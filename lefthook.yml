@@ -16,7 +16,7 @@ pre-commit:
     - name: frontend lint
       root: "frontend/"
       glob: "*.{ts,tsx}"
-      run: pnpm exec eslint {staged_files}
+      run: pnpm exec eslint --no-warn-ignored {staged_files}
 
     - name: frontend typecheck
       root: "frontend/"
