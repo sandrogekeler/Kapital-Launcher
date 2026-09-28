@@ -38,6 +38,7 @@ cd frontend && pnpm dev
 | `backend/` | Go: models, services (Prism, settings, logging, redaction), generated design values |
 | `frontend/` | React, TypeScript, Vite, Tailwind |
 | `docs/HANDOFF.md` | The brief this project was started from |
+| `docs/HANDOVER.md` | Where things stand, for the next session |
 | `docs/adr/` | Architecture decisions |
 | `agent_docs/` | Conventions, roadmap, dependency and health and security checklists |
 

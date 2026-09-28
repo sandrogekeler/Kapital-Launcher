@@ -78,7 +78,7 @@ What is left:
 - [ ] Forward frontend render errors to the Go log
 - [ ] Release workflow with attested artefacts for Windows and macOS; code
       signing decision (ADR-6)
-- [ ] Create the labels in `.github/labels.yml` on the repository
+- [ ] Create the labels in `.github/labels.yml` on the repository (`scripts/sync-labels.py`)
 
 ## Out of scope, and why
 
