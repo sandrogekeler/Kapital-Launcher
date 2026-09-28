@@ -34,7 +34,7 @@ updates:
       # bindings and the webview it links against. Upgraded by hand (ADR-1).
       - dependency-name: github.com/wailsapp/wails/v2
 
-  # Two npm projects: the root holds lefthook and nothing else.
+  # Three npm projects: the root holds lefthook and nothing else.
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -59,3 +59,15 @@ updates:
       # Held on 6.x until typescript-eslint supports 7 (DEPENDENCIES.md).
       - dependency-name: typescript
         update-types: ['version-update:semver-major']
+
+  # The download site: Vite, Tailwind and Wrangler, none of which ships.
+  - package-ecosystem: npm
+    directory: /site
+    schedule:
+      interval: weekly
+      day: sunday
+    open-pull-requests-limit: 2
+    groups:
+      site:
+        patterns: ['*']
+        update-types: [minor, patch]

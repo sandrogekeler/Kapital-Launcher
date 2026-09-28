@@ -74,6 +74,20 @@ It will fail `pr-labelled` until the labels below exist and it is labelled.
 Milestones map to `agent_docs/ROADMAP.md`. Stage them as `milestone:` labels
 or GitHub milestones, whichever the next session prefers; nothing reads them.
 
+## The download site
+
+Added 2026-09-28 on `claude/vibrant-goodall-26qklx` (ADR-9). `site/` builds
+and was served locally through `wrangler dev` with its headers; it has never
+run on Cloudflare. To take it live:
+
+1. Connect Workers Builds with the settings in `site/README.md`, Hosting. The
+   pnpm version build variable matters: the build image's default is older
+   than the release-age policy.
+2. Download and GitHub are `null` in `site/links.json` and show "coming soon"
+   and nothing. Set them when there is a release and the repository is public.
+3. A custom domain needs its nameservers on Cloudflare; otherwise the site
+   stays on `*.workers.dev`.
+
 ## Open questions, all the author's
 
 - **Lichdenstein's client loader.** The visuals pack's loader is

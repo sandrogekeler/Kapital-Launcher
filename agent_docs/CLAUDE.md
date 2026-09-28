@@ -16,13 +16,15 @@ Same shape as Konnekt, deliberately (docs/adr/0001-app-framework.md).
   turns it into `frontend/src/styles/tokens.css` (Tailwind theme), `tokens.ts` and
   `backend/design/design_gen.go`. Never edit those three by hand.
 - `data/launcher.json` is the chapter manifest built into the app, validated by
-  `design/launcher.schema.json` and again by Go at startup. The site will publish
+  `design/launcher.schema.json` and again by Go at startup. The wiki will publish
   the same shape later (ADR-4).
 - `backend/models/` holds the data shapes; Wails generates `frontend/wailsjs/` from
   the bound methods on `App` in `app.go`. Regenerate with `wails generate module`.
 - `backend/services/` holds everything with a side effect: Prism detection and
   launch, the server ping and its ticker, settings, logging, redaction. Each
   service ships with tests.
+- `site/` is the static download page (ADR-9). It imports the app's tokens,
+  fonts and images from `frontend/`, and its links live in `site/links.json`.
 - `frontend/src/`: `components/` (view), `stores/` (one Zustand store per domain:
   chapters, engine, settings), `lib/` (pure helpers), `types/` (the data shapes).
 
@@ -61,6 +63,9 @@ pnpm check-tokens      # every token-named class compiles (builds if stale)
 pnpm check-bundle      # entry chunk gzip budget
 pnpm gen:tokens        # regenerate the three token outputs
 
+# site/
+pnpm build | preview   # preview serves dist/ through wrangler dev
+
 # repo root
 go vet ./... && go test ./...
 wails dev | wails build | wails generate module
@@ -93,4 +98,4 @@ Vendored from `kollektiv-mc/Kollektiv` and never edited here: the three
 `.claude/rules/` holds what matters in one part of the tree, scoped by `paths:`
 so it costs no context until a matching file is opened: `frontend-style.md`,
 `ipc.md`, `backend.md`, `tokens.md`, `manifest.md`, `builds-and-releases.md`,
-`dependencies.md`, `aislop.md`.
+`dependencies.md`, `aislop.md`, `site.md`.

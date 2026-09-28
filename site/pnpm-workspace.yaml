@@ -1,0 +1,10 @@
+# pnpm settings for the download site, its own project like frontend/. Same
+# supply-chain policy as frontend/pnpm-workspace.yaml: a version published less
+# than a day ago is not installed (.claude/rules/dependencies.md).
+minimumReleaseAge: 1440
+
+# workerd is the runtime `wrangler dev` serves the built site from; esbuild is
+# Vite's and Wrangler's. Both fetch a platform binary on install.
+allowBuilds:
+  esbuild: true
+  workerd: true

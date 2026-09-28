@@ -1,0 +1,10 @@
+// A static site on Workers static assets: no Worker script, only the built
+// dist/ directory (https://developers.cloudflare.com/workers/static-assets/).
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "kapital-launcher",
+  "compatibility_date": "2026-09-28",
+  "assets": {
+    "directory": "./dist"
+  }
+}

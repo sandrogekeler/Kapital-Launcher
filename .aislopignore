@@ -16,5 +16,7 @@ backend/design
 
 # Build outputs and dependencies.
 frontend/dist
+site/dist
+site/.wrangler
 node_modules
 build/bin

@@ -52,6 +52,19 @@ Two pins worth a line: `vitest` and `@vitest/coverage-v8` must move together,
 so Dependabot ignores both; and `typescript` stays on 6.x until
 `typescript-eslint` declares support for 7.
 
+## Download site (`site/package.json`, dev only)
+
+Nothing here ships as code: the built site is HTML, CSS, fonts and images.
+
+| Package | Rationale |
+|---|---|
+| `vite`, `tailwindcss`, `@tailwindcss/vite` | The same build and styling as the frontend, same versions, so the page uses the app's token utilities |
+| `wrangler` | Cloudflare's CLI. Deploys `dist/` and serves it locally with `_headers` applied. Pinned here so Workers Builds runs the reviewed version rather than whatever `npx` fetches |
+
+**Considered and not added:** Astro, which the wiki uses. One section with
+three links needs no framework, and a plain Vite page reuses the app's
+toolchain.
+
 ## Fonts
 
 Inter, Fraunces and JetBrains Mono, copied from the wiki's `public/fonts/`,

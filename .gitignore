@@ -3,6 +3,9 @@
 frontend/dist/*
 !frontend/dist/.gitkeep
 build/bin/
+site/dist/
+# wrangler dev's local state
+site/.wrangler/
 
 # Wails frontend-hash cache
 frontend/package.json.md5

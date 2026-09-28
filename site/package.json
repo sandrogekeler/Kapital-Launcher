@@ -1,0 +1,17 @@
+{
+  "name": "site",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "preview": "vite build && wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.1",
+    "wrangler": "^4.142.0"
+  }
+}
