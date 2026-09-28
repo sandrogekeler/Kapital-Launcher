@@ -10,7 +10,7 @@ while building the scaffold.
 
 | ADR | Decision | Status |
 |---|---|---|
-| [0001](0001-app-framework.md) | Wails v2 on Go 1.25 | accepted |
+| [0001](0001-app-framework.md) | Wails v2 on Go 1.26 | accepted |
 | [0002](0002-prism-data-root.md) | The user's own Prism root by default, a dedicated root as a setting | accepted |
 | [0003](0003-pack-format.md) | packwiz as the pack source; installer for sync, `.mrpack` for a fresh install | accepted, unbuilt |
 | [0004](0004-launcher-manifest.md) | A versioned `launcher.json`, embedded now, published by the site later | accepted |

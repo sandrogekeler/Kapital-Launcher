@@ -6,7 +6,7 @@ this app finds it, shows the three chapters, and calls Prism's documented CLI.
 
 ## Stack
 
-Wails v2 shell (Go 1.25, system WebView) with React 19, TypeScript, Vite and
+Wails v2 shell (Go 1.26, system WebView) with React 19, TypeScript, Vite and
 Tailwind v4; Zustand for state; pnpm for the frontend, Go modules for the backend.
 Same shape as Konnekt, deliberately (docs/adr/0001-app-framework.md).
 

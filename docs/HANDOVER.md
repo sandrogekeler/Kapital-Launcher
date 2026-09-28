@@ -14,7 +14,7 @@ wails dev                    # Wails CLI v2.16.0, the version go.mod names
 .claude/suite-check.py       # 21 checks; all pass at the last push
 ```
 
-pnpm 11 or later, Node 22 or later, Go 1.25 or later (a newer Go is fine;
+pnpm 11 or later, Node 22 or later, Go 1.26 or later (a newer Go is fine;
 `go.mod` pins the minimum). `wails doctor` was green on the author's Windows
 11 machine and `wails dev` opened the window.
 
