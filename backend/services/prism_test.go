@@ -14,6 +14,9 @@ import (
 )
 
 func TestLaunchArgsBuildsTheDocumentedCommandLine(t *testing.T) {
+	// Absolute on every platform: a hand-built "\\data\\prism" has no drive
+	// letter on Windows and is rightly refused there.
+	root := t.TempDir()
 	cases := []struct {
 		name string
 		req  models.LaunchRequest
@@ -27,8 +30,8 @@ func TestLaunchArgsBuildsTheDocumentedCommandLine(t *testing.T) {
 			[]string{"--launch", "x", "--server", "play.example.org"}},
 		{"with profile", models.LaunchRequest{InstanceID: "x", Profile: "Sandro"},
 			[]string{"--launch", "x", "--profile", "Sandro"}},
-		{"with root", models.LaunchRequest{InstanceID: "x", Root: string(filepath.Separator) + filepath.Join("data", "prism")},
-			[]string{"--dir", string(filepath.Separator) + filepath.Join("data", "prism"), "--launch", "x"}},
+		{"with root", models.LaunchRequest{InstanceID: "x", Root: root},
+			[]string{"--dir", root, "--launch", "x"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
