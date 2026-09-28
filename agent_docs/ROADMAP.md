@@ -25,9 +25,11 @@ the scaffold changed the picture.
 
 ## Milestone 2: Detect Prism, for real
 
-- [ ] Confirm the standard install paths on Windows 11 and macOS against real
-      installs; the code marks each `[verify]`
-- [ ] Confirm `prismlauncher --version` prints to stdout on a Windows GUI build
+- [x] Confirm the standard install path on Windows 11 against a real install:
+      `%LOCALAPPDATA%\Programs\PrismLauncher` (Prism 11.1.0, 2026-09-29)
+- [ ] Confirm the standard install paths on macOS; the code marks each `[verify]`
+- [x] Confirm `prismlauncher --version` prints to stdout on a Windows GUI build:
+      it does, through a pipe, as `PrismLauncher 11.1.0` (2026-09-29)
 - [ ] Settings screen: Prism executable, Prism root, profile name, theme
 - [ ] Read the instances folder under the chosen root to know whether a chapter's
       instance exists, so Play can say "Install" instead
@@ -78,7 +80,8 @@ What is left:
 - [ ] Forward frontend render errors to the Go log
 - [ ] Release workflow with attested artefacts for Windows and macOS; code
       signing decision (ADR-6)
-- [ ] Create the labels in `.github/labels.yml` on the repository (`scripts/sync-labels.py`)
+- [x] Create the labels in `.github/labels.yml` on the repository (`scripts/sync-labels.py`),
+      done 2026-09-29
 
 ## Out of scope, and why
 
