@@ -219,8 +219,10 @@ func (p *PrismService) executableName() string {
 }
 
 // standardLocations lists where each platform's installers put Prism.
-// [verify] against a real install of each: taken from the installers'
-// defaults, not yet observed on every OS (docs/adr/0007-target-oses.md).
+// Observed on 2026-09-29: the Windows 11 installer of Prism 11.1.0 puts it
+// under %LOCALAPPDATA%\Programs\PrismLauncher. The other entries are the
+// installers' documented defaults and stay [verify] until seen on a real
+// install (docs/adr/0007-target-oses.md).
 func (p *PrismService) standardLocations() []string {
 	switch p.goos {
 	case "windows":
@@ -262,10 +264,14 @@ func (p *PrismService) flatpakInstalled(ctx context.Context, flatpak string) boo
 	return err == nil
 }
 
-// readVersion asks Prism for its version. Prism's --version prints something
-// like "Prism Launcher 11.1.0"; only the number is kept. A failure is not an
-// error: the engine card shows "linked" without a number, and the launch path
-// does not depend on it. [verify] that a Windows GUI build writes to stdout.
+// readVersion asks Prism for its version and keeps only the number. A failure
+// is not an error: the engine card shows "linked" without a number, and the
+// launch path does not depend on it.
+//
+// Observed on 2026-09-29 with Prism 11.1.0 on Windows 11: the GUI build writes
+// "PrismLauncher 11.1.0\r\n\r\n" to stdout through a pipe, so exec's Output
+// reads it without a console. The pattern takes the number wherever it sits,
+// so other builds' wording does not matter; macOS and Linux output is [verify].
 func (p *PrismService) readVersion(ctx context.Context, engine models.EngineInfo) string {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

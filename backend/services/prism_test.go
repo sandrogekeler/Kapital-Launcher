@@ -131,7 +131,8 @@ func TestDetectPrefersSettingsThenPathThenStandardLocations(t *testing.T) {
 	files := map[string]bool{custom: false, std: false}
 	env := map[string]string{"LOCALAPPDATA": filepath.Join("C:", "Users", "s", "AppData", "Local")}
 
-	p := fakeOS("windows", files, env, map[string]string{"prismlauncher.exe": "/path/prismlauncher.exe"}, "Prism Launcher 11.1.0\n")
+	// The exact bytes Prism 11.1.0's Windows build printed for --version.
+	p := fakeOS("windows", files, env, map[string]string{"prismlauncher.exe": "/path/prismlauncher.exe"}, "PrismLauncher 11.1.0\r\n\r\n")
 	got := p.Detect(ctx, models.AppSettings{PrismExecutable: custom})
 	if !got.Found || got.Source != "settings" || got.Executable != custom || got.Version != "11.1.0" {
 		t.Fatalf("settings should win: %+v", got)
