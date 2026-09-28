@@ -76,6 +76,7 @@
 :root {
   --layout-sidebar: 264px;
   --layout-hero: 440px;
+  --layout-titlebar: 40px;
 }
 
 /* Dark is the default. Light is opt-in through data-theme; the system

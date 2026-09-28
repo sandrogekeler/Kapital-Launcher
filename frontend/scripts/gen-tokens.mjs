@@ -243,6 +243,7 @@ function emitLayout(src, push) {
   push(`:root {`)
   push(`  --layout-sidebar: ${src.layout.sidebar}${src.layout.unit};`)
   push(`  --layout-hero: ${src.layout.hero}${src.layout.unit};`)
+  push(`  --layout-titlebar: ${src.layout.titlebar}${src.layout.unit};`)
   push(`}`)
 }
 
@@ -328,7 +329,7 @@ ${accents('light')}
 /** Window geometry, in px. main.go reads the same numbers from backend/design/design_gen.go. */
 export const WINDOW = { width: ${w.width}, height: ${w.height}, minWidth: ${w.minWidth}, minHeight: ${w.minHeight} } as const
 
-export const LAYOUT = { sidebar: ${src.layout.sidebar}, hero: ${src.layout.hero} } as const
+export const LAYOUT = { sidebar: ${src.layout.sidebar}, hero: ${src.layout.hero}, titlebar: ${src.layout.titlebar} } as const
 `
 }
 

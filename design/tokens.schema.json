@@ -163,12 +163,13 @@
     },
     "layout": {
       "type": "object",
-      "required": ["unit", "sidebar", "hero", "window"],
+      "required": ["unit", "sidebar", "hero", "titlebar", "window"],
       "additionalProperties": false,
       "properties": {
         "unit": { "const": "px" },
         "sidebar": { "type": "integer", "minimum": 1 },
         "hero": { "type": "integer", "minimum": 1 },
+        "titlebar": { "type": "integer", "minimum": 1 },
         "window": {
           "type": "object",
           "required": ["width", "height", "minWidth", "minHeight"],

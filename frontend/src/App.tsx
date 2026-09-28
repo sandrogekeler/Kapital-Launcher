@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { HeaderBar } from './components/shell/HeaderBar'
 import { Sidebar } from './components/sidebar/Sidebar'
 import { Hero } from './components/main/Hero'
 import { ActionBar } from './components/main/ActionBar'
@@ -8,7 +9,8 @@ import { useEngineStore } from './stores/useEngineStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { selectStatus, useServerStore } from './stores/useServerStore'
 import { OpenChapterWiki, OpenExternal } from '../wailsjs/go/main/App'
-import { errMsg } from './lib/ipc'
+import { Environment } from '../wailsjs/runtime/runtime'
+import { errMsg, readOr } from './lib/ipc'
 
 const PRISM_SITE = 'https://prismlauncher.org'
 
@@ -30,6 +32,13 @@ export default function App() {
 
   const theme = useSettingsStore((s) => s.settings.theme)
   const loadSettings = useSettingsStore((s) => s.load)
+
+  // Which OS draws the window, for the header's controls. Without a bridge
+  // (the browser-only preview) it shows the Windows bar, the primary target.
+  const [platform, setPlatform] = useState('windows')
+  useEffect(() => {
+    void readOr(Environment, null).then((env) => env && setPlatform(env.platform))
+  }, [])
 
   // One read per store on mount. These are reads of state Go holds, not
   // events, so an effect is the right tool.
@@ -67,24 +76,27 @@ export default function App() {
     OpenExternal(PRISM_SITE).catch((e) => console.warn('open prism site', errMsg(e)))
 
   return (
-    <div className="bg-canvas flex h-full">
+    <div className="bg-canvas flex h-full flex-col">
       <ChapterSelectionSync />
-      <Sidebar />
-      <main className="flex min-w-0 grow flex-col">
-        <Hero chapter={chapter} onOpenWiki={openWiki} />
-        <ActionBar
-          chapter={chapter}
-          engine={engine}
-          status={status}
-          launching={launching === chapter.id}
-          checking={checking === chapter.id}
-          error={launchError}
-          onPlay={() => void launch(chapter.id)}
-          onInstallPrism={openPrismSite}
-          onCheckServer={() => void checkServer(chapter.id)}
-        />
-        <Panels chapter={chapter} status={status} onOpenWiki={openWiki} />
-      </main>
+      <HeaderBar platform={platform} />
+      <div className="flex min-h-0 grow">
+        <Sidebar />
+        <main className="flex min-w-0 grow flex-col">
+          <Hero chapter={chapter} onOpenWiki={openWiki} />
+          <ActionBar
+            chapter={chapter}
+            engine={engine}
+            status={status}
+            launching={launching === chapter.id}
+            checking={checking === chapter.id}
+            error={launchError}
+            onPlay={() => void launch(chapter.id)}
+            onInstallPrism={openPrismSite}
+            onCheckServer={() => void checkServer(chapter.id)}
+          />
+          <Panels chapter={chapter} status={status} onOpenWiki={openWiki} />
+        </main>
+      </div>
       <footer className="text-fg-faint text-2xs pointer-events-none fixed inset-x-0 bottom-2 text-center">
         NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.
       </footer>

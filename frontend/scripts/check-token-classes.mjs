@@ -102,8 +102,11 @@ const builtCss = (
 ).join('\n')
 
 // Tailwind escapes `.` and `/` in emitted selectors; the names here carry neither,
-// so a plain `.cls{` or `.cls:` or `.cls,` search is enough.
-const compiled = (cls) => new RegExp(`\\.${escape(cls)}(?=[{:,\\s>])`).test(builtCss)
+// so a plain `.cls{` or `.cls:` or `.cls,` search is enough. A class used only
+// under a variant compiles only in that form, `.hover\:cls:hover{`, so any
+// escaped `variant\:` prefixes are allowed in front of the name.
+const compiled = (cls) =>
+  new RegExp(`\\.(?:[\\w-]+\\\\:)*${escape(cls)}(?=[{:,\\s>])`).test(builtCss)
 
 const dead = used.filter(({ cls }) => !compiled(cls))
 if (dead.length > 0) {

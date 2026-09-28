@@ -30,6 +30,8 @@ the scaffold changed the picture.
 - [ ] Confirm the standard install paths on macOS; the code marks each `[verify]`
 - [x] Confirm `prismlauncher --version` prints to stdout on a Windows GUI build:
       it does, through a pipe, as `PrismLauncher 11.1.0` (2026-09-29)
+- [x] A header bar in place of the OS title bar, holding the brand and the
+      settings gear (ADR-9, #11)
 - [ ] Settings screen: Prism executable, Prism root, profile name, theme
 - [ ] Read the instances folder under the chosen root to know whether a chapter's
       instance exists, so Play can say "Install" instead

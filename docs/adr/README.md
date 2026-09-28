@@ -18,3 +18,4 @@ while building the scaffold.
 | [0006](0006-self-update-and-signing.md) | Manual updates and unsigned builds first | proposed |
 | [0007](0007-target-oses.md) | Windows 11 and macOS on Apple Silicon | accepted |
 | [0008](0008-design-tokens.md) | The launcher holds its own token source, seeded from the wiki; the wiki's era accents corrected | accepted |
+| [0009](0009-window-chrome.md) | The app draws its own header bar; our window buttons on Windows, native traffic lights on macOS | accepted |
