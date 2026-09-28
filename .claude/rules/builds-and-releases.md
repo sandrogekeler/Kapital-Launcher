@@ -17,6 +17,14 @@ follows Konnekt's: cut from the Actions tab, tag `vX.Y.Z[-alpha.N|-beta.N]`,
 artefacts attested with `actions/attest` and a `checksums.txt`, no code-signing
 certificate (ADR-6), and the release body carries the Minecraft disclaimer.
 
+## The toolchain directive is what CI runs
+
+`go.mod`'s `toolchain go1.26.x` is the exact Go that `setup-go` installs in
+CI, so it is also the standard library `govulncheck` scans. When the scanner
+reports a fix in a newer patch release, bump the directive; the `go 1.26.0`
+line is the language minimum and stays. A machine on an older patch
+downloads the pinned one on first use.
+
 ## The Wails CLI version is the module version
 
 `wails dev` and `wails build` rewrite `go.mod` to the CLI's own Wails version
