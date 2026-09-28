@@ -140,13 +140,23 @@ func (a *App) GetSettings() (models.AppSettings, error) {
 	return a.settings.Load()
 }
 
-// SaveSettings validates, persists, and re-detects the engine, since the
-// settings decide where Prism is looked for.
+// SaveSettings validates and persists, then re-detects the engine when a field
+// detection reads has changed. Detection runs Prism's --version, so a save
+// that only records the open chapter must not reach it (#6).
 func (a *App) SaveSettings(settings models.AppSettings) error {
+	before, err := a.settings.Load()
+	if err != nil {
+		// An unreadable file is about to be replaced; re-detect to be safe.
+		before = models.AppSettings{}
+		slog.Warn("settings before save", "error", err)
+	}
 	if err := a.settings.Save(settings); err != nil {
 		return err
 	}
-	_, err := a.RefreshEngine()
+	if !services.AffectsDetection(before, settings) {
+		return nil
+	}
+	_, err = a.RefreshEngine()
 	return err
 }
 

@@ -153,3 +153,11 @@ func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
 	}
 	return nil
 }
+
+// AffectsDetection reports whether going from before to after changes a field
+// PrismService.Detect reads. Compared after normalizing, so whitespace alone
+// is not a change.
+func AffectsDetection(before, after models.AppSettings) bool {
+	b, a := normalize(before), normalize(after)
+	return b.PrismExecutable != a.PrismExecutable || b.PrismRoot != a.PrismRoot
+}
