@@ -1,0 +1,6 @@
+# The root holds lefthook and nothing else; frontend/ is its own pnpm project,
+# not a workspace member. Same supply-chain policy as frontend/pnpm-workspace.yaml.
+minimumReleaseAge: 1440
+
+allowBuilds:
+  lefthook: true

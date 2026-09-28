@@ -14,6 +14,10 @@ export function GetManifest() {
   return window['go']['main']['App']['GetManifest']();
 }
 
+export function GetServerStatus(arg1) {
+  return window['go']['main']['App']['GetServerStatus'](arg1);
+}
+
 export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }

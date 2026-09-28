@@ -31,6 +31,17 @@ func TestBundledManifestIsValid(t *testing.T) {
 			t.Errorf("%s: instance id %q should carry the kapital- prefix (ADR-2)", c.ID, c.Instance.ID)
 		}
 	}
+	// The two server chapters, and how Play behaves on each (ADR-5).
+	lic, fra := m.Chapters[1], m.Chapters[2]
+	if lic.Server == nil || !lic.Server.JoinOnLaunch || lic.Server.Software != "Paper" {
+		t.Errorf("Lichdenstein is joined on launch and runs Paper: %+v", lic.Server)
+	}
+	if fra.Server == nil || fra.Server.JoinOnLaunch {
+		t.Errorf("Frangfurd has a server but is played as a pack: %+v", fra.Server)
+	}
+	if m.Chapters[0].Pack.Loader != "Forge" || m.Chapters[0].Pack.Minecraft != "1.19.1" {
+		t.Errorf("Luxemburg is Forge 1.19.1: %+v", m.Chapters[0].Pack)
+	}
 }
 
 func validManifest() models.Manifest {

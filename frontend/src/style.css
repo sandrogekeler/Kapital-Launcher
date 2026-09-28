@@ -111,5 +111,4 @@
 }
 .art-pending-thumb {
   --art-pending-cell: 8px;
-  --accent: var(--thumb-accent, var(--accent));
 }

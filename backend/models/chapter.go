@@ -57,9 +57,15 @@ type Pack struct {
 	Mrpack    *string `json:"mrpack"`
 }
 
-// Server is the address a chapter joins on launch, as host[:port].
+// Server is a chapter's server: the address the status line pings, as
+// host[:port], and whether Play joins it. A modpack with a server may still
+// be played alone, so joining is a choice the manifest states rather than a
+// consequence of the field existing.
 type Server struct {
-	Address string `json:"address"`
+	Address      string `json:"address"`
+	JoinOnLaunch bool   `json:"joinOnLaunch"`
+	// Software is what the server runs, for the facts panel: "Paper", "Vanilla".
+	Software string `json:"software"`
 }
 
 // WikiTeaser is the "From the wiki" panel: a title, one line, and where to read on.

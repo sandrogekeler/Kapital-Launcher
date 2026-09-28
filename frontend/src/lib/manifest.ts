@@ -22,9 +22,9 @@ export function chapterById(manifest: Manifest, id: string): Chapter | undefined
   return manifest.chapters.find((c) => c.id === id)
 }
 
-/** The verb on the Play button: a server chapter is joined, a pack is played. */
+/** The verb on the Play button: a chapter that joins its server on launch is joined, the rest are played. */
 export const playLabel = (chapter: Chapter) =>
-  chapter.server ? `Join ${chapter.name}` : `Play ${chapter.name}`
+  chapter.server?.joinOnLaunch ? `Join ${chapter.name}` : `Play ${chapter.name}`
 
 /** The one-word pill for the chapter's state, as the reference writes it. */
 export const stateLabel = (state: string) =>

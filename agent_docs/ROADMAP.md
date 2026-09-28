@@ -17,10 +17,15 @@ the scaffold changed the picture.
 - [x] Settings persisted as JSON in the app data dir, owner-only
 - [x] Log file with rotation, and a redactor for sharing it
 - [x] agent_docs, path-scoped rules, `.claude/suite.json`, vendored check runner, CI
+- [x] Server List Ping for every chapter with a server, on a Go ticker, as
+      events; the state line and facts panel read it (ADR-5)
+- [x] The Kollektiv conventions: label taxonomy, issue forms with the priority
+      question, the pull-request label gate, a title and em-dash gate, release
+      notes generator, aislop gate, CONTRIBUTING and SECURITY
 
 ## Milestone 2: Detect Prism, for real
 
-- [ ] Confirm the standard install paths on Windows, macOS and Linux against real
+- [ ] Confirm the standard install paths on Windows 11 and macOS against real
       installs; the code marks each `[verify]`
 - [ ] Confirm `prismlauncher --version` prints to stdout on a Windows GUI build
 - [ ] Settings screen: Prism executable, Prism root, profile name, theme
@@ -45,6 +50,8 @@ the scaffold changed the picture.
       from the manifest
 - [ ] Verify every download by hash; refuse a mismatch
 - [ ] Update pack button and sync state line
+- [ ] Developer setting: override a chapter's `pack.toml` URL with a local
+      `packwiz serve` address, so a pack is tried from a working copy first
 
 ## Milestone 5: Manifest from the site
 
@@ -53,11 +60,15 @@ the scaffold changed the picture.
 - [ ] Fetch with a unique User-Agent, cache, fall back to the bundled copy offline
 - [ ] Screenshots by URL; CSP `img-src` grows by the site's host
 
-## Milestone 6: Lichdenstein server status
+## Milestone 6: Server status, the rest
 
-- [ ] Server List Ping to the manifest's address only; player count and MOTD
-- [ ] Decide offline behaviour: disable Join, or launch the visuals pack anyway
-      (docs/adr/0005-server-status.md)
+The ping, the ticker and the state line shipped with the scaffold (ADR-5).
+What is left:
+
+- [ ] Real addresses for Lichdenstein and Frangfurd in the manifest
+- [ ] Show the MOTD and the player sample somewhere the reference has room for
+- [ ] Drop the per-minute "connection refused" log line to debug once the
+      addresses are real
 
 ## Milestone 7: Polish
 
@@ -65,7 +76,9 @@ the scaffold changed the picture.
 - [ ] Copy redacted log action (`services.Redactor`)
 - [ ] About screen: version, disclaimer, licences (fonts, lucide, Prism's GPL notice)
 - [ ] Forward frontend render errors to the Go log
-- [ ] Release workflow with attested artefacts; code signing decision (ADR-6)
+- [ ] Release workflow with attested artefacts for Windows and macOS; code
+      signing decision (ADR-6)
+- [ ] Create the labels in `.github/labels.yml` on the repository (`scripts/sync-labels.py`)
 
 ## Out of scope, and why
 

@@ -6,7 +6,7 @@ this app finds it, shows the three chapters, and calls Prism's documented CLI.
 
 ## Stack
 
-Wails v2 shell (Go 1.25, system WebView) with React 19, TypeScript, Vite and
+Wails v2 shell (Go 1.26, system WebView) with React 19, TypeScript, Vite and
 Tailwind v4; Zustand for state; pnpm for the frontend, Go modules for the backend.
 Same shape as Konnekt, deliberately (docs/adr/0001-app-framework.md).
 
@@ -21,7 +21,8 @@ Same shape as Konnekt, deliberately (docs/adr/0001-app-framework.md).
 - `backend/models/` holds the data shapes; Wails generates `frontend/wailsjs/` from
   the bound methods on `App` in `app.go`. Regenerate with `wails generate module`.
 - `backend/services/` holds everything with a side effect: Prism detection and
-  launch, settings, logging, redaction. Each service ships with tests.
+  launch, the server ping and its ticker, settings, logging, redaction. Each
+  service ships with tests.
 - `frontend/src/`: `components/` (view), `stores/` (one Zustand store per domain:
   chapters, engine, settings), `lib/` (pure helpers), `types/` (the data shapes).
 
@@ -35,8 +36,10 @@ Same shape as Konnekt, deliberately (docs/adr/0001-app-framework.md).
   whole on any violation (`services.ValidateManifest`).
 - **Every value that reaches Prism is validated first**: instance id, server
   `host[:port]`, profile name, root path. `LaunchArgs` is the one place, tested.
-- **One Zustand store per domain.** Reads degrade without a bridge (`lib/ipc.ts`),
-  writes revert and rethrow when a real backend rejects.
+- **One Zustand store per domain** (chapters, engine, settings, servers). Reads
+  degrade without a bridge (`lib/ipc.ts`), writes revert and rethrow when a real
+  backend rejects. Server status arrives as `server:status` events from Go's
+  ticker; nothing in the frontend polls.
 - **Styling is Tailwind utilities over the token layer.** No literal colour or
   pixel size in a component; a missing value is a token to add. Inline `style` is
   an ESLint error. The chapter accent is `data-chapter` on the root and
@@ -73,12 +76,21 @@ gap you cannot close under `HEALTH_CHECKLIST.md`'s Open backlog.
 ## Task tracking
 
 GitHub Issues. `ROADMAP.md` holds direction and milestones; work items are
-issues. Pull request titles are the release notes: imperative, sentence case,
-one concern each. Branch from `origin/main`.
+issues. `CONTRIBUTING.md` holds the rules CI enforces: one `type:` and one
+`area:` label on every pull request (`pr-labelled`), a title in sentence case
+with no em dash (`pr-copy`), the `type:` ladder that files each merged pull
+request into the release notes. Branch from `origin/main`.
+
+`docs/HANDOVER.md` is the state a session cannot derive: branches, open
+questions, the issues still to file. Update it when handing over.
+
+Vendored from `kollektiv-mc/Kollektiv` and never edited here: the three
+`.claude/suite-*.py`, `.github/workflows/{pr-labelled,aislop,issue-priority}.yml`,
+`.github/scripts/release-notes*.py`, `.github/release.yml`, `.aislop/base.yml`.
 
 ## Deeper rules, loaded on demand
 
 `.claude/rules/` holds what matters in one part of the tree, scoped by `paths:`
 so it costs no context until a matching file is opened: `frontend-style.md`,
 `ipc.md`, `backend.md`, `tokens.md`, `manifest.md`, `builds-and-releases.md`,
-`dependencies.md`.
+`dependencies.md`, `aislop.md`.

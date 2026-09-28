@@ -26,9 +26,29 @@ export interface Chapter {
   state: ChapterState | string
   instance: { id: string }
   pack: Pack
-  server?: { address: string } | null
+  server?: Server | null
   wiki: WikiTeaser
   changelog: ChangelogEntry[]
+}
+
+export interface Server {
+  address: string
+  /** Whether Play joins this server, or the chapter is played as a pack with a server nearby. */
+  joinOnLaunch: boolean
+  software: string
+}
+
+/** The result of one Server List Ping, keyed by chapter. */
+export interface ServerStatus {
+  chapterId: string
+  checked: boolean
+  online: boolean
+  players: number
+  max: number
+  version: string
+  motd: string
+  latencyMs: number
+  checkedAt: string
 }
 
 // Go pointer fields arrive optional from the bindings, so they are optional here too.

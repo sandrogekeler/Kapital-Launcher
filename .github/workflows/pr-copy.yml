@@ -1,0 +1,58 @@
+# The writing conventions, on the one surface a file check cannot reach: the
+# pull request's title and body. Merged titles become the release notes, so a
+# title is published copy, and the rule for published copy is no em dash, a
+# short imperative line, and no trailing period. The rest of the copy, the UI
+# strings and the manifest, is held by the `no em dashes in published copy`
+# invariant in .claude/suite.json, which the invariants job runs.
+#
+# `edited` is among the triggers so fixing the title turns the check green
+# without a push. Everything from the event reaches the script through env:
+# a title is text a stranger wrote, and `${{ }}` inside `run:` is substituted
+# before bash sees it.
+name: pr-copy
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions: {}
+
+jobs:
+  pr-copy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: The title and body carry no em dash
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -u
+          status=0
+          if printf '%s' "$TITLE" | grep -q $'\xe2\x80\x94'; then
+            echo "::error::The title carries an em dash. Use a comma, a colon, or two sentences."
+            status=1
+          fi
+          if printf '%s' "$BODY" | grep -q $'\xe2\x80\x94'; then
+            echo "::error::The body carries an em dash. Use a comma, a colon, or two sentences."
+            status=1
+          fi
+          exit $status
+
+      - name: The title is one short line in sentence case with no trailing period
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -u
+          status=0
+          case "$TITLE" in
+            *.) echo "::error::The title ends with a period. Release-notes lines do not."; status=1 ;;
+          esac
+          if [ "${#TITLE}" -gt 90 ]; then
+            echo "::error::The title is ${#TITLE} characters. Keep it under 90; the body has room for the rest."
+            status=1
+          fi
+          first="$(printf '%s' "$TITLE" | cut -c1)"
+          case "$first" in
+            [a-z]) echo "::error::The title starts lowercase. Sentence case: capitalise the first word only."; status=1 ;;
+          esac
+          exit $status

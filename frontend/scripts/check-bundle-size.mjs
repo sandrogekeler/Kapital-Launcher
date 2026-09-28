@@ -15,7 +15,7 @@ const BUDGET_KB = 90
 
 const DIST_ASSETS = await ensureFreshDist()
 const files = (await readdir(DIST_ASSETS)).filter((f) => f.endsWith('.js'))
-const entry = files.find((f) => /^index-/.test(f))
+const entry = files.find((f) => f.startsWith('index-'))
 if (!entry) {
   console.error(`check-bundle: no entry chunk (index-*.js) in dist/assets: ${files.join(', ')}`)
   process.exit(1)

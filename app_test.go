@@ -32,6 +32,18 @@ func TestLaunchChapterRefusesAnUnknownChapter(t *testing.T) {
 	}
 }
 
+func TestGetServerStatusRefusesAnUnknownChapterAndAnswersForOne(t *testing.T) {
+	app := newTestApp(t)
+	if _, err := app.GetServerStatus("atlantis"); err == nil {
+		t.Fatal("unknown chapter must be refused")
+	}
+	// Luxemburg has no server: checked, offline, no dial attempted.
+	got, err := app.GetServerStatus("luxemburg")
+	if err != nil || !got.Checked || got.Online || got.ChapterID != "luxemburg" {
+		t.Fatalf("%v %+v", err, got)
+	}
+}
+
 func TestSaveSettingsValidatesAndRedetects(t *testing.T) {
 	app := newTestApp(t)
 	if err := app.SaveSettings(models.AppSettings{Theme: "sepia"}); err == nil {

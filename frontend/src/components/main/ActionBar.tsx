@@ -1,39 +1,62 @@
-import type { Chapter, EngineInfo } from '../../types'
+import type { Chapter, EngineInfo, ServerStatus } from '../../types'
 import { playLabel } from '../../lib/manifest'
-import { Play, TriangleAlert } from '../../lib/icons'
+import { serverLine } from '../../lib/serverLine'
+import { Play, RefreshCw, TriangleAlert } from '../../lib/icons'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
+import { IconButton } from '../ui/IconButton'
 
 interface Props {
   chapter: Chapter
   engine: EngineInfo | null
+  status: ServerStatus | undefined
   launching: boolean
+  checking: boolean
   error: string | null
   onPlay: () => void
   onInstallPrism: () => void
+  onCheckServer: () => void
 }
 
 /**
- * Play, and the state line beside it. What the line says is only what the app
- * knows: whether Prism is there. Pack sync and server status arrive with
- * milestones 4 to 6 and take the same slot.
+ * Play, and the state line beside it. The line says what the app knows:
+ * whether Prism is there, and for a chapter with a server, whether it is up.
+ * Pack sync arrives with milestone 4 and takes the same slot.
  */
-export function ActionBar({ chapter, engine, launching, error, onPlay, onInstallPrism }: Props) {
+export function ActionBar({
+  chapter,
+  engine,
+  status,
+  launching,
+  checking,
+  error,
+  onPlay,
+  onInstallPrism,
+  onCheckServer,
+}: Props) {
   const missing = engine !== null && !engine.found
-  const state = launching
-    ? '◐ Launching'
-    : missing
-      ? '○ Prism not found'
-      : engine === null
-        ? '○ Checking engine'
-        : '● Ready'
-  const meta = missing
-    ? 'Install Prism Launcher and sign in there'
-    : chapter.server
-      ? `${chapter.server.address} · status pending`
-      : chapter.pack.version
-        ? `Pack ${chapter.pack.version}`
-        : 'Pack version pending'
+  let state: string
+  let meta: string
+  let tone = 'text-accent'
+  if (launching) {
+    ;[state, meta] = ['◐ Launching', 'Handing over to Prism']
+  } else if (missing) {
+    ;[state, meta, tone] = [
+      '○ Prism not found',
+      'Install Prism Launcher and sign in there',
+      'text-danger',
+    ]
+  } else if (engine === null) {
+    ;[state, meta] = ['○ Checking engine', '']
+  } else if (chapter.server) {
+    ;[state, meta] = serverLine(status, chapter.server.address)
+    if (status?.checked && !status.online) tone = 'text-fg-muted'
+  } else {
+    ;[state, meta] = [
+      '● Ready',
+      chapter.pack.version ? `Pack ${chapter.pack.version}` : 'Pack version pending',
+    ]
+  }
 
   return (
     <section className="border-line flex flex-col gap-3 border-b px-14 py-5">
@@ -50,11 +73,20 @@ export function ActionBar({ chapter, engine, launching, error, onPlay, onInstall
           </Button>
         )}
         <div className="grow" />
-        <div className="flex flex-col items-end gap-0.5">
-          <span className={`font-mono text-xs ${missing ? 'text-danger' : 'text-accent'}`}>
-            {state}
-          </span>
-          <span className="text-fg-faint text-xs">{meta}</span>
+        <div className="flex items-center gap-2">
+          <div className="flex flex-col items-end gap-0.5">
+            <span className={`font-mono text-xs ${tone}`}>{state}</span>
+            <span className="text-fg-faint text-xs">{meta}</span>
+          </div>
+          {chapter.server && (
+            <IconButton
+              icon={RefreshCw}
+              title="Check the server now"
+              size="sm"
+              onClick={onCheckServer}
+              disabled={checking}
+            />
+          )}
         </div>
       </div>
       {error && (

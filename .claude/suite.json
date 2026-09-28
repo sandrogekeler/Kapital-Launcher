@@ -54,8 +54,16 @@
         "run": "go test ./..."
       },
       {
+        "name": "release notes",
+        "run": "python3 .github/scripts/release-notes_test.py"
+      },
+      {
         "name": "schemas",
         "run": "node scripts/validate-schemas.mjs"
+      },
+      {
+        "name": "aislop",
+        "run": "npx --yes aislop@0.16.0 ci"
       }
     ],
     "invariants": [
@@ -111,10 +119,21 @@
       {
         "name": "no em dashes in published copy",
         "grep": "—",
-        "paths": ["frontend/src", "data", "README.md", "wails.json"],
+        "paths": [
+          "frontend/src",
+          "data",
+          "README.md",
+          "wails.json",
+          "CONTRIBUTING.md",
+          "SECURITY.md",
+          ".github/ISSUE_TEMPLATE",
+          ".github/pull_request_template.md",
+          "agent_docs",
+          "docs/adr"
+        ],
         "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/assets/**"],
         "expect": "no matches",
-        "diagnosis": "Nothing the user reads carries an em dash: use a comma, a colon, a middle dot or two sentences. The rule is the Kapitel Kapital wiki's and the Kollektiv suite's alike. Code comments and the agent docs are not published and are not covered.",
+        "diagnosis": "Nothing the user reads carries an em dash: use a comma, a colon, a middle dot or two sentences. The rule is the Kapitel Kapital wiki's and the Kollektiv suite's alike, and this repo extends it to its own docs. Not covered: docs/HANDOFF.md, which is the brief as it was received, and the files vendored from Kollektiv, which are that repo's to write. Pull request titles and bodies are checked by pr-copy.yml.",
         "reference": "agent_docs/CLAUDE.md"
       }
     ],

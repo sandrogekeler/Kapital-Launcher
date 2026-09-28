@@ -1,0 +1,53 @@
+# The escape hatch. Blank issues are off, so without this form anyone whose
+# problem is not cleanly a bug or a feature has no way in. Labelled with the
+# stock `question` label rather than a `type:` one on purpose: `type:` drives
+# the release notes and the pull-request gate, and a question belongs in neither.
+name: Question or something else
+description: Ask for help, or report something that is not clearly a bug or a feature request
+title: '[Question]: '
+labels: ['question', 'status:needs-triage']
+
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: What do you need help with?
+      description: As much or as little detail as you have.
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Which version of Kapital Launcher?
+      description: Shown in the engine card. Leave blank if it is not relevant.
+      placeholder: 0.1.0
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Which operating system?
+      options:
+        - Windows 11
+        - macOS (Apple Silicon)
+        - Something else
+
+  # >>> suite:priority. Vendored from kollektiv by scripts/sync-priority.sh. Edit it there.
+  - type: dropdown
+    id: priority
+    attributes:
+      label: How urgent is this for you?
+      description: Your honest read. Triage may change it, and that is normal.
+      options:
+        - 'Blocking: I cannot use it and have no way around it'
+        - 'Significant: it costs me real time, but I can work around it'
+        - 'Minor: it would be nice, but it is not in my way'
+    validations:
+      required: true
+  # <<< suite:priority
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots help. Drag them straight into this box.

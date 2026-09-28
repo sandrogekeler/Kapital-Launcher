@@ -74,13 +74,22 @@
             { "type": "null" },
             {
               "type": "object",
-              "required": ["address"],
+              "required": ["address", "joinOnLaunch"],
               "additionalProperties": false,
               "properties": {
                 "address": {
                   "type": "string",
                   "pattern": "^[A-Za-z0-9.-]+(:[0-9]{1,5})?$",
-                  "description": "host[:port]. Passed to Prism's --server, so nothing else is accepted."
+                  "description": "host[:port]. Pinged for the status line and, when joinOnLaunch is true, passed to Prism's --server, so nothing else is accepted."
+                },
+                "joinOnLaunch": {
+                  "type": "boolean",
+                  "description": "Whether Play joins this server. A server-first chapter says true; a modpack that merely has a server says false and the player joins from inside the game."
+                },
+                "software": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "What the server runs, for the facts panel: Paper, Vanilla, or [PLACEHOLDER]."
                 }
               }
             }

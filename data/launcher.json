@@ -1,7 +1,9 @@
 {
   "$schema": "../design/launcher.schema.json",
   "version": 1,
-  "wiki": { "baseUrl": "https://kapitel-kapital.pages.dev" },
+  "wiki": {
+    "baseUrl": "https://kapitel-kapital.pages.dev"
+  },
   "chapters": [
     {
       "id": "luxemburg",
@@ -11,11 +13,13 @@
       "kind": "Modpack · creative building expansion",
       "blurb": "A creative building expansion filled with tools, decorations, blocks and automations.",
       "state": "released",
-      "instance": { "id": "kapital-luxemburg" },
+      "instance": {
+        "id": "kapital-luxemburg"
+      },
       "pack": {
         "type": "modpack",
-        "loader": "[PLACEHOLDER]",
-        "minecraft": "[PLACEHOLDER]",
+        "loader": "Forge",
+        "minecraft": "1.19.1",
         "mods": null,
         "memoryGb": null,
         "version": null,
@@ -38,18 +42,24 @@
       "kind": "Server · vanilla-plus survival",
       "blurb": "A plug-and-play vanilla server with economies, updated survival, and character progression. Launches with your visual pack.",
       "state": "released",
-      "instance": { "id": "kapital-lichdenstein" },
+      "instance": {
+        "id": "kapital-lichdenstein"
+      },
       "pack": {
         "type": "client-visuals",
         "loader": "[PLACEHOLDER]",
-        "minecraft": "[PLACEHOLDER]",
+        "minecraft": "1.20.6",
         "mods": null,
         "memoryGb": null,
         "version": null,
         "packwiz": null,
         "mrpack": null
       },
-      "server": { "address": "placeholder.invalid" },
+      "server": {
+        "address": "placeholder.invalid",
+        "joinOnLaunch": true,
+        "software": "Paper"
+      },
       "wiki": {
         "title": "Lichdenstein",
         "line": "Small, cautious settlements on scarred land.",
@@ -65,7 +75,9 @@
       "kind": "Modpack · modern creative expansion",
       "blurb": "A modern creative expansion with new tools, visual improvements and alternative automations.",
       "state": "development",
-      "instance": { "id": "kapital-frangfurd" },
+      "instance": {
+        "id": "kapital-frangfurd"
+      },
       "pack": {
         "type": "modpack",
         "loader": "NeoForge",
@@ -76,7 +88,11 @@
         "packwiz": null,
         "mrpack": null
       },
-      "server": null,
+      "server": {
+        "address": "placeholder.invalid",
+        "joinOnLaunch": false,
+        "software": "[PLACEHOLDER]"
+      },
       "wiki": {
         "title": "The Obelisk",
         "line": "A built-up city-state, read from a distance.",

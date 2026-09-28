@@ -1,0 +1,39 @@
+{
+  "$comment": [
+    "What .github/scripts/release-notes.py needs to know that is true of this repo",
+    "and no other. The rules it applies, which label means which section and that",
+    "an unlabelled pull request never reaches Features, are the same across the",
+    "suite and live in the script, vendored from kollektiv-mc/Kollektiv."
+  ],
+
+  "nonAppPaths": [
+    ".aislop/",
+    ".aislopignore",
+    ".claude/",
+    ".github/",
+    ".gitattributes",
+    ".gitignore",
+    "CLAUDE.md",
+    "CONTRIBUTING.md",
+    "README.md",
+    "SECURITY.md",
+    "agent_docs/",
+    "docs/",
+    "lefthook.yml",
+    "package.json",
+    "pnpm-lock.yaml",
+    "scripts/"
+  ],
+
+  "$nonAppPaths": [
+    "Prefixes, matched against each changed file. A pull request touching only",
+    "these did not change the binary being downloaded, so it is left out of the",
+    "notes and counted in the footer instead.",
+    "",
+    "Not listed, on purpose: build/ holds the app icon and platform manifests,",
+    "which ship; design/ and data/ are inputs the app is generated from; and the",
+    "frontend's build config does not ship but excluding it by path would also",
+    "hide real frontend work in the same pull request. That case is what the",
+    "type:chore label is for."
+  ]
+}

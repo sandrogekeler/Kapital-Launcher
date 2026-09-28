@@ -12,7 +12,7 @@ on Wails v2.
 
 ## Decision
 
-Wails v2.16.0 on Go 1.25, with React 19, TypeScript, Vite and Tailwind v4 in
+Wails v2.16.0 on Go 1.26, with React 19, TypeScript, Vite and Tailwind v4 in
 the frontend and Zustand for state: the Konnekt stack, so its conventions,
 its token pipeline shape and its agent tooling carry over with the names
 changed.
@@ -24,6 +24,9 @@ drawn for.
 ## Consequences
 
 - One Go dependency. Wails is pinned by hand and excluded from Dependabot.
+- `go.mod` says 1.26 although Wails needs only 1.25: CI runs `govulncheck`
+  v1.8.0, which needs 1.26, and the same pin as Konnekt keeps the two repos
+  on one scanner version.
 - The Wails CLI is a build prerequisite (`wails generate module`, `wails build`),
   not a module dependency.
 - Reconsider v3 once it reaches a stable release; the migration is the shell
