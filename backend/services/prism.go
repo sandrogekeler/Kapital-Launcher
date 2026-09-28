@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -42,11 +43,12 @@ var ErrPrismNotFound = errors.New("Prism Launcher was not found; install it from
 
 // PrismService finds and runs the Prism Launcher install the app drives.
 type PrismService struct {
-	// lookPath, getenv, stat and run are injected so detection is testable
-	// without a Prism install on the machine running the tests.
+	// lookPath, getenv, stat, open and run are injected so detection is
+	// testable without a Prism install on the machine running the tests.
 	lookPath func(file string) (string, error)
 	getenv   func(key string) string
 	stat     func(name string) (os.FileInfo, error)
+	open     func(name string) (io.ReadCloser, error)
 	run      func(ctx context.Context, exe string, args ...string) ([]byte, error)
 	goos     string
 	home     string
@@ -65,6 +67,7 @@ func NewPrismService(goos string) *PrismService {
 		lookPath: exec.LookPath,
 		getenv:   os.Getenv,
 		stat:     os.Stat,
+		open:     func(name string) (io.ReadCloser, error) { return os.Open(name) },
 		run: func(ctx context.Context, exe string, args ...string) ([]byte, error) {
 			return exec.CommandContext(ctx, exe, args...).Output()
 		},

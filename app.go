@@ -102,6 +102,21 @@ func (a *App) RefreshEngine() (models.EngineInfo, error) {
 	return info, nil
 }
 
+// GetInstances reports which chapters' Prism instances exist, read fresh from
+// disk under the resolved Prism root. It stats one file per chapter and reads
+// one key from Prism's config; see services/instances.go for exactly what.
+func (a *App) GetInstances() (models.InstanceReport, error) {
+	settings, err := a.settings.Load()
+	if err != nil {
+		return models.InstanceReport{}, err
+	}
+	engine, err := a.GetEngine()
+	if err != nil {
+		return models.InstanceReport{}, err
+	}
+	return a.prism.Instances(settings, engine, a.manifest.Chapters), nil
+}
+
 // LaunchChapter starts the chapter's Prism instance, joining its server when
 // it has one. The chapter id is looked up in the validated manifest, so the
 // instance id and address that reach Prism are the manifest's, never the

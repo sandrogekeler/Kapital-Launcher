@@ -10,6 +10,10 @@ export function GetEngine() {
   return window['go']['main']['App']['GetEngine']();
 }
 
+export function GetInstances() {
+  return window['go']['main']['App']['GetInstances']();
+}
+
 export function GetManifest() {
   return window['go']['main']['App']['GetManifest']();
 }

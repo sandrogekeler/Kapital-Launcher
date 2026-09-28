@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -89,5 +90,27 @@ func TestBoundMethodsReturnAnError(t *testing.T) {
 		if !strings.HasSuffix(strings.TrimSpace(line), "error {") && !strings.HasSuffix(strings.TrimSpace(line), "error) {") {
 			t.Errorf("%s does not return an error as its last value", name)
 		}
+	}
+}
+
+func TestGetInstancesAnswersForEveryChapterUnderAConfiguredRoot(t *testing.T) {
+	app := newTestApp(t)
+	root := t.TempDir()
+	if err := app.SaveSettings(models.AppSettings{Theme: "dark", PrismRoot: root}); err != nil {
+		t.Fatal(err)
+	}
+	inst := filepath.Join(root, "instances", "kapital-luxemburg")
+	if err := os.MkdirAll(inst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(inst, "instance.cfg"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := app.GetInstances()
+	if err != nil || got.Root != root {
+		t.Fatalf("%v %+v", err, got)
+	}
+	if !got.Present["luxemburg"] || got.Present["lichdenstein"] || got.Present["frangfurd"] {
+		t.Fatalf("%+v", got.Present)
 	}
 }

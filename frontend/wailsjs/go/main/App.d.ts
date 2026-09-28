@@ -6,6 +6,8 @@ export function GetAppVersion():Promise<string>;
 
 export function GetEngine():Promise<models.EngineInfo>;
 
+export function GetInstances():Promise<models.InstanceReport>;
+
 export function GetManifest():Promise<models.Manifest>;
 
 export function GetServerStatus(arg1:string):Promise<models.ServerStatus>;

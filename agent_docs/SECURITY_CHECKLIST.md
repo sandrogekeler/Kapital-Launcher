@@ -15,11 +15,19 @@ A different count is new surface to classify.
 ## S1. Credentials
 
 **S1.1 The Microsoft account never enters this process.**
-Holds when: nothing under `backend/` or `app.go` opens Prism's `accounts.json`
-or anything under its data directory; the only account-related value is the
-profile *name* in `AppSettings.ProfileName`, passed to `--profile`.
-Verify: `grep -rn 'accounts\|token\|refresh' --include=*.go . | grep -v _test`.
-Probe: a setting that points `PrismRoot` at a folder. Does anything read it?
+Holds when: nothing under `backend/` or `app.go` opens Prism's `accounts.json`;
+the only account-related value is the profile *name* in
+`AppSettings.ProfileName`, passed to `--profile`. Inside a Prism data
+directory exactly two reads happen, both in `services/instances.go`:
+`prismlauncher.cfg` is scanned for the one key `InstanceDir` (every other line,
+including any `ProxyPass`, is dropped unread and nothing from the file is
+logged), and `<instances>/<instance id>/instance.cfg` is stat'ed, once per
+manifest instance id. The instances folder is never listed.
+Verify: `grep -rn 'accounts\|token\|refresh' --include=*.go . | grep -v _test`;
+`grep -rn 'p.open(\|os.Open\|ReadFile' backend/services/instances.go` shows one open;
+`TestScanInstanceDirKeepsOnlyThatKey`.
+Probe: a setting that points `PrismRoot` at a folder. Does anything read more
+than those two paths from it?
 
 **S1.2 App data holds no secrets.**
 Holds when: `models.AppSettings` carries no password, token or key, and the
