@@ -10,10 +10,11 @@ Personal use, for the people on the same servers.
 
 ## Getting started
 
-Prerequisites: Go 1.25, Node 22 with pnpm, the Wails CLI
-(`go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0`), and Prism
-Launcher installed and signed in. `wails doctor` lists what your platform
-still needs.
+Prerequisites: Go 1.25 or later, Node 22 or later with pnpm 11 or later
+(`npm install -g pnpm`), the Wails CLI at the version `go.mod` names
+(`go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0`; an older CLI
+rewrites `go.mod`), and Prism Launcher installed and signed in. `wails doctor`
+lists what your platform still needs.
 
 ```bash
 cd frontend && pnpm install && cd ..

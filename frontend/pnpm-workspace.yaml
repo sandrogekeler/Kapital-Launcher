@@ -1,0 +1,13 @@
+# pnpm settings for the frontend. pnpm 10.16 and later read them from here;
+# the `pnpm` field in package.json is ignored from pnpm 11 on.
+#
+# minimumReleaseAge is pnpm's supply-chain policy: a version published less
+# than this many minutes ago is not installed, so a compromised release is
+# usually yanked before it can reach a machine here. It is pnpm 11's default
+# stated explicitly, so the lockfile resolves the same way on every pnpm
+# version and CI, and the container that regenerates it, cannot commit an
+# entry a developer's pnpm then refuses.
+minimumReleaseAge: 1440
+
+allowBuilds:
+  esbuild: true

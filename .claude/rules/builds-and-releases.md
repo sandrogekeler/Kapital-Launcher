@@ -17,6 +17,15 @@ follows Konnekt's: cut from the Actions tab, tag `vX.Y.Z[-alpha.N|-beta.N]`,
 artefacts attested with `actions/attest` and a `checksums.txt`, no code-signing
 certificate (ADR-6), and the release body carries the Minecraft disclaimer.
 
+## The Wails CLI version is the module version
+
+`wails dev` and `wails build` rewrite `go.mod` to the CLI's own Wails version
+and run `go mod tidy` before doing anything else. A CLI older than
+`go.mod`'s `github.com/wailsapp/wails/v2` therefore downgrades the module in
+the working tree, silently. Install the CLI at the version `go.mod` names
+(`go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0`) and check
+`git status` after the first `wails dev` on a machine.
+
 ## CI
 
 `.github/workflows/ci.yml` runs the frontend gates on Ubuntu, the Go gates on
