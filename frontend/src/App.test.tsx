@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { models } from '../wailsjs/go/models'
 import * as Bindings from '../wailsjs/go/main/App'
 import App from './App'
@@ -13,6 +13,7 @@ vi.mock('../wailsjs/go/main/App')
 
 describe('App', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     useChapterStore.setState({ manifest: BUNDLED_MANIFEST, selectedId: 'luxemburg', loaded: false })
     useEngineStore.setState({ engine: null, launching: null, error: null })
     useSettingsStore.setState({ settings: DEFAULT_SETTINGS, loaded: false, error: null })
@@ -84,6 +85,31 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: /03.*Frangfurd/ }))
     expect(screen.getByRole('button', { name: 'Play Frangfurd' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Check the server now' })).toBeInTheDocument()
+  })
+
+  // Restoring the saved chapter and saving a new selection once fed each
+  // other: every save re-ran detection and spawned Prism, forever (#6).
+  it('reopens the saved chapter without writing it back, and saves a new pick once', async () => {
+    vi.mocked(Bindings.GetSettings).mockResolvedValue({
+      ...DEFAULT_SETTINGS,
+      lastChapter: 'frangfurd',
+    })
+    render(<App />)
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Frangfurd'),
+    )
+    // Let any effect ping-pong play out before counting.
+    await new Promise((r) => setTimeout(r, 50))
+    expect(Bindings.SaveSettings).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: /02.*Lichdenstein/ }))
+    await waitFor(() => expect(Bindings.SaveSettings).toHaveBeenCalledTimes(1))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(Bindings.SaveSettings).toHaveBeenCalledTimes(1)
+    expect(Bindings.SaveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ lastChapter: 'lichdenstein' }),
+    )
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Lichdenstein')
   })
 
   it('shows the disclaimer the usage guidelines require', () => {

@@ -82,3 +82,22 @@ func TestValidateSettings(t *testing.T) {
 }
 
 func isWindows() bool { return os.PathSeparator == '\\' }
+
+func TestAffectsDetectionOnlyForPrismFields(t *testing.T) {
+	base := models.AppSettings{Theme: "dark", PrismRoot: "/srv/prism"}
+	cases := map[string]struct {
+		after models.AppSettings
+		want  bool
+	}{
+		"open chapter":      {models.AppSettings{Theme: "dark", PrismRoot: "/srv/prism", LastChapter: "frangfurd"}, false},
+		"theme and profile": {models.AppSettings{Theme: "light", PrismRoot: "/srv/prism", ProfileName: "Steve"}, false},
+		"whitespace only":   {models.AppSettings{Theme: "dark", PrismRoot: " /srv/prism "}, false},
+		"root":              {models.AppSettings{Theme: "dark", PrismRoot: "/srv/other"}, true},
+		"executable set":    {models.AppSettings{Theme: "dark", PrismRoot: "/srv/prism", PrismExecutable: "/usr/bin/prismlauncher"}, true},
+	}
+	for name, c := range cases {
+		if got := AffectsDetection(base, c.after); got != c.want {
+			t.Errorf("%s: got %v, want %v", name, got, c.want)
+		}
+	}
+}
