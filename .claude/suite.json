@@ -1,0 +1,136 @@
+{
+  "$schema": "https://raw.githubusercontent.com/kollektiv-mc/Kollektiv/main/design/suite.schema.json",
+  "product": "Kapital Launcher",
+  "kind": "wails-desktop",
+  "tracking": "github-issues",
+  "roadmap": "agent_docs/ROADMAP.md",
+  "health": {
+    "commands": [
+      {
+        "name": "typecheck",
+        "run": "pnpm typecheck",
+        "cwd": "frontend"
+      },
+      {
+        "name": "lint",
+        "run": "pnpm lint",
+        "cwd": "frontend"
+      },
+      {
+        "name": "format",
+        "run": "pnpm format:check",
+        "cwd": "frontend"
+      },
+      {
+        "name": "test",
+        "run": "pnpm test",
+        "cwd": "frontend"
+      },
+      {
+        "name": "frontend coverage floor",
+        "run": "pnpm test:coverage",
+        "cwd": "frontend"
+      },
+      {
+        "name": "bundle budget",
+        "run": "pnpm check-bundle",
+        "cwd": "frontend"
+      },
+      {
+        "name": "token classes",
+        "run": "pnpm check-tokens",
+        "cwd": "frontend"
+      },
+      {
+        "name": "gofmt",
+        "run": "test -z \"$(gofmt -l .)\""
+      },
+      {
+        "name": "go vet",
+        "run": "go vet ./..."
+      },
+      {
+        "name": "go test",
+        "run": "go test ./..."
+      },
+      {
+        "name": "schemas",
+        "run": "node scripts/validate-schemas.mjs"
+      }
+    ],
+    "invariants": [
+      {
+        "name": "no literal colours in components",
+        "grep": "#[0-9a-fA-F]{3,8}\\b|rgba?\\(|\\b(text|bg|border)-(white|black|gray|zinc|neutral|slate|red|green|blue|amber|yellow|emerald)\\b",
+        "paths": [
+          "frontend/src/components",
+          "frontend/src/App.tsx",
+          "frontend/src/style.css"
+        ],
+        "exclude": [],
+        "expect": "no matches",
+        "diagnosis": "Every colour the app paints is a token in design/tokens.json, generated into frontend/src/styles/tokens.css and exposed as bg-canvas, text-fg-muted, border-line, text-accent and so on. A literal hex, an rgb() or one of Tailwind's own palette names is a colour defined somewhere other than the source: it ignores the theme, ignores the chapter accent, and the next token change leaves it behind. A colour the set does not name is a token to add, never a literal to inline (Kollektiv's rule, adopted here). Legitimate exception: none in these paths. The generated tokens.css is outside the grep on purpose, since it is where the literals are supposed to be.",
+        "reference": "agent_docs/HEALTH_CHECKLIST.md"
+      },
+      {
+        "name": "no arbitrary pixel text sizes",
+        "grep": "text-\\[[0-9.]+px\\]",
+        "paths": ["frontend/src"],
+        "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/assets/**"],
+        "expect": "no matches",
+        "diagnosis": "The type scale is design/tokens.json's type.size, generated as text-2xs through text-display. An inlined text-[13px] is the same value with no single place to change it. A size the scale does not name is a value to add there.",
+        "reference": "agent_docs/HEALTH_CHECKLIST.md"
+      },
+      {
+        "name": "shell never sees a command string",
+        "grep": "exec\\.Command(Context)?\\([^,]*(\"sh\"|\"bash\"|\"cmd\"|\"powershell\"|/bin/sh|cmd\\.exe)",
+        "paths": ["app.go", "main.go", "backend"],
+        "exclude": ["**/*_test.go"],
+        "expect": "no matches",
+        "diagnosis": "Prism is called with an argument array, never through a shell, so a crafted instance id or server address cannot become a second command (docs/HANDOFF.md section 6, agent_docs/SECURITY_CHECKLIST.md S4). A match here is a shell being invoked with something as its script. Legitimate exception: none.",
+        "reference": "agent_docs/SECURITY_CHECKLIST.md"
+      },
+      {
+        "name": "no discarded errors",
+        "grep": ", _ :?= (?!.*(?:\\.\\(|//nolint))",
+        "paths": ["app.go", "main.go", "backend"],
+        "exclude": ["**/*_test.go"],
+        "expect": "no matches",
+        "diagnosis": "An error in the second return position discarded as `x, _ := f()` is a failure nobody hears about. Handle it where it happens, or say why the discard is right in a trailing `//nolint:errcheck // reason` on the same line. The comma-ok form of a type assertion (`v, _ := x.(T)`) is idiomatic and excluded by the lookahead.",
+        "reference": "agent_docs/HEALTH_CHECKLIST.md"
+      },
+      {
+        "name": "icons come from one module",
+        "grep": "from 'lucide-react'",
+        "paths": ["frontend/src"],
+        "exclude": ["**/assets/**", "**/lib/icons.ts"],
+        "expect": "no matches",
+        "diagnosis": "frontend/src/lib/icons.ts is the only module that imports lucide-react, so the icon set is swappable from one file and the entry chunk pays only for what it re-exports. ESLint enforces the same rule in eslint.config.js; this is the copy that runs where ESLint does not.",
+        "reference": ".claude/rules/frontend-style.md"
+      },
+      {
+        "name": "no em dashes in published copy",
+        "grep": "—",
+        "paths": ["frontend/src", "data", "README.md", "wails.json"],
+        "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/assets/**"],
+        "expect": "no matches",
+        "diagnosis": "Nothing the user reads carries an em dash: use a comma, a colon, a middle dot or two sentences. The rule is the Kapitel Kapital wiki's and the Kollektiv suite's alike. Code comments and the agent docs are not published and are not covered.",
+        "reference": "agent_docs/CLAUDE.md"
+      }
+    ],
+    "generated": [
+      {
+        "regenerate": "pnpm gen:tokens",
+        "cwd": "frontend",
+        "expectCleanDiff": [
+          "frontend/src/styles/tokens.css",
+          "frontend/src/styles/tokens.ts",
+          "backend/design/design_gen.go"
+        ],
+        "requiresNetwork": false,
+        "diagnosis": "A non-empty diff means one of the three generated token files was hand-edited, or design/tokens.json changed without regenerating. Both are bugs: the next run reverts the edit, and the CSS, TypeScript and Go copies of a value stop agreeing. Regenerate and commit all three with the token change.",
+        "reference": "frontend/scripts/gen-tokens.mjs"
+      }
+    ]
+  }
+}

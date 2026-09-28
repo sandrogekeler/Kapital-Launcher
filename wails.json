@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "Kapital Launcher",
+  "outputfilename": "kapital-launcher",
+  "frontend:install": "pnpm install",
+  "frontend:build": "pnpm run build",
+  "frontend:dev:watcher": "pnpm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Alessandro Gekeler",
+    "email": "alessandrogekeler@proton.me"
+  },
+  "info": {
+    "companyName": "Kapitel Kapital",
+    "productName": "Kapital Launcher",
+    "productVersion": "0.1.0-dev",
+    "copyright": "Copyright 2026 Alessandro Gekeler",
+    "comments": "NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT."
+  }
+}

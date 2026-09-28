@@ -1,0 +1,183 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"runtime"
+	"sync"
+
+	wailsrt "github.com/wailsapp/wails/v2/pkg/runtime"
+
+	"kapital/backend/models"
+	"kapital/backend/services"
+)
+
+// App is the one struct Wails binds. Every exported method on it is callable
+// from the frontend through the generated bindings in frontend/wailsjs/, and
+// every one returns (T, error) so the frontend has a rejection to handle.
+//
+// The rules that hold on every method (agent_docs/SECURITY_CHECKLIST.md):
+// a value from the frontend or a manifest is validated before it becomes an
+// argument, a path or a URL; Prism is called with an argument array, never a
+// shell string; and nothing here reads, copies or logs Prism's account data.
+type App struct {
+	ctx      context.Context
+	manifest models.Manifest
+	settings *services.SettingsService
+	prism    *services.PrismService
+
+	mu     sync.Mutex
+	engine models.EngineInfo
+}
+
+// NewApp wires the services. The manifest is parsed and validated here so a
+// bad bundled manifest fails at startup rather than on the first click.
+func NewApp(dataDir string, manifest []byte) (*App, error) {
+	m, err := services.ParseManifest(manifest)
+	if err != nil {
+		return nil, err
+	}
+	return &App{
+		manifest: m,
+		settings: services.NewSettingsService(dataDir),
+		prism:    services.NewPrismService(runtime.GOOS),
+	}, nil
+}
+
+func (a *App) startup(ctx context.Context) {
+	a.ctx = ctx
+	if _, err := a.RefreshEngine(); err != nil {
+		slog.Warn("engine detection", "error", err)
+	}
+}
+
+func (a *App) shutdown(context.Context) {}
+
+// GetAppVersion returns the version stamped into this build.
+func (a *App) GetAppVersion() (string, error) {
+	return Version, nil
+}
+
+// GetManifest returns the chapter list and everything the UI renders from it.
+func (a *App) GetManifest() (models.Manifest, error) {
+	return a.manifest, nil
+}
+
+// GetEngine returns what is known about the Prism install, from the last
+// detection. RefreshEngine re-runs detection.
+func (a *App) GetEngine() (models.EngineInfo, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.engine, nil
+}
+
+// RefreshEngine re-detects Prism with the current settings and returns the
+// result. Called on startup and after the settings change.
+func (a *App) RefreshEngine() (models.EngineInfo, error) {
+	settings, err := a.settings.Load()
+	if err != nil {
+		return models.EngineInfo{}, err
+	}
+	info := a.prism.Detect(a.context(), settings)
+	a.mu.Lock()
+	a.engine = info
+	a.mu.Unlock()
+	slog.Info("engine", "found", info.Found, "source", info.Source, "version", info.Version)
+	return info, nil
+}
+
+// LaunchChapter starts the chapter's Prism instance, joining its server when
+// it has one. The chapter id is looked up in the validated manifest, so the
+// instance id and address that reach Prism are the manifest's, never the
+// caller's.
+func (a *App) LaunchChapter(chapterID string) error {
+	chapter, ok := a.chapter(chapterID)
+	if !ok {
+		return fmt.Errorf("no chapter %q", chapterID)
+	}
+	settings, err := a.settings.Load()
+	if err != nil {
+		return err
+	}
+	engine, err := a.GetEngine()
+	if err != nil {
+		return err
+	}
+	req := models.LaunchRequest{
+		InstanceID: chapter.Instance.ID,
+		Profile:    settings.ProfileName,
+		Root:       settings.PrismRoot,
+	}
+	if chapter.Server != nil {
+		req.Server = chapter.Server.Address
+	}
+	if err := a.prism.Launch(a.context(), engine, req); err != nil {
+		slog.Error("launch", "chapter", chapterID, "error", err)
+		return err
+	}
+	slog.Info("launched", "chapter", chapterID, "instance", req.InstanceID, "server", req.Server != "")
+	return nil
+}
+
+// GetSettings returns the persisted settings, or defaults on a fresh install.
+func (a *App) GetSettings() (models.AppSettings, error) {
+	return a.settings.Load()
+}
+
+// SaveSettings validates, persists, and re-detects the engine, since the
+// settings decide where Prism is looked for.
+func (a *App) SaveSettings(settings models.AppSettings) error {
+	if err := a.settings.Save(settings); err != nil {
+		return err
+	}
+	_, err := a.RefreshEngine()
+	return err
+}
+
+// OpenChapterWiki opens the chapter's wiki page in the system browser. The URL
+// is built from the validated manifest, so the frontend never hands one over.
+func (a *App) OpenChapterWiki(chapterID string) error {
+	chapter, ok := a.chapter(chapterID)
+	if !ok {
+		return fmt.Errorf("no chapter %q", chapterID)
+	}
+	return a.openURL(services.WikiURL(a.manifest, chapter))
+}
+
+// OpenExternal opens a web address in the system browser. http and https
+// only; anything else is refused before it reaches the OS.
+func (a *App) OpenExternal(raw string) error {
+	checked, err := services.ExternalURL(raw)
+	if err != nil {
+		return err
+	}
+	return a.openURL(checked)
+}
+
+func (a *App) openURL(url string) error {
+	if a.ctx == nil {
+		return errors.New("window is not ready")
+	}
+	wailsrt.BrowserOpenURL(a.ctx, url)
+	return nil
+}
+
+func (a *App) chapter(id string) (models.Chapter, bool) {
+	for _, c := range a.manifest.Chapters {
+		if c.ID == id {
+			return c, true
+		}
+	}
+	return models.Chapter{}, false
+}
+
+// context is the Wails context once the window is up, or Background before
+// it: detection during NewApp must not depend on the window.
+func (a *App) context() context.Context {
+	if a.ctx != nil {
+		return a.ctx
+	}
+	return context.Background()
+}

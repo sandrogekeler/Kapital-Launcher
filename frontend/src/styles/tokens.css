@@ -1,0 +1,164 @@
+/* GENERATED FILE. DO NOT EDIT.
+ *
+ * Produced by frontend/scripts/gen-tokens.mjs from design/tokens.json. A hand
+ * edit here is reverted by the next `pnpm gen:tokens` and never reaches the
+ * TypeScript or Go copies of the same values. Change design/tokens.json, then
+ * regenerate.
+ */
+
+/* Colours are `inline` so a utility resolves straight to the themed custom
+   property below: bg-canvas becomes background-color: var(--bg), which is
+   what lets a theme or a chapter switch retheme by changing the property. */
+@theme inline {
+  --color-sunken: var(--bg-sunken);
+  --color-canvas: var(--bg);
+  --color-raised: var(--bg-raised);
+  --color-raised-2: var(--bg-raised-2);
+  --color-hover: var(--bg-hover);
+  --color-fg: var(--fg);
+  --color-fg-soft: var(--fg-soft);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-faint: var(--fg-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-chapter-luxemburg: var(--chapter-luxemburg);
+  --color-chapter-lichdenstein: var(--chapter-lichdenstein);
+  --color-chapter-frangfurd: var(--chapter-frangfurd);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  /* The active chapter's accent. Set by [data-chapter] below. */
+  --color-accent: var(--accent);
+  --color-accent-wash: var(--accent-wash);
+  --color-accent-edge: var(--accent-edge);
+}
+
+/* Everything else is a plain @theme block, deliberately not `inline`, so the
+   custom property exists for hand-written CSS as well as for the utility. */
+@theme {
+  /* Type. The scale overrides Tailwind's defaults of the same name, so text-sm
+     is this UI's 13px rather than Tailwind's 14px. */
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 26px;
+  --text-display: 76px;
+  --text-display--line-height: 0.95;
+  --text-display--letter-spacing: -0.01em;
+
+  --font-ui: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Fraunces', 'Iowan Old Style', 'Georgia', serif;
+  --font-display--font-variation-settings: 'SOFT' 0, 'WONK' 0;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
+
+  /* Radius. */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+
+  /* Motion. Each duration is emitted twice from one value: --duration-* is what
+     hand-written CSS reads, and Tailwind resolves its duration-* utility against
+     --transition-duration-*, never --duration-*. */
+  --duration-fast: 140ms;
+  --transition-duration-fast: 140ms;
+  --duration-slow: 420ms;
+  --transition-duration-slow: 420ms;
+  --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Layout geometry is not a Tailwind namespace. Read it with the var()
+   shorthand, w-(--layout-sidebar), or from style.css. */
+:root {
+  --layout-sidebar: 264px;
+  --layout-hero: 440px;
+}
+
+/* Dark is the default. Light is opt-in through data-theme; the system
+   preference is honoured only when nothing was chosen, and the light block
+   is repeated under the media query rather than reordered so an explicit
+   choice always wins. */
+
+:root,
+[data-theme='dark'] {
+  --bg-sunken: #08080a;
+  --bg: #0c0c0e;
+  --bg-raised: #131316;
+  --bg-raised-2: #1a1a1f;
+  --bg-hover: #212127;
+  --fg: #ededf0;
+  --fg-soft: #c8c8cf;
+  --fg-muted: #a5a5ae;
+  --fg-faint: #8c8c97;
+  --line: rgb(255 255 255 / 0.09);
+  --line-strong: rgb(255 255 255 / 0.17);
+  --chapter-luxemburg: #e0aa4e;
+  --chapter-lichdenstein: #5cbfa2;
+  --chapter-frangfurd: #7cbfe0;
+  --warning: #e0aa4e;
+  --danger: #ef7a5e;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg-sunken: #e9e9ec;
+  --bg: #f7f7f8;
+  --bg-raised: #ffffff;
+  --bg-raised-2: #fcfcfd;
+  --bg-hover: #eeeef1;
+  --fg: #14141a;
+  --fg-soft: #2e2e38;
+  --fg-muted: #4c4c58;
+  --fg-faint: #63636f;
+  --line: rgb(0 0 0 / 0.11);
+  --line-strong: rgb(0 0 0 / 0.2);
+  --chapter-luxemburg: #8a6512;
+  --chapter-lichdenstein: #1a6b55;
+  --chapter-frangfurd: #1c6a8e;
+  --warning: #8a6512;
+  --danger: #b23e21;
+}
+
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme='dark']) {
+    color-scheme: light;
+    --bg-sunken: #e9e9ec;
+    --bg: #f7f7f8;
+    --bg-raised: #ffffff;
+    --bg-raised-2: #fcfcfd;
+    --bg-hover: #eeeef1;
+    --fg: #14141a;
+    --fg-soft: #2e2e38;
+    --fg-muted: #4c4c58;
+    --fg-faint: #63636f;
+    --line: rgb(0 0 0 / 0.11);
+    --line-strong: rgb(0 0 0 / 0.2);
+    --chapter-luxemburg: #8a6512;
+    --chapter-lichdenstein: #1a6b55;
+    --chapter-frangfurd: #1c6a8e;
+    --warning: #8a6512;
+    --danger: #b23e21;
+  }
+}
+
+/* The chapter accent. Set once by data-chapter on the root; read by anything
+   inside through --accent, or the accent, accent-wash and accent-edge
+   utilities. The first chapter is the fallback so nothing renders unaccented. */
+:root {
+  --accent: var(--chapter-luxemburg);
+  --accent-wash: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-edge: color-mix(in srgb, var(--accent) 42%, transparent);
+}
+[data-chapter='luxemburg'] {
+  --accent: var(--chapter-luxemburg);
+}
+[data-chapter='lichdenstein'] {
+  --accent: var(--chapter-lichdenstein);
+}
+[data-chapter='frangfurd'] {
+  --accent: var(--chapter-frangfurd);
+}

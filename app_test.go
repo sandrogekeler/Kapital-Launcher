@@ -1,0 +1,81 @@
+package main
+
+import (
+	"os"
+	"strings"
+	"testing"
+
+	"kapital/backend/models"
+)
+
+func newTestApp(t *testing.T) *App {
+	t.Helper()
+	app, err := NewApp(t.TempDir(), bundledManifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return app
+}
+
+func TestBundledManifestBoots(t *testing.T) {
+	app := newTestApp(t)
+	m, err := app.GetManifest()
+	if err != nil || len(m.Chapters) == 0 {
+		t.Fatalf("%v %+v", err, m)
+	}
+}
+
+func TestLaunchChapterRefusesAnUnknownChapter(t *testing.T) {
+	app := newTestApp(t)
+	if err := app.LaunchChapter("atlantis"); err == nil || !strings.Contains(err.Error(), "no chapter") {
+		t.Fatalf("got %v", err)
+	}
+}
+
+func TestSaveSettingsValidatesAndRedetects(t *testing.T) {
+	app := newTestApp(t)
+	if err := app.SaveSettings(models.AppSettings{Theme: "sepia"}); err == nil {
+		t.Fatal("an invalid theme must be refused")
+	}
+	if err := app.SaveSettings(models.AppSettings{Theme: "light", LastChapter: "frangfurd"}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := app.GetSettings()
+	if err != nil || got.Theme != "light" || got.LastChapter != "frangfurd" {
+		t.Fatalf("%v %+v", err, got)
+	}
+}
+
+func TestOpenExternalRefusesNonWebURLsBeforeTheWindowExists(t *testing.T) {
+	app := newTestApp(t)
+	if err := app.OpenExternal("file:///etc/passwd"); err == nil || strings.Contains(err.Error(), "window") {
+		t.Fatalf("the scheme check must run before the window check: %v", err)
+	}
+	if err := app.OpenExternal("https://prismlauncher.org"); err == nil || !strings.Contains(err.Error(), "window") {
+		t.Fatalf("with no window there is nothing to open with: %v", err)
+	}
+}
+
+// Every exported method on App must return an error as its last value, so the
+// frontend always has a rejection to handle (.claude/rules/ipc.md). Read from
+// the source rather than by reflection, so a method with no error return is
+// named in the failure.
+func TestBoundMethodsReturnAnError(t *testing.T) {
+	src, err := os.ReadFile("app.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, line := range strings.Split(string(src), "\n") {
+		if !strings.HasPrefix(line, "func (a *App) ") {
+			continue
+		}
+		name := strings.TrimPrefix(line, "func (a *App) ")
+		name = name[:strings.Index(name, "(")]
+		if name == "" || name[0] < 'A' || name[0] > 'Z' {
+			continue
+		}
+		if !strings.HasSuffix(strings.TrimSpace(line), "error {") && !strings.HasSuffix(strings.TrimSpace(line), "error) {") {
+			t.Errorf("%s does not return an error as its last value", name)
+		}
+	}
+}

@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sandrogekeler/Kapital-Launcher/design/launcher.schema.json",
+  "title": "Kapital Launcher manifest",
+  "description": "What the launcher shows and launches: the chapter list, each chapter's pack and server, its wiki teaser and changelog. data/launcher.json is the copy built into the app; docs/adr/0004-launcher-manifest.md is the plan for the Kapitel Kapital site to publish the same shape. A manifest is untrusted input wherever it comes from: it can name things, never run them. There is no field for a command, a JVM argument or a path, and the Go loader refuses a URL that is not https on an allowlisted host.",
+  "type": "object",
+  "required": ["version", "wiki", "chapters"],
+  "additionalProperties": false,
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,31}$" },
+    "instanceId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+      "description": "A Prism instance id is its folder name. No separators, no dots-only names, nothing a path could be built from."
+    },
+    "httpsUrl": { "type": "string", "pattern": "^https://[^\\s]+$" },
+    "placeholderOrString": { "type": "string", "minLength": 1 },
+    "chapter": {
+      "type": "object",
+      "required": [
+        "id",
+        "number",
+        "name",
+        "era",
+        "kind",
+        "blurb",
+        "state",
+        "instance",
+        "pack",
+        "wiki"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "number": { "type": "string", "pattern": "^[0-9]{2}$" },
+        "name": { "type": "string", "minLength": 1 },
+        "era": {
+          "type": "string",
+          "minLength": 1,
+          "description": "As the wiki's taxonomy writes the period."
+        },
+        "kind": { "type": "string", "minLength": 1 },
+        "blurb": { "type": "string", "minLength": 1 },
+        "state": { "enum": ["released", "development", "planned"] },
+        "instance": {
+          "type": "object",
+          "required": ["id"],
+          "additionalProperties": false,
+          "properties": { "id": { "$ref": "#/$defs/instanceId" } }
+        },
+        "pack": {
+          "type": "object",
+          "required": ["type", "loader", "minecraft"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "enum": ["modpack", "client-visuals"] },
+            "loader": { "$ref": "#/$defs/placeholderOrString" },
+            "minecraft": { "$ref": "#/$defs/placeholderOrString" },
+            "mods": { "type": ["integer", "null"], "minimum": 0 },
+            "memoryGb": { "type": ["integer", "null"], "minimum": 1 },
+            "version": { "type": ["string", "null"] },
+            "packwiz": {
+              "oneOf": [{ "$ref": "#/$defs/httpsUrl" }, { "type": "null" }],
+              "description": "The hosted pack.toml packwiz-installer syncs from (ADR-3, option B)."
+            },
+            "mrpack": {
+              "oneOf": [{ "$ref": "#/$defs/httpsUrl" }, { "type": "null" }],
+              "description": "The .mrpack a fresh install imports (ADR-3, option A)."
+            }
+          }
+        },
+        "server": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["address"],
+              "additionalProperties": false,
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9.-]+(:[0-9]{1,5})?$",
+                  "description": "host[:port]. Passed to Prism's --server, so nothing else is accepted."
+                }
+              }
+            }
+          ]
+        },
+        "wiki": {
+          "type": "object",
+          "required": ["title", "line", "path"],
+          "additionalProperties": false,
+          "properties": {
+            "title": { "type": "string", "minLength": 1 },
+            "line": { "type": "string", "minLength": 1 },
+            "path": {
+              "type": "string",
+              "pattern": "^/[^\\s]*$",
+              "description": "Relative to wiki.baseUrl."
+            }
+          }
+        },
+        "changelog": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["version", "summary"],
+            "additionalProperties": false,
+            "properties": {
+              "version": { "type": "string", "minLength": 1 },
+              "summary": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "wiki": {
+      "type": "object",
+      "required": ["baseUrl"],
+      "additionalProperties": false,
+      "properties": { "baseUrl": { "$ref": "#/$defs/httpsUrl" } }
+    },
+    "chapters": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/chapter" }
+    }
+  }
+}

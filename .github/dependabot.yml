@@ -1,0 +1,61 @@
+# Dependency updates. agent_docs/DEPENDENCIES.md is the decision record for
+# what may be added; this answers whether what is here is still current.
+#
+# Grouped, so routine minor and patch traffic arrives as one pull request per
+# ecosystem and only a major gets a pull request of its own. github-actions
+# groups its majors too: bumping checkout or setup-node asks one question,
+# does CI still pass, and the combined effect is what runs.
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns: ['*']
+        update-types: [major, minor, patch]
+
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+    open-pull-requests-limit: 3
+    groups:
+      go:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      # The app shell, not a library: a minor bump changes the generated
+      # bindings and the webview it links against. Upgraded by hand (ADR-1).
+      - dependency-name: github.com/wailsapp/wails/v2
+
+  # Two npm projects: the root holds lefthook and nothing else.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+    open-pull-requests-limit: 2
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: sunday
+    open-pull-requests-limit: 5
+    groups:
+      frontend:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      # Must move together, or the lockfile resolves to two vitest versions.
+      - dependency-name: '@vitest/coverage-v8'
+      - dependency-name: vitest
+      # Held on 6.x until typescript-eslint supports 7 (DEPENDENCIES.md).
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']

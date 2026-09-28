@@ -1,0 +1,33 @@
+# Build output. The directory itself stays, via .gitkeep, so `go vet ./...`
+# compiles the embed directive on a fresh clone.
+frontend/dist/*
+!frontend/dist/.gitkeep
+build/bin/
+
+# Wails frontend-hash cache
+frontend/package.json.md5
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Go
+*.test
+*.syso
+coverage.out
+frontend/coverage/
+
+# TypeScript build info; the configs point it at node_modules/.tmp
+*.tsbuildinfo
+
+# Editor
+.DS_Store
+*.swp
+
+# Claude Code: the shared config is committed (settings.json, launch.json,
+# suite.json, the vendored runner); only personal permission overrides are local.
+.claude/settings.local.json
+
+# Python bytecode from the vendored runner's test runs
+__pycache__/
+*.pyc

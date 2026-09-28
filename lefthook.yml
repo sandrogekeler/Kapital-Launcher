@@ -1,0 +1,33 @@
+# https://lefthook.dev/configuration/
+#
+# Fixes staged files on the way in, so CI's `pnpm format:check` does not fail on
+# them later. Install once with `npm install` at the repo root, then
+# `npx lefthook install`.
+pre-commit:
+  parallel: true
+  jobs:
+    - name: frontend format
+      root: "frontend/"
+      glob: "*.{ts,tsx,css,json,mjs}"
+      exclude: "src/styles/tokens.*"
+      run: pnpm exec prettier --write {staged_files}
+      stage_fixed: true
+
+    - name: frontend lint
+      root: "frontend/"
+      glob: "*.{ts,tsx}"
+      run: pnpm exec eslint {staged_files}
+
+    - name: frontend typecheck
+      root: "frontend/"
+      glob: "*.{ts,tsx}"
+      run: pnpm run typecheck
+
+    - name: go format
+      glob: "*.go"
+      run: gofmt -w {staged_files}
+      stage_fixed: true
+
+    - name: go vet
+      glob: "*.go"
+      run: go vet ./...

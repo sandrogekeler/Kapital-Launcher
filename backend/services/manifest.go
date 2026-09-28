@@ -1,0 +1,150 @@
+package services
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/url"
+	"regexp"
+	"slices"
+	"strings"
+
+	"kapital/backend/design"
+	"kapital/backend/models"
+)
+
+// ManifestVersion is the only shape this build understands. A newer manifest
+// is refused rather than half-read.
+const ManifestVersion = 1
+
+// AllowedManifestHosts is the fixed allowlist a manifest URL must be on. A
+// manifest that names another host is refused whole, because a URL in it is
+// something the app will fetch or open (agent_docs/SECURITY_CHECKLIST.md, S3).
+var AllowedManifestHosts = []string{
+	"kapitel-kapital.pages.dev",
+	"github.com",
+	"raw.githubusercontent.com",
+	"modrinth.com",
+	"cdn.modrinth.com",
+}
+
+var (
+	chapterIDPattern  = regexp.MustCompile(`^[a-z][a-z0-9-]{1,31}$`)
+	instanceIDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
+	numberPattern     = regexp.MustCompile(`^[0-9]{2}$`)
+	wikiPathPattern   = regexp.MustCompile(`^/[^\s]*$`)
+	chapterStates     = []string{"released", "development", "planned"}
+	packTypes         = []string{"modpack", "client-visuals"}
+)
+
+// ParseManifest decodes and validates a manifest. Unknown fields are an error:
+// a field this build does not know is either a typo or a newer shape, and in
+// both cases silently dropping it is the wrong answer.
+func ParseManifest(data []byte) (models.Manifest, error) {
+	var m models.Manifest
+	dec := json.NewDecoder(strings.NewReader(string(data)))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&m); err != nil {
+		return models.Manifest{}, fmt.Errorf("manifest: %w", err)
+	}
+	if err := ValidateManifest(m); err != nil {
+		return models.Manifest{}, err
+	}
+	return m, nil
+}
+
+// ValidateManifest is the Go side of design/launcher.schema.json, plus the
+// checks a schema cannot express: chapter ids are unique and known to the
+// token set, and every URL is https on an allowlisted host.
+func ValidateManifest(m models.Manifest) error {
+	if m.Version != ManifestVersion {
+		return fmt.Errorf("manifest: version %d, this build understands %d", m.Version, ManifestVersion)
+	}
+	if err := checkURL("wiki.baseUrl", m.Wiki.BaseURL); err != nil {
+		return err
+	}
+	if len(m.Chapters) == 0 {
+		return fmt.Errorf("manifest: no chapters")
+	}
+	seen := map[string]bool{}
+	for i, c := range m.Chapters {
+		where := fmt.Sprintf("manifest: chapters[%d]", i)
+		if !chapterIDPattern.MatchString(c.ID) {
+			return fmt.Errorf("%s: id %q is not lowercase letters, digits and hyphens", where, c.ID)
+		}
+		if seen[c.ID] {
+			return fmt.Errorf("%s: id %q appears twice", where, c.ID)
+		}
+		seen[c.ID] = true
+		if !slices.Contains(design.ChapterIDs, c.ID) {
+			return fmt.Errorf("%s: id %q has no accent in design/tokens.json", where, c.ID)
+		}
+		if !numberPattern.MatchString(c.Number) {
+			return fmt.Errorf("%s: number %q is not two digits", where, c.Number)
+		}
+		for name, v := range map[string]string{"name": c.Name, "era": c.Era, "kind": c.Kind, "blurb": c.Blurb} {
+			if strings.TrimSpace(v) == "" {
+				return fmt.Errorf("%s: %s is empty", where, name)
+			}
+		}
+		if !slices.Contains(chapterStates, c.State) {
+			return fmt.Errorf("%s: state %q is not one of %v", where, c.State, chapterStates)
+		}
+		if !instanceIDPattern.MatchString(c.Instance.ID) {
+			return fmt.Errorf("%s: instance id %q could name a path", where, c.Instance.ID)
+		}
+		if !slices.Contains(packTypes, c.Pack.Type) {
+			return fmt.Errorf("%s: pack type %q is not one of %v", where, c.Pack.Type, packTypes)
+		}
+		if strings.TrimSpace(c.Pack.Loader) == "" || strings.TrimSpace(c.Pack.Minecraft) == "" {
+			return fmt.Errorf("%s: pack loader and minecraft must be set (use [PLACEHOLDER])", where)
+		}
+		if c.Pack.Packwiz != nil {
+			if err := checkURL(where+".pack.packwiz", *c.Pack.Packwiz); err != nil {
+				return err
+			}
+		}
+		if c.Pack.Mrpack != nil {
+			if err := checkURL(where+".pack.mrpack", *c.Pack.Mrpack); err != nil {
+				return err
+			}
+		}
+		if c.Server != nil {
+			if _, _, err := ParseServerAddress(c.Server.Address); err != nil {
+				return fmt.Errorf("%s: server: %w", where, err)
+			}
+		}
+		if strings.TrimSpace(c.Wiki.Title) == "" || strings.TrimSpace(c.Wiki.Line) == "" {
+			return fmt.Errorf("%s: wiki teaser is incomplete", where)
+		}
+		if !wikiPathPattern.MatchString(c.Wiki.Path) {
+			return fmt.Errorf("%s: wiki path %q must be absolute and carry no whitespace", where, c.Wiki.Path)
+		}
+	}
+	return nil
+}
+
+// checkURL accepts only https on an allowlisted host, with no credentials in
+// the URL. It is the one gate every manifest URL passes through.
+func checkURL(field, raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("manifest: %s: %w", field, err)
+	}
+	if u.Scheme != "https" {
+		return fmt.Errorf("manifest: %s: %q is not https", field, raw)
+	}
+	if u.User != nil {
+		return fmt.Errorf("manifest: %s: %q carries credentials", field, raw)
+	}
+	host := strings.ToLower(u.Hostname())
+	if !slices.Contains(AllowedManifestHosts, host) {
+		return fmt.Errorf("manifest: %s: host %q is not on the allowlist", field, host)
+	}
+	return nil
+}
+
+// WikiURL joins a chapter's wiki path onto the manifest's base URL. Both were
+// validated on load, so the result is always https on the wiki's host.
+func WikiURL(m models.Manifest, c models.Chapter) string {
+	return strings.TrimRight(m.Wiki.BaseURL, "/") + c.Wiki.Path
+}

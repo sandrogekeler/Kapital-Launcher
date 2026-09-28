@@ -1,0 +1,20 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "frontend",
+        "exec",
+        "vite",
+        "--port",
+        "5199",
+        "--strictPort"
+      ],
+      "port": 5199,
+      "autoPort": false
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      The WebView is same-origin with the Wails bridge, so this is what stops
+      any remote content that ever reaches the page from loading a frame, an
+      object or a script that could call into Go. Everything the app loads is
+      its own bundle ('self'). 'unsafe-inline' on styles only, for Tailwind's
+      runtime-free output and the accent custom property React sets. No
+      remote images yet: when the manifest is fetched from the site (ADR-4),
+      img-src grows by that one host and nothing else. In dev, vite.config.ts
+      strips this tag; see there for why.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Kapital Launcher</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="./src/main.tsx" type="module"></script>
+  </body>
+</html>

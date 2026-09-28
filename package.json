@@ -1,0 +1,7 @@
+{
+  "name": "kapital-launcher-repo",
+  "private": true,
+  "devDependencies": {
+    "lefthook": "^2.1.14"
+  }
+}

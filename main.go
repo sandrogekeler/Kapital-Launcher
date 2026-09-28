@@ -1,0 +1,70 @@
+package main
+
+import (
+	"embed"
+	"log/slog"
+
+	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/options"
+	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+
+	"kapital/backend/design"
+	"kapital/backend/services"
+)
+
+// The built frontend. `pnpm build` in frontend/ has to run before `go build`
+// or `wails build`; frontend/dist/.gitkeep keeps the directory present so a
+// bare `go vet ./...` compiles on a fresh clone.
+//
+//go:embed all:frontend/dist
+var assets embed.FS
+
+// The launcher manifest built into this version of the app. The Kapitel
+// Kapital site is planned to publish the same shape, at which point this copy
+// becomes the offline fallback (docs/adr/0004-launcher-manifest.md).
+//
+//go:embed data/launcher.json
+var bundledManifest []byte
+
+func main() {
+	// Before wails.Run, so a failure to open the window is itself logged
+	// somewhere retrievable: a packaged GUI build has no terminal.
+	dataDir := services.DataDir()
+	log, logErr := services.InitLogger(dataDir)
+	defer func() {
+		if err := services.CloseLogger(); err != nil {
+			log.Error("close log file", "error", err)
+		}
+	}()
+	if logErr != nil {
+		// Non-fatal by design: the logger falls back to stderr and the app still
+		// starts on a read-only data dir.
+		log.Warn("file logging unavailable", "error", logErr)
+	}
+	log.Info("starting", "version", Version, "dataDir", dataDir)
+
+	app, err := NewApp(dataDir, bundledManifest)
+	if err != nil {
+		// The bundled manifest is part of this build; if it does not validate,
+		// the build is wrong and there is nothing sensible to show.
+		log.Error("bundled manifest is invalid", "error", err)
+		return
+	}
+
+	bg := design.WindowBackground
+	err = wails.Run(&options.App{
+		Title:            "Kapital Launcher",
+		Width:            design.WindowWidth,
+		Height:           design.WindowHeight,
+		MinWidth:         design.WindowMinWidth,
+		MinHeight:        design.WindowMinHeight,
+		BackgroundColour: &options.RGBA{R: bg[0], G: bg[1], B: bg[2], A: 255},
+		AssetServer:      &assetserver.Options{Assets: assets},
+		OnStartup:        app.startup,
+		OnShutdown:       app.shutdown,
+		Bind:             []any{app},
+	})
+	if err != nil {
+		slog.Error("wails run", "error", err)
+	}
+}
