@@ -1,0 +1,144 @@
+# Every required field is one a reporter can answer without a terminal. The
+# technical fields are optional and say where to find what they ask for.
+#
+# The `area` options must stay identical to feature_request.yml's, and every
+# label in `labels:` must exist in .github/labels.yml: GitHub ignores an
+# unknown label silently.
+name: Bug report
+description: Something in Kapital Launcher is broken or does not behave the way you expected
+title: '[Bug]: '
+labels: ['type:bug', 'status:needs-triage']
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this.
+
+        You do not need to be technical to write a good report. Answer what you can. Anything not
+        marked **Required** can be left blank, and "not sure" is a genuinely useful answer.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the existing issues and did not find this one
+          required: true
+
+  - type: input
+    id: summary
+    attributes:
+      label: What went wrong?
+      description: One sentence. There is room for the detail just below.
+      placeholder: Play Luxemburg did nothing after the button greyed out
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: What were you doing when it went wrong?
+      description: Plain English is perfect. Numbered steps help most.
+      placeholder: |
+        1. Opened the launcher
+        2. Clicked Play Luxemburg
+        3. The button greyed out and nothing opened
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen instead?
+      placeholder: Prism opens and starts the Luxemburg instance.
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot or screen recording
+      description: Optional, and often the most useful thing you can add. Drag an image straight into this box.
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Which version of Kapital Launcher?
+      description: Shown in the engine card at the bottom of the sidebar.
+      placeholder: 0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Which operating system?
+      options:
+        - Windows 11
+        - macOS (Apple Silicon)
+        - Something else
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the launcher?
+      description: Pick the closest one. The last option is a perfectly good answer.
+      options:
+        - Chapters and the chapter page
+        - Prism detection and launching
+        - Packs and updates
+        - Server status and joining
+        - Settings
+        - Something else, or not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: chapter
+    attributes:
+      label: Which chapter?
+      options:
+        - Luxemburg
+        - Lichdenstein
+        - Frangfurd
+        - Not applicable
+
+  - type: input
+    id: prism-version
+    attributes:
+      label: Which Prism Launcher version?
+      description: Shown in the engine card, or in Prism under Help, then About.
+      placeholder: 11.1.0
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log or error text
+      description: |
+        Optional. The launcher's log is in its data folder (`KapitalLauncher/kapital-launcher.log`
+        under your user's config directory). Paste the relevant lines here. Please do not paste
+        anything from Prism's own `accounts.json`.
+      render: shell
+
+  # >>> suite:priority. Vendored from kollektiv by scripts/sync-priority.sh. Edit it there.
+  - type: dropdown
+    id: priority
+    attributes:
+      label: How urgent is this for you?
+      description: Your honest read. Triage may change it, and that is normal.
+      options:
+        - 'Blocking: I cannot use it and have no way around it'
+        - 'Significant: it costs me real time, but I can work around it'
+        - 'Minor: it would be nice, but it is not in my way'
+    validations:
+      required: true
+  # <<< suite:priority
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: How often it happens, whether it started recently, anything you already tried.

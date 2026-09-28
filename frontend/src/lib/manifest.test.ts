@@ -24,9 +24,10 @@ describe('bundled manifest', () => {
 
 describe('labels', () => {
   it('joins a server and plays a pack', () => {
-    const [lux, lic] = BUNDLED_MANIFEST.chapters
+    const [lux, lic, fra] = BUNDLED_MANIFEST.chapters
     expect(playLabel(lux!)).toBe('Play Luxemburg')
     expect(playLabel(lic!)).toBe('Join Lichdenstein')
+    expect(playLabel(fra!)).toBe('Play Frangfurd')
   })
 
   it('renders unknown facts as the placeholder marker', () => {

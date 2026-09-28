@@ -9,7 +9,7 @@ Two reaches matter: **network** (a manifest, a pack index, a download, a server
 ping response) and **bridge** (a bound method on `App`, callable by anything
 that runs in the WebView).
 
-Bound methods on 2026-09-28: **9** (`grep -c '^func (a \*App) [A-Z]' app.go`).
+Bound methods on 2026-09-28: **10** (`grep -c '^func (a \*App) [A-Z]' app.go`).
 A different count is new surface to classify.
 
 ## S1. Credentials
@@ -93,18 +93,45 @@ Verify: `grep -rn 'dangerouslySetInnerHTML\|innerHTML' frontend/src` is empty.
 **S5.3 Release builds have no inspector.** Wails' `Debug.OpenInspectorOnStartup`
 is unset and `wails build` does not pass `-devtools`.
 
-## S6. Logs
+## S6. The server ping
 
-**S6.1 The log carries no credential** and is written owner-only.
-**S6.2 The share path redacts** home directory, username, server addresses and
+**S6.1 Only the manifest's addresses are pinged.**
+Holds when: `services.Ping` is reached only through `StatusService.Check`,
+which takes a `models.Chapter` from the validated manifest; the frontend
+passes a chapter id, never an address.
+Verify: `grep -rn 'Ping(' --include=*.go . | grep -v _test`.
+
+**S6.2 A response can change the status line and nothing else.**
+Holds when: the packet length is bounded (`pingMaxResponse`), the body is
+parsed as JSON into a fixed struct, and the description is flattened to text
+with formatting codes stripped. Nothing from the response reaches a file, a
+URL or a command.
+Verify: `TestReadPacketBoundsTheLength`, `TestComponentText`.
+Probe: a server that answers with a 100 MB length prefix, or never answers.
+
+**S6.3 The ping sends nothing a server can act on.** A handshake with
+protocol `-1` and an empty status request, then the connection closes.
+
+## S7. Logs
+
+**S7.1 The log carries no credential** and is written owner-only.
+**S7.2 The share path redacts** home directory, username, server addresses and
 IPv4 addresses. Verify: `TestRedactRemovesWhatIdentifiesTheUser`.
 
-## S7. CI and supply chain
+## S8. CI and supply chain
 
-**S7.1 Every workflow declares top-level `permissions:`** with `contents: read`.
-**S7.2 Actions are pinned by commit SHA** with the version as a trailing comment.
-**S7.3 Dependabot covers** gomod, npm (both projects) and github-actions.
-**S7.4 A vulnerability scanner runs in CI**: `govulncheck` on the backend job.
+**S8.1 Every workflow declares top-level `permissions:`**, `contents: read` or
+less.
+**S8.2 Actions are pinned by commit SHA** with the version as a trailing comment.
+**S8.3 Dependabot covers** gomod, npm (both projects) and github-actions.
+**S8.4 A vulnerability scanner runs in CI**: `govulncheck` on both backend jobs.
+**S8.5 Event text never reaches a shell through `${{ }}`.** `pr-copy.yml`,
+`pr-labelled.yml` and `issue-priority.yml` read titles, bodies and labels
+from `env`.
+
+CodeQL and Scorecard, which the Kollektiv suite vendors, are not here: both
+need a public repository (or Advanced Security) and this one is private. Add
+them the day it is not.
 
 ## Open backlog
 

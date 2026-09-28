@@ -41,7 +41,16 @@ A bare `catch {}` that swallows a rejection is the thing to refuse in review.
 
 ## Events
 
-None yet. When one arrives (pack sync progress, server status), it is emitted
-from Go with `runtime.EventsEmit`, listened to with `EventsOn` from
-`wailsjs/runtime`, and cleaned up on unmount. Do not poll for what an event
-can deliver.
+One so far: `server:status`, a `models.ServerStatus` emitted by
+`StatusService.Run`'s ticker and by `GetServerStatus`. The pattern for the
+next one:
+
+- The name is a Go constant (`services.EventServerStatus`) and a TS constant
+  (`EVENT_SERVER_STATUS`), spelled the same.
+- The payload names what it is about (`chapterId`), and the listener files by
+  it. A payload without one is dropped.
+- One `EventsOn` per event, in the store that owns the data, subscribed from
+  App for the app's lifetime and returning the `EventsOff` for a StrictMode
+  double mount. With no bridge, `listen` subscribes to nothing.
+- Do not poll for what an event can deliver. `check` exists for "now", not
+  for a timer.

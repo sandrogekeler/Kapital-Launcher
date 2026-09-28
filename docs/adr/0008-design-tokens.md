@@ -1,6 +1,6 @@
 # ADR-0008: Where the design tokens live
 
-**Status:** accepted, 2026-09-28, with one question for the author (below).
+**Status:** accepted, 2026-09-28. The accent question below was answered the same day.
 
 ## Context
 
@@ -30,11 +30,14 @@ question arrives: what does it read?
   `#e0aa4e`, Lichdenstein `#5cbfa2`, Frangfurd `#7cbfe0`. They are one group
   in the token file, so flipping them is one edit.
 
-## The question: the wiki's accents
+## The wiki's accents
 
-The handoff's §9 asks for a "side fix" in the wiki: Lichdenstein from `ice`
-to `verdigris`, Frangfurd from `oxide` to `ice`. **This was not done, and
-should not be done as described.** Read from the wiki on 2026-09-28:
+The handoff's §9 asked for a "side fix" in the wiki: Lichdenstein from `ice`
+to `verdigris`, Frangfurd from `oxide` to `ice`. The author confirmed the
+eras are gold, green and blue and that the wiki's mapping was the error.
+**The wiki was corrected on 2026-09-28** on the same branch as this repo,
+and not as the one-line change the handoff described, because of what was
+read from the wiki that day:
 
 - `tokens.css` states the era mapping in prose (brass, ice, oxide) and
   assigns `verdigris` to events and concepts and `ice` to locations as *type*
@@ -44,8 +47,10 @@ should not be done as described.** Read from the wiki on 2026-09-28:
   their CSS, and `tokens.css` has no `[data-accent='verdigris']` rule. Changing
   `taxonomy.mjs` alone breaks the era accent on those pages.
 
-Either the wiki keeps brass/ice/oxide and the launcher follows (one edit to
-`color.chapter` here), or the wiki adopts the handoff's mapping as a proper
-design change touching tokens, two components and its type-colour scheme. That
-is the author's decision; the launcher ships the handoff's values until it is
-made, and changing them costs one line.
+So the fix touched `taxonomy.mjs`, `tokens.css` (the accent rule, a
+`verdigris-bright` tint for both themes, and the prose that stated the old
+mapping), the two components, the contrast check and `PLAN.md`. The type
+colours (location ice, event and concept verdigris) were left as they are:
+they are a separate axis that happens to share two hues with the eras, and
+`taxonomy.mjs` now says so. Both sites agree with the launcher's
+`color.chapter` group.

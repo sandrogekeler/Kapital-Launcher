@@ -161,9 +161,21 @@ const BANNER = `/* GENERATED FILE. DO NOT EDIT.
 function emitCss(src) {
   const lines = []
   const push = (line = '') => lines.push(line)
-
   push(BANNER)
   push()
+  emitThemeMapping(src, push)
+  push()
+  emitThemeValues(src, push)
+  push()
+  emitLayout(src, push)
+  emitPalettes(src, lines, push)
+  push()
+  emitAccents(src, push)
+  push()
+  return lines.join('\n')
+}
+
+function emitThemeMapping(src, push) {
   push(`/* Colours are \`inline\` so a utility resolves straight to the themed custom`)
   push(`   property below: bg-canvas becomes background-color: var(--bg), which is`)
   push(`   what lets a theme or a chapter switch retheme by changing the property. */`)
@@ -179,8 +191,9 @@ function emitCss(src) {
   push(`  --color-accent-wash: var(--accent-wash);`)
   push(`  --color-accent-edge: var(--accent-edge);`)
   push(`}`)
+}
 
-  push()
+function emitThemeValues(src, push) {
   push(`/* Everything else is a plain @theme block, deliberately not \`inline\`, so the`)
   push(`   custom property exists for hand-written CSS as well as for the utility. */`)
   push(`@theme {`)
@@ -222,49 +235,53 @@ function emitCss(src) {
     push(`  --ease-${name}: cubic-bezier(${points.join(', ')});`)
   }
   push(`}`)
+}
 
-  push()
+function emitLayout(src, push) {
   push(`/* Layout geometry is not a Tailwind namespace. Read it with the var()`)
   push(`   shorthand, w-(--layout-sidebar), or from style.css. */`)
   push(`:root {`)
   push(`  --layout-sidebar: ${src.layout.sidebar}${src.layout.unit};`)
   push(`  --layout-hero: ${src.layout.hero}${src.layout.unit};`)
   push(`}`)
+}
 
-  const emitTheme = (selector, mode) => {
-    push()
-    push(`${selector} {`)
-    if (mode === 'light') push(`  color-scheme: light;`)
-    for (const [group, tokens] of Object.entries(src.color)) {
-      for (const [name, token] of Object.entries(tokens)) {
-        const value = token[mode]
-        // A null light value inherits the dark one; emitting it again would be
-        // a second copy to keep in step for no behavioural gain.
-        if (value == null) continue
-        const prop = group === 'chapter' ? `chapter-${name}` : name
-        push(`  --${prop}: ${css(value)};`)
-      }
+// One palette block: every colour token's value for one mode. A null light
+// value inherits the dark one; emitting it again would be a second copy to
+// keep in step for no behavioural gain.
+function emitPalette(src, push, selector, mode) {
+  push()
+  push(`${selector} {`)
+  if (mode === 'light') push(`  color-scheme: light;`)
+  for (const [group, tokens] of Object.entries(src.color)) {
+    for (const [name, token] of Object.entries(tokens)) {
+      const value = token[mode]
+      if (value == null) continue
+      const prop = group === 'chapter' ? `chapter-${name}` : name
+      push(`  --${prop}: ${css(value)};`)
     }
-    push(`}`)
   }
+  push(`}`)
+}
 
+function emitPalettes(src, lines, push) {
   push()
   push(`/* Dark is the default. Light is opt-in through data-theme; the system`)
   push(`   preference is honoured only when nothing was chosen, and the light block`)
   push(`   is repeated under the media query rather than reordered so an explicit`)
   push(`   choice always wins. */`)
-  emitTheme(`:root,\n[data-theme='dark']`, 'dark')
-  emitTheme(`[data-theme='light']`, 'light')
+  emitPalette(src, push, `:root,\n[data-theme='dark']`, 'dark')
+  emitPalette(src, push, `[data-theme='light']`, 'light')
   push()
   push(`@media (prefers-color-scheme: light) {`)
-  const inner = []
   const save = lines.length
-  emitTheme(`  :root:not([data-theme='dark'])`, 'light')
-  inner.push(...lines.splice(save).map((l) => (l ? `  ${l}` : l)))
+  emitPalette(src, push, `  :root:not([data-theme='dark'])`, 'light')
+  const inner = lines.splice(save).map((l) => (l ? `  ${l}` : l))
   lines.push(...inner.slice(1))
   push(`}`)
+}
 
-  push()
+function emitAccents(src, push) {
   push(`/* The chapter accent. Set once by data-chapter on the root; read by anything`)
   push(`   inside through --accent, or the accent, accent-wash and accent-edge`)
   push(`   utilities. The first chapter is the fallback so nothing renders unaccented. */`)
@@ -279,8 +296,6 @@ function emitCss(src) {
     push(`  --accent: var(--chapter-${id});`)
     push(`}`)
   }
-  push()
-  return lines.join('\n')
 }
 
 // ── TS emission ─────────────────────────────────────────────────────────────

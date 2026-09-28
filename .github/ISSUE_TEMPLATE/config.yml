@@ -1,0 +1,14 @@
+# The chooser shown at /issues/new/choose. Blank issues are off, so every
+# route into the tracker goes through a form and a report arrives with a
+# version, an OS and an area attached. The Question form replaces the blank
+# box for anything that is not cleanly a bug or a feature.
+blank_issues_enabled: false
+
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/sandrogekeler/Kapital-Launcher/security/advisories/new
+    about: Report it privately through GitHub. Please do not open a public issue for a security problem.
+
+  - name: Roadmap
+    url: https://github.com/sandrogekeler/Kapital-Launcher/blob/main/agent_docs/ROADMAP.md
+    about: What is built, what comes next, and what is deliberately out of scope.

@@ -52,6 +52,8 @@ export namespace models {
 	}
 	export class Server {
 	    address: string;
+	    joinOnLaunch: boolean;
+	    software: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Server(source);
@@ -60,6 +62,8 @@ export namespace models {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.address = source["address"];
+	        this.joinOnLaunch = source["joinOnLaunch"];
+	        this.software = source["software"];
 	    }
 	}
 	export class Pack {
@@ -223,6 +227,34 @@ export namespace models {
 	}
 	
 	
+	export class ServerStatus {
+	    chapterId: string;
+	    checked: boolean;
+	    online: boolean;
+	    players: number;
+	    max: number;
+	    version: string;
+	    motd: string;
+	    latencyMs: number;
+	    checkedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ServerStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.chapterId = source["chapterId"];
+	        this.checked = source["checked"];
+	        this.online = source["online"];
+	        this.players = source["players"];
+	        this.max = source["max"];
+	        this.version = source["version"];
+	        this.motd = source["motd"];
+	        this.latencyMs = source["latencyMs"];
+	        this.checkedAt = source["checkedAt"];
+	    }
+	}
 	
 
 }

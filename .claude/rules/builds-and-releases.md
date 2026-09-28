@@ -19,10 +19,17 @@ certificate (ADR-6), and the release body carries the Minecraft disclaimer.
 
 ## CI
 
-`.github/workflows/ci.yml` runs three jobs: the frontend gates on Ubuntu, the Go
-gates on Windows (the primary target, ADR-7) with the frontend built first
-because `main.go` embeds `frontend/dist`, and the vendored runner's
-`invariants` and `generated` sections with `--require-runnable`.
+`.github/workflows/ci.yml` runs the frontend gates on Ubuntu, the Go gates on
+Windows and on an Apple Silicon macOS runner (the two targets, ADR-7) with the
+frontend built first because `main.go` embeds `frontend/dist`, the release
+notes generator's tests, and the vendored runner's `invariants`, `generated`
+and `memory` sections with `--require-runnable`.
+
+Beside it: `pr-labelled.yml` (one `type:` and one `area:` label),
+`pr-copy.yml` (title in sentence case, no em dash in title or body),
+`aislop.yml` (the aislop gate at 100, with ruff pinned) and
+`issue-priority.yml` (the form's answer becomes a `p*` label). The first,
+third and fourth are vendored from Kollektiv and never edited here.
 
 Every action is pinned to a commit SHA with the version as a trailing comment,
 and every workflow declares `permissions: contents: read`. Dependabot keeps the

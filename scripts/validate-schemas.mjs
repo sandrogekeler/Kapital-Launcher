@@ -108,75 +108,76 @@ function validate(value, schema, rootSchema, at, errors) {
       return;
     }
   }
-  if (typeof value === "number") {
-    if (schema.minimum !== undefined && value < schema.minimum)
-      errors.push(`${at}: below minimum`);
-    if (schema.maximum !== undefined && value > schema.maximum)
-      errors.push(`${at}: above maximum`);
-    if (
-      schema.exclusiveMinimum !== undefined &&
-      value <= schema.exclusiveMinimum
-    )
-      errors.push(`${at}: not above ${schema.exclusiveMinimum}`);
-    if (
-      schema.exclusiveMaximum !== undefined &&
-      value >= schema.exclusiveMaximum
-    )
-      errors.push(`${at}: not below ${schema.exclusiveMaximum}`);
+  if (typeof value === "number") validateNumber(value, schema, at, errors);
+  if (typeof value === "string") validateString(value, schema, at, errors);
+  if (Array.isArray(value))
+    validateArray(value, schema, rootSchema, at, errors);
+  else if (value && typeof value === "object")
+    validateObject(value, schema, rootSchema, at, errors);
+}
+
+function validateNumber(value, schema, at, errors) {
+  if (schema.minimum !== undefined && value < schema.minimum)
+    errors.push(`${at}: below minimum`);
+  if (schema.maximum !== undefined && value > schema.maximum)
+    errors.push(`${at}: above maximum`);
+  if (schema.exclusiveMinimum !== undefined && value <= schema.exclusiveMinimum)
+    errors.push(`${at}: not above ${schema.exclusiveMinimum}`);
+  if (schema.exclusiveMaximum !== undefined && value >= schema.exclusiveMaximum)
+    errors.push(`${at}: not below ${schema.exclusiveMaximum}`);
+}
+
+function validateString(value, schema, at, errors) {
+  if (schema.minLength !== undefined && value.length < schema.minLength)
+    errors.push(`${at}: shorter than ${schema.minLength}`);
+  if (schema.pattern && !new RegExp(schema.pattern).test(value))
+    errors.push(
+      `${at}: ${JSON.stringify(value)} does not match ${schema.pattern}`,
+    );
+}
+
+function validateArray(value, schema, rootSchema, at, errors) {
+  if (schema.minItems !== undefined && value.length < schema.minItems)
+    errors.push(`${at}: fewer than ${schema.minItems} items`);
+  if (schema.maxItems !== undefined && value.length > schema.maxItems)
+    errors.push(`${at}: more than ${schema.maxItems} items`);
+  if (schema.items)
+    value.forEach((v, i) =>
+      validate(v, schema.items, rootSchema, `${at}[${i}]`, errors),
+    );
+}
+
+function validateObject(value, schema, rootSchema, at, errors) {
+  const keys = Object.keys(value);
+  if (schema.minProperties !== undefined && keys.length < schema.minProperties)
+    errors.push(`${at}: fewer than ${schema.minProperties} properties`);
+  for (const req of schema.required ?? []) {
+    if (!(req in value)) errors.push(`${at}: missing required "${req}"`);
   }
-  if (typeof value === "string") {
-    if (schema.minLength !== undefined && value.length < schema.minLength)
-      errors.push(`${at}: shorter than ${schema.minLength}`);
-    if (schema.pattern && !new RegExp(schema.pattern).test(value))
-      errors.push(
-        `${at}: ${JSON.stringify(value)} does not match ${schema.pattern}`,
+  for (const key of keys) {
+    if (schema.propertyNames)
+      validate(
+        key,
+        schema.propertyNames,
+        rootSchema,
+        `${at}.${key} (name)`,
+        errors,
       );
-  }
-  if (Array.isArray(value)) {
-    if (schema.minItems !== undefined && value.length < schema.minItems)
-      errors.push(`${at}: fewer than ${schema.minItems} items`);
-    if (schema.maxItems !== undefined && value.length > schema.maxItems)
-      errors.push(`${at}: more than ${schema.maxItems} items`);
-    if (schema.items)
-      value.forEach((v, i) =>
-        validate(v, schema.items, rootSchema, `${at}[${i}]`, errors),
-      );
-  }
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    const keys = Object.keys(value);
-    if (
-      schema.minProperties !== undefined &&
-      keys.length < schema.minProperties
+    const prop = schema.properties?.[key];
+    if (prop) validate(value[key], prop, rootSchema, `${at}.${key}`, errors);
+    else if (schema.additionalProperties === false)
+      errors.push(`${at}: unknown property "${key}"`);
+    else if (
+      schema.additionalProperties &&
+      typeof schema.additionalProperties === "object"
     )
-      errors.push(`${at}: fewer than ${schema.minProperties} properties`);
-    for (const req of schema.required ?? []) {
-      if (!(req in value)) errors.push(`${at}: missing required "${req}"`);
-    }
-    for (const key of keys) {
-      if (schema.propertyNames)
-        validate(
-          key,
-          schema.propertyNames,
-          rootSchema,
-          `${at}.${key} (name)`,
-          errors,
-        );
-      const prop = schema.properties?.[key];
-      if (prop) validate(value[key], prop, rootSchema, `${at}.${key}`, errors);
-      else if (schema.additionalProperties === false)
-        errors.push(`${at}: unknown property "${key}"`);
-      else if (
-        schema.additionalProperties &&
-        typeof schema.additionalProperties === "object"
-      )
-        validate(
-          value[key],
-          schema.additionalProperties,
-          rootSchema,
-          `${at}.${key}`,
-          errors,
-        );
-    }
+      validate(
+        value[key],
+        schema.additionalProperties,
+        rootSchema,
+        `${at}.${key}`,
+        errors,
+      );
   }
 }
 

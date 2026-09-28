@@ -31,6 +31,34 @@ As proposed, with two things stated more precisely than the handoff did:
   GitHub Releases or Cloudflare Pages. The manifest schema already has
   `pack.packwiz` and `pack.mrpack` slots.
 
+## Authoring: a repository, not an admin panel
+
+The question came up whether packs should be managed from an admin panel
+that adds and removes mods and tests locally, or fetched by the launcher
+from a hosted `.mrpack` and manifest. The second, and the reasons are what
+packwiz already is:
+
+- **The pack source is a git repository** of packwiz TOML, one folder per
+  chapter. Adding a mod is `packwiz modrinth add <slug>` (or `curseforge
+  add`), removing is `packwiz remove`, and `packwiz refresh` rewrites
+  `index.toml` with hashes. Every change is a commit with a diff, which is
+  the audit trail an admin panel would have to build.
+- **Local testing is `packwiz serve`**, packwiz's built-in HTTP server for
+  exactly this: point an instance's pre-launch installer at
+  `http://localhost:8080/pack.toml` and launch. The launcher gains a
+  developer setting for that override (Roadmap, milestone 4), so a pack can
+  be tried from a working copy before it is pushed.
+- **Publishing is a push.** A static host serves `pack.toml` and
+  `index.toml`; `packwiz modrinth export` produces the `.mrpack` a fresh
+  install imports. The launcher's manifest carries the two URLs and nothing
+  else changes.
+
+An admin panel would be a second application with its own hosting, auth and
+database, to do what the CLI and a git remote do for one person and a few
+friends. It is the wrong size. If the pack authors ever stop being people
+who use git, the panel is a front-end over the same repository, not a
+replacement for it.
+
 ## Open
 
 - How Prism's import handles an instance whose name already exists. Observe it

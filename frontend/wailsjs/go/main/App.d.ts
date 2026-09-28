@@ -8,6 +8,8 @@ export function GetEngine():Promise<models.EngineInfo>;
 
 export function GetManifest():Promise<models.Manifest>;
 
+export function GetServerStatus(arg1:string):Promise<models.ServerStatus>;
+
 export function GetSettings():Promise<models.AppSettings>;
 
 export function LaunchChapter(arg1:string):Promise<void>;

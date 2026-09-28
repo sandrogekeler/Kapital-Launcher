@@ -27,6 +27,8 @@ type App struct {
 	manifest models.Manifest
 	settings *services.SettingsService
 	prism    *services.PrismService
+	status   *services.StatusService
+	stop     context.CancelFunc
 
 	mu     sync.Mutex
 	engine models.EngineInfo
@@ -43,6 +45,7 @@ func NewApp(dataDir string, manifest []byte) (*App, error) {
 		manifest: m,
 		settings: services.NewSettingsService(dataDir),
 		prism:    services.NewPrismService(runtime.GOOS),
+		status:   services.NewStatusService(),
 	}, nil
 }
 
@@ -51,9 +54,20 @@ func (a *App) startup(ctx context.Context) {
 	if _, err := a.RefreshEngine(); err != nil {
 		slog.Warn("engine detection", "error", err)
 	}
+	// The status ticker lives as long as the window. Each result is an event
+	// the frontend listens for; a chapter's line updates without asking.
+	runCtx, cancel := context.WithCancel(ctx)
+	a.stop = cancel
+	go a.status.Run(runCtx, a.manifest.Chapters, func(s models.ServerStatus) {
+		wailsrt.EventsEmit(a.ctx, services.EventServerStatus, s)
+	})
 }
 
-func (a *App) shutdown(context.Context) {}
+func (a *App) shutdown(context.Context) {
+	if a.stop != nil {
+		a.stop()
+	}
+}
 
 // GetAppVersion returns the version stamped into this build.
 func (a *App) GetAppVersion() (string, error) {
@@ -110,7 +124,7 @@ func (a *App) LaunchChapter(chapterID string) error {
 		Profile:    settings.ProfileName,
 		Root:       settings.PrismRoot,
 	}
-	if chapter.Server != nil {
+	if chapter.Server != nil && chapter.Server.JoinOnLaunch {
 		req.Server = chapter.Server.Address
 	}
 	if err := a.prism.Launch(a.context(), engine, req); err != nil {
@@ -134,6 +148,21 @@ func (a *App) SaveSettings(settings models.AppSettings) error {
 	}
 	_, err := a.RefreshEngine()
 	return err
+}
+
+// GetServerStatus pings the chapter's server now and returns the result. The
+// same result is also emitted as a server:status event. A chapter with no
+// server returns an offline, checked status rather than an error.
+func (a *App) GetServerStatus(chapterID string) (models.ServerStatus, error) {
+	chapter, ok := a.chapter(chapterID)
+	if !ok {
+		return models.ServerStatus{}, fmt.Errorf("no chapter %q", chapterID)
+	}
+	status := a.status.Check(a.context(), chapter)
+	if a.ctx != nil {
+		wailsrt.EventsEmit(a.ctx, services.EventServerStatus, status)
+	}
+	return status, nil
 }
 
 // OpenChapterWiki opens the chapter's wiki page in the system browser. The URL

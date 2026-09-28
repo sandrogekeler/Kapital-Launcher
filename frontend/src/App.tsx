@@ -6,6 +6,7 @@ import { Panels } from './components/main/Panels'
 import { selectChapter, useChapterStore } from './stores/useChapterStore'
 import { useEngineStore } from './stores/useEngineStore'
 import { useSettingsStore } from './stores/useSettingsStore'
+import { selectStatus, useServerStore } from './stores/useServerStore'
 import { OpenChapterWiki, OpenExternal } from '../wailsjs/go/main/App'
 import { errMsg } from './lib/ipc'
 
@@ -23,6 +24,11 @@ export default function App() {
   const loadEngine = useEngineStore((s) => s.load)
   const launch = useEngineStore((s) => s.launch)
 
+  const status = useServerStore(selectStatus(selectedId))
+  const checking = useServerStore((s) => s.checking)
+  const listenServers = useServerStore((s) => s.listen)
+  const checkServer = useServerStore((s) => s.check)
+
   const theme = useSettingsStore((s) => s.settings.theme)
   const lastChapter = useSettingsStore((s) => s.settings.lastChapter)
   const settingsLoaded = useSettingsStore((s) => s.loaded)
@@ -35,6 +41,16 @@ export default function App() {
     void loadEngine()
     void loadSettings()
   }, [loadChapters, loadEngine, loadSettings])
+
+  // Server status arrives as events from Go's ticker (.claude/rules/ipc.md);
+  // this is the one listener, for the app's lifetime.
+  useEffect(() => listenServers(), [listenServers])
+
+  // Opening a chapter with a server asks for a fresh ping rather than waiting
+  // for the next tick, so the line is current when it is looked at.
+  useEffect(() => {
+    if (chapter?.server) void checkServer(chapter.id)
+  }, [chapter?.id, chapter?.server, checkServer])
 
   // Reopen the chapter that was open last time, once settings have arrived.
   useEffect(() => {
@@ -67,12 +83,15 @@ export default function App() {
         <ActionBar
           chapter={chapter}
           engine={engine}
+          status={status}
           launching={launching === chapter.id}
+          checking={checking === chapter.id}
           error={launchError}
           onPlay={() => void launch(chapter.id)}
           onInstallPrism={openPrismSite}
+          onCheckServer={() => void checkServer(chapter.id)}
         />
-        <Panels chapter={chapter} onOpenWiki={openWiki} />
+        <Panels chapter={chapter} status={status} onOpenWiki={openWiki} />
       </main>
       <footer className="text-fg-faint text-2xs pointer-events-none fixed inset-x-0 bottom-2 text-center">
         NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.

@@ -1,25 +1,29 @@
 # ADR-0007: Target operating systems
 
-**Status:** proposed; needs the author's answer to "which OSes are needed?"
+**Status:** accepted, 2026-09-28.
 
 ## Context
 
-The choice decides Prism path detection, the CI build matrix, and packaging.
-Konnekt's release builds Windows first and Linux on the snapshot channel; the
-author's own machine is Windows.
+The choice decides Prism path detection, the CI build matrix, and
+packaging. The author answered: **Windows 11 and macOS on Apple Silicon.**
+No Intel Macs, no Linux.
 
-## Proposal
+## Decision
 
-- **Windows is the primary target**: CI's Go job runs on `windows-latest`, and
-  the first release is a Windows executable.
-- **Detection is written for all three** (`backend/services/prism.go`:
-  standard install locations for Windows, macOS and Linux, plus Flatpak on
-  Linux), because it costs a few lines and a test each, and because
-  `runtime.GOOS` is the only switch. Each path is marked `[verify]` until it
-  is observed on a real install.
-- macOS and Linux builds are added when someone will run them.
+- **Two targets: Windows 11 (amd64) and macOS (arm64).** CI's Go gates run
+  on `windows-latest` and `macos-latest`, the latter an Apple Silicon
+  runner, so both binaries compile on every push. The first release ships
+  a Windows executable and a macOS app bundle.
+- **Detection stays written for Linux too** (`backend/services/prism.go`,
+  including Flatpak). It costs a few lines and a test, nothing in the code
+  prevents a Linux build, and removing it buys nothing. It is simply not
+  promised, not built in CI, and not released.
+- macOS-specific work still ahead: the `.app` bundle's plist in
+  `build/darwin/`, and whether Gatekeeper's prompt on an unsigned bundle is
+  acceptable (ADR-6 says yes for now).
 
-## Open
+## Consequences
 
-Which OSes the friends on the servers use. Until answered, nothing beyond
-Windows is promised, and nothing in the code prevents the others.
+- The issue forms offer Windows 11 and macOS (Apple Silicon) and a
+  "something else".
+- A Linux report is answered as best effort.

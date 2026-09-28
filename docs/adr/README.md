@@ -14,7 +14,7 @@ while building the scaffold.
 | [0002](0002-prism-data-root.md) | The user's own Prism root by default, a dedicated root as a setting | accepted |
 | [0003](0003-pack-format.md) | packwiz as the pack source; installer for sync, `.mrpack` for a fresh install | accepted, unbuilt |
 | [0004](0004-launcher-manifest.md) | A versioned `launcher.json`, embedded now, published by the site later | accepted |
-| [0005](0005-server-status.md) | Server List Ping for Lichdenstein | proposed |
+| [0005](0005-server-status.md) | Server List Ping for every chapter with a server; Play stays live offline | accepted |
 | [0006](0006-self-update-and-signing.md) | Manual updates and unsigned builds first | proposed |
-| [0007](0007-target-oses.md) | Windows first, detection written for all three | proposed |
-| [0008](0008-design-tokens.md) | The launcher holds its own token source, seeded from the wiki | accepted |
+| [0007](0007-target-oses.md) | Windows 11 and macOS on Apple Silicon | accepted |
+| [0008](0008-design-tokens.md) | The launcher holds its own token source, seeded from the wiki; the wiki's era accents corrected | accepted |

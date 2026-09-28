@@ -1,9 +1,10 @@
-import type { Chapter } from '../../types'
+import type { Chapter, ServerStatus } from '../../types'
 import { factValue } from '../../lib/manifest'
 import { Fact } from '../ui/Fact'
 
 interface Props {
   chapter: Chapter
+  status: ServerStatus | undefined
   onOpenWiki: () => void
 }
 
@@ -12,21 +13,29 @@ function PanelTitle({ children }: { children: string }) {
 }
 
 /** The three columns under the actions: the pack's facts, its changelog, and a line from the wiki. */
-export function Panels({ chapter, onOpenWiki }: Props) {
-  const { pack } = chapter
-  const facts: [string, string][] = chapter.server
-    ? [
-        ['Type', 'Client visuals'],
-        ['Minecraft', factValue(pack.minecraft)],
-        ['Mods', factValue(pack.mods)],
-        ['Server', chapter.server.address],
-      ]
-    : [
-        ['Loader', factValue(pack.loader)],
-        ['Minecraft', factValue(pack.minecraft)],
-        ['Mods', factValue(pack.mods)],
-        ['Memory', pack.memoryGb == null ? factValue(null) : `${pack.memoryGb} GB`],
-      ]
+export function Panels({ chapter, status, onOpenWiki }: Props) {
+  const { pack, server } = chapter
+  const facts: [string, string][] =
+    pack.type === 'client-visuals'
+      ? [
+          ['Type', 'Client visuals'],
+          ['Minecraft', factValue(pack.minecraft)],
+          ['Mods', factValue(pack.mods)],
+        ]
+      : [
+          ['Loader', factValue(pack.loader)],
+          ['Minecraft', factValue(pack.minecraft)],
+          ['Mods', factValue(pack.mods)],
+          ['Memory', pack.memoryGb == null ? factValue(null) : `${pack.memoryGb} GB`],
+        ]
+  if (server) {
+    facts.push(['Server', server.address])
+    // What the server itself reports wins over what the manifest says it runs.
+    facts.push([
+      'Runs',
+      status?.online && status.version ? status.version : factValue(server.software),
+    ])
+  }
 
   return (
     <section className="grid min-h-0 grow grid-cols-3">

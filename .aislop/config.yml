@@ -1,0 +1,21 @@
+# This repo's aislop config. The policy is base.yml beside it, vendored from
+# kollektiv-mc/Kollektiv and never edited here: which engines run, which two
+# style rules are off and why, the scoring, failBelow 100, telemetry off. Only
+# this tree's numbers live in this file. Run locally with
+# `npx --yes aislop@0.16.0 scan` with ruff 0.16.7 on PATH; CI runs `aislop ci`
+# through the vendored .github/workflows/aislop.yml, which pins both.
+#
+# The `./` is load-bearing: aislop resolves `extends` relative to this file, and
+# `base.yml` without it silently loads nothing.
+extends: ./base.yml
+
+quality:
+  # A ratchet, not a target: each number sits at today's largest function or
+  # file so the gate is green, and is lowered as they shrink. Never raised. The
+  # tool multiplies maxFileLoc by 1.5 for .go and .tsx and maxFunctionLoc by 2
+  # for a React component, then allows 10% over.
+  #
+  # Seeded 2026-09-28 at the scaffold's own sizes: the tool's defaults of 80
+  # and 400 already hold, so they are stated rather than raised.
+  maxFunctionLoc: 80
+  maxFileLoc: 400
