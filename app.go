@@ -126,7 +126,15 @@ func (a *App) GetInstances() (models.InstanceReport, error) {
 // download, and whether the launcher-managed copy has an update. Nothing is
 // downloaded; the approval card shows this before InstallPrism is called.
 func (a *App) GetPrismRelease() (models.PrismRelease, error) {
-	return a.managed.Latest(a.context())
+	rel, err := a.managed.Latest(a.context())
+	if err != nil {
+		return rel, err
+	}
+	// An update is only worth offering for the Prism the launcher runs.
+	if engine, err := a.GetEngine(); err != nil || engine.Source != "managed" {
+		rel.UpdateAvailable = false
+	}
+	return rel, nil
 }
 
 // InstallPrism installs or updates the launcher-managed Prism from Prism's
@@ -135,14 +143,15 @@ func (a *App) GetPrismRelease() (models.PrismRelease, error) {
 // what Prism published. Progress arrives as prism:install events; detection
 // re-runs once it is in place.
 func (a *App) InstallPrism() error {
-	rel, err := a.managed.Latest(a.context())
-	if err != nil {
-		return err
-	}
 	emit := func(p models.PrismInstallProgress) {
 		if a.ctx != nil {
 			wailsrt.EventsEmit(a.ctx, services.EventPrismInstall, p)
 		}
+	}
+	rel, err := a.managed.Latest(a.context())
+	if err != nil {
+		emit(models.PrismInstallProgress{Phase: "failed", Error: err.Error()})
+		return err
 	}
 	if err := a.managed.Install(a.context(), rel, emit); err != nil {
 		slog.Error("install prism", "version", rel.Version, "error", err)

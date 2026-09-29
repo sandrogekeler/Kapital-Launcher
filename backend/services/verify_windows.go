@@ -20,10 +20,10 @@ func verifySignature(_ context.Context, goos, appDir string) error {
 	if goos != "windows" {
 		return fmt.Errorf("cannot verify a %s build on Windows", goos)
 	}
-	for _, name := range []string{"prismlauncher.exe"} {
-		if err := winVerifyTrust(filepath.Join(appDir, name)); err != nil {
-			return fmt.Errorf("%s: %w", name, err)
-		}
+	// The executable is what runs; the rest of the archive's bytes are
+	// pinned by GitHub's digest.
+	if err := winVerifyTrust(filepath.Join(appDir, "prismlauncher.exe")); err != nil {
+		return fmt.Errorf("prismlauncher.exe: %w", err)
 	}
 	return nil
 }

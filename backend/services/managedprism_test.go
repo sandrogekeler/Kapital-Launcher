@@ -17,6 +17,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"kapital/backend/models"
 )
@@ -229,6 +230,9 @@ func TestInstallDownloadsVerifiesAndPlacesPrism(t *testing.T) {
 	version, exe, ok := m.Installed()
 	if !ok || version != "11.1.0" || exe != filepath.Join(m.dir, "app-11.1.0", "prismlauncher.exe") {
 		t.Fatalf("%q %q %v", version, exe, ok)
+	}
+	if _, err := os.Stat(filepath.Join(m.dir, "app-11.1.0", "portable.txt")); !errors.Is(err, os.ErrNotExist) {
+		t.Error("portable.txt is removed, so a managed Prism opened by hand never keeps data in its program folder")
 	}
 	cfg, err := os.ReadFile(filepath.Join(m.Root(), "prismlauncher.cfg"))
 	if err != nil || !strings.Contains(string(cfg), "AutomaticJavaDownload=true") || !strings.Contains(string(cfg), "Language=en_US") {
@@ -451,5 +455,109 @@ func TestDetectFallsBackToTheManagedPrism(t *testing.T) {
 	p.managed = managed
 	if got := p.Detect(ctx, models.AppSettings{}); got.Source != "standard-location" {
 		t.Errorf("a Prism the player installed wins over the managed one: %+v", got)
+	}
+}
+
+func TestInstallLeavesTheInstalledVersionAlone(t *testing.T) {
+	asset := "PrismLauncher-Windows-MSVC-Portable-11.1.1.zip"
+	g := newFakeGitHub(t, "11.1.1", map[string][]byte{asset: windowsPrism(t, "11.1.1")})
+	downloads := 0
+	g.hook = func(_ http.ResponseWriter, r *http.Request) bool {
+		if strings.HasPrefix(r.URL.Path, "/dl/") {
+			downloads++
+		}
+		return false
+	}
+	m := managedFor(t, g, "windows", "amd64", okVerify)
+	rel, err := m.Latest(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Install(context.Background(), rel, func(models.PrismInstallProgress) {}); err != nil {
+		t.Fatal(err)
+	}
+	marker := filepath.Join(m.dir, "app-11.1.1", "in-use")
+	if err := os.WriteFile(marker, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var log progressLog
+	if err := m.Install(context.Background(), rel, log.add); err != nil {
+		t.Fatal(err)
+	}
+	if downloads != 1 || log.phases() != "done" {
+		t.Errorf("a second install of the same version downloads nothing: %d downloads, phases %s", downloads, log.phases())
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Error("the program folder of the installed version is never touched; it may be running")
+	}
+}
+
+func TestInstallMovesALeftoverFolderAsideInsteadOfDeletingInPlace(t *testing.T) {
+	asset := "PrismLauncher-Windows-MSVC-Portable-11.1.1.zip"
+	g := newFakeGitHub(t, "11.1.1", map[string][]byte{asset: windowsPrism(t, "11.1.1")})
+	m := managedFor(t, g, "windows", "amd64", okVerify)
+	// An install that placed its folder but died before recording it.
+	leftover := filepath.Join(m.dir, "app-11.1.1")
+	if err := os.MkdirAll(leftover, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(leftover, "stale.txt"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rel, err := m.Latest(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Install(context.Background(), rel, func(models.PrismInstallProgress) {}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(leftover, "stale.txt")); !errors.Is(err, os.ErrNotExist) {
+		t.Error("the leftover is replaced")
+	}
+	if _, err := os.Stat(leftover + ".old"); !errors.Is(err, os.ErrNotExist) {
+		t.Error("the moved-aside folder is cleaned up")
+	}
+	if v, _, ok := m.Installed(); !ok || v != "11.1.1" {
+		t.Fatalf("installed: %q %v", v, ok)
+	}
+}
+
+func TestDownloadEndsOnAStallNotOnSlowness(t *testing.T) {
+	asset := "PrismLauncher-Windows-MSVC-Portable-11.1.1.zip"
+	body := windowsPrism(t, "11.1.1")
+	g := newFakeGitHub(t, "11.1.1", map[string][]byte{asset: body})
+	release := make(chan struct{})
+	t.Cleanup(func() { close(release) })
+	g.hook = func(w http.ResponseWriter, r *http.Request) bool {
+		if !strings.HasPrefix(r.URL.Path, "/dl/") {
+			return false
+		}
+		w.Header().Set("Content-Length", fmt.Sprint(len(body)))
+		if _, err := w.Write(body[:len(body)/2]); err != nil {
+			return true
+		}
+		w.(http.Flusher).Flush()
+		select { // then nothing: a stalled connection
+		case <-release:
+		case <-r.Context().Done():
+		}
+		return true
+	}
+	m := managedFor(t, g, "windows", "amd64", okVerify)
+	m.stall = 200 * time.Millisecond
+	rel, err := m.Latest(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	started := time.Now()
+	var log progressLog
+	if err := m.Install(context.Background(), rel, log.add); err == nil {
+		t.Fatal("a stalled download must fail")
+	}
+	if took := time.Since(started); took > 10*time.Second {
+		t.Errorf("the stall timer ends it promptly, took %v", took)
+	}
+	if _, _, ok := m.Installed(); ok {
+		t.Error("nothing is installed from a stalled download")
 	}
 }

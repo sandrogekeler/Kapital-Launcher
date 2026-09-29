@@ -50,7 +50,8 @@ const (
 	maxPrismUnpacked   = 1 << 30
 	maxPrismEntries    = 10000
 	prismAPITimeout    = 15 * time.Second
-	prismDownloadLimit = 10 * time.Minute
+	prismDownloadStall = 60 * time.Second // no bytes for this long ends a download
+	prismDownloadLimit = 2 * time.Hour    // a backstop, not a speed requirement
 	progressEvery      = 512 << 10
 )
 
@@ -108,6 +109,7 @@ type ManagedPrism struct {
 	downloadBase string
 	allowedHosts []string
 	verify       func(ctx context.Context, appDir string) error
+	stall        time.Duration
 
 	mu sync.Mutex // one install at a time
 }
@@ -122,6 +124,7 @@ func NewManagedPrism(dataDir, goos, goarch string) *ManagedPrism {
 		downloadBase: prismDownloadBase,
 		allowedHosts: prismDownloadHosts,
 		verify:       func(ctx context.Context, appDir string) error { return verifySignature(ctx, goos, appDir) },
+		stall:        prismDownloadStall,
 	}
 	m.client = &http.Client{CheckRedirect: m.checkRedirect}
 	return m
@@ -226,6 +229,12 @@ func (m *ManagedPrism) Install(ctx context.Context, rel models.PrismRelease, pro
 	if !prismTag.MatchString(rel.Version) {
 		return fmt.Errorf("refusing Prism version %q", rel.Version)
 	}
+	// The version already in place stays: replacing it would mean deleting
+	// the program folder of a Prism that may be running.
+	if installed, _, ok := m.Installed(); ok && installed == rel.Version {
+		progress(models.PrismInstallProgress{Phase: "done", Received: rel.Size, Total: rel.Size})
+		return nil
+	}
 	if err := os.MkdirAll(m.dir, 0o755); err != nil {
 		return err
 	}
@@ -245,19 +254,35 @@ func (m *ManagedPrism) Install(ctx context.Context, rel models.PrismRelease, pro
 		removeQuietly(partial)
 		return fmt.Errorf("unpack Prism: %w", err)
 	}
+	if info, err := os.Stat(m.executable(partial)); err != nil || info.IsDir() {
+		removeQuietly(partial)
+		return fmt.Errorf("the download has no Prism executable at %s", m.executable(partial))
+	}
 	progress(models.PrismInstallProgress{Phase: "verifying"})
 	if err := m.verify(ctx, partial); err != nil {
 		removeQuietly(partial)
 		return fmt.Errorf("Prism's signature did not verify: %w", err)
 	}
-	if info, err := os.Stat(m.executable(partial)); err != nil || info.IsDir() {
+	// The portable build's marker makes Prism keep its data in the program
+	// folder when started without --dir, and every update replaces that
+	// folder. Without it, a managed Prism opened by hand uses Prism's usual
+	// data folder, which no update touches. Launches always pass --dir.
+	if err := os.Remove(filepath.Join(partial, "portable.txt")); err != nil && !errors.Is(err, os.ErrNotExist) {
 		removeQuietly(partial)
-		return fmt.Errorf("the download has no Prism executable at %s", m.executable(partial))
+		return fmt.Errorf("prepare Prism: %w", err)
 	}
 
+	// A leftover folder of this version (an interrupted install that never
+	// recorded it) is moved aside, never deleted in place, then removed.
 	final := m.appDir(rel.Version)
-	if err := os.RemoveAll(final); err != nil {
-		return err
+	if _, err := os.Stat(final); err == nil {
+		aside := final + ".old"
+		removeQuietly(aside)
+		if err := os.Rename(final, aside); err != nil {
+			removeQuietly(partial)
+			return fmt.Errorf("move the previous Prism %s aside (is it running?): %w", rel.Version, err)
+		}
+		defer removeQuietly(aside)
 	}
 	if err := os.Rename(partial, final); err != nil {
 		return fmt.Errorf("place Prism: %w", err)
@@ -294,6 +319,9 @@ func (m *ManagedPrism) download(ctx context.Context, rel models.PrismRelease, pr
 	}
 	ctx, cancel := context.WithTimeout(ctx, prismDownloadLimit)
 	defer cancel()
+	// A stalled connection ends the download; a slow one does not.
+	stalled := time.AfterFunc(m.stall, cancel)
+	defer stalled.Stop()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rel.URL, nil)
 	if err != nil {
 		return "", err
@@ -324,7 +352,7 @@ func (m *ManagedPrism) download(ctx context.Context, rel models.PrismRelease, pr
 		return "", e
 	}
 	h := sha256.New()
-	counter := &progressWriter{total: rel.Size, report: progress}
+	counter := &progressWriter{total: rel.Size, report: progress, alive: func() { stalled.Reset(m.stall) }}
 	n, err := io.Copy(io.MultiWriter(tmp, h, counter), io.LimitReader(resp.Body, rel.Size+1))
 	if err != nil {
 		return fail(fmt.Errorf("download Prism: %w", err))
@@ -546,9 +574,11 @@ func removeQuietly(path string) {
 type progressWriter struct {
 	total, n, last int64
 	report         func(models.PrismInstallProgress)
+	alive          func() // called on every chunk, to hold off the stall timer
 }
 
 func (p *progressWriter) Write(b []byte) (int, error) {
+	p.alive()
 	p.n += int64(len(b))
 	if p.n-p.last >= progressEvery || p.n == p.total {
 		p.last = p.n

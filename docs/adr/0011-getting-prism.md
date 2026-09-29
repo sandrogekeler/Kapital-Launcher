@@ -44,16 +44,23 @@ Read on 2026-09-30 from Prism 11.1.1's source and release:
   (fixed URL); the asset must be this platform's portable build, at its
   expected download URL, with a SHA-256 digest and a sane size. The download
   follows redirects only to GitHub's download hosts, is size-bounded and
-  hashed while it streams, and is refused on any mismatch. Unpacking refuses
+  hashed while it streams, and is refused on any mismatch. It ends when no
+  bytes arrive for a minute, not after a fixed time, so a slow connection
+  still finishes. Unpacking refuses
   entries outside the target, rooted names and symlinks leaving the folder,
   and bounds entries and bytes. Windows then requires a valid Authenticode
   signature (`WinVerifyTrust`, no shell); macOS runs `codesign --verify --deep
   --strict` with a fixed argument array.
 - **Program and data apart.** `<data>/prism/app-<version>/` is the program,
-  replaced whole on update; `<data>/prism/root/` is Prism's data root, passed
+  replaced whole on update (the installed version is never reinstalled, and a
+  leftover folder is moved aside before it is removed, so a running Prism is
+  never deleted in place); `<data>/prism/root/` is Prism's data root, passed
   as `--dir` on every launch and never touched by an update. The managed copy
   is the dedicated root ADR-2 describes, used here because there is no root of
-  the player's to share.
+  the player's to share. The portable build's `portable.txt` is removed:
+  with it, Prism opened by hand would keep its data in the program folder,
+  which the next update replaces; without it, it uses Prism's usual data
+  folder.
 - **Prism never asks what the launcher can answer.** Before Prism first
   starts, the launcher writes `prismlauncher.cfg` (language, theme, automatic
   Java download and switching, quit after the game stops) and
@@ -61,8 +68,8 @@ Read on 2026-09-30 from Prism 11.1.1's source and release:
   player's later changes stay theirs. What remains of the wizard is the
   Microsoft sign-in, which is Prism's and stays Prism's.
 - **Updates on a click.** On start the launcher reads Prism's latest release;
-  when it is newer than the managed copy it offers the update, through the
-  same verification. Never silent.
+  when it is newer than the managed copy, and the managed copy is the Prism
+  in use, it offers the update, through the same verification. Never silent.
 
 ## Consequences
 
