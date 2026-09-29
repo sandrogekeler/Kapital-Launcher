@@ -14,6 +14,22 @@ export const PLACEHOLDER = '[PLACEHOLDER]'
 export const isPlaceholder = (value: string | null | undefined) =>
   value == null || value === PLACEHOLDER
 
+/**
+ * Whether a server address is still unsettled. The manifest writes an unknown
+ * address as a host under `.invalid`, the TLD reserved never to resolve, so
+ * the status ping reads offline rather than reaching someone else's machine
+ * (docs/adr/0005-server-status.md). The UI shows it as a placeholder.
+ */
+export function isPlaceholderAddress(address: string | null | undefined): boolean {
+  if (address == null || address === PLACEHOLDER) return true
+  const host = address.trim().replace(/:\d+$/, '').replace(/\.$/, '').toLowerCase()
+  return host === 'invalid' || host.endsWith('.invalid')
+}
+
+/** A server address formatted for a fact row: the placeholder marker when unsettled. */
+export const addressValue = (address: string | null | undefined): string =>
+  address == null || isPlaceholderAddress(address) ? PLACEHOLDER : address
+
 /** A count or a version that may be unknown, formatted for a fact row. */
 export const factValue = (value: string | number | null | undefined): string =>
   value == null || value === PLACEHOLDER ? PLACEHOLDER : String(value)

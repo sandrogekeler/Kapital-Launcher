@@ -6,7 +6,7 @@ import { LAYOUT } from '../../styles/tokens'
  * lucide's `absoluteStrokeWidth`: layout.icon.stroke in design/tokens.json.
  * The reference draws its glyphs at 1.6 on a 24-unit grid at 18px.
  */
-export const ICON_STROKE_PX = LAYOUT.icon.stroke
+const ICON_STROKE_PX = LAYOUT.icon.stroke
 
 // The box and the px lucide draws at, both from layout.icon in design/tokens.json.
 const SIZE = {

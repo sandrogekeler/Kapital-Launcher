@@ -11,6 +11,16 @@ import { BUNDLED_MANIFEST } from './lib/manifest'
 
 vi.mock('../wailsjs/go/main/App')
 
+/** The bundled manifest with Lichdenstein's server at a settled address. */
+function withLichdensteinAt(address: string) {
+  return {
+    ...BUNDLED_MANIFEST,
+    chapters: BUNDLED_MANIFEST.chapters.map((c) =>
+      c.id === 'lichdenstein' && c.server ? { ...c, server: { ...c.server, address } } : c,
+    ),
+  }
+}
+
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -74,6 +84,10 @@ describe('App', () => {
       root: '',
       source: 'path',
     })
+    // A settled address: a placeholder one never reads as online.
+    const manifest = withLichdensteinAt('play.example')
+    useChapterStore.setState({ manifest })
+    vi.mocked(Bindings.GetManifest).mockResolvedValue(models.Manifest.createFrom(manifest))
     render(<App />)
     await screen.findByRole('heading', { level: 1 })
     fireEvent.click(screen.getByRole('button', { name: /02.*Lichdenstein/ }))
@@ -86,6 +100,25 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: /03.*Frangfurd/ }))
     expect(screen.getByRole('button', { name: 'Play Frangfurd' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Check the server now' })).toBeInTheDocument()
+  })
+
+  it('shows an unsettled server address as pending, not as the placeholder host', async () => {
+    vi.mocked(Bindings.GetEngine).mockResolvedValue({
+      found: true,
+      executable: '/usr/bin/prismlauncher',
+      version: '11.1.0',
+      root: '',
+      source: 'path',
+    })
+    render(<App />)
+    await screen.findByRole('heading', { level: 1 })
+    fireEvent.click(screen.getByRole('button', { name: /02.*Lichdenstein/ }))
+    expect(await screen.findByText('○ No server yet')).toBeInTheDocument()
+    expect(screen.queryByText(/placeholder\.invalid/)).not.toBeInTheDocument()
+    expect(screen.getByText('Address pending')).toBeInTheDocument()
+    const serverFact = screen.getByText('Server').nextElementSibling
+    expect(serverFact).toHaveTextContent('[PLACEHOLDER]')
+    expect(serverFact).toHaveClass('text-fg-faint')
   })
 
   // Restoring the saved chapter and saving a new selection once fed each

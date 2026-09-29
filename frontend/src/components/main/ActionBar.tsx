@@ -1,5 +1,5 @@
 import type { Chapter, EngineInfo, ServerStatus } from '../../types'
-import { playLabel } from '../../lib/manifest'
+import { isPlaceholderAddress, playLabel } from '../../lib/manifest'
 import { serverLine } from '../../lib/serverLine'
 import { Play, RefreshCw, TriangleAlert } from '../../lib/icons'
 import { Button } from '../ui/Button'
@@ -60,7 +60,9 @@ export function ActionBar({
     ]
   } else if (chapter.server) {
     ;[state, meta] = serverLine(status, chapter.server.address)
-    if (status?.checked && !status.online) tone = 'text-fg-muted'
+    if (isPlaceholderAddress(chapter.server.address) || (status?.checked && !status.online)) {
+      tone = 'text-fg-muted'
+    }
   } else {
     ;[state, meta] = [
       '● Ready',

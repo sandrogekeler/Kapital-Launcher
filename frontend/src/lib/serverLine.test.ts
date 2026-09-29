@@ -15,6 +15,13 @@ const base: ServerStatus = {
 }
 
 describe('serverLine', () => {
+  it('says an unsettled address is pending, whatever the ping said', () => {
+    const pending: [string, string] = ['○ No server yet', 'Address pending']
+    expect(serverLine(undefined, 'placeholder.invalid')).toEqual(pending)
+    expect(serverLine({ ...base, online: false }, 'placeholder.invalid')).toEqual(pending)
+    expect(serverLine(base, 'lichdenstein.invalid:25565')).toEqual(pending)
+  })
+
   it('says checking before the first ping', () => {
     expect(serverLine(undefined, 'play.example')).toEqual(['○ Checking server', 'play.example'])
     expect(serverLine({ ...base, checked: false }, 'play.example')[0]).toBe('○ Checking server')

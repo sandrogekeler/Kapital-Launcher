@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   BUNDLED_MANIFEST,
+  addressValue,
   chapterById,
   factValue,
   isPlaceholder,
+  isPlaceholderAddress,
   playLabel,
   stateLabel,
 } from './manifest'
@@ -36,6 +38,31 @@ describe('labels', () => {
     expect(isPlaceholder('NeoForge')).toBe(false)
     expect(factValue(null)).toBe('[PLACEHOLDER]')
     expect(factValue(42)).toBe('42')
+  })
+
+  it('treats an address under .invalid as a placeholder, and a real one as itself', () => {
+    for (const unsettled of [
+      'placeholder.invalid',
+      'PLACEHOLDER.INVALID',
+      'lichdenstein.invalid:25565',
+      'placeholder.invalid.',
+      'invalid',
+      '[PLACEHOLDER]',
+      null,
+      undefined,
+    ]) {
+      expect(isPlaceholderAddress(unsettled), String(unsettled)).toBe(true)
+      expect(addressValue(unsettled)).toBe('[PLACEHOLDER]')
+    }
+    for (const real of [
+      'rails-enjoyed.tun.ply.gg',
+      'play.example:25565',
+      'invalid.example',
+      'notinvalid',
+    ]) {
+      expect(isPlaceholderAddress(real), real).toBe(false)
+      expect(addressValue(real)).toBe(real)
+    }
   })
 
   it('spells states as the reference does', () => {
