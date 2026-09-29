@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -497,11 +498,18 @@ func unzipBounded(src, dst string) error {
 			}
 		case mode&os.ModeSymlink != 0:
 			// macOS app bundles link their frameworks' current versions.
+			// Windows builds have no links, and Windows resolves a target
+			// such as "/etc/x" against the drive root, so links are refused
+			// there outright.
+			if runtime.GOOS == "windows" {
+				return fmt.Errorf("entry %q is a link; Prism's Windows build has none", f.Name)
+			}
 			link, err := readSmall(f, 4096)
 			if err != nil {
 				return err
 			}
-			if filepath.IsAbs(link) || !inside(filepath.Join(filepath.Dir(target), link)) {
+			if strings.HasPrefix(link, "/") || strings.Contains(link, `\`) || filepath.IsAbs(link) ||
+				filepath.VolumeName(link) != "" || !inside(filepath.Join(filepath.Dir(target), link)) {
 				return fmt.Errorf("link %q points outside the install folder", f.Name)
 			}
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
