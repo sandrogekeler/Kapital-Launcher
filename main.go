@@ -61,7 +61,7 @@ func main() {
 		MinWidth:         design.WindowMinWidth,
 		MinHeight:        design.WindowMinHeight,
 		BackgroundColour: &options.RGBA{R: bg[0], G: bg[1], B: bg[2], A: 255},
-		// The app draws its own header bar (docs/adr/0009-window-chrome.md).
+		// The app draws its own header bar (docs/adr/0010-window-chrome.md).
 		// Windows and Linux go frameless and get the header's own window
 		// buttons; macOS keeps a hidden title bar so its native traffic
 		// lights, full-screen and zoom stay the system's.

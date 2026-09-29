@@ -1,4 +1,4 @@
-# ADR-0009: The app draws its own window header
+# ADR-0010: The app draws its own window header
 
 **Status:** accepted, 2026-09-29.
 
@@ -20,9 +20,11 @@ the traffic lights.
 - **A full-width header bar, `layout.titlebar` tall**
   (`components/shell/HeaderBar.tsx`). Left: the Kapital Launcher logo (the
   author's artwork, kept full size in `../Art`), which replaces the Kapitel
-  Kapital wordmark the sidebar used to carry. Right: the settings gear. The bar's empty area drags the window
-  through Wails' `--wails-draggable` property, and a double-click maximises;
-  its controls opt out of both.
+  Kapital wordmark the sidebar used to carry. The wordmark file stays in
+  `frontend/src/assets/brand/`: the download site (ADR-9) still shows it.
+  Right: the settings gear. The bar's empty area drags the window through
+  Wails' `--wails-draggable` property, and a double-click maximises; its
+  controls opt out of both.
 - **Windows (and Linux): frameless, with our own buttons.** Minimise,
   maximise or restore, and close, 46px wide at the bar's height, close red
   on hover, glyphs from `lib/icons.ts`. They call the Wails runtime.

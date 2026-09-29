@@ -20,7 +20,7 @@ interface Props {
 
 /**
  * The window's own header bar, replacing the OS title bar
- * (docs/adr/0009-window-chrome.md). Its empty area drags the window and a
+ * (docs/adr/0010-window-chrome.md). Its empty area drags the window and a
  * double-click maximises; anything interactive opts out of the drag.
  *
  * macOS keeps its native traffic lights at the top left, so the brand starts

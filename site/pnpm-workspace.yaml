@@ -1,0 +1,8 @@
+# pnpm settings for the download site, its own project like frontend/. Same
+# supply-chain policy as frontend/pnpm-workspace.yaml: a version published less
+# than a day ago is not installed (.claude/rules/dependencies.md).
+minimumReleaseAge: 1440
+
+# esbuild fetches its platform binary on install.
+allowBuilds:
+  esbuild: true
