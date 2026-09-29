@@ -10,7 +10,7 @@ interface Props {
 }
 
 const VARIANT = {
-  play: 'bg-accent text-canvas h-13 px-7.5 text-md tracking-[0.01em] hover:brightness-[1.08]',
+  play: 'bg-accent text-canvas h-13 px-7.5 text-md tracking-control hover:brightness-(--effect-hover-brightness)',
   ghost: 'border-line-strong hover:bg-hover h-11 border px-4.5 text-base',
 } as const
 

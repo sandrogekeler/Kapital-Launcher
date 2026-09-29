@@ -6,7 +6,7 @@ that changes one says so and links back. Each carries a status
 what it costs.
 
 The first seven follow the questions in `docs/HANDOFF.md` §3; 0008 was added
-while building the scaffold, 0009 with the download site.
+while building the scaffold, 0009 with the download site, 0010 with the header bar.
 
 | ADR | Decision | Status |
 |---|---|---|
@@ -19,3 +19,4 @@ while building the scaffold, 0009 with the download site.
 | [0007](0007-target-oses.md) | Windows 11 and macOS on Apple Silicon | accepted |
 | [0008](0008-design-tokens.md) | The launcher holds its own token source, seeded from the wiki; the wiki's era accents corrected | accepted |
 | [0009](0009-download-site.md) | A static download site in `site/`, on Cloudflare Pages | accepted |
+| [0010](0010-window-chrome.md) | The app draws its own header bar; our window buttons on Windows, native traffic lights on macOS | accepted |

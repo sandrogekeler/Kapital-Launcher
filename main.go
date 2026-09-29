@@ -3,10 +3,12 @@ package main
 import (
 	"embed"
 	"log/slog"
+	"runtime"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
 
 	"kapital/backend/design"
 	"kapital/backend/services"
@@ -59,10 +61,16 @@ func main() {
 		MinWidth:         design.WindowMinWidth,
 		MinHeight:        design.WindowMinHeight,
 		BackgroundColour: &options.RGBA{R: bg[0], G: bg[1], B: bg[2], A: 255},
-		AssetServer:      &assetserver.Options{Assets: assets},
-		OnStartup:        app.startup,
-		OnShutdown:       app.shutdown,
-		Bind:             []any{app},
+		// The app draws its own header bar (docs/adr/0010-window-chrome.md).
+		// Windows and Linux go frameless and get the header's own window
+		// buttons; macOS keeps a hidden title bar so its native traffic
+		// lights, full-screen and zoom stay the system's.
+		Frameless:   runtime.GOOS != "darwin",
+		Mac:         &mac.Options{TitleBar: mac.TitleBarHidden()},
+		AssetServer: &assetserver.Options{Assets: assets},
+		OnStartup:   app.startup,
+		OnShutdown:  app.shutdown,
+		Bind:        []any{app},
 	})
 	if err != nil {
 		slog.Error("wails run", "error", err)

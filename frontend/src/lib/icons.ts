@@ -17,8 +17,11 @@ export {
   Copy,
   ExternalLink,
   Folder,
+  Minus,
   Play,
   RefreshCw,
   Settings,
+  Square,
   TriangleAlert,
+  X,
 } from 'lucide-react'

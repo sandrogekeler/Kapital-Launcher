@@ -2,61 +2,10 @@
 
 /* The design tokens, every themed value and the Tailwind theme mapping, are
    generated from design/tokens.json. Do not add a token here; add it there and
-   run `pnpm gen:tokens`. Everything below is hand-authored: the font files,
-   the base element rules, and the few surfaces a utility cannot express. */
+   run `pnpm gen:tokens`. base.css holds what the app shares with the download
+   site; below it is what only the app needs. */
 @import './styles/tokens.css';
-
-/* Faces. Copied from the wiki's public/fonts (SIL OFL 1.1, licences beside the
-   files in assets/fonts/licences). Variable fonts, one file per script range. */
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('./assets/fonts/inter-latin.woff2') format('woff2-variations');
-  unicode-range:
-    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
-    U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('./assets/fonts/inter-latin-ext.woff2') format('woff2-variations');
-  unicode-range:
-    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
-    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
-    U+A720-A7FF;
-}
-@font-face {
-  font-family: 'Fraunces';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('./assets/fonts/fraunces-latin.woff2') format('woff2-variations');
-  unicode-range:
-    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
-    U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Fraunces';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('./assets/fonts/fraunces-latin-ext.woff2') format('woff2-variations');
-  unicode-range:
-    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
-    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
-    U+A720-A7FF;
-}
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 100 800;
-  font-display: swap;
-  src: url('./assets/fonts/jetbrains-mono-latin.woff2') format('woff2-variations');
-}
+@import './styles/base.css';
 
 @layer base {
   html,
@@ -65,13 +14,7 @@
     height: 100%;
   }
   body {
-    margin: 0;
     overflow: hidden;
-    background: var(--bg);
-    color: var(--fg);
-    font-family: var(--font-ui);
-    font-size: var(--text-base);
-    -webkit-font-smoothing: antialiased;
     /* The window is not a web page: no text selection on chrome, no rubber
        banding. Content that should be selectable opts back in. */
     user-select: none;
@@ -80,35 +23,25 @@
     font: inherit;
     color: inherit;
   }
-  :focus-visible {
-    outline: 2px solid var(--fg);
-    outline-offset: 2px;
-  }
-}
-
-/* Scrims and patterns a utility cannot express. */
-
-/* Over the hero photograph: opaque at the text edge, clear at the far side.
-   Composed from the page ground so a theme switch moves it too. */
-.hero-scrim {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--bg) 96%, transparent) 0%,
-    color-mix(in srgb, var(--bg) 78%, transparent) 42%,
-    color-mix(in srgb, var(--bg) 18%, transparent) 100%
-  );
 }
 
 /* Where a chapter has no screenshot yet: a fine grid in the chapter's accent
    over the page ground. The same pattern at two scales serves the hero and
    the sidebar thumbnail. */
 .art-pending {
-  background-color: color-mix(in srgb, var(--accent) 6%, var(--bg));
+  background-color: color-mix(in srgb, var(--accent) var(--art-pending-tint), var(--bg));
   background-image:
-    linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px);
-  background-size: var(--art-pending-cell, 48px) var(--art-pending-cell, 48px);
+    linear-gradient(
+      color-mix(in srgb, var(--accent) var(--art-pending-line), transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--accent) var(--art-pending-line), transparent) 1px,
+      transparent 1px
+    );
+  background-size: var(--art-pending-cell) var(--art-pending-cell);
 }
 .art-pending-thumb {
-  --art-pending-cell: 8px;
+  --art-pending-cell: var(--art-pending-cell-thumb);
 }

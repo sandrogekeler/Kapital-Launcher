@@ -88,7 +88,7 @@ function validate(src) {
   for (const group of ['surface', 'text', 'line', 'chapter', 'status']) {
     if (!src.color?.[group]) fail(`missing color.${group}`)
   }
-  for (const group of ['type', 'radius', 'motion', 'layout']) {
+  for (const group of ['type', 'radius', 'motion', 'layout', 'effect']) {
     if (!src[group]) fail(`missing ${group}`)
   }
   for (const [group, tokens] of Object.entries(src.color)) {
@@ -168,6 +168,8 @@ function emitCss(src) {
   emitThemeValues(src, push)
   push()
   emitLayout(src, push)
+  push()
+  emitEffects(src, push)
   emitPalettes(src, lines, push)
   push()
   emitAccents(src, push)
@@ -218,6 +220,11 @@ function emitThemeValues(src, push) {
     if (axes) push(`  --font-${name}--font-variation-settings: ${variation(axes)};`)
   }
   push()
+  push(`  /* Letter-spacing by role, read as tracking-<role>. */`)
+  for (const [name, value] of Object.entries(src.type.tracking.scale)) {
+    push(`  --tracking-${name}: ${value}${src.type.tracking.unit};`)
+  }
+  push()
   push(`  /* Radius. */`)
   for (const [name, value] of Object.entries(src.radius.scale)) {
     push(`  --radius-${name}: ${value}${src.radius.unit};`)
@@ -243,6 +250,29 @@ function emitLayout(src, push) {
   push(`:root {`)
   push(`  --layout-sidebar: ${src.layout.sidebar}${src.layout.unit};`)
   push(`  --layout-hero: ${src.layout.hero}${src.layout.unit};`)
+  push(`  --layout-titlebar: ${src.layout.titlebar}${src.layout.unit};`)
+  push(`  --layout-icon-sm: ${src.layout.icon.sm}${src.layout.unit};`)
+  push(`  --layout-icon-md: ${src.layout.icon.md}${src.layout.unit};`)
+  push(`}`)
+}
+
+function emitEffects(src, push) {
+  const { hoverBrightness, focusRing, scrim, artPending } = src.effect
+  push(`/* Effects: values a utility cannot name on its own. Read by the shared`)
+  push(`   styles/base.css and by brightness-(--effect-hover-brightness). */`)
+  push(`:root {`)
+  push(`  --effect-hover-brightness: ${hoverBrightness};`)
+  push(`  --focus-ring-width: ${focusRing.width}px;`)
+  push(`  --focus-ring-offset: ${focusRing.offset}px;`)
+  push(`  --scrim-edge: ${scrim.edge}${scrim.unit};`)
+  push(`  --scrim-mid: ${scrim.mid}${scrim.unit};`)
+  push(`  --scrim-mid-at: ${scrim.midAt}${scrim.unit};`)
+  push(`  --scrim-far: ${scrim.far}${scrim.unit};`)
+  push(`  --scrim-wash: ${scrim.wash}${scrim.unit};`)
+  push(`  --art-pending-tint: ${artPending.tint}%;`)
+  push(`  --art-pending-line: ${artPending.line}%;`)
+  push(`  --art-pending-cell: ${artPending.cell}px;`)
+  push(`  --art-pending-cell-thumb: ${artPending.cellThumb}px;`)
   push(`}`)
 }
 
@@ -328,7 +358,12 @@ ${accents('light')}
 /** Window geometry, in px. main.go reads the same numbers from backend/design/design_gen.go. */
 export const WINDOW = { width: ${w.width}, height: ${w.height}, minWidth: ${w.minWidth}, minHeight: ${w.minHeight} } as const
 
-export const LAYOUT = { sidebar: ${src.layout.sidebar}, hero: ${src.layout.hero} } as const
+export const LAYOUT = {
+  sidebar: ${src.layout.sidebar},
+  hero: ${src.layout.hero},
+  titlebar: ${src.layout.titlebar},
+  icon: { sm: ${src.layout.icon.sm}, md: ${src.layout.icon.md}, stroke: ${src.layout.icon.stroke} },
+} as const
 `
 }
 

@@ -1,15 +1,17 @@
 import type { LucideIcon } from '../../lib/icons'
+import { LAYOUT } from '../../styles/tokens'
 
 /**
  * Rendered stroke weight in screen pixels, held constant across sizes by
- * lucide's `absoluteStrokeWidth`. The reference draws its glyphs at 1.6 on a
- * 24-unit grid at 18px, which is this value.
+ * lucide's `absoluteStrokeWidth`: layout.icon.stroke in design/tokens.json.
+ * The reference draws its glyphs at 1.6 on a 24-unit grid at 18px.
  */
-export const ICON_STROKE_PX = 1.2
+export const ICON_STROKE_PX = LAYOUT.icon.stroke
 
+// The box and the px lucide draws at, both from layout.icon in design/tokens.json.
 const SIZE = {
-  sm: { cls: 'size-4', px: 16 },
-  md: { cls: 'size-[18px]', px: 18 },
+  sm: { cls: 'size-(--layout-icon-sm)', px: LAYOUT.icon.sm },
+  md: { cls: 'size-(--layout-icon-md)', px: LAYOUT.icon.md },
 } as const
 
 export type IconSize = keyof typeof SIZE

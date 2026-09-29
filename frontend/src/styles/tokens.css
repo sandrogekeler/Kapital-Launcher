@@ -54,6 +54,11 @@
   --font-display--font-variation-settings: 'SOFT' 0, 'WONK' 0;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
 
+  /* Letter-spacing by role, read as tracking-<role>. */
+  --tracking-control: 0.01em;
+  --tracking-label: 0.06em;
+  --tracking-eyebrow: 0.08em;
+
   /* Radius. */
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -76,6 +81,26 @@
 :root {
   --layout-sidebar: 264px;
   --layout-hero: 440px;
+  --layout-titlebar: 40px;
+  --layout-icon-sm: 16px;
+  --layout-icon-md: 18px;
+}
+
+/* Effects: values a utility cannot name on its own. Read by the shared
+   styles/base.css and by brightness-(--effect-hover-brightness). */
+:root {
+  --effect-hover-brightness: 1.08;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --scrim-edge: 96%;
+  --scrim-mid: 78%;
+  --scrim-mid-at: 42%;
+  --scrim-far: 18%;
+  --scrim-wash: 84%;
+  --art-pending-tint: 6%;
+  --art-pending-line: 8%;
+  --art-pending-cell: 48px;
+  --art-pending-cell-thumb: 8px;
 }
 
 /* Dark is the default. Light is opt-in through data-theme; the system

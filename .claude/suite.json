@@ -88,6 +88,15 @@
         "reference": "agent_docs/HEALTH_CHECKLIST.md"
       },
       {
+        "name": "no hand-written design values",
+        "grep": "tracking-\\[|brightness-\\[|size-\\[[0-9.]+px\\]|color-mix\\([^)]*[0-9.]+%",
+        "paths": ["frontend/src", "site/index.html", "site/src"],
+        "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/assets/**", "frontend/src/styles/tokens.css"],
+        "expect": "no matches",
+        "diagnosis": "Letter-spacing, the hover lift, icon sizes and the opacity stops of the scrims and the pending-art grid are tokens in design/tokens.json (type.tracking, effect, layout.icon), read as tracking-control, brightness-(--effect-hover-brightness), size-(--layout-icon-md) and var(--scrim-edge). An arbitrary tracking-[0.08em] or a color-mix() with a literal percentage is the same value with no single place to change it, and the app and the download site drift. A value the tokens do not name is one to add there. The generated tokens.css is excluded: it is where the values are supposed to be.",
+        "reference": "agent_docs/HEALTH_CHECKLIST.md"
+      },
+      {
         "name": "no arbitrary pixel text sizes",
         "grep": "text-\\[[0-9.]+px\\]",
         "paths": ["frontend/src", "site/index.html"],
