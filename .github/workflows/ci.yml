@@ -45,6 +45,30 @@ jobs:
       # default and looks fine in review. Needs the build above.
       - run: pnpm check-tokens
 
+  # The download site (site/). It imports the app's generated tokens.css, fonts
+  # and screenshots, so a change on the app side can break it; the build also
+  # refuses a link that is not https. Deploys are Cloudflare's, not CI's.
+  site:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 12
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: site/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
   # Release tooling never runs until a release is being cut, which is the
   # worst moment to find out it is wrong. The generator's tests are pure and
   # offline, so they run on every push instead.

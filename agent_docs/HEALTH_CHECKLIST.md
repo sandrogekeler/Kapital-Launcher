@@ -64,6 +64,7 @@ and by CI. Items below that a gate already holds say so; the rest are review.
 ## Open backlog
 
 - Coverage floor for `backend/services` once it has a floor-sized surface.
-- `[verify]` markers in `backend/services/prism.go`: standard install paths and
-  the Windows `--version` behaviour (Roadmap, milestone 2).
+- `[verify]` markers in `backend/services/prism.go`: the macOS and Linux install
+  paths and their `--version` output. Windows was observed on 2026-09-29
+  (Roadmap, milestone 2).
 - Forward frontend render errors to the Go log (milestone 7).

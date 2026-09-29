@@ -25,9 +25,11 @@ the scaffold changed the picture.
 
 ## Milestone 2: Detect Prism, for real
 
-- [ ] Confirm the standard install paths on Windows 11 and macOS against real
-      installs; the code marks each `[verify]`
-- [ ] Confirm `prismlauncher --version` prints to stdout on a Windows GUI build
+- [x] Confirm the standard install path on Windows 11 against a real install:
+      `%LOCALAPPDATA%\Programs\PrismLauncher` (Prism 11.1.0, 2026-09-29)
+- [ ] Confirm the standard install paths on macOS; the code marks each `[verify]`
+- [x] Confirm `prismlauncher --version` prints to stdout on a Windows GUI build:
+      it does, through a pipe, as `PrismLauncher 11.1.0` (2026-09-29)
 - [ ] Settings screen: Prism executable, Prism root, profile name, theme
 - [x] Know whether a chapter's instance exists under the resolved root, and
       warn on the state line when it does not; Play stays Play until
@@ -79,7 +81,21 @@ What is left:
 - [ ] Forward frontend render errors to the Go log
 - [ ] Release workflow with attested artefacts for Windows and macOS; code
       signing decision (ADR-6)
-- [ ] Create the labels in `.github/labels.yml` on the repository (`scripts/sync-labels.py`)
+- [x] Create the labels in `.github/labels.yml` on the repository (`scripts/sync-labels.py`),
+      done 2026-09-29
+
+## Download site
+
+A static page separate from the wiki, with Download, GitHub and Wiki buttons
+(ADR-9). Runs alongside the milestones; it waits on milestone 7 for a real
+download.
+
+- [x] `site/`: one page on the app's tokens, no script, links as data, a
+      strict CSP; built in CI
+- [ ] Connect a Cloudflare Pages project to the repository (`site/README.md`, Hosting)
+- [ ] GitHub link, once the repository is public
+- [ ] Download link, once the release workflow publishes a release
+- [ ] A custom domain, if one is wanted
 
 ## Out of scope, and why
 

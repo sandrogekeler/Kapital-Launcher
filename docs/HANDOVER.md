@@ -74,6 +74,21 @@ It will fail `pr-labelled` until the labels below exist and it is labelled.
 Milestones map to `agent_docs/ROADMAP.md`. Stage them as `milestone:` labels
 or GitHub milestones, whichever the next session prefers; nothing reads them.
 
+## The download site
+
+Added 2026-09-28 on `claude/vibrant-goodall-26qklx` (ADR-9). `site/` builds
+and was checked locally; it has never run on Cloudflare. To take it live:
+
+1. Create a Cloudflare Pages project from this repository with the settings in
+   `site/README.md`, Hosting. The build output directory is `dist` under the
+   root directory `site`, not `site` itself: the page must be built. The
+   `PNPM_VERSION` variable matters, since the build image's default pnpm
+   predates the release-age policy.
+2. Download and GitHub are `null` in `site/links.json` and show "coming soon"
+   and nothing. Set them when there is a release and the repository is public.
+3. Until a custom domain is added the site lives on
+   `<project>.pages.dev`.
+
 ## Open questions, all the author's
 
 - **Lichdenstein's client loader.** The visuals pack's loader is

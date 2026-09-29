@@ -16,5 +16,6 @@ backend/design
 
 # Build outputs and dependencies.
 frontend/dist
+site/dist
 node_modules
 build/bin

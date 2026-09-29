@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en" data-chapter="luxemburg">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Kapital Launcher</title>
+    <meta
+      name="description"
+      content="One place to play the three chapters of Kapitel Kapital. Starts the game through Prism Launcher."
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <!--
+    One section, no script. The three links are filled in at build time by
+    vite.config.js from links.json and the manifest; see site/README.md. The
+    classes on the buttons are the app's Button variants (play and ghost), so
+    the two look the same.
+  -->
+  <body class="flex min-h-dvh flex-col">
+    <main class="relative flex grow flex-col justify-center overflow-hidden px-6 py-16 md:px-14">
+      <img
+        src="../frontend/src/assets/screenshots/luxemburg.webp"
+        alt=""
+        class="absolute inset-0 size-full object-cover object-[center_40%]"
+      />
+      <div class="site-scrim absolute inset-0" aria-hidden="true"></div>
+
+      <div class="relative flex max-w-140 flex-col gap-6">
+        <div class="flex flex-col gap-1.5">
+          <img
+            src="../frontend/src/assets/brand/wordmark-inline.png"
+            alt="Kapitel Kapital"
+            width="2048"
+            height="167"
+            class="block h-auto w-56"
+          />
+          <div class="text-fg-faint text-2xs font-mono tracking-[0.08em] uppercase">Launcher</div>
+        </div>
+
+        <h1 class="font-display text-display m-0 font-semibold">Kapital Launcher</h1>
+
+        <p class="text-fg-soft m-0 text-lg leading-normal">
+          One place to play the three chapters of Kapitel Kapital. It keeps each pack ready and
+          starts the game through Prism Launcher, which handles your Microsoft sign-in.
+        </p>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <a
+            data-link="download"
+            class="bg-accent text-canvas duration-fast ease-standard inline-flex h-13 items-center gap-2 rounded-md px-7.5 text-md font-semibold tracking-[0.01em] no-underline transition-[filter] hover:brightness-[1.08]"
+            >Download</a
+          >
+          <span
+            data-link-fallback="download"
+            class="bg-accent text-canvas inline-flex h-13 cursor-default items-center gap-2 rounded-md px-7.5 text-md font-semibold tracking-[0.01em] opacity-50"
+            >Download · coming soon</span
+          >
+          <a
+            data-link="github"
+            class="border-line-strong hover:bg-hover text-fg duration-fast ease-standard inline-flex h-11 items-center gap-2 rounded-md border px-4.5 text-base font-semibold no-underline transition-[background-color]"
+            >GitHub</a
+          >
+          <a
+            data-link="wiki"
+            class="border-line-strong hover:bg-hover text-fg duration-fast ease-standard inline-flex h-11 items-center gap-2 rounded-md border px-4.5 text-base font-semibold no-underline transition-[background-color]"
+            >Wiki</a
+          >
+        </div>
+
+        <p class="text-fg-muted m-0 text-sm">
+          For Windows 11 and macOS on Apple Silicon. Needs
+          <a
+            href="https://prismlauncher.org"
+            class="text-accent underline-offset-2 hover:underline"
+            >Prism Launcher</a
+          >, free and open source.
+        </p>
+      </div>
+    </main>
+
+    <footer class="text-fg-faint text-2xs border-line border-t px-6 py-4 text-center">
+      NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.
+    </footer>
+  </body>
+</html>
