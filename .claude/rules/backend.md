@@ -20,18 +20,25 @@ through.
 
 ## Prism
 
-`backend/services/prism.go` is the only file that runs anything. The command
-line is Prism's documented CLI, quoted at the top of the file; `LaunchArgs` is
-the pure, tested function that builds the argument array, and `Launch` is the
-one `exec.Command` in the tree. There is no shell anywhere, and the `shell never
-sees a command string` invariant holds it.
+`backend/services/prism.go` runs Prism. The command line is Prism's
+documented CLI, quoted at the top of the file; `LaunchArgs` is the pure, tested
+function that builds the argument array, and `Launch` starts the game. The only
+other process is macOS's `codesign`, with fixed arguments, in
+`verify_darwin.go`. There is no shell anywhere, and the `shell never sees a
+command string` invariant holds it.
+
+`managedprism.go` gets Prism for a player who has none, on approval only
+(ADR-11): downloads are verified by digest and signature before anything is
+placed, and a managed Prism always runs with its own `--dir` root.
 
 Detection is injected (`lookPath`, `getenv`, `stat`, `run`) so it is tested on
 a machine with no Prism. A path that has not been observed on a real install is
 marked `[verify]` in a comment; clearing those is Roadmap milestone 2.
 
-The launcher does not write into Prism's data directory. When it needs an
-instance to exist (milestone 4) it asks Prism to import one.
+The launcher does not write into a player's Prism data directory. When it
+needs an instance to exist (milestone 4) it asks Prism to import one. The one
+exception is the managed root it owns: `prismlauncher.cfg` and
+`prismlauncher_update.cfg` are seeded there once, before Prism first starts.
 
 ## Data shapes
 

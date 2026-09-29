@@ -27,6 +27,7 @@ type App struct {
 	manifest models.Manifest
 	settings *services.SettingsService
 	prism    *services.PrismService
+	managed  *services.ManagedPrism
 	status   *services.StatusService
 	stop     context.CancelFunc
 
@@ -41,10 +42,14 @@ func NewApp(dataDir string, manifest []byte) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	prism := services.NewPrismService(runtime.GOOS)
+	managed := services.NewManagedPrism(dataDir, runtime.GOOS, runtime.GOARCH)
+	prism.UseManaged(managed)
 	return &App{
 		manifest: m,
 		settings: services.NewSettingsService(dataDir),
-		prism:    services.NewPrismService(runtime.GOOS),
+		prism:    prism,
+		managed:  managed,
 		status:   services.NewStatusService(),
 	}, nil
 }
@@ -117,6 +122,45 @@ func (a *App) GetInstances() (models.InstanceReport, error) {
 	return a.prism.Instances(settings, engine, a.manifest.Chapters), nil
 }
 
+// GetPrismRelease reads Prism's latest release: what installing Prism would
+// download, and whether the launcher-managed copy has an update. Nothing is
+// downloaded; the approval card shows this before InstallPrism is called.
+func (a *App) GetPrismRelease() (models.PrismRelease, error) {
+	rel, err := a.managed.Latest(a.context())
+	if err != nil {
+		return rel, err
+	}
+	// An update is only worth offering for the Prism the launcher runs.
+	if engine, err := a.GetEngine(); err != nil || engine.Source != "managed" {
+		rel.UpdateAvailable = false
+	}
+	return rel, nil
+}
+
+// InstallPrism installs or updates the launcher-managed Prism from Prism's
+// latest release, after the player approved it. The release is read again
+// here rather than taken from the caller, so what is downloaded is always
+// what Prism published. Progress arrives as prism:install events; detection
+// re-runs once it is in place.
+func (a *App) InstallPrism() error {
+	emit := func(p models.PrismInstallProgress) {
+		if a.ctx != nil {
+			wailsrt.EventsEmit(a.ctx, services.EventPrismInstall, p)
+		}
+	}
+	rel, err := a.managed.Latest(a.context())
+	if err != nil {
+		emit(models.PrismInstallProgress{Phase: "failed", Error: err.Error()})
+		return err
+	}
+	if err := a.managed.Install(a.context(), rel, emit); err != nil {
+		slog.Error("install prism", "version", rel.Version, "error", err)
+		return err
+	}
+	_, err = a.RefreshEngine()
+	return err
+}
+
 // LaunchChapter starts the chapter's Prism instance, joining its server when
 // it has one. The chapter id is looked up in the validated manifest, so the
 // instance id and address that reach Prism are the manifest's, never the
@@ -137,7 +181,9 @@ func (a *App) LaunchChapter(chapterID string) error {
 	req := models.LaunchRequest{
 		InstanceID: chapter.Instance.ID,
 		Profile:    settings.ProfileName,
-		Root:       settings.PrismRoot,
+		// The detected engine's root: the configured one for the player's own
+		// Prism, the managed root for the launcher's copy.
+		Root: engine.Root,
 	}
 	if chapter.Server != nil && chapter.Server.JoinOnLaunch {
 		req.Server = chapter.Server.Address

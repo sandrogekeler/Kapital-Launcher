@@ -38,6 +38,9 @@ const (
 // mode; else the platform default. "" means it could not be worked out, which
 // the caller reports as "unknown" rather than "missing".
 func (p *PrismService) DataRoot(settings models.AppSettings, engine models.EngineInfo) string {
+	if engine.Source == "managed" {
+		return engine.Root
+	}
 	if root := strings.TrimSpace(settings.PrismRoot); root != "" {
 		return filepath.Clean(root)
 	}

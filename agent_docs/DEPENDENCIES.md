@@ -28,6 +28,8 @@ package.
 |---|---|
 | `github.com/wailsapp/wails/v2` | The app shell: Go to WebView bridge, binding generation. Pinned by hand, not bumped by Dependabot: a minor changes the generated bindings and the webview it links against. |
 
+| `golang.org/x/sys` | `windows.WinVerifyTrustEx`, Windows' own Authenticode check for the managed Prism's executable (ADR-11), called directly so no shell or external tool is involved. Already in the build through Wails; now direct. |
+
 Everything else in `go.mod` is `// indirect`, pulled in by Wails.
 
 **Considered and not added:** a JSON Schema validator for the manifest. The Go
