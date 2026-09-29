@@ -362,12 +362,13 @@ func TestInstallRefusesWhatDoesNotVerify(t *testing.T) {
 
 func TestUnzipBoundedRefusesEscapes(t *testing.T) {
 	cases := map[string][]zipEntry{
-		"parent path":   {{name: "../evil.txt", body: "x"}},
-		"deep parent":   {{name: "a/../../evil.txt", body: "x"}},
-		"absolute":      {{name: "/etc/evil", body: "x"}},
-		"backslashes":   {{name: `..\evil.txt`, body: "x"}},
-		"link outside":  {{name: "link", body: "../../outside", mode: os.ModeSymlink | 0o777}},
-		"link absolute": {{name: "link", body: "/etc/passwd", mode: os.ModeSymlink | 0o777}},
+		"parent path":    {{name: "../evil.txt", body: "x"}},
+		"deep parent":    {{name: "a/../../evil.txt", body: "x"}},
+		"absolute":       {{name: "/etc/evil", body: "x"}},
+		"backslashes":    {{name: `..\evil.txt`, body: "x"}},
+		"link outside":   {{name: "link", body: "../../outside", mode: os.ModeSymlink | 0o777}},
+		"link absolute":  {{name: "link", body: "/etc/passwd", mode: os.ModeSymlink | 0o777}},
+		"link backslash": {{name: "link", body: `..\..\outside`, mode: os.ModeSymlink | 0o777}},
 	}
 	for name, entries := range cases {
 		dir := t.TempDir()
