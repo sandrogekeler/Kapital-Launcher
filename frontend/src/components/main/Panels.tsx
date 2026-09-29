@@ -1,5 +1,5 @@
 import type { Chapter, ServerStatus } from '../../types'
-import { factValue } from '../../lib/manifest'
+import { addressValue, factValue } from '../../lib/manifest'
 import { Fact } from '../ui/Fact'
 
 interface Props {
@@ -29,7 +29,7 @@ export function Panels({ chapter, status, onOpenWiki }: Props) {
           ['Memory', pack.memoryGb == null ? factValue(null) : `${pack.memoryGb} GB`],
         ]
   if (server) {
-    facts.push(['Server', server.address])
+    facts.push(['Server', addressValue(server.address)])
     // What the server itself reports wins over what the manifest says it runs.
     facts.push([
       'Runs',
