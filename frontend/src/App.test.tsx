@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { models } from '../wailsjs/go/models'
 import * as Bindings from '../wailsjs/go/main/App'
 import App from './App'
@@ -25,7 +25,14 @@ describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useChapterStore.setState({ manifest: BUNDLED_MANIFEST, selectedId: 'luxemburg', loaded: false })
-    useEngineStore.setState({ engine: null, instances: null, launching: null, error: null })
+    useEngineStore.setState({
+      engine: null,
+      instances: null,
+      launching: null,
+      error: null,
+      release: null,
+      install: null,
+    })
     useSettingsStore.setState({ settings: DEFAULT_SETTINGS, loaded: false, error: null })
     useServerStore.setState({ statuses: {}, checking: null, error: null })
     vi.mocked(Bindings.GetServerStatus).mockResolvedValue({
@@ -48,6 +55,8 @@ describe('App', () => {
       source: '',
     })
     vi.mocked(Bindings.GetInstances).mockRejectedValue('no root')
+    vi.mocked(Bindings.GetPrismRelease).mockRejectedValue('offline')
+    vi.mocked(Bindings.OpenExternal).mockResolvedValue()
     vi.mocked(Bindings.GetSettings).mockResolvedValue(DEFAULT_SETTINGS)
     vi.mocked(Bindings.SaveSettings).mockResolvedValue()
   })
@@ -165,6 +174,87 @@ describe('App', () => {
     vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ luxemburg: true }))
     fireEvent.focus(window)
     await waitFor(() => expect(screen.queryByText('○ Not in Prism yet')).not.toBeInTheDocument())
+  })
+
+  it('offers to get Prism, says what it downloads, and follows the install', async () => {
+    const release = models.PrismRelease.createFrom({
+      version: '11.1.1',
+      asset: 'PrismLauncher-Windows-MSVC-Portable-11.1.1.zip',
+      url: 'https://github.com/PrismLauncher/PrismLauncher/releases/download/11.1.1/x.zip',
+      size: 20396629,
+      digest: 'sha256:ab',
+      page: 'https://github.com/PrismLauncher/PrismLauncher/releases/tag/11.1.1',
+      installed: '',
+      updateAvailable: false,
+    })
+    vi.mocked(Bindings.GetPrismRelease).mockResolvedValue(release)
+    render(<App />)
+    await screen.findByText('Kapital Launcher can get it for you')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Get Prism Launcher' }))
+    const card = screen.getByRole('region', { name: 'Get Prism Launcher' })
+    expect(card).toHaveTextContent('Prism Launcher 11.1.1 (19.5 MB)')
+    expect(card).toHaveTextContent('sign in with Microsoft')
+    fireEvent.click(within(card).getByRole('button', { name: /What.s in 11.1.1/ }))
+    expect(Bindings.OpenExternal).toHaveBeenCalledWith(release.page)
+    fireEvent.click(within(card).getByRole('button', { name: 'Not now' }))
+    expect(screen.queryByRole('region', { name: 'Get Prism Launcher' })).not.toBeInTheDocument()
+    expect(Bindings.InstallPrism).not.toHaveBeenCalled()
+
+    let finish!: () => void
+    vi.mocked(Bindings.InstallPrism).mockReturnValue(new Promise<void>((r) => (finish = r)))
+    fireEvent.click(screen.getByRole('button', { name: 'Get Prism Launcher' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Download and set up' }))
+    expect(Bindings.InstallPrism).toHaveBeenCalledOnce()
+    expect(await screen.findByText('◐ Getting Prism · 0%')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Play Luxemburg' })).toBeDisabled()
+
+    vi.mocked(Bindings.GetEngine).mockResolvedValue({
+      found: true,
+      executable: 'C:/data/prism/app-11.1.1/prismlauncher.exe',
+      version: '11.1.1',
+      root: 'C:/data/prism/root',
+      source: 'managed',
+    })
+    await act(async () => finish())
+    expect(await screen.findByText('● Prism is ready')).toBeInTheDocument()
+    expect(screen.getByText(/sign in with Microsoft/)).toBeInTheDocument()
+    expect(screen.getByText('Prism 11.1.1 · managed')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Play Luxemburg' })).toBeEnabled()
+  })
+
+  it("falls back to Prism's website when the release cannot be read", async () => {
+    render(<App />)
+    await screen.findByText('Install Prism Launcher and sign in there')
+    fireEvent.click(screen.getByRole('button', { name: 'Get Prism Launcher' }))
+    expect(Bindings.OpenExternal).toHaveBeenCalledWith('https://prismlauncher.org')
+    expect(screen.queryByRole('region', { name: 'Get Prism Launcher' })).not.toBeInTheDocument()
+  })
+
+  it('offers a one-click update for the managed Prism', async () => {
+    vi.mocked(Bindings.GetEngine).mockResolvedValue({
+      found: true,
+      executable: 'C:/data/prism/app-11.1.1/prismlauncher.exe',
+      version: '11.1.1',
+      root: 'C:/data/prism/root',
+      source: 'managed',
+    })
+    vi.mocked(Bindings.GetPrismRelease).mockResolvedValue(
+      models.PrismRelease.createFrom({
+        version: '11.2.0',
+        asset: 'a.zip',
+        url: 'https://github.com/x',
+        size: 1,
+        digest: 'sha256:ab',
+        page: 'https://github.com/p',
+        installed: '11.1.1',
+        updateAvailable: true,
+      }),
+    )
+    vi.mocked(Bindings.InstallPrism).mockResolvedValue()
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Update Prism to 11.2.0' }))
+    expect(Bindings.InstallPrism).toHaveBeenCalledOnce()
   })
 
   it('shows the disclaimer the usage guidelines require', () => {

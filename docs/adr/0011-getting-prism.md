@@ -1,7 +1,7 @@
 # ADR-0011: Getting Prism for the player
 
-**Status:** accepted, 2026-09-30. Service built (#23); the approval card is
-the second pull request.
+**Status:** accepted, 2026-09-30. Built (#23): the service, the approval card
+in the action bar and the update offer on the engine card.
 
 ## Context
 

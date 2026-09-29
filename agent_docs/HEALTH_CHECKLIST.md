@@ -63,6 +63,8 @@ and by CI. Items below that a gate already holds say so; the rest are review.
   timeout on the version read; `Launch` returns once Prism has started.
 - **No polling.** Engine state is read on start and on demand; instances also
   on window focus, since they appear when the user imports one in Prism.
+  Prism's latest release is read once the engine is known, only when there is
+  no Prism or the managed one is in use, and on demand after an install.
 
 ## Open backlog
 
