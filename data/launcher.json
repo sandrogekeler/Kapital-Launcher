@@ -82,7 +82,7 @@
         "type": "modpack",
         "loader": "NeoForge",
         "minecraft": "1.21.1",
-        "mods": 92,
+        "mods": 95,
         "memoryGb": null,
         "version": null,
         "packwiz": null,
