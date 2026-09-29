@@ -15,7 +15,7 @@ describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useChapterStore.setState({ manifest: BUNDLED_MANIFEST, selectedId: 'luxemburg', loaded: false })
-    useEngineStore.setState({ engine: null, launching: null, error: null })
+    useEngineStore.setState({ engine: null, instances: null, launching: null, error: null })
     useSettingsStore.setState({ settings: DEFAULT_SETTINGS, loaded: false, error: null })
     useServerStore.setState({ statuses: {}, checking: null, error: null })
     vi.mocked(Bindings.GetServerStatus).mockResolvedValue({
@@ -37,6 +37,7 @@ describe('App', () => {
       root: '',
       source: '',
     })
+    vi.mocked(Bindings.GetInstances).mockRejectedValue('no root')
     vi.mocked(Bindings.GetSettings).mockResolvedValue(DEFAULT_SETTINGS)
     vi.mocked(Bindings.SaveSettings).mockResolvedValue()
   })
@@ -110,6 +111,27 @@ describe('App', () => {
       expect.objectContaining({ lastChapter: 'lichdenstein' }),
     )
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Lichdenstein')
+  })
+
+  it('warns when the chapter has no Prism instance but keeps Play, and looks again on focus', async () => {
+    vi.mocked(Bindings.GetEngine).mockResolvedValue({
+      found: true,
+      executable: 'C:/Prism/prismlauncher.exe',
+      version: '11.1.0',
+      root: '',
+      source: 'standard-location',
+    })
+    const report = (present: Record<string, boolean>) =>
+      models.InstanceReport.createFrom({ root: 'C:/Prism', dir: 'C:/Prism/instances', present })
+    vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ luxemburg: false }))
+    render(<App />)
+    expect(await screen.findByText('○ Not in Prism yet')).toBeInTheDocument()
+    expect(screen.getByText('No kapital-luxemburg instance was found')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Play Luxemburg' })).toBeEnabled()
+
+    vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ luxemburg: true }))
+    fireEvent.focus(window)
+    await waitFor(() => expect(screen.queryByText('○ Not in Prism yet')).not.toBeInTheDocument())
   })
 
   it('shows the disclaimer the usage guidelines require', () => {

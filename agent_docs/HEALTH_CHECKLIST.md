@@ -61,7 +61,8 @@ and by CI. Items below that a gate already holds say so; the rest are review.
   separate assets and do not count.
 - **Detection and launch never block the UI.** `Detect` runs on startup with a
   timeout on the version read; `Launch` returns once Prism has started.
-- **No polling.** Engine state is read on start and on demand.
+- **No polling.** Engine state is read on start and on demand; instances also
+  on window focus, since they appear when the user imports one in Prism.
 
 ## Open backlog
 

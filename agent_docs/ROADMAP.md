@@ -33,8 +33,9 @@ the scaffold changed the picture.
 - [x] A header bar in place of the OS title bar, holding the brand and the
       settings gear (ADR-10, #11)
 - [ ] Settings screen: Prism executable, Prism root, profile name, theme
-- [ ] Read the instances folder under the chosen root to know whether a chapter's
-      instance exists, so Play can say "Install" instead
+- [x] Know whether a chapter's instance exists under the resolved root, and
+      warn on the state line when it does not; Play stays Play until
+      milestone 4 can install (decided 2026-09-29)
 
 ## Milestone 3: Launch end to end
 

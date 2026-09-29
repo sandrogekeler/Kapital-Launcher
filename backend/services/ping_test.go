@@ -62,7 +62,9 @@ func TestPingReadsAStatusResponse(t *testing.T) {
 	if got.MOTD != "Lichdenstein · survival" {
 		t.Fatalf("motd %q", got.MOTD)
 	}
-	if got.Latency <= 0 || got.Latency > 5*time.Second {
+	// Windows reads the monotonic clock from the kernel's interrupt time,
+	// which advances a tick at a time, so a loopback exchange can measure 0.
+	if got.Latency < 0 || got.Latency > 5*time.Second {
 		t.Fatalf("latency %v", got.Latency)
 	}
 

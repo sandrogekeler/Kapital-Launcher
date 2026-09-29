@@ -27,3 +27,16 @@ type LaunchRequest struct {
 	Profile    string
 	Root       string
 }
+
+// InstanceReport says which chapters' Prism instances exist. Root and Dir are
+// what was looked at, for the settings screen and for support; Present is
+// keyed by chapter id, and a chapter missing from it is unknown, not absent.
+type InstanceReport struct {
+	// Root is the resolved Prism data directory, or "" when it could not be
+	// worked out.
+	Root string `json:"root"`
+	// Dir is the instances folder under Root (Prism's InstanceDir setting).
+	Dir string `json:"dir"`
+	// Present maps a chapter id to whether <Dir>/<instance id>/instance.cfg exists.
+	Present map[string]bool `json:"present"`
+}
