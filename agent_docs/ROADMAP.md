@@ -83,6 +83,19 @@ What is left:
 - [x] Create the labels in `.github/labels.yml` on the repository (`scripts/sync-labels.py`),
       done 2026-09-29
 
+## Download site
+
+A static page separate from the wiki, with Download, GitHub and Wiki buttons
+(ADR-9). Runs alongside the milestones; it waits on milestone 7 for a real
+download.
+
+- [x] `site/`: one page on the app's tokens, no script, links as data, a
+      strict CSP; built in CI
+- [ ] Connect a Cloudflare Pages project to the repository (`site/README.md`, Hosting)
+- [ ] GitHub link, once the repository is public
+- [ ] Download link, once the release workflow publishes a release
+- [ ] A custom domain, if one is wanted
+
 ## Out of scope, and why
 
 - **Handling Microsoft sign-in.** Needs an approved Azure app id that solo

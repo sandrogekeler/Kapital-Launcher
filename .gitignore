@@ -3,6 +3,7 @@
 frontend/dist/*
 !frontend/dist/.gitkeep
 build/bin/
+site/dist/
 
 # Wails frontend-hash cache
 frontend/package.json.md5

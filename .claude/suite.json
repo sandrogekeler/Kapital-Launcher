@@ -42,6 +42,11 @@
         "cwd": "frontend"
       },
       {
+        "name": "site build",
+        "run": "pnpm build",
+        "cwd": "site"
+      },
+      {
         "name": "gofmt",
         "run": "test -z \"$(gofmt -l .)\""
       },
@@ -73,7 +78,9 @@
         "paths": [
           "frontend/src/components",
           "frontend/src/App.tsx",
-          "frontend/src/style.css"
+          "frontend/src/style.css",
+          "site/index.html",
+          "site/src"
         ],
         "exclude": [],
         "expect": "no matches",
@@ -83,7 +90,7 @@
       {
         "name": "no arbitrary pixel text sizes",
         "grep": "text-\\[[0-9.]+px\\]",
-        "paths": ["frontend/src"],
+        "paths": ["frontend/src", "site/index.html"],
         "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/assets/**"],
         "expect": "no matches",
         "diagnosis": "The type scale is design/tokens.json's type.size, generated as text-2xs through text-display. An inlined text-[13px] is the same value with no single place to change it. A size the scale does not name is a value to add there.",
@@ -129,7 +136,10 @@
           ".github/ISSUE_TEMPLATE",
           ".github/pull_request_template.md",
           "agent_docs",
-          "docs/adr"
+          "docs/adr",
+          "site/index.html",
+          "site/links.json",
+          "site/README.md"
         ],
         "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/assets/**"],
         "expect": "no matches",
