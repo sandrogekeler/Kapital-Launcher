@@ -29,7 +29,9 @@ Three facts read on 2026-09-28 shaped the answer:
   relative path rather than copying them, so the page and the app cannot
   drift apart. Since 2026-09-29 (#16) it also imports the shared
   `frontend/src/styles/base.css` (faces, base rules, scrims) instead of
-  keeping its own copy, and adds no style of its own.
+  keeping its own copy, and adds no style of its own. The page's heading
+  is the Kapital Launcher logo, the same artwork as the app's header
+  (ADR-10), in place of the Kapitel Kapital wordmark.
 - **Vite and Tailwind v4, no framework, no script.** One HTML page styled with
   the same token utilities as the app. The built output is HTML, one CSS file,
   fonts and two images.

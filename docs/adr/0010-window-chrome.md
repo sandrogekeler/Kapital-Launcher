@@ -20,8 +20,8 @@ the traffic lights.
 - **A full-width header bar, `layout.titlebar` tall**
   (`components/shell/HeaderBar.tsx`). Left: the Kapital Launcher logo (the
   author's artwork, kept full size in `../Art`), which replaces the Kapitel
-  Kapital wordmark the sidebar used to carry. The wordmark file stays in
-  `frontend/src/assets/brand/`: the download site (ADR-9) still shows it.
+  Kapital wordmark the sidebar used to carry. The download site (ADR-9)
+  switched to the launcher's own logo too, so the wordmark file is gone.
   Right: the settings gear. The bar's empty area drags the window through
   Wails' `--wails-draggable` property, and a double-click maximises; its
   controls opt out of both.
