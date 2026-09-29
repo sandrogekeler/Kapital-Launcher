@@ -64,7 +64,7 @@ pnpm check-bundle      # entry chunk gzip budget
 pnpm gen:tokens        # regenerate the three token outputs
 
 # site/
-pnpm build | preview   # preview serves dist/ through wrangler dev
+pnpm build | preview   # preview serves dist/, without _headers
 
 # repo root
 go vet ./... && go test ./...

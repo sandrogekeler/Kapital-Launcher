@@ -91,10 +91,10 @@ download.
 
 - [x] `site/`: one page on the app's tokens, no script, links as data, a
       strict CSP; built in CI
-- [ ] Connect Workers Builds to the repository (`site/README.md`, Hosting)
+- [ ] Connect a Cloudflare Pages project to the repository (`site/README.md`, Hosting)
 - [ ] GitHub link, once the repository is public
 - [ ] Download link, once the release workflow publishes a release
-- [ ] A custom domain, if one is wanted (needs Cloudflare nameservers)
+- [ ] A custom domain, if one is wanted
 
 ## Out of scope, and why
 

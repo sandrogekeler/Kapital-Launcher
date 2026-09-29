@@ -1,5 +1,5 @@
-# Response headers for every file the site serves, applied by Workers static
-# assets (https://developers.cloudflare.com/workers/static-assets/headers/).
+# Response headers for every file the site serves, applied by Cloudflare Pages
+# (https://developers.cloudflare.com/pages/configuration/headers/).
 # The page runs no script and loads nothing from another origin, so the policy
 # allows its own styles, images and fonts and nothing else.
 /*

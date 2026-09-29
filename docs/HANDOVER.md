@@ -77,16 +77,17 @@ or GitHub milestones, whichever the next session prefers; nothing reads them.
 ## The download site
 
 Added 2026-09-28 on `claude/vibrant-goodall-26qklx` (ADR-9). `site/` builds
-and was served locally through `wrangler dev` with its headers; it has never
-run on Cloudflare. To take it live:
+and was checked locally; it has never run on Cloudflare. To take it live:
 
-1. Connect Workers Builds with the settings in `site/README.md`, Hosting. The
-   pnpm version build variable matters: the build image's default is older
-   than the release-age policy.
+1. Create a Cloudflare Pages project from this repository with the settings in
+   `site/README.md`, Hosting. The build output directory is `dist` under the
+   root directory `site`, not `site` itself: the page must be built. The
+   `PNPM_VERSION` variable matters, since the build image's default pnpm
+   predates the release-age policy.
 2. Download and GitHub are `null` in `site/links.json` and show "coming soon"
    and nothing. Set them when there is a release and the repository is public.
-3. A custom domain needs its nameservers on Cloudflare; otherwise the site
-   stays on `*.workers.dev`.
+3. Until a custom domain is added the site lives on
+   `<project>.pages.dev`.
 
 ## Open questions, all the author's
 

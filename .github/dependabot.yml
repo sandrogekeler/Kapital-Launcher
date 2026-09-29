@@ -60,7 +60,7 @@ updates:
       - dependency-name: typescript
         update-types: ['version-update:semver-major']
 
-  # The download site: Vite, Tailwind and Wrangler, none of which ships.
+  # The download site: Vite and Tailwind, neither of which ships.
   - package-ecosystem: npm
     directory: /site
     schedule:

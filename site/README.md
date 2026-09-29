@@ -37,30 +37,36 @@ When they exist, set:
 ```bash
 pnpm install
 pnpm build      # dist/
-pnpm preview    # build, then serve dist/ with wrangler dev, _headers applied
+pnpm preview    # build, then serve dist/ locally
 ```
 
 There is no `vite` dev server script on purpose: the page's fonts and images
 live in `frontend/`, outside the dev server's root, and only the build
-resolves them. A build takes well under a second.
+resolves them. A build takes well under a second. `pnpm preview` does not
+apply `public/_headers`; only Cloudflare does.
 
 ## Hosting
 
-Workers static assets (`wrangler.jsonc`): no Worker script, only `dist/`.
+Cloudflare Pages, connected to this repository from the dashboard. There is no
+Wrangler file: the settings below live in the Pages project.
 `public/_headers` sets the CSP and caching and is copied into `dist/`.
 
-To connect it once, in the Cloudflare dashboard under Workers & Pages, create
-an application by importing this repository and set:
+In the Cloudflare dashboard under Workers & Pages, create a Pages project by
+connecting this repository, then set:
 
 | Setting | Value |
 |---|---|
-| Project name | `kapital-launcher`, matching `name` in `wrangler.jsonc` |
+| Framework preset | None |
+| Production branch | `main` |
 | Root directory | `site` |
 | Build command | `pnpm build` |
-| Deploy command | the default, `npx wrangler deploy` (Wrangler from `package.json`) |
-| Build variable | `PNPM_VERSION` = `12`, the version CI uses. The build image's default pnpm predates `minimumReleaseAge` in `pnpm-workspace.yaml`. |
-| Build watch paths | `site/*`, `frontend/src/styles/*`, `frontend/src/assets/*`, `data/launcher.json` |
+| Build output directory | `dist`, which is relative to the root directory. Not `site`: that is the unbuilt source, whose links are empty and whose fonts and images point into `frontend/`. |
+| Environment variable | `PNPM_VERSION` = `12`, the version CI uses. The build image's default, 10.11.1, installs the site but predates `minimumReleaseAge` in `pnpm-workspace.yaml`, so the release-age policy would not apply. |
+| Build watch paths | Include `site/*`, `frontend/src/styles/*`, `frontend/src/assets/*`, `data/launcher.json`. Paths are from the repository root. |
 
-These settings come from Cloudflare's documentation as read on 2026-09-28 and
-have not been run on Cloudflare yet. The build and the headers were checked
-locally with `pnpm preview`.
+Pages installs the dependencies itself before the build command, from the root
+directory's `pnpm-lock.yaml`. Every other branch gets a preview deployment.
+
+These settings come from Cloudflare's Pages documentation as read on
+2026-09-28 and have not been run on Cloudflare yet. The build was checked
+locally, and the install with pnpm 12 and with 10.11.1.
