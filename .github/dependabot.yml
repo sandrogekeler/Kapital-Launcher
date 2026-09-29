@@ -1,6 +1,10 @@
 # Dependency updates. agent_docs/DEPENDENCIES.md is the decision record for
 # what may be added; this answers whether what is here is still current.
 #
+# Every update carries type:chore and area:build, the pair CONTRIBUTING.md's
+# ladder gives a dependency bump, so pr-labelled passes without a hand edit.
+# Setting labels replaces Dependabot's own (dependencies, the ecosystem).
+#
 # Grouped, so routine minor and patch traffic arrives as one pull request per
 # ecosystem and only a major gets a pull request of its own. github-actions
 # groups its majors too: bumping checkout or setup-node asks one question,
@@ -13,6 +17,7 @@ updates:
     schedule:
       interval: weekly
       day: sunday
+    labels: ['type:chore', 'area:build']
     open-pull-requests-limit: 3
     groups:
       actions:
@@ -24,6 +29,7 @@ updates:
     schedule:
       interval: weekly
       day: sunday
+    labels: ['type:chore', 'area:build']
     open-pull-requests-limit: 3
     groups:
       go:
@@ -40,6 +46,7 @@ updates:
     schedule:
       interval: weekly
       day: sunday
+    labels: ['type:chore', 'area:build']
     open-pull-requests-limit: 2
 
   - package-ecosystem: npm
@@ -47,6 +54,7 @@ updates:
     schedule:
       interval: weekly
       day: sunday
+    labels: ['type:chore', 'area:build']
     open-pull-requests-limit: 5
     groups:
       frontend:
@@ -66,6 +74,7 @@ updates:
     schedule:
       interval: weekly
       day: sunday
+    labels: ['type:chore', 'area:build']
     open-pull-requests-limit: 2
     groups:
       site:
