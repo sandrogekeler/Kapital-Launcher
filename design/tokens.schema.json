@@ -4,7 +4,7 @@
   "title": "Kapital Launcher design tokens",
   "description": "The one file a design value is defined in. Values are plain data, never CSS: a colour is { hex, alpha? }, an easing is four numbers, a size is a bare number with the unit on its group. frontend/scripts/gen-tokens.mjs turns this into the CSS, TypeScript and Go the app reads.",
   "type": "object",
-  "required": ["version", "color", "type", "radius", "motion", "layout"],
+  "required": ["version", "color", "type", "radius", "motion", "layout", "effect"],
   "additionalProperties": false,
   "$defs": {
     "hex": { "type": "string", "pattern": "^#[0-9a-f]{6}$" },
@@ -44,7 +44,7 @@
       "required": ["unit", "scale"],
       "additionalProperties": false,
       "properties": {
-        "unit": { "enum": ["px", "ms"] },
+        "unit": { "enum": ["px", "ms", "em"] },
         "scale": {
           "type": "object",
           "minProperties": 1,
@@ -131,6 +131,7 @@
             "maximum": 900
           }
         },
+        "tracking": { "$ref": "#/$defs/scale", "description": "Letter-spacing by role, in em: control (a button label), label (a small caps line), eyebrow (a wide mono caption)." },
         "variation": {
           "type": "object",
           "description": "font-variation-settings per family, as axis tag to value.",
@@ -163,13 +164,24 @@
     },
     "layout": {
       "type": "object",
-      "required": ["unit", "sidebar", "hero", "titlebar", "window"],
+      "required": ["unit", "sidebar", "hero", "titlebar", "icon", "window"],
       "additionalProperties": false,
       "properties": {
         "unit": { "const": "px" },
         "sidebar": { "type": "integer", "minimum": 1 },
         "hero": { "type": "integer", "minimum": 1 },
         "titlebar": { "type": "integer", "minimum": 1 },
+        "icon": {
+          "type": "object",
+          "description": "Icon box sizes, the px value lucide draws at, and the stroke weight in screen px that lucide's absoluteStrokeWidth holds constant across sizes.",
+          "required": ["sm", "md", "stroke"],
+          "additionalProperties": false,
+          "properties": {
+            "sm": { "type": "integer", "minimum": 1 },
+            "md": { "type": "integer", "minimum": 1 },
+            "stroke": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        },
         "window": {
           "type": "object",
           "required": ["width", "height", "minWidth", "minHeight"],
@@ -179,6 +191,51 @@
             "height": { "type": "integer", "minimum": 1 },
             "minWidth": { "type": "integer", "minimum": 1 },
             "minHeight": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "effect": {
+      "type": "object",
+      "description": "Values a utility cannot name on its own: the hover lift on the filled button, the focus outline, the stops of the scrim over artwork, and the grid shown where a chapter has no artwork yet.",
+      "required": ["hoverBrightness", "focusRing", "scrim", "artPending"],
+      "additionalProperties": false,
+      "properties": {
+        "hoverBrightness": { "type": "number", "exclusiveMinimum": 1, "maximum": 2 },
+        "focusRing": {
+          "type": "object",
+          "description": "The keyboard focus outline, width and offset in px.",
+          "required": ["width", "offset"],
+          "additionalProperties": false,
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "offset": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "scrim": {
+          "type": "object",
+          "description": "Opacity of the page ground over artwork, in percent: edge at the text side, mid at midAt across, far at the other side; wash is the even cover on narrow screens.",
+          "required": ["unit", "edge", "mid", "midAt", "far", "wash"],
+          "additionalProperties": false,
+          "properties": {
+            "unit": { "const": "%" },
+            "edge": { "type": "number", "minimum": 0, "maximum": 100 },
+            "mid": { "type": "number", "minimum": 0, "maximum": 100 },
+            "midAt": { "type": "number", "minimum": 0, "maximum": 100 },
+            "far": { "type": "number", "minimum": 0, "maximum": 100 },
+            "wash": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        },
+        "artPending": {
+          "type": "object",
+          "description": "The accent grid where a chapter has no artwork: tint and line are percent of the accent, cell and cellThumb the grid pitch in px on the hero and the thumbnail.",
+          "required": ["tint", "line", "cell", "cellThumb"],
+          "additionalProperties": false,
+          "properties": {
+            "tint": { "type": "number", "minimum": 0, "maximum": 100 },
+            "line": { "type": "number", "minimum": 0, "maximum": 100 },
+            "cell": { "type": "integer", "minimum": 1 },
+            "cellThumb": { "type": "integer", "minimum": 1 }
           }
         }
       }

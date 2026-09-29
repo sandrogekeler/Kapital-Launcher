@@ -34,8 +34,11 @@ The `generated` check in `.claude/suite.json` diffs them; CI runs it.
    the same change: the checker builds candidate class names from the source
    and asserts each one used in `src/` compiles, and a namespace it does not
    know is a class it cannot vouch for.
-3. Use it as a utility (`bg-<name>`, `text-<name>`, `rounded-<name>`) or as
-   `var(--<name>)` in `style.css`.
+3. Use it as a utility (`bg-<name>`, `text-<name>`, `rounded-<name>`,
+   `tracking-<name>`) or as `var(--<name>)` in `styles/base.css` or
+   `style.css`. `layout` and `effect` values are plain custom properties, not
+   a Tailwind namespace: read them with the `var()` shorthand
+   (`size-(--layout-icon-md)`, `brightness-(--effect-hover-brightness)`).
 
 ## Things the generator gets right on purpose
 

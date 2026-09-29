@@ -15,9 +15,15 @@ tokens not literals, icons from one module). This is the rest.
 source and regenerate; commit all three outputs (the third is
 `backend/design/design_gen.go`). A hand edit is reverted on the next run.
 
-`src/style.css` holds the `@font-face` rules, the base element rules and the
-few surfaces a utility cannot express (`.hero-scrim`, `.art-pending`). Nothing
-else goes there; a component's look is its utility classes.
+`src/styles/base.css` is what the app shares with the download site: the
+`@font-face` rules, the base element rules, and the scrims over artwork as
+`@utility scrim-hero` and `scrim-wash`. `src/style.css` imports it after
+`tokens.css` and adds only what the app alone needs (the full-height root, no
+text selection, `.art-pending`). Neither holds a literal design value: every
+size, spacing, percentage and weight in them is a `var(--…)` from the tokens,
+and the `no hand-written design values` invariant refuses arbitrary
+`tracking-[…]`, `brightness-[…]`, pixel `size-[…]` and literal `color-mix()`
+percentages. A component's look is its utility classes.
 
 ## Utilities the token layer provides
 
@@ -26,9 +32,12 @@ Colours: `bg-sunken bg-canvas bg-raised bg-raised-2 bg-hover`,
 border-line-strong`, `text-accent bg-accent bg-accent-wash border-accent-edge`,
 `text-warning text-danger`, and `bg-chapter-<id>` for the rare place a chapter's
 colour is needed outside its own scope. Type: `text-2xs` to `text-2xl` and
-`text-display`; `font-ui font-display font-mono`. Radius: `rounded-sm rounded-md
+`text-display`; `font-ui font-display font-mono`; `tracking-control
+tracking-label tracking-eyebrow`. Radius: `rounded-sm rounded-md
 rounded-lg rounded-pill`. Motion: `duration-fast duration-slow ease-standard
-ease-out`. Layout: `w-(--layout-sidebar)`, `h-(--layout-hero)`.
+ease-out`. Layout: `w-(--layout-sidebar)`, `h-(--layout-hero)`,
+`h-(--layout-titlebar)`, `size-(--layout-icon-sm)` and `-md`. Effects:
+`hover:brightness-(--effect-hover-brightness)`, `scrim-hero`, `scrim-wash`.
 
 Spacing is Tailwind's default 4px scale, which is what the reference was drawn
 on; `p-14` is 56px. Do not add a spacing token for a value the scale already has.

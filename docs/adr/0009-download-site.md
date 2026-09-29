@@ -27,7 +27,9 @@ Three facts read on 2026-09-28 shaped the answer:
 - **`site/` in this repository**, its own pnpm project beside `frontend/`.
   It imports `frontend/src/styles/tokens.css`, the fonts and the images by
   relative path rather than copying them, so the page and the app cannot
-  drift apart.
+  drift apart. Since 2026-09-29 (#16) it also imports the shared
+  `frontend/src/styles/base.css` (faces, base rules, scrims) instead of
+  keeping its own copy, and adds no style of its own.
 - **Vite and Tailwind v4, no framework, no script.** One HTML page styled with
   the same token utilities as the app. The built output is HTML, one CSS file,
   fonts and two images.
