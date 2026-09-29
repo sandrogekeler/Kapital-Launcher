@@ -7,7 +7,8 @@ record is `docs/adr/0009-download-site.md`.
 ## Where the look comes from
 
 Nothing visual is defined here. `src/style.css` imports the app's generated
-`frontend/src/styles/tokens.css` and its fonts, and `index.html` uses the
+`frontend/src/styles/tokens.css` and its shared `frontend/src/styles/base.css`
+(fonts, base rules, scrims), and `index.html` uses the
 wordmark and a screenshot from `frontend/src/assets/`. The buttons carry the
 classes of the app's `Button` variants: `play` for Download, `ghost` for the
 others. A value the page needs and the tokens do not have is a token to add in

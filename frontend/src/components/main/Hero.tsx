@@ -27,12 +27,12 @@ export function Hero({ chapter, onOpenWiki }: Props) {
             className="absolute inset-0 size-full object-cover object-[center_40%]"
             draggable={false}
           />
-          <div className="hero-scrim absolute inset-0" aria-hidden />
+          <div className="scrim-hero absolute inset-0" aria-hidden />
         </>
       ) : (
         <>
           <div className="art-pending absolute inset-0" aria-hidden />
-          <div className="text-accent text-2xs absolute top-6 left-14 font-mono tracking-[0.06em]">
+          <div className="text-accent text-2xs tracking-label absolute top-6 left-14 font-mono">
             [ {chapter.name.toUpperCase()} SCREENSHOT ]
           </div>
         </>

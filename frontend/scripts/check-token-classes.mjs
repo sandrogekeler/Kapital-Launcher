@@ -64,6 +64,7 @@ for (const utility of ['accent', 'accent-wash', 'accent-edge']) {
 }
 for (const name of Object.keys(src.type.size.scale)) add(`text-${name}`, 'type size')
 for (const name of Object.keys(src.type.family)) add(`font-${name}`, 'font family')
+for (const name of Object.keys(src.type.tracking.scale)) add(`tracking-${name}`, 'tracking')
 for (const name of Object.keys(src.radius.scale)) {
   for (const prefix of RADIUS_PREFIXES) add(`${prefix}-${name}`, 'radius')
 }

@@ -10,10 +10,13 @@ and by CI. Items below that a gate already holds say so; the rest are review.
 
 ## 1. Clean
 
-- **Every colour and size is a token.** `design/tokens.json` is the only place a
-  value is defined; components use `bg-canvas`, `text-fg-muted`, `text-sm` and
-  so on. Gate: the `no literal colours` and `no arbitrary pixel text sizes`
-  invariants, `pnpm check-tokens`.
+- **Every design value is a token.** `design/tokens.json` is the only place a
+  colour, size, letter-spacing, effect or scrim stop is defined, for the app
+  and the download site alike; components use `bg-canvas`, `text-fg-muted`,
+  `text-sm`, `tracking-control` and so on, and the shared `styles/base.css`
+  reads `var(--…)` only. Gate: the `no literal colours`, `no arbitrary pixel
+  text sizes` and `no hand-written design values` invariants, `pnpm
+  check-tokens`.
 - **Generated files are regenerated, never edited.** `tokens.css`, `tokens.ts`,
   `design_gen.go`, `wailsjs/`. Gate: the `generated` section.
 - **Icons come from one module.** Gate: ESLint and the `icons come from one
