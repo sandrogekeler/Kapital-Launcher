@@ -19,10 +19,10 @@
       "pack": {
         "type": "modpack",
         "loader": "Forge",
-        "minecraft": "1.19.1",
-        "mods": null,
-        "memoryGb": null,
-        "version": null,
+        "minecraft": "1.19.2",
+        "mods": 208,
+        "memoryGb": 12,
+        "version": "4.1",
         "packwiz": null,
         "mrpack": null
       },
@@ -47,9 +47,9 @@
       },
       "pack": {
         "type": "client-visuals",
-        "loader": "[PLACEHOLDER]",
+        "loader": "Fabric",
         "minecraft": "1.20.6",
-        "mods": null,
+        "mods": 31,
         "memoryGb": null,
         "version": null,
         "packwiz": null,
@@ -82,14 +82,14 @@
         "type": "modpack",
         "loader": "NeoForge",
         "minecraft": "1.21.1",
-        "mods": null,
+        "mods": 92,
         "memoryGb": null,
         "version": null,
         "packwiz": null,
         "mrpack": null
       },
       "server": {
-        "address": "placeholder.invalid",
+        "address": "rails-enjoyed.tun.ply.gg",
         "joinOnLaunch": false,
         "software": "[PLACEHOLDER]"
       },

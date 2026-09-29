@@ -91,10 +91,12 @@ and was checked locally; it has never run on Cloudflare. To take it live:
 
 ## Open questions, all the author's
 
-- **Lichdenstein's client loader.** The visuals pack's loader is
-  `[PLACEHOLDER]` in `data/launcher.json` (Fabric with Iris? Something else?).
-- **Server addresses** for Lichdenstein and Frangfurd: `placeholder.invalid`
-  until known. Everything reads as offline until then.
+- **Lichdenstein's server address**: `placeholder.invalid` until it has a
+  permanent one; it reads as offline until then. Frangfurd's is
+  `rails-enjoyed.tun.ply.gg` (2026-09-29), a playit.gg tunnel whose port comes
+  from its `_minecraft._tcp` SRV record.
+- **Memory** for Lichdenstein and Frangfurd: `null`. Luxemburg's 12 GB is its
+  CurseForge instance setting.
 - **Frangfurd `joinOnLaunch`.** Set to `false` (play the pack, join from
   inside the game). One boolean if that is wrong.
 - **`verdigris-bright`** in the wiki: two derived tints, not brand values.

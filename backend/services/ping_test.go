@@ -167,3 +167,80 @@ func atoi(s string) int {
 	}
 	return n
 }
+
+// withSRV swaps the SRV lookup for the test, answering from records by host.
+func withSRV(t *testing.T, calls *int, records map[string][]*net.SRV) {
+	t.Helper()
+	orig := lookupSRV
+	lookupSRV = func(_ context.Context, service, proto, name string) (string, []*net.SRV, error) {
+		*calls++
+		if service != "minecraft" || proto != "tcp" {
+			t.Errorf("looked up _%s._%s", service, proto)
+		}
+		if r, ok := records[name]; ok {
+			return "", r, nil
+		}
+		return "", nil, &net.DNSError{Err: "no such host", Name: name, IsNotFound: true}
+	}
+	t.Cleanup(func() { lookupSRV = orig })
+}
+
+func TestPingFollowsTheMinecraftSRVRecord(t *testing.T) {
+	addr, hs := fakeServer(t, `{"version":{"name":"NeoForge 1.21.1"},"players":{"max":10,"online":1}}`)
+	_, portStr, _ := net.SplitHostPort(addr)
+	calls := 0
+	withSRV(t, &calls, map[string][]*net.SRV{
+		"rails.tunnel.test": {{Target: "127.0.0.1.", Port: uint16(atoi(portStr))}},
+	})
+
+	got, err := Ping(context.Background(), "rails.tunnel.test")
+	if err != nil || !got.Online || got.Players != 1 {
+		t.Fatalf("%+v %v", got, err)
+	}
+	// The handshake names the manifest's host, as a client does, with the port dialled.
+	raw := <-hs
+	_, rest, _ := readVarint(raw)
+	_, rest, _ = readVarint(rest)
+	host, err := readString(rest)
+	if err != nil || string(host) != "rails.tunnel.test" {
+		t.Fatalf("handshake host %q %v", host, err)
+	}
+	rest = rest[len(varint(int32(len(host))))+len(host):]
+	if int(binary.BigEndian.Uint16(rest[:2])) != atoi(portStr) {
+		t.Fatalf("handshake port %d", binary.BigEndian.Uint16(rest[:2]))
+	}
+}
+
+func TestResolveTargetFallsBackToTheHostOn25565(t *testing.T) {
+	calls := 0
+	withSRV(t, &calls, map[string][]*net.SRV{
+		"good.test":     {{Target: "node7.tunnel.test.", Port: 56932}},
+		"zero.test":     {{Target: "node7.tunnel.test.", Port: 0}},
+		"hostile.test":  {{Target: "-oProxy=evil.", Port: 25570}},
+		"withport.test": {{Target: "node7.tunnel.test:1.", Port: 25570}},
+		"empty.test":    {},
+	})
+	cases := []struct {
+		host     string
+		port     int
+		wantHost string
+		wantPort int
+	}{
+		{"good.test", 0, "node7.tunnel.test", 56932},
+		{"good.test", 25580, "good.test", 25580}, // a port in the manifest wins; no lookup
+		{"missing.test", 0, "missing.test", 25565},
+		{"empty.test", 0, "empty.test", 25565},
+		{"zero.test", 0, "zero.test", 25565},
+		{"hostile.test", 0, "hostile.test", 25565},
+		{"withport.test", 0, "withport.test", 25565},
+	}
+	for _, c := range cases {
+		h, p := resolveTarget(context.Background(), c.host, c.port)
+		if h != c.wantHost || p != c.wantPort {
+			t.Errorf("%s:%d -> %s:%d, want %s:%d", c.host, c.port, h, p, c.wantHost, c.wantPort)
+		}
+	}
+	if calls != len(cases)-1 {
+		t.Errorf("SRV looked up %d times, want %d (never when the port is given)", calls, len(cases)-1)
+	}
+}
