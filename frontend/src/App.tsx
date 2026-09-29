@@ -24,6 +24,11 @@ export default function App() {
   const launchError = useEngineStore((s) => s.error)
   const loadEngine = useEngineStore((s) => s.load)
   const loadInstances = useEngineStore((s) => s.loadInstances)
+  const release = useEngineStore((s) => s.release)
+  const install = useEngineStore((s) => s.install)
+  const loadRelease = useEngineStore((s) => s.loadRelease)
+  const listenInstall = useEngineStore((s) => s.listenInstall)
+  const installPrism = useEngineStore((s) => s.installPrism)
   const installed = useEngineStore(selectInstalled(selectedId))
   const launch = useEngineStore((s) => s.launch)
 
@@ -59,6 +64,19 @@ export default function App() {
     return () => window.removeEventListener('focus', onFocus)
   }, [loadInstances])
 
+  // Prism install progress arrives as events too; one listener for the app.
+  useEffect(() => listenInstall(), [listenInstall])
+
+  // Prism's latest release matters in two cases: there is no Prism, so the
+  // launcher can offer to get it; or the launcher's own copy is the one in
+  // use, so it can offer an update (ADR-11). Checked when the engine is
+  // known, never on a timer.
+  const engineFound = engine?.found
+  const engineSource = engine?.source
+  useEffect(() => {
+    if (engineFound === false || engineSource === 'managed') void loadRelease()
+  }, [engineFound, engineSource, loadRelease])
+
   // Server status arrives as events from Go's ticker (.claude/rules/ipc.md);
   // this is the one listener, for the app's lifetime.
   useEffect(() => listenServers(), [listenServers])
@@ -85,6 +103,10 @@ export default function App() {
     OpenChapterWiki(chapter.id).catch((e) => console.warn('open wiki', errMsg(e)))
   const openPrismSite = () =>
     OpenExternal(PRISM_SITE).catch((e) => console.warn('open prism site', errMsg(e)))
+  const openReleasePage = () =>
+    OpenExternal(release?.page || PRISM_SITE).catch((e) =>
+      console.warn('open prism release', errMsg(e)),
+    )
 
   return (
     <div className="bg-canvas flex h-full flex-col">
@@ -103,7 +125,11 @@ export default function App() {
             checking={checking === chapter.id}
             error={launchError}
             onPlay={() => void launch(chapter.id)}
-            onInstallPrism={openPrismSite}
+            release={release}
+            install={install}
+            onGetPrism={() => void installPrism()}
+            onOpenPrismSite={openPrismSite}
+            onOpenReleasePage={openReleasePage}
             onCheckServer={() => void checkServer(chapter.id)}
           />
           <Panels chapter={chapter} status={status} onOpenWiki={openWiki} />

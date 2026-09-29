@@ -16,7 +16,16 @@ const found: EngineInfo = {
 
 describe('useEngineStore', () => {
   beforeEach(() => {
-    useEngineStore.setState({ engine: null, instances: null, launching: null, error: null })
+    useEngineStore.setState({
+      engine: null,
+      instances: null,
+      launching: null,
+      error: null,
+      release: null,
+      install: null,
+    })
+    vi.mocked(App.GetPrismRelease).mockReset()
+    vi.mocked(App.InstallPrism).mockReset()
     vi.mocked(App.GetEngine).mockReset()
     vi.mocked(App.GetInstances).mockReset()
     vi.mocked(App.RefreshEngine).mockReset()
@@ -78,5 +87,67 @@ describe('useEngineStore', () => {
     expect(useEngineStore.getState().error).toContain('not found')
     useEngineStore.getState().clearError()
     expect(useEngineStore.getState().error).toBeNull()
+  })
+
+  it('installs Prism: progress from events, outcome from the promise, then re-reads', async () => {
+    const release = {
+      version: '11.1.1',
+      asset: 'PrismLauncher-Windows-MSVC-Portable-11.1.1.zip',
+      url: 'https://github.com/x',
+      size: 20396629,
+      digest: 'sha256:ab',
+      page: 'https://github.com/p',
+      installed: '',
+      updateAvailable: false,
+    }
+    vi.mocked(App.GetPrismRelease).mockResolvedValue(models.PrismRelease.createFrom(release))
+    await useEngineStore.getState().loadRelease()
+    expect(useEngineStore.getState().release?.version).toBe('11.1.1')
+
+    // Before an install nothing is shown, whatever arrives.
+    useEngineStore
+      .getState()
+      .receiveInstall({ phase: 'downloading', received: 1, total: 2, error: '' })
+    expect(useEngineStore.getState().install).toBeNull()
+
+    let finish!: () => void
+    vi.mocked(App.InstallPrism).mockReturnValue(new Promise<void>((r) => (finish = r)))
+    vi.mocked(App.GetEngine).mockResolvedValue({ ...found, source: 'managed' })
+    const p = useEngineStore.getState().installPrism()
+    expect(useEngineStore.getState().install?.phase).toBe('downloading')
+    useEngineStore
+      .getState()
+      .receiveInstall({ phase: 'verifying', received: 0, total: 0, error: '' })
+    expect(useEngineStore.getState().install?.phase).toBe('verifying')
+    finish()
+    await p
+    expect(useEngineStore.getState().install?.phase).toBe('done')
+    expect(useEngineStore.getState().engine?.source).toBe('managed')
+    expect(App.GetPrismRelease).toHaveBeenCalledTimes(2)
+
+    // A late event does not reopen a finished install.
+    useEngineStore
+      .getState()
+      .receiveInstall({ phase: 'downloading', received: 1, total: 2, error: '' })
+    expect(useEngineStore.getState().install?.phase).toBe('done')
+
+    // The first Play clears "ready, sign in on first play".
+    vi.mocked(App.LaunchChapter).mockResolvedValue()
+    await useEngineStore.getState().launch('frangfurd')
+    expect(useEngineStore.getState().install).toBeNull()
+  })
+
+  it('records a failed install, and offers nothing without a bridge', async () => {
+    vi.mocked(App.InstallPrism).mockRejectedValue("Prism's download does not match GitHub's digest")
+    await useEngineStore.getState().installPrism()
+    expect(useEngineStore.getState().install).toMatchObject({ phase: 'failed' })
+    expect(useEngineStore.getState().install?.error).toMatch(/digest/)
+
+    vi.mocked(App.GetPrismRelease).mockImplementation(() => {
+      throw new TypeError('no bridge')
+    })
+    await useEngineStore.getState().loadRelease()
+    expect(useEngineStore.getState().release).toBeNull()
+    expect(useEngineStore.getState().listenInstall()).toBeTypeOf('function')
   })
 })

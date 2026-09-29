@@ -32,9 +32,8 @@ the scaffold changed the picture.
       it does, through a pipe, as `PrismLauncher 11.1.0` (2026-09-29)
 - [x] A header bar in place of the OS title bar, holding the brand and the
       settings gear (ADR-10, #11)
-- [ ] Get Prism for a player who has none, on approval: a verified,
-      launcher-managed portable copy (ADR-11, #23). The service is built; the
-      approval card and update offer are next
+- [x] Get Prism for a player who has none, on approval: a verified,
+      launcher-managed portable copy with a one-click update offer (ADR-11, #23)
 - [ ] Settings screen: Prism executable, Prism root, profile name, theme
 - [x] Know whether a chapter's instance exists under the resolved root, and
       warn on the state line when it does not; Play stays Play until

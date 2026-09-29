@@ -92,6 +92,30 @@ export interface InstanceReport {
   present: Record<string, boolean>
 }
 
+/** A Prism release the launcher can install for a player without Prism (ADR-11). */
+export interface PrismRelease {
+  version: string
+  asset: string
+  url: string
+  size: number
+  digest: string
+  page: string
+  /** The launcher-managed Prism's version, "" when there is none. */
+  installed: string
+  /** Only ever true when the managed Prism is the one in use. */
+  updateAvailable: boolean
+}
+
+export type PrismInstallPhase = 'downloading' | 'verifying' | 'unpacking' | 'done' | 'failed'
+
+/** The prism:install event: one per step of an install or update. */
+export interface PrismInstallProgress {
+  phase: PrismInstallPhase | string
+  received: number
+  total: number
+  error: string
+}
+
 export interface AppSettings {
   theme: Theme | string
   prismExecutable: string

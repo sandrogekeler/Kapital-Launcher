@@ -15,6 +15,7 @@ export type { LucideIcon } from 'lucide-react'
 export {
   BookOpen,
   Copy,
+  Download,
   ExternalLink,
   Folder,
   Minus,
