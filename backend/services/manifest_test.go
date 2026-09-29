@@ -39,8 +39,8 @@ func TestBundledManifestIsValid(t *testing.T) {
 	if fra.Server == nil || fra.Server.JoinOnLaunch {
 		t.Errorf("Frangfurd has a server but is played as a pack: %+v", fra.Server)
 	}
-	if m.Chapters[0].Pack.Loader != "Forge" || m.Chapters[0].Pack.Minecraft != "1.19.1" {
-		t.Errorf("Luxemburg is Forge 1.19.1: %+v", m.Chapters[0].Pack)
+	if m.Chapters[0].Pack.Loader != "Forge" || m.Chapters[0].Pack.Minecraft != "1.19.2" {
+		t.Errorf("Luxemburg is Forge 1.19.2: %+v", m.Chapters[0].Pack)
 	}
 }
 

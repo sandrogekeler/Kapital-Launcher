@@ -70,7 +70,9 @@ the scaffold changed the picture.
 The ping, the ticker and the state line shipped with the scaffold (ADR-5).
 What is left:
 
-- [ ] Real addresses for Lichdenstein and Frangfurd in the manifest
+- [x] Frangfurd's real address (`rails-enjoyed.tun.ply.gg`, 2026-09-29), with the
+      ping following the host's SRV record for the port
+- [ ] Lichdenstein's real address
 - [ ] Show the MOTD and the player sample somewhere the reference has room for
 - [ ] Drop the per-minute "connection refused" log line to debug once the
       addresses are real

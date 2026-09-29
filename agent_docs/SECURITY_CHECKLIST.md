@@ -106,7 +106,10 @@ is unset and `wails build` does not pass `-devtools`.
 **S6.1 Only the manifest's addresses are pinged.**
 Holds when: `services.Ping` is reached only through `StatusService.Check`,
 which takes a `models.Chapter` from the validated manifest; the frontend
-passes a chapter id, never an address.
+passes a chapter id, never an address. An address without a port may be
+redirected by that host's own `_minecraft._tcp` SRV record, and only to a
+target that passes `ParseServerAddress`; anything else falls back to the
+manifest's host (`TestResolveTargetFallsBackToTheHostOn25565`).
 Verify: `grep -rn 'Ping(' --include=*.go . | grep -v _test`.
 
 **S6.2 A response can change the status line and nothing else.**

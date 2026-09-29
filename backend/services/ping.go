@@ -33,6 +33,32 @@ const (
 	defaultMinecraft   = 25565
 )
 
+// lookupSRV is the resolver's SRV lookup, injected so the SRV path is testable
+// without DNS.
+var lookupSRV = net.DefaultResolver.LookupSRV
+
+// resolveTarget is where a ping connects, the way the game itself decides: an
+// address with a port is dialled as given; without one, the host's
+// _minecraft._tcp SRV record names the target and port, as tunnels such as
+// playit.gg publish them; without a usable record, the host on 25565. The
+// target comes from DNS, so it must itself be a plain host name; anything
+// else falls back to the manifest's host. The handshake still names the
+// manifest's host, as a client does, so a proxy routing by name still works.
+func resolveTarget(ctx context.Context, host string, port int) (string, int) {
+	if port != 0 {
+		return host, port
+	}
+	_, records, err := lookupSRV(ctx, "minecraft", "tcp", host)
+	if err != nil || len(records) == 0 || records[0].Port == 0 {
+		return host, defaultMinecraft
+	}
+	target, p, err := ParseServerAddress(strings.TrimSuffix(records[0].Target, "."))
+	if err != nil || p != 0 {
+		return host, defaultMinecraft
+	}
+	return target, int(records[0].Port)
+}
+
 // PingResult is what a status query returns, before it is folded into a
 // models.ServerStatus for the UI.
 type PingResult struct {
@@ -52,15 +78,13 @@ func Ping(ctx context.Context, address string) (PingResult, error) {
 	if err != nil {
 		return PingResult{}, err
 	}
-	if port == 0 {
-		port = defaultMinecraft
-	}
 	ctx, cancel := context.WithTimeout(ctx, pingTimeout)
 	defer cancel()
+	dialHost, port := resolveTarget(ctx, host, port)
 
 	started := time.Now()
 	var d net.Dialer
-	conn, err := d.DialContext(ctx, "tcp", net.JoinHostPort(host, strconv.Itoa(port)))
+	conn, err := d.DialContext(ctx, "tcp", net.JoinHostPort(dialHost, strconv.Itoa(port)))
 	if err != nil {
 		return PingResult{}, fmt.Errorf("ping %s: %w", address, err)
 	}

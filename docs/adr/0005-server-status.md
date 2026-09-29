@@ -38,7 +38,12 @@ user's IP only to the author's own servers.
   the response is size-bounded, parsed as JSON, and its description is
   flattened to plain text with formatting codes stripped.
 - The addresses are `placeholder.invalid` until the real ones are known,
-  which reads as offline. That is correct.
+  which reads as offline. That is correct. Frangfurd's is real since
+  2026-09-29; Lichdenstein's is still a placeholder.
+- An address without a port follows the host's `_minecraft._tcp` SRV record,
+  as the game does, falling back to the host on 25565. Tunnels such as
+  playit.gg publish their port that way, so the manifest names only the host
+  and a reassigned port needs no manifest change.
 - `.invalid` never resolves, so the ticker's first pass on a fresh build
   logs one refused connection per server chapter per minute. Fine until
   the addresses land; if it becomes noise, the log line drops to debug.
