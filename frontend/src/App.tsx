@@ -4,7 +4,7 @@ import { Hero } from './components/main/Hero'
 import { ActionBar } from './components/main/ActionBar'
 import { Panels } from './components/main/Panels'
 import { selectChapter, useChapterStore } from './stores/useChapterStore'
-import { useEngineStore } from './stores/useEngineStore'
+import { selectInstalled, useEngineStore } from './stores/useEngineStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { selectStatus, useServerStore } from './stores/useServerStore'
 import { OpenChapterWiki, OpenExternal } from '../wailsjs/go/main/App'
@@ -21,6 +21,8 @@ export default function App() {
   const launching = useEngineStore((s) => s.launching)
   const launchError = useEngineStore((s) => s.error)
   const loadEngine = useEngineStore((s) => s.load)
+  const loadInstances = useEngineStore((s) => s.loadInstances)
+  const installed = useEngineStore(selectInstalled(selectedId))
   const launch = useEngineStore((s) => s.launch)
 
   const status = useServerStore(selectStatus(selectedId))
@@ -38,6 +40,15 @@ export default function App() {
     void loadEngine()
     void loadSettings()
   }, [loadChapters, loadEngine, loadSettings])
+
+  // An instance appears when the user imports one in Prism, which happens in
+  // another window. Coming back is the moment to look again; a focus event,
+  // not a timer, so nothing polls.
+  useEffect(() => {
+    const onFocus = () => void loadInstances()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [loadInstances])
 
   // Server status arrives as events from Go's ticker (.claude/rules/ipc.md);
   // this is the one listener, for the app's lifetime.
@@ -76,6 +87,7 @@ export default function App() {
           chapter={chapter}
           engine={engine}
           status={status}
+          installed={installed}
           launching={launching === chapter.id}
           checking={checking === chapter.id}
           error={launchError}

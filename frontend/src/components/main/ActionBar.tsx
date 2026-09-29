@@ -10,6 +10,8 @@ interface Props {
   chapter: Chapter
   engine: EngineInfo | null
   status: ServerStatus | undefined
+  /** Whether the chapter's Prism instance exists; undefined when unknown. */
+  installed: boolean | undefined
   launching: boolean
   checking: boolean
   error: string | null
@@ -20,13 +22,15 @@ interface Props {
 
 /**
  * Play, and the state line beside it. The line says what the app knows:
- * whether Prism is there, and for a chapter with a server, whether it is up.
- * Pack sync arrives with milestone 4 and takes the same slot.
+ * whether Prism is there, whether the chapter's instance is, and for a chapter
+ * with a server, whether it is up. A missing instance only warns: Play stays
+ * enabled and Prism says the rest. Installing arrives with milestone 4.
  */
 export function ActionBar({
   chapter,
   engine,
   status,
+  installed,
   launching,
   checking,
   error,
@@ -48,6 +52,12 @@ export function ActionBar({
     ]
   } else if (engine === null) {
     ;[state, meta] = ['○ Checking engine', '']
+  } else if (installed === false) {
+    ;[state, meta, tone] = [
+      '○ Not in Prism yet',
+      `No ${chapter.instance.id} instance was found`,
+      'text-warning',
+    ]
   } else if (chapter.server) {
     ;[state, meta] = serverLine(status, chapter.server.address)
     if (status?.checked && !status.online) tone = 'text-fg-muted'

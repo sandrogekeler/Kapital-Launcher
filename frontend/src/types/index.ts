@@ -82,6 +82,16 @@ export interface EngineInfo {
   source: string
 }
 
+/**
+ * Which chapters' Prism instances exist. A chapter missing from `present` is
+ * unknown (the root could not be worked out), not absent.
+ */
+export interface InstanceReport {
+  root: string
+  dir: string
+  present: Record<string, boolean>
+}
+
 export interface AppSettings {
   theme: Theme | string
   prismExecutable: string

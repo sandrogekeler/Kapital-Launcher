@@ -177,6 +177,22 @@ export namespace models {
 	    }
 	}
 	
+	export class InstanceReport {
+	    root: string;
+	    dir: string;
+	    present: Record<string, boolean>;
+	
+	    static createFrom(source: any = {}) {
+	        return new InstanceReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.root = source["root"];
+	        this.dir = source["dir"];
+	        this.present = source["present"];
+	    }
+	}
 	export class Wiki {
 	    baseUrl: string;
 	
