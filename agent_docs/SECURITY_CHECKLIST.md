@@ -55,8 +55,10 @@ bundled copy is the fallback on any failure.
 ## S3. Paths and processes
 
 **S3.1 Prism is run with an argument array.**
-Holds when: the only `exec.Command` in the tree takes the executable and
-`LaunchArgs`' output; nothing invokes `sh`, `cmd` or `powershell`.
+Holds when: the `exec.Command`s in the tree are Prism's (launch, `--version`,
+`flatpak info`), all with argument arrays built from validated values, plus
+`/usr/bin/codesign --verify` on macOS with a fixed argument list (S4.5);
+nothing invokes `sh`, `cmd` or `powershell`.
 Verify: the `shell never sees a command string` invariant in `.claude/suite.json`.
 
 **S3.2 Every argument is validated.**
@@ -85,6 +87,19 @@ resolving outside the instance directory.
 **S4.3 Every outbound request has a timeout and a size bound.**
 **S4.4 The Modrinth User-Agent is unique** and the client backs off on the
 `X-Ratelimit-*` headers.
+
+**S4.5 Prism itself is installed only on approval, and only if it verifies.**
+Holds when: `ManagedPrism` reads the release from Prism's fixed repository URL;
+the asset is this platform's portable build at its expected download URL with a
+GitHub SHA-256 digest and a bounded size; redirects stay on GitHub's download
+hosts; the digest and size are checked while streaming; unpacking refuses
+escapes (S4.2) and bounds entries and bytes; the Windows executable passes
+`WinVerifyTrust` and the macOS bundle `codesign --verify` (fixed arguments);
+and nothing is placed until all of that passed. `InstallPrism` re-reads the
+release itself rather than taking one from the frontend (ADR-11).
+Verify: `managedprism_test.go` (bad digest, redirect off the allowlist, a
+release URL off Prism's, failed signature, no executable, zip escapes).
+Probe: a release whose asset URL points elsewhere; a zip naming `../x`.
 
 ## S5. WebView
 

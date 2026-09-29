@@ -15,7 +15,8 @@ type EngineInfo struct {
 	// when Prism's own default root is used (docs/adr/0002-prism-data-root.md).
 	Root string `json:"root"`
 	// Source says how the executable was found: "settings", "path",
-	// "standard-location" or "flatpak". For the engine card and for support.
+	// "standard-location", "flatpak", or "managed" for the copy the launcher
+	// installed itself. For the engine card and for support.
 	Source string `json:"source"`
 }
 

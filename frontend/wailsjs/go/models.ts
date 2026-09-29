@@ -242,6 +242,32 @@ export namespace models {
 		}
 	}
 	
+	export class PrismRelease {
+	    version: string;
+	    asset: string;
+	    url: string;
+	    size: number;
+	    digest: string;
+	    page: string;
+	    installed: string;
+	    updateAvailable: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new PrismRelease(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.version = source["version"];
+	        this.asset = source["asset"];
+	        this.url = source["url"];
+	        this.size = source["size"];
+	        this.digest = source["digest"];
+	        this.page = source["page"];
+	        this.installed = source["installed"];
+	        this.updateAvailable = source["updateAvailable"];
+	    }
+	}
 	
 	export class ServerStatus {
 	    chapterId: string;

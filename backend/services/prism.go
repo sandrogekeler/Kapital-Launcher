@@ -52,6 +52,17 @@ type PrismService struct {
 	run      func(ctx context.Context, exe string, args ...string) ([]byte, error)
 	goos     string
 	home     string
+	// managed reports the launcher-managed Prism, tried after every copy
+	// the player installed themselves (docs/adr/0011-getting-prism.md).
+	managed func() (exe, root string, ok bool)
+}
+
+// UseManaged makes detection fall back to the launcher-managed Prism.
+func (p *PrismService) UseManaged(m *ManagedPrism) {
+	p.managed = func() (string, string, bool) {
+		_, exe, ok := m.Installed()
+		return exe, m.Root(), ok
+	}
 }
 
 // NewPrismService wires the real OS.
@@ -77,8 +88,11 @@ func NewPrismService(goos string) *PrismService {
 }
 
 // Detect finds Prism, preferring an explicit setting, then PATH, then each
-// platform's standard install location. It never downloads or installs
-// anything: Prism is GPL-3.0 and separately installed (docs/HANDOFF.md §5).
+// platform's standard install location, and only then the copy the launcher
+// manages for a player who has none. Detection itself never downloads or
+// installs anything; getting Prism is a separate step the player approves
+// (docs/adr/0011-getting-prism.md). A managed Prism always runs with its own
+// data root, so Root is that root whatever the settings say.
 func (p *PrismService) Detect(ctx context.Context, settings models.AppSettings) models.EngineInfo {
 	info := models.EngineInfo{Root: settings.PrismRoot}
 	if exe := strings.TrimSpace(settings.PrismExecutable); exe != "" {
@@ -102,6 +116,11 @@ func (p *PrismService) Detect(ctx context.Context, settings models.AppSettings) 
 	if !info.Found && p.goos == "linux" {
 		if flatpak, err := p.lookPath("flatpak"); err == nil && p.flatpakInstalled(ctx, flatpak) {
 			info.Found, info.Executable, info.Source = true, flatpak, "flatpak"
+		}
+	}
+	if !info.Found && p.managed != nil {
+		if exe, root, ok := p.managed(); ok {
+			info.Found, info.Executable, info.Source, info.Root = true, exe, "managed", root
 		}
 	}
 	if info.Found {

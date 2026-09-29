@@ -41,9 +41,10 @@ A bare `catch {}` that swallows a rejection is the thing to refuse in review.
 
 ## Events
 
-One so far: `server:status`, a `models.ServerStatus` emitted by
-`StatusService.Run`'s ticker and by `GetServerStatus`. The pattern for the
-next one:
+Two: `server:status`, a `models.ServerStatus` emitted by
+`StatusService.Run`'s ticker and by `GetServerStatus`; and `prism:install`, a
+`models.PrismInstallProgress` per step while `InstallPrism` runs (its listener
+arrives with the approval card). The pattern for the next one:
 
 - The name is a Go constant (`services.EventServerStatus`) and a TS constant
   (`EVENT_SERVER_STATUS`), spelled the same.
