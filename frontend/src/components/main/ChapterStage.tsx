@@ -16,7 +16,8 @@ interface Outgoing {
   direction: Direction
 }
 
-const CARD = 'bg-raised border-line overflow-hidden rounded-lg border'
+// A column, so the hero can take the height left over (#68).
+const CARD = 'bg-raised border-line flex min-h-0 grow flex-col overflow-hidden rounded-lg border'
 
 /**
  * The chapter card and its motion (#59, #67). The open chapter's view sits
@@ -44,7 +45,7 @@ export function ChapterStage({ chapter, chapters, onOpenSettings }: Props) {
   const leaving = outgoing?.direction === 'down' ? 'card-out-down' : 'card-out-up'
 
   return (
-    <div className="relative m-5 mb-8">
+    <div className="relative m-5 mb-8 flex min-h-0 grow flex-col">
       <div key={chapter.id} className={`${CARD} ${entering}`}>
         <ChapterView chapter={chapter} onOpenSettings={onOpenSettings} />
       </div>

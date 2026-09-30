@@ -12,7 +12,12 @@ interface Props {
   onOpenSettings: () => void
 }
 
-/** The chapter's picture, name and blurb. Art is a bundled screenshot or the accent grid. */
+/**
+ * The chapter's picture, name and blurb. Art is a bundled screenshot or the
+ * accent grid. The hero takes whatever height the card has left above the
+ * action bar and the panels, up to the layout token, so the card fits the
+ * window without scrolling (#68).
+ */
 export function Hero({ chapter, onOpenWiki, onOpenSettings }: Props) {
   const art = chapterArt(chapter.id)
   const loader = isPlaceholder(chapter.pack.loader) ? '[Loader]' : chapter.pack.loader
@@ -20,7 +25,7 @@ export function Hero({ chapter, onOpenWiki, onOpenSettings }: Props) {
   const mods = chapter.pack.mods == null ? '[N] mods' : `${factValue(chapter.pack.mods)} mods`
 
   return (
-    <section className="border-line relative flex h-(--layout-hero) shrink-0 flex-col justify-end overflow-hidden border-b px-14 py-11">
+    <section className="border-line relative flex max-h-(--layout-hero) min-h-0 grow flex-col justify-end overflow-hidden border-b px-14 py-11">
       {art ? (
         <>
           <img
