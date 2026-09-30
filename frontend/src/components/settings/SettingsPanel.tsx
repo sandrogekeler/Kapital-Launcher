@@ -86,7 +86,7 @@ export function SettingsPanel({ onClose }: Props) {
   }
 
   return (
-    <section aria-label="Settings" className="flex min-h-0 grow flex-col overflow-y-auto">
+    <section aria-label="Settings" className="flex flex-col">
       <div className="border-line flex items-center gap-3 border-b px-14 py-5">
         <IconButton icon={ArrowLeft} title="Back" onClick={onClose} />
         <h1 className="font-display m-0 text-2xl font-semibold">Settings</h1>
