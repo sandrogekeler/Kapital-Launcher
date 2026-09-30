@@ -1,6 +1,6 @@
 import type { Ref } from 'react'
 import type { Chapter } from '../../types'
-import { chapterArt } from '../../lib/art'
+import { chapterArt, chapterIcon } from '../../lib/art'
 
 interface Props {
   chapter: Chapter
@@ -11,11 +11,12 @@ interface Props {
 }
 
 /**
- * One row of the chapter nav: thumbnail, number and name in the chapter's own
- * accent, era underneath, and a dot that lights when the chapter is open. The
- * selected row's border is the nav's highlight, drawn behind the rows; the
- * row itself fades its own art in behind its text, blurred and washed, while
- * it is the one open (#69), and stops its hover tint.
+ * One row of the chapter nav: the pack's icon (#77), number and name in the
+ * chapter's own accent, era underneath, and a dot that lights when the
+ * chapter is open. The selected row's border is the nav's highlight, drawn
+ * behind the rows; the row itself fades its own art in behind its text,
+ * blurred, tinted toward its accent and washed, while it is the one open
+ * (#69, #77), and stops its hover tint.
  *
  * The row is scoped to its chapter with data-chapter, so `text-accent` inside
  * it resolves to that chapter's colour regardless of which chapter the page
@@ -24,6 +25,7 @@ interface Props {
  */
 export function ChapterButton({ chapter, current, onSelect, ref }: Props) {
   const art = chapterArt(chapter.id)
+  const icon = chapterIcon(chapter.id) ?? art
   return (
     <button
       ref={ref}
@@ -48,12 +50,14 @@ export function ChapterButton({ chapter, current, onSelect, ref }: Props) {
             className="size-full scale-125 object-cover blur-(--effect-tile-blur)"
             draggable={false}
           />
+          {/* The accent's hue over the art's light: a tint toward the chapter's colour. */}
+          <div className="bg-accent absolute inset-0 opacity-(--effect-tile-tint) mix-blend-color" />
           <div className="scrim-tile absolute inset-0" />
         </div>
       )}
-      {art ? (
+      {icon ? (
         <img
-          src={art}
+          src={icon}
           alt=""
           className="border-line-strong size-10 shrink-0 rounded-sm border object-cover"
           draggable={false}

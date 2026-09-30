@@ -56,10 +56,16 @@ export function Hero({ chapter, onOpenWiki, onOpenSettings }: Props) {
           <span className="text-accent font-mono">{chapter.number}</span>
           <span>{chapter.kind}</span>
         </div>
-        {/* The heading is the artwork when there is one; its alt keeps the name for readers. */}
+        {/* The heading is the artwork when there is one, at one height for
+            every chapter (#77); its alt keeps the name for readers. */}
         <h1 className="font-display text-display m-0 font-semibold">
           {title ? (
-            <img src={title} alt={chapter.name} className="block h-auto w-full" draggable={false} />
+            <img
+              src={title}
+              alt={chapter.name}
+              className="block h-(--layout-title) w-auto max-w-full"
+              draggable={false}
+            />
           ) : (
             chapter.name
           )}
