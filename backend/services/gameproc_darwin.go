@@ -54,11 +54,28 @@ func processStart(pid int) (time.Time, bool) {
 	return time.Unix(int64(t.Sec), int64(t.Usec)*1000), true
 }
 
+// sZomb is p_stat for a process that has exited and waits for its parent to
+// reap it (SZOMB in sys/proc.h). x/sys/unix does not export it.
+const sZomb = 5
+
+// exited says whether pid is gone. A zombie counts: kill(pid, 0) still
+// succeeds on one, and its parent may take its time reaping it.
+func exited(pid int) bool {
+	if err := unix.Kill(pid, 0); errors.Is(err, unix.ESRCH) {
+		return true
+	}
+	procs, err := unix.SysctlKinfoProcSlice("kern.proc.pid", pid)
+	if err != nil {
+		return false
+	}
+	return len(procs) == 0 || int(procs[0].Proc.P_pid) != pid || procs[0].Proc.P_stat == sZomb
+}
+
 func waitProcess(ctx context.Context, pid int) (int, bool, error) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
-		if err := unix.Kill(pid, 0); errors.Is(err, unix.ESRCH) {
+		if exited(pid) {
 			return 0, false, nil
 		}
 		select {
