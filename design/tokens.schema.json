@@ -168,13 +168,18 @@
     },
     "layout": {
       "type": "object",
-      "required": ["unit", "sidebar", "hero", "titlebar", "icon", "scrollbar", "window"],
+      "required": ["unit", "sidebar", "hero", "titlebar", "icon", "scrollbar", "slide", "window"],
       "additionalProperties": false,
       "properties": {
         "unit": { "const": "px" },
         "sidebar": { "type": "integer", "minimum": 1 },
         "hero": { "type": "integer", "minimum": 1 },
         "titlebar": { "type": "integer", "minimum": 1 },
+        "slide": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How far the chapter card travels on a switch, in px (#59)."
+        },
         "scrollbar": {
           "type": "integer",
           "minimum": 1,
@@ -207,7 +212,7 @@
     "effect": {
       "type": "object",
       "description": "Values a utility cannot name on its own: the hover lift on the filled button, the focus outline, the stops of the scrim over artwork, and the grid shown where a chapter has no artwork yet.",
-      "required": ["hoverBrightness", "focusRing", "scrim", "artPending"],
+      "required": ["hoverBrightness", "focusRing", "scrim", "artPending", "motionBlur"],
       "additionalProperties": false,
       "properties": {
         "hoverBrightness": { "type": "number", "exclusiveMinimum": 1, "maximum": 2 },
@@ -246,6 +251,11 @@
             "cell": { "type": "integer", "minimum": 1 },
             "cellThumb": { "type": "integer", "minimum": 1 }
           }
+        },
+        "motionBlur": {
+          "type": "number",
+          "minimum": 0,
+          "description": "The blur in px at the middle of the chapter card's slide (#59). 0 turns the blur off and keeps the slide."
         }
       }
     }

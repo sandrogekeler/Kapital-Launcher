@@ -35,6 +35,111 @@
   display: none;
 }
 
+/* The chapter card's slide on a switch (#59). The card moves the way the
+   selection moved in the nav: down, and the new card comes in from above,
+   or the reverse. The blur peaks mid-travel and is gone before the card
+   settles; the distance and the blur are tokens. With reduced motion the
+   cards only fade, over the same duration, so the outgoing card's
+   animationend still fires and it is still removed. */
+@keyframes card-in-down {
+  from {
+    transform: translateY(calc(-1 * var(--layout-slide)));
+    opacity: 0;
+    filter: blur(0);
+  }
+  45% {
+    filter: blur(var(--effect-motion-blur));
+  }
+  to {
+    transform: none;
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+@keyframes card-in-up {
+  from {
+    transform: translateY(var(--layout-slide));
+    opacity: 0;
+    filter: blur(0);
+  }
+  45% {
+    filter: blur(var(--effect-motion-blur));
+  }
+  to {
+    transform: none;
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+@keyframes card-out-down {
+  from {
+    transform: none;
+    opacity: 1;
+    filter: blur(0);
+  }
+  45% {
+    filter: blur(var(--effect-motion-blur));
+  }
+  to {
+    transform: translateY(var(--layout-slide));
+    opacity: 0;
+    filter: blur(0);
+  }
+}
+@keyframes card-out-up {
+  from {
+    transform: none;
+    opacity: 1;
+    filter: blur(0);
+  }
+  45% {
+    filter: blur(var(--effect-motion-blur));
+  }
+  to {
+    transform: translateY(calc(-1 * var(--layout-slide)));
+    opacity: 0;
+    filter: blur(0);
+  }
+}
+@keyframes card-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes card-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@utility card-in-down {
+  animation: card-in-down var(--duration-slow) var(--ease-out) both;
+}
+@utility card-in-up {
+  animation: card-in-up var(--duration-slow) var(--ease-out) both;
+}
+@utility card-out-down {
+  animation: card-out-down var(--duration-slow) var(--ease-out) both;
+}
+@utility card-out-up {
+  animation: card-out-up var(--duration-slow) var(--ease-out) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-in-down,
+  .card-in-up {
+    animation-name: card-fade-in;
+  }
+  .card-out-down,
+  .card-out-up {
+    animation-name: card-fade-out;
+  }
+}
+
 /* Where a chapter has no screenshot yet: a fine grid in the chapter's accent
    over the page ground. The same pattern at two scales serves the hero and
    the sidebar thumbnail. */

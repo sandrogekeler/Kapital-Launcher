@@ -1,58 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { HeaderBar } from './components/shell/HeaderBar'
 import { Sidebar } from './components/sidebar/Sidebar'
-import { Hero } from './components/main/Hero'
-import { ActionBar } from './components/main/ActionBar'
-import { Panels } from './components/main/Panels'
+import { ChapterStage } from './components/main/ChapterStage'
 import { SettingsPanel } from './components/settings/SettingsPanel'
 import { Scrollable } from './components/ui/Scrollable'
-import { selectChapter, selectWikiPick, useChapterStore } from './stores/useChapterStore'
-import {
-  selectInstalled,
-  selectInstancePack,
-  selectInstanceSize,
-  useEngineStore,
-} from './stores/useEngineStore'
+import { selectChapter, useChapterStore } from './stores/useChapterStore'
+import { useEngineStore } from './stores/useEngineStore'
 import { useSettingsStore } from './stores/useSettingsStore'
-import { selectStatus, useServerStore } from './stores/useServerStore'
-import { OpenChapterWiki, OpenExternal, OpenWikiPage } from '../wailsjs/go/main/App'
+import { useServerStore } from './stores/useServerStore'
 import { Environment } from '../wailsjs/runtime/runtime'
 import { errMsg, readOr } from './lib/ipc'
 
-const PRISM_SITE = 'https://prismlauncher.org'
-
 export default function App() {
   const chapter = useChapterStore(selectChapter)
+  const chapters = useChapterStore((s) => s.manifest.chapters)
   const selectedId = useChapterStore((s) => s.selectedId)
   const loadChapters = useChapterStore((s) => s.load)
   const loadWikiPages = useChapterStore((s) => s.loadWikiPages)
-  const wikiPick = useChapterStore(selectWikiPick)
 
   const engine = useEngineStore((s) => s.engine)
-  const launching = useEngineStore((s) => s.launching)
-  const launchError = useEngineStore((s) => s.error)
   const loadEngine = useEngineStore((s) => s.load)
   const loadInstances = useEngineStore((s) => s.loadInstances)
-  const release = useEngineStore((s) => s.release)
-  const install = useEngineStore((s) => s.install)
   const loadRelease = useEngineStore((s) => s.loadRelease)
   const listenInstall = useEngineStore((s) => s.listenInstall)
-  const installPrism = useEngineStore((s) => s.installPrism)
-  const installed = useEngineStore(selectInstalled(selectedId))
-  const instancePack = useEngineStore(selectInstancePack(selectedId))
-  const instanceSize = useEngineStore(selectInstanceSize(selectedId))
-  const launch = useEngineStore((s) => s.launch)
-  const installing = useEngineStore((s) => s.installing)
-  const installedNow = useEngineStore((s) => s.installedNow)
-  const installChapter = useEngineStore((s) => s.installChapter)
 
-  const status = useServerStore(selectStatus(selectedId))
-  const checking = useServerStore((s) => s.checking)
   const listenServers = useServerStore((s) => s.listen)
   const checkServer = useServerStore((s) => s.check)
 
   const theme = useSettingsStore((s) => s.settings.theme)
-  const devPack = useSettingsStore((s) => s.settings.packOverrides?.[selectedId])
   const loadSettings = useSettingsStore((s) => s.load)
 
   // Which OS draws the window, for the header's controls. Without a bridge
@@ -123,62 +98,20 @@ export default function App() {
 
   if (!chapter) return null
 
-  // The page the panel shows is the one that opens: the pick, or the
-  // manifest's teaser when there is none.
-  const openWiki = () =>
-    (wikiPick ? OpenWikiPage(wikiPick.url) : OpenChapterWiki(chapter.id)).catch((e) =>
-      console.warn('open wiki', errMsg(e)),
-    )
-  const openPrismSite = () =>
-    OpenExternal(PRISM_SITE).catch((e) => console.warn('open prism site', errMsg(e)))
-  const openReleasePage = () =>
-    OpenExternal(release?.page || PRISM_SITE).catch((e) =>
-      console.warn('open prism release', errMsg(e)),
-    )
-
   return (
     <div className="bg-canvas flex h-full flex-col">
       <ChapterSelectionSync />
       <HeaderBar platform={platform} onOpenSettings={() => setSettingsOpen((open) => !open)} />
       <div className="flex min-h-0 grow">
         <Sidebar />
-        {/* The chapter view scrolls under the header bar and beside the
-            sidebar when the window is shorter than it (#56); the padding
-            keeps the last row clear of the fixed disclaimer. */}
-        <Scrollable as="main" className="flex flex-col pb-8">
+        {/* The chapter card scrolls under the header bar and beside the
+            sidebar when the window is shorter than it (#56); the card's
+            margin keeps it clear of the fixed disclaimer. */}
+        <Scrollable as="main" className="flex flex-col">
           {settingsOpen ? (
             <SettingsPanel onClose={closeSettings} />
           ) : (
-            <>
-              <Hero chapter={chapter} onOpenWiki={openWiki} />
-              <ActionBar
-                chapter={chapter}
-                engine={engine}
-                status={status}
-                installed={installed}
-                devPack={devPack}
-                instancePack={instancePack}
-                launching={launching === chapter.id}
-                installing={installing === chapter.id}
-                installedNow={installedNow === chapter.id}
-                checking={checking === chapter.id}
-                error={launchError}
-                onPlay={() => void launch(chapter.id)}
-                onInstall={() => void installChapter(chapter.id)}
-                release={release}
-                install={install}
-                onGetPrism={() => void installPrism()}
-                onOpenPrismSite={openPrismSite}
-                onOpenReleasePage={openReleasePage}
-                onCheckServer={() => void checkServer(chapter.id)}
-              />
-              <Panels
-                chapter={chapter}
-                sizeBytes={instanceSize}
-                wikiPage={wikiPick}
-                onOpenWiki={openWiki}
-              />
-            </>
+            <ChapterStage chapter={chapter} chapters={chapters} />
           )}
         </Scrollable>
       </div>
