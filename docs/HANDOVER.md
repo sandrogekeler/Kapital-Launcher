@@ -1,7 +1,7 @@
 # Handover
 
 Written 2026-09-30, at the end of the second local session (Windows 11, the
-author's PC). Read `agent_docs/ROADMAP.md` for the milestones, `docs/adr/` for
+author's PC), and brought up to date the same day by a cloud session. Read `agent_docs/ROADMAP.md` for the milestones, `docs/adr/` for
 the decisions and the GitHub issues for the work items; this file is what a
 fresh session cannot work out on its own.
 
@@ -11,29 +11,30 @@ fresh session cannot work out on its own.
 git clone https://github.com/sandrogekeler/Kapital-Launcher
 cd Kapital-Launcher/frontend && pnpm install && cd ../site && pnpm install && cd ..
 wails dev                    # Wails CLI v2.16.0, the version go.mod names
-.claude/suite-check.py       # 23 checks; all pass except the two skipped locally
+.claude/suite-check.py       # all pass; aislop and release notes skip without ruff 0.16.7 or python3
 ```
 
 `main` is the default branch. Branch from `origin/main`. The repository
 deletes a branch when its pull request merges, which also retargets a pull
 request stacked on it.
 
-## Open pull requests, and the order to merge them
+## Open pull requests
 
-| PR | Base | What | State at handover |
-|---|---|---|---|
-| #26 | `main` | Getting Prism, the Go side: `ManagedPrism`, verification, detection, ADR-11 | Review findings fixed; CI re-running after a Windows symlink fix |
-| #27 | #26's branch | Getting Prism, the UI: approval card, progress, update offer | Stacked; merge after #26 and it retargets to `main` |
-| #1 | `main` | Dependabot: pnpm/action-setup 6.1.0 | Labelled; `backend` fails until Dependabot rebases it (asked for) |
+#26, #27 and #28 are merged; #23 is closed and `main` is green.
 
-Merge #26 first, then #27. Both close #23.
+| PR | What | State |
+|---|---|---|
+| #1 | Dependabot: pnpm/action-setup 6.1.0 | Its base is `cedad35`, 22 commits behind `main`, and `backend` failed there (`pattern all:frontend/dist: no matching files found`). A fresh `@dependabot rebase` should clear it |
 
 ## Work items, in the order agreed
 
-1. **#22** Generate a Prism instance zip for a fresh install: memory from the
+1. **#22** Generate a Prism instance for a fresh install: memory from the
    chapter's `memoryGb`, a named JVM preset (e.g. `"jvm": "zgc"`, never raw
    arguments in the manifest), the packwiz-installer pre-launch command, the
-   loader versions. Imported with `prismlauncher -I <local zip>`.
+   loader versions. Decided 2026-09-30: the launcher writes the
+   `kapital-<id>` folder itself, because `prismlauncher -I` cannot fix the
+   folder name (see the issue's comment), and the versions come from the
+   hosted `pack.toml`.
 2. **#24** Install a chapter before it can be played: Install replaces Play
    when the `kapital-<id>` instance is missing. Nothing comes preinstalled.
 3. **#25** Publish the packs on Cloudflare Pages, add its `pages.dev` host to
@@ -42,6 +43,12 @@ Merge #26 first, then #27. Both close #23.
    screen (its gear sits disabled in the header bar since #13).
 
 Plan each with the author before building; they choose between the options.
+
+Filed 2026-09-30 for work that needs the author, a dashboard or real hardware:
+#29 (Pages build watch paths), #30 (macOS verification pass), #31 (universal
+macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
+(server addresses and join on launch), #34 (first Windows build and app icon),
+#35 (what publishing the packs makes public).
 
 ## The packs
 
@@ -62,7 +69,12 @@ Plan each with the author before building; they choose between the options.
   40 Mbit/s 4K re-encode (16.8 MB); the 68 MB original stays in the author's
   Modrinth profile.
 - **Not hosted yet.** The Pages project for `kapital-packs` does not exist;
-  that is #25.
+  that is #25. Hosting makes every indexed file public, not only the
+  metadata: #35.
+- **Test-installed from `packwiz serve`** on 2026-09-30 (the comment on #25):
+  529 of 529 files client and server side, Create Propulsion included with no
+  manual step, a changed file refused by hash. Under a non-UTF-8 locale two
+  resource packs fail to install (#32).
 - `packwiz` is installed on the author's PC with `go install
   github.com/packwiz/packwiz@latest`.
 
@@ -88,13 +100,9 @@ Plan each with the author before building; they choose between the options.
 
 ## Open questions, all the author's
 
-- **Lichdenstein's server address**: `placeholder.invalid` until it has a
-  permanent one. Frangfurd's manifest address is the Germany tunnel; the
-  Global one is `female-specified.gl.joinmc.link`. Which the status line
-  should ping is the author's call.
+- **Server addresses and `joinOnLaunch`**: #33.
 - **Memory** for Lichdenstein and Frangfurd is `null` in the manifest;
   Frangfurd runs with 8 GB in Prism. Both feed #22.
-- **Frangfurd `joinOnLaunch`** is `false`.
 - **`verdigris-bright`** in the wiki: two derived tints, not brand values.
 
 ## Things a fresh session will trip on
@@ -109,9 +117,9 @@ Plan each with the author before building; they choose between the options.
   updater's `prismlauncher_update.cfg`, `m_rootPath` being the program
   folder on Windows) were read from Prism 11.1.1's source and are cited in
   ADR-11. Re-read them when Prism's major version changes.
-- **`[verify]` on a real Mac:** the managed Prism's `codesign` check, its app
-  bundle's symlinks, the Sparkle updater setting, the macOS Prism paths, the
-  header bar's traffic lights (ADR-10).
+- **`[verify]` on a real Mac:** #30. The author's 2017 Intel iMac covers it;
+  the bundle layout, its symlinks and the executable path were already
+  checked against Prism 11.1.1's macOS zip.
 - **The Wails CLI rewrites `go.mod` to its own version.** Install v2.16.0,
   and check `git status` after the first `wails dev`
   (`.claude/rules/builds-and-releases.md`).
@@ -120,7 +128,12 @@ Plan each with the author before building; they choose between the options.
 - **aislop needs ruff 0.16.7 on PATH** and `release notes` needs `python3`, or
   the check runner skips them locally; CI runs both.
 - **`wails build` has not been run**; `build/appicon.png` is the Wails
-  template's placeholder.
+  template's placeholder (#34).
+- **In a cloud container** every check runs, aislop included, with ruff
+  0.16.7 from a venv on `PATH`. Java there follows a POSIX locale, so run
+  packwiz-installer with `LC_ALL=C.UTF-8` (#32). The bootstrap's update check
+  against `api.github.com` gets a 403 there; fetch `packwiz-installer.jar`
+  from its release page and pass `--bootstrap-no-update`.
 - **CodeQL and Scorecard are not vendored**: the repo is private.
 - The vendored files (`.claude/suite-*.py`, three workflows, the notes
   generator, `.aislop/base.yml`) are copied from `kollektiv-mc/Kollektiv` by

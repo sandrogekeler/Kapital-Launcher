@@ -27,9 +27,12 @@ As proposed, with two things stated more precisely than the handoff did:
 - Mods are referenced by their Modrinth or CurseForge download URL and never
   re-hosted. Prefer Modrinth where a mod is on both, and expect some
   CurseForge mods to opt out of third-party distribution.
-- Hosting is a static host that serves only manifests and `index.toml`;
-  GitHub Releases or Cloudflare Pages. The manifest schema already has
-  `pack.packwiz` and `pack.mrpack` slots.
+- Hosting is a static host that serves `pack.toml`, `index.toml`, the mods'
+  metadata and every file the pack carries itself (configs, scripts, its own
+  resource pack); GitHub Releases or Cloudflare Pages. For Frangfurd that is
+  426 files besides the metadata, about 107 MB, all of it public once hosted
+  (#35). The manifest schema already has `pack.packwiz` and `pack.mrpack`
+  slots.
 
 ## Authoring: a repository, not an admin panel
 
@@ -61,7 +64,12 @@ replacement for it.
 
 ## Open
 
-- How Prism's import handles an instance whose name already exists. Observe it
-  before deciding whether a fresh install can be non-interactive at all.
+- How Prism's import handles an instance whose name already exists. Answered
+  from Prism 11.1.1's source on 2026-09-30 (the comment on #22 cites the
+  lines): `-I` always opens the New Instance dialog and waits for OK, the
+  folder name comes from that dialog's name field, and a collision gets a
+  `(1)` suffix, never an overwrite. So an import cannot promise the
+  `kapital-<id>` folder `--launch` needs; #22 decides what the launcher does
+  instead.
 - Whether `packwiz-installer-bootstrap.jar` is fetched by the launcher (then
   hashed) or by the pack import.
