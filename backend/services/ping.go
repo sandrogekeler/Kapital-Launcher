@@ -19,7 +19,12 @@ import (
 // varint, address string, port uint16, next state varint 1), an empty Status
 // Request packet (id 0x00), and a Status Response packet (id 0x00) carrying a
 // JSON string. Every packet is length-prefixed with a varint, and so is every
-// string. By convention a client that is only asking sends protocol -1.
+// string. The wiki's convention for a client that is only asking is protocol
+// -1, but a negative number is a five-byte varint, and the Frangfurd server
+// (NeoForge 1.21.1 behind a playit.gg tunnel) resets the connection on one;
+// probed 2026-09-30 with -1 and 2147483647, both reset every time, while 0,
+// 47 and 767 were answered (#55). So the launcher asks with 0, one byte,
+// which every server answers with its own version.
 //
 // This is the whole of what the launcher does with a server before Prism
 // takes over: it asks, once per interval, whether the server is up. It never
@@ -29,7 +34,7 @@ import (
 const (
 	pingTimeout        = 5 * time.Second
 	pingMaxResponse    = 1 << 20 // 1 MiB; a status JSON with a favicon is ~10 KB
-	pingProtocolAsking = -1
+	pingProtocolAsking = 0
 	defaultMinecraft   = 25565
 )
 

@@ -68,14 +68,19 @@ func TestPingReadsAStatusResponse(t *testing.T) {
 		t.Fatalf("latency %v", got.Latency)
 	}
 
-	// The handshake the server saw: id 0, protocol -1, our host, its port, next state 1.
+	// The handshake the server saw: id 0, protocol 0 as one byte (a five-byte
+	// varint such as -1 is reset by the Frangfurd server, #55), our host, its
+	// port, next state 1.
 	raw := <-hs
 	id, rest, err := readVarint(raw)
 	if err != nil || id != 0 {
 		t.Fatalf("handshake id %d %v", id, err)
 	}
+	if rest[0] != 0x00 {
+		t.Fatalf("protocol must be the single byte 0, got % x", rest[:5])
+	}
 	proto, rest, err := readVarint(rest)
-	if err != nil || proto != -1 {
+	if err != nil || proto != 0 {
 		t.Fatalf("protocol %d %v", proto, err)
 	}
 	host, err := readString(rest)
