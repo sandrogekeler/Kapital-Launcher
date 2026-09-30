@@ -62,3 +62,24 @@ root. What keeps it narrow:
   and only that.
 - The contents are Prism's own formats (`instance.cfg`, `mmc-pack.json`) and
   the two pinned packwiz jars; no other file in the root is read or written.
+
+## Second amendment, 2026-09-30
+
+A player's machine is not the manifest's: 8 GB is more than an 8 GB Mac can
+spare, and a preset that helps one machine may not suit another (#36). The
+author chose to let the launcher change two things about an instance it
+created, on the player's request from the chapter's own settings, over
+sending players into Prism's instance settings:
+
+- The heap's maximum (`OverrideMemory`, `MinMemAlloc`, `MaxMemAlloc`) and the
+  JVM preset (`OverrideJavaArgs`, `JvmArgs`), and only those keys, in
+  `instance.cfg`. Every other line is copied through unchanged, with its own
+  line ending, and the file is replaced atomically.
+- The value is held to the launcher's fixed preset list and the machine's
+  memory; a player still never types an argument that reaches the game.
+- A save is refused while the instance looks to be running (its game log
+  changed within the last minute), so Prism and the launcher never write the
+  file at once.
+
+Optional mods, the other half of #36, wait for `kapital-packs` to mark them
+and will write `packwiz.json` under the same rules.

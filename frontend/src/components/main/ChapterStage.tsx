@@ -6,6 +6,7 @@ interface Props {
   chapter: Chapter
   /** The nav's order, which decides which way a switch moves. */
   chapters: readonly Chapter[]
+  onOpenSettings: (chapterId: string) => void
 }
 
 type Direction = 'down' | 'up'
@@ -30,7 +31,7 @@ const CARD = 'bg-raised border-line overflow-hidden rounded-lg border'
  * React's pattern for state derived from a prop change, so the first render
  * shows the card still and every later change animates.
  */
-export function ChapterStage({ chapter, chapters }: Props) {
+export function ChapterStage({ chapter, chapters, onOpenSettings }: Props) {
   const [shown, setShown] = useState(chapter)
   const [outgoing, setOutgoing] = useState<Outgoing | null>(null)
   if (shown.id !== chapter.id) {
@@ -45,7 +46,7 @@ export function ChapterStage({ chapter, chapters }: Props) {
   return (
     <div className="relative m-5 mb-8">
       <div key={chapter.id} className={`${CARD} ${entering}`}>
-        <ChapterView chapter={chapter} />
+        <ChapterView chapter={chapter} onOpenSettings={onOpenSettings} />
       </div>
       {outgoing && (
         <div
@@ -55,7 +56,7 @@ export function ChapterStage({ chapter, chapters }: Props) {
           onAnimationEnd={() => setOutgoing(null)}
           className={`${CARD} ${leaving} pointer-events-none absolute inset-0`}
         >
-          <ChapterView chapter={outgoing.chapter} />
+          <ChapterView chapter={outgoing.chapter} onOpenSettings={onOpenSettings} />
         </div>
       )}
     </div>

@@ -130,6 +130,26 @@ export interface PrismInstallProgress {
   error: string
 }
 
+/** What a player may change about a chapter's installed instance (#36). */
+export interface ChapterSettings {
+  maxMemoryMb: number
+  /** A preset name from the launcher's list, or '' for Prism's own arguments. */
+  jvm: string
+}
+
+/** A chapter's settings with what the panel shows around them. */
+export interface ChapterSettingsInfo {
+  chapterId: string
+  settings: ChapterSettings
+  /** The machine's memory in MB, 0 when unknown. */
+  machineMemoryMb: number
+  prismDefaultMb: number
+  /** The manifest's memory for the chapter in MB, 0 when it names none. */
+  packMemoryMb: number
+  presets: string[]
+  running: boolean
+}
+
 export interface AppSettings {
   theme: Theme | string
   prismExecutable: string

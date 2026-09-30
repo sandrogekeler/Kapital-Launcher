@@ -21,6 +21,7 @@ export {
   Folder,
   FolderOpen,
   Minus,
+  Pencil,
   Play,
   RefreshCw,
   Settings,

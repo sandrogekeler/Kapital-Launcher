@@ -22,7 +22,12 @@ const PRISM_SITE = 'https://prismlauncher.org'
  * selection so the card that is leaving can keep showing the chapter it
  * showed while the new one slides in (#59).
  */
-export function ChapterView({ chapter }: { chapter: Chapter }) {
+interface Props {
+  chapter: Chapter
+  onOpenSettings: (chapterId: string) => void
+}
+
+export function ChapterView({ chapter, onOpenSettings }: Props) {
   const wikiPick = useChapterStore((s) => s.wikiPick[chapter.id])
 
   const engine = useEngineStore((s) => s.engine)
@@ -60,7 +65,11 @@ export function ChapterView({ chapter }: { chapter: Chapter }) {
 
   return (
     <>
-      <Hero chapter={chapter} onOpenWiki={openWiki} />
+      <Hero
+        chapter={chapter}
+        onOpenWiki={openWiki}
+        onOpenSettings={() => onOpenSettings(chapter.id)}
+      />
       <ActionBar
         chapter={chapter}
         engine={engine}

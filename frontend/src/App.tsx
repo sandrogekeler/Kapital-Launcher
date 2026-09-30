@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { HeaderBar } from './components/shell/HeaderBar'
 import { Sidebar } from './components/sidebar/Sidebar'
 import { ChapterStage } from './components/main/ChapterStage'
+import { ChapterSettingsPanel } from './components/settings/ChapterSettingsPanel'
 import { SettingsPanel } from './components/settings/SettingsPanel'
 import { Scrollable } from './components/ui/Scrollable'
 import { selectChapter, useChapterStore } from './stores/useChapterStore'
@@ -44,6 +45,11 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const closeSettings = useCallback(() => setSettingsOpen(false), [])
   useEffect(() => setSettingsOpen(false), [selectedId])
+  // A chapter's own settings (#36) take the column the same way, opened from
+  // the pen in its hero, and close with the chapter they belong to.
+  const [chapterSettingsFor, setChapterSettingsFor] = useState<string | null>(null)
+  const closeChapterSettings = useCallback(() => setChapterSettingsFor(null), [])
+  useEffect(() => setChapterSettingsFor(null), [selectedId])
 
   // One read per store on mount. These are reads of state Go holds, not
   // events, so an effect is the right tool.
@@ -110,8 +116,14 @@ export default function App() {
         <Scrollable as="main" className="flex flex-col">
           {settingsOpen ? (
             <SettingsPanel onClose={closeSettings} />
+          ) : chapterSettingsFor === chapter.id ? (
+            <ChapterSettingsPanel chapter={chapter} onClose={closeChapterSettings} />
           ) : (
-            <ChapterStage chapter={chapter} chapters={chapters} />
+            <ChapterStage
+              chapter={chapter}
+              chapters={chapters}
+              onOpenSettings={setChapterSettingsFor}
+            />
           )}
         </Scrollable>
       </div>

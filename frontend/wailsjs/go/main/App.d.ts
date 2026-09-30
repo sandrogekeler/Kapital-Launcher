@@ -8,6 +8,8 @@ export function ChoosePrismRoot():Promise<string>;
 
 export function GetAppVersion():Promise<string>;
 
+export function GetChapterSettings(arg1:string):Promise<models.ChapterSettingsInfo>;
+
 export function GetEngine():Promise<models.EngineInfo>;
 
 export function GetInstances():Promise<models.InstanceReport>;
@@ -35,5 +37,7 @@ export function OpenExternal(arg1:string):Promise<void>;
 export function OpenWikiPage(arg1:string):Promise<void>;
 
 export function RefreshEngine():Promise<models.EngineInfo>;
+
+export function SaveChapterSettings(arg1:string,arg2:models.ChapterSettings):Promise<models.ChapterSettingsInfo>;
 
 export function SaveSettings(arg1:models.AppSettings):Promise<void>;
