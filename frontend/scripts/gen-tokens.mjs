@@ -259,7 +259,7 @@ function emitLayout(src, push) {
 }
 
 function emitEffects(src, push) {
-  const { hoverBrightness, focusRing, scrim, artPending, motionBlur } = src.effect
+  const { hoverBrightness, focusRing, scrim, artPending, motionBlur, tileBlur } = src.effect
   push(`/* Effects: values a utility cannot name on its own. Read by the shared`)
   push(`   styles/base.css and by brightness-(--effect-hover-brightness). */`)
   push(`:root {`)
@@ -271,11 +271,13 @@ function emitEffects(src, push) {
   push(`  --scrim-mid-at: ${scrim.midAt}${scrim.unit};`)
   push(`  --scrim-far: ${scrim.far}${scrim.unit};`)
   push(`  --scrim-wash: ${scrim.wash}${scrim.unit};`)
+  push(`  --scrim-tile: ${scrim.tile}${scrim.unit};`)
   push(`  --art-pending-tint: ${artPending.tint}%;`)
   push(`  --art-pending-line: ${artPending.line}%;`)
   push(`  --art-pending-cell: ${artPending.cell}px;`)
   push(`  --art-pending-cell-thumb: ${artPending.cellThumb}px;`)
   push(`  --effect-motion-blur: ${motionBlur}px;`)
+  push(`  --effect-tile-blur: ${tileBlur}px;`)
   push(`}`)
 }
 

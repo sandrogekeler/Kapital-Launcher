@@ -13,8 +13,9 @@ interface Props {
 /**
  * One row of the chapter nav: thumbnail, number and name in the chapter's own
  * accent, era underneath, and a dot that lights when the chapter is open. The
- * selected row's background is the nav's highlight, drawn behind the rows,
- * so the row itself only stops its hover tint while it is the one open.
+ * selected row's border is the nav's highlight, drawn behind the rows; the
+ * row itself fades its own art in behind its text, blurred and washed, while
+ * it is the one open (#69), and stops its hover tint.
  *
  * The row is scoped to its chapter with data-chapter, so `text-accent` inside
  * it resolves to that chapter's colour regardless of which chapter the page
@@ -30,10 +31,26 @@ export function ChapterButton({ chapter, current, onSelect, ref }: Props) {
       data-chapter={chapter.id}
       aria-current={current ? 'true' : undefined}
       onClick={() => onSelect(chapter.id)}
-      className={`duration-fast ease-standard relative flex w-full cursor-pointer items-center gap-3 rounded-lg border border-transparent p-2.5 text-left transition-colors ${
+      className={`duration-fast ease-standard relative isolate flex w-full cursor-pointer items-center gap-3 overflow-hidden rounded-lg border border-transparent p-2.5 text-left transition-colors ${
         current ? '' : 'hover:bg-raised-2'
       }`}
     >
+      {art && (
+        <div
+          aria-hidden
+          className={`duration-slow ease-glide pointer-events-none absolute inset-0 -z-10 transition-opacity ${
+            current ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <img
+            src={art}
+            alt=""
+            className="size-full scale-125 object-cover blur-(--effect-tile-blur)"
+            draggable={false}
+          />
+          <div className="scrim-tile absolute inset-0" />
+        </div>
+      )}
       {art ? (
         <img
           src={art}

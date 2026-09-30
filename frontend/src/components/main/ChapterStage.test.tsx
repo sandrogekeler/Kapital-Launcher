@@ -20,7 +20,7 @@ describe('ChapterStage', () => {
 
   it('shows the first chapter still, with no card leaving', () => {
     render(<ChapterStage chapter={luxemburg} chapters={chapters} onOpenSettings={noop} />)
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Luxemburg')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Luxemburg')
     expect(leaving()).toBeNull()
     expect(document.querySelector('.card-in-down, .card-in-up')).toBeNull()
   })
@@ -32,17 +32,17 @@ describe('ChapterStage', () => {
     rerender(<ChapterStage chapter={frangfurd} chapters={chapters} onOpenSettings={noop} />)
     // A chapter further down: the content moves up, so the new card comes
     // in from below and the old one leaves upward, inert.
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Frangfurd')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Frangfurd')
     const out = leaving()!
     expect(out).toHaveClass('card-out-up')
-    expect(out).toHaveTextContent('Luxemburg')
-    expect(document.querySelector('.card-in-up')).toHaveTextContent('Frangfurd')
+    expect(out).toHaveTextContent('Play Luxemburg')
+    expect(document.querySelector('.card-in-up')).toHaveTextContent('Play Frangfurd')
     endAnimation(out)
     expect(leaving()).toBeNull()
 
     rerender(<ChapterStage chapter={lichdenstein} chapters={chapters} onOpenSettings={noop} />)
     expect(leaving()).toHaveClass('card-out-down')
-    expect(document.querySelector('.card-in-down')).toHaveTextContent('Lichdenstein')
+    expect(document.querySelector('.card-in-down')).toHaveTextContent('Join Lichdenstein')
   })
 
   it('replaces a card still leaving when the selection moves again', () => {
@@ -52,7 +52,7 @@ describe('ChapterStage', () => {
     rerender(<ChapterStage chapter={lichdenstein} chapters={chapters} onOpenSettings={noop} />)
     rerender(<ChapterStage chapter={frangfurd} chapters={chapters} onOpenSettings={noop} />)
     expect(document.querySelectorAll('[inert]').length).toBe(1)
-    expect(leaving()).toHaveTextContent('Lichdenstein')
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Frangfurd')
+    expect(leaving()).toHaveTextContent('Join Lichdenstein')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Frangfurd')
   })
 })
