@@ -4,6 +4,7 @@ import {
   selectInstalled,
   selectInstancePack,
   selectInstanceSize,
+  selectPackState,
   useEngineStore,
 } from '../../stores/useEngineStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
@@ -39,6 +40,7 @@ export function ChapterView({ chapter, onOpenSettings }: Props) {
   const installed = useEngineStore(selectInstalled(chapter.id))
   const instancePack = useEngineStore(selectInstancePack(chapter.id))
   const instanceSize = useEngineStore(selectInstanceSize(chapter.id))
+  const packState = useEngineStore(selectPackState(chapter.id))
   const launch = useEngineStore((s) => s.launch)
   const installing = useEngineStore((s) => s.installing)
   const installedNow = useEngineStore((s) => s.installedNow)
@@ -77,6 +79,7 @@ export function ChapterView({ chapter, onOpenSettings }: Props) {
         installed={installed}
         devPack={devPack}
         instancePack={instancePack}
+        packState={packState}
         launching={launching === chapter.id}
         installing={installing === chapter.id}
         installedNow={installedNow === chapter.id}
@@ -94,6 +97,7 @@ export function ChapterView({ chapter, onOpenSettings }: Props) {
       <Panels
         chapter={chapter}
         sizeBytes={instanceSize}
+        packState={packState}
         wikiPage={wikiPick}
         onOpenWiki={openWiki}
       />

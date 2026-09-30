@@ -35,7 +35,7 @@ func TestScanPackVersionsReadsThePack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v != (packVersions{minecraft: "1.21.1", loader: "neoforge", version: "21.1.252"}) {
+	if v != (packVersions{minecraft: "1.21.1", loader: "neoforge", version: "21.1.252", pack: "1.0.0"}) {
 		t.Fatalf("got %+v", v)
 	}
 }

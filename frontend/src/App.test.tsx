@@ -111,6 +111,7 @@ describe('App', () => {
     vi.mocked(Bindings.GetSettings).mockResolvedValue(DEFAULT_SETTINGS)
     vi.mocked(Bindings.SaveSettings).mockResolvedValue()
     vi.mocked(Bindings.GetWikiPages).mockResolvedValue([])
+    vi.mocked(Bindings.GetPackStates).mockResolvedValue([])
   })
   afterEach(cleanup)
 
@@ -422,5 +423,28 @@ describe('App', () => {
     expect(Bindings.OpenWikiPage).toHaveBeenCalledWith(
       'https://kapitel-kapital.pages.dev/wiki/locations/the-obelisk',
     )
+  })
+
+  it('offers Update and play when the installed pack is behind its source, and names the version', async () => {
+    vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
+    vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ luxemburg: true }))
+    vi.mocked(Bindings.LaunchChapter).mockResolvedValue()
+    vi.mocked(Bindings.GetPackStates).mockResolvedValue([
+      { chapterId: 'luxemburg', installed: true, checked: true, upToDate: false, version: '4.2' },
+    ])
+    render(<App />)
+    expect(await screen.findByRole('button', { name: 'Update and play' })).toBeEnabled()
+    expect(screen.getByText('● Update available')).toBeInTheDocument()
+    expect(screen.getByText('Version').nextElementSibling).toHaveTextContent('older than 4.2')
+    fireEvent.click(screen.getByRole('button', { name: 'Update and play' }))
+    await waitFor(() => expect(Bindings.LaunchChapter).toHaveBeenCalledWith('luxemburg'))
+
+    // Synced: Play is back and the row names the version.
+    vi.mocked(Bindings.GetPackStates).mockResolvedValue([
+      { chapterId: 'luxemburg', installed: true, checked: true, upToDate: true, version: '4.2' },
+    ])
+    fireEvent.focus(window)
+    expect(await screen.findByRole('button', { name: 'Play Luxemburg' })).toBeInTheDocument()
+    expect(screen.getByText('Version').nextElementSibling).toHaveTextContent('4.2')
   })
 })

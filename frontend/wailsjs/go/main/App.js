@@ -30,6 +30,10 @@ export function GetManifest() {
   return window['go']['main']['App']['GetManifest']();
 }
 
+export function GetPackStates() {
+  return window['go']['main']['App']['GetPackStates']();
+}
+
 export function GetPrismRelease() {
   return window['go']['main']['App']['GetPrismRelease']();
 }
