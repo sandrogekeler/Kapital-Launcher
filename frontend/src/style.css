@@ -35,69 +35,61 @@
   display: none;
 }
 
-/* The chapter card's slide on a switch (#59). The card moves the way the
-   selection moved in the nav: down, and the new card comes in from above,
-   or the reverse. The blur peaks mid-travel and is gone before the card
-   settles; the distance and the blur are tokens. With reduced motion the
-   cards only fade, over the same duration, so the outgoing card's
-   animationend still fires and it is still removed. */
+/* The chapter card's slide on a switch (#59, #67). The card moves the way the
+   content moves: picking a chapter higher in the nav brings what is above
+   down into view, lower brings what is below up. The travel eases with the
+   glide curve, which starts and ends softly; the blur rises and falls on
+   its own ease-in-out so it never cuts. The distance and the blur are
+   tokens. With reduced motion the cards only fade, over the same duration,
+   so the outgoing card's animationend still fires and it is still removed. */
 @keyframes card-in-down {
   from {
     transform: translateY(calc(-1 * var(--layout-slide)));
     opacity: 0;
-    filter: blur(0);
-  }
-  45% {
-    filter: blur(var(--effect-motion-blur));
   }
   to {
     transform: none;
     opacity: 1;
-    filter: blur(0);
   }
 }
 @keyframes card-in-up {
   from {
     transform: translateY(var(--layout-slide));
     opacity: 0;
-    filter: blur(0);
-  }
-  45% {
-    filter: blur(var(--effect-motion-blur));
   }
   to {
     transform: none;
     opacity: 1;
-    filter: blur(0);
   }
 }
 @keyframes card-out-down {
   from {
     transform: none;
     opacity: 1;
-    filter: blur(0);
-  }
-  45% {
-    filter: blur(var(--effect-motion-blur));
   }
   to {
     transform: translateY(var(--layout-slide));
     opacity: 0;
-    filter: blur(0);
   }
 }
 @keyframes card-out-up {
   from {
     transform: none;
     opacity: 1;
-    filter: blur(0);
-  }
-  45% {
-    filter: blur(var(--effect-motion-blur));
   }
   to {
     transform: translateY(calc(-1 * var(--layout-slide)));
     opacity: 0;
+  }
+}
+@keyframes card-blur {
+  from {
+    filter: blur(0);
+  }
+  50% {
+    filter: blur(var(--effect-motion-blur));
+  }
+  to {
     filter: blur(0);
   }
 }
@@ -118,25 +110,33 @@
   }
 }
 @utility card-in-down {
-  animation: card-in-down var(--duration-slow) var(--ease-out) both;
+  animation:
+    card-in-down var(--duration-slow) var(--ease-glide) both,
+    card-blur var(--duration-slow) ease-in-out both;
 }
 @utility card-in-up {
-  animation: card-in-up var(--duration-slow) var(--ease-out) both;
+  animation:
+    card-in-up var(--duration-slow) var(--ease-glide) both,
+    card-blur var(--duration-slow) ease-in-out both;
 }
 @utility card-out-down {
-  animation: card-out-down var(--duration-slow) var(--ease-out) both;
+  animation:
+    card-out-down var(--duration-slow) var(--ease-glide) both,
+    card-blur var(--duration-slow) ease-in-out both;
 }
 @utility card-out-up {
-  animation: card-out-up var(--duration-slow) var(--ease-out) both;
+  animation:
+    card-out-up var(--duration-slow) var(--ease-glide) both,
+    card-blur var(--duration-slow) ease-in-out both;
 }
 @media (prefers-reduced-motion: reduce) {
   .card-in-down,
   .card-in-up {
-    animation-name: card-fade-in;
+    animation: card-fade-in var(--duration-slow) ease-in-out both;
   }
   .card-out-down,
   .card-out-up {
-    animation-name: card-fade-out;
+    animation: card-fade-out var(--duration-slow) ease-in-out both;
   }
 }
 

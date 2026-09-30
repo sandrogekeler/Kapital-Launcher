@@ -76,6 +76,7 @@
   --transition-duration-slow: 420ms;
   --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-glide: cubic-bezier(0.45, 0, 0.15, 1);
 }
 
 /* Layout geometry is not a Tailwind namespace. Read it with the var()
@@ -85,7 +86,7 @@
   --layout-hero: 440px;
   --layout-titlebar: 40px;
   --layout-scrollbar: 6px;
-  --layout-slide: 48px;
+  --layout-slide: 32px;
   --layout-icon-sm: 16px;
   --layout-icon-md: 18px;
 }
@@ -105,7 +106,7 @@
   --art-pending-line: 8%;
   --art-pending-cell: 48px;
   --art-pending-cell-thumb: 8px;
-  --effect-motion-blur: 6px;
+  --effect-motion-blur: 4px;
 }
 
 /* Dark is the default. Light is opt-in through data-theme; the system
