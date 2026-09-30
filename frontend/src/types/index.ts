@@ -65,6 +65,14 @@ export interface Pack {
   mrpack?: string | null
 }
 
+/** One page of the wiki, from its lore export (#58); eras are chapter names. */
+export interface WikiPage {
+  title: string
+  line: string
+  url: string
+  eras: string[]
+}
+
 export interface WikiTeaser {
   title: string
   line: string

@@ -1,4 +1,4 @@
-import type { Chapter } from '../../types'
+import type { Chapter, WikiPage } from '../../types'
 import { factValue, sizeValue } from '../../lib/manifest'
 import { Fact } from '../ui/Fact'
 
@@ -6,6 +6,8 @@ interface Props {
   chapter: Chapter
   /** The chapter's size on disk, from the instance report; undefined until it is installed. */
   sizeBytes: number | undefined
+  /** The wiki page picked for this chapter (#58); undefined shows the manifest's teaser. */
+  wikiPage: WikiPage | undefined
   onOpenWiki: () => void
 }
 
@@ -20,8 +22,9 @@ function PanelTitle({ children }: { children: string }) {
  * Memory is edited in the chapter's own settings (#36), and the server is on
  * the action bar's state line with its ping.
  */
-export function Panels({ chapter, sizeBytes, onOpenWiki }: Props) {
+export function Panels({ chapter, sizeBytes, wikiPage, onOpenWiki }: Props) {
   const { pack } = chapter
+  const wiki = wikiPage ?? chapter.wiki
   const facts: [string, string][] = [
     ['Loader', pack.type === 'client-visuals' ? 'Client visuals' : factValue(pack.loader)],
     ['Minecraft', factValue(pack.minecraft)],
@@ -59,8 +62,8 @@ export function Panels({ chapter, sizeBytes, onOpenWiki }: Props) {
       </div>
       <div className="flex flex-col gap-3 py-6 pr-14 pl-7">
         <PanelTitle>From the wiki</PanelTitle>
-        <p className="font-display m-0 text-lg leading-snug">{chapter.wiki.title}</p>
-        <span className="text-fg-muted text-sm leading-normal">{chapter.wiki.line}</span>
+        <p className="font-display m-0 text-lg leading-snug">{wiki.title}</p>
+        <span className="text-fg-muted line-clamp-4 text-sm leading-normal">{wiki.line}</span>
         <button
           type="button"
           onClick={onOpenWiki}

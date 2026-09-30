@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as App from '../../wailsjs/go/main/App'
 import { models } from '../../wailsjs/go/models'
-import { selectChapter, useChapterStore } from './useChapterStore'
+import { selectChapter, selectWikiPick, useChapterStore } from './useChapterStore'
 import { BUNDLED_MANIFEST } from '../lib/manifest'
+import type { WikiPage } from '../types'
 
 vi.mock('../../wailsjs/go/main/App')
 
@@ -12,8 +13,11 @@ describe('useChapterStore', () => {
       manifest: BUNDLED_MANIFEST,
       selectedId: BUNDLED_MANIFEST.chapters[0]!.id,
       loaded: false,
+      wikiPages: [],
+      wikiPick: {},
     })
     vi.mocked(App.GetManifest).mockReset()
+    vi.mocked(App.GetWikiPages).mockReset()
   })
 
   it('starts on the bundled manifest with the first chapter open', () => {
@@ -52,5 +56,39 @@ describe('useChapterStore', () => {
   it('ignores a selection the manifest does not have', () => {
     useChapterStore.getState().select('atlantis')
     expect(useChapterStore.getState().selectedId).toBe('luxemburg')
+  })
+
+  it('picks a wiki page for the open chapter when the pages arrive, and again on each switch', async () => {
+    const page = (url: string, era: string): WikiPage => ({
+      title: url,
+      line: 'l',
+      url,
+      eras: [era],
+    })
+    vi.mocked(App.GetWikiPages).mockResolvedValue([
+      page('/a', 'Luxemburg'),
+      page('/b', 'Frangfurd'),
+      page('/c', 'Frangfurd'),
+    ])
+    await useChapterStore.getState().loadWikiPages()
+    expect(selectWikiPick(useChapterStore.getState())?.url).toBe('/a')
+
+    useChapterStore.getState().select('frangfurd')
+    const first = selectWikiPick(useChapterStore.getState())?.url
+    expect(['/b', '/c']).toContain(first)
+    // Leaving and coming back never shows the same page twice in a row.
+    useChapterStore.getState().select('luxemburg')
+    useChapterStore.getState().select('frangfurd')
+    expect(selectWikiPick(useChapterStore.getState())?.url).not.toBe(first)
+    // A chapter without pages keeps the teaser.
+    useChapterStore.getState().select('lichdenstein')
+    expect(selectWikiPick(useChapterStore.getState())).toBeUndefined()
+  })
+
+  it('has no pick without a bridge or a reachable wiki', async () => {
+    vi.mocked(App.GetWikiPages).mockRejectedValue('wiki pages: offline (no cached copy)')
+    await useChapterStore.getState().loadWikiPages()
+    expect(useChapterStore.getState().wikiPages).toEqual([])
+    expect(selectWikiPick(useChapterStore.getState())).toBeUndefined()
   })
 })
