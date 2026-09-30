@@ -34,7 +34,11 @@ type App struct {
 	status   *services.StatusService
 	creator  *services.InstanceCreator
 	wiki     *services.WikiService
+	games    *services.GameTracker
 	stop     context.CancelFunc
+	// runCtx is the context the background work runs under: cancelled in
+	// shutdown, nil before startup.
+	runCtx context.Context
 
 	mu     sync.Mutex
 	engine models.EngineInfo
@@ -50,7 +54,7 @@ func NewApp(dataDir string, manifest []byte) (*App, error) {
 	prism := services.NewPrismService(runtime.GOOS)
 	managed := services.NewManagedPrism(dataDir, runtime.GOOS, runtime.GOARCH)
 	prism.UseManaged(managed)
-	return &App{
+	a := &App{
 		manifest: m,
 		settings: services.NewSettingsService(dataDir),
 		prism:    prism,
@@ -58,7 +62,15 @@ func NewApp(dataDir string, manifest []byte) (*App, error) {
 		status:   services.NewStatusService(),
 		creator:  services.NewInstanceCreator(dataDir),
 		wiki:     services.NewWikiService(dataDir, m.Wiki.BaseURL),
-	}, nil
+	}
+	// Each phase change of a launched game is an event the frontend listens
+	// for; before the window is up there is nobody to tell.
+	a.games = services.NewGameTracker(dataDir, func(s models.GameState) {
+		if a.ctx != nil {
+			wailsrt.EventsEmit(a.ctx, services.EventGameState, s)
+		}
+	})
+	return a, nil
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -70,6 +82,7 @@ func (a *App) startup(ctx context.Context) {
 	// the frontend listens for; a chapter's line updates without asking.
 	runCtx, cancel := context.WithCancel(ctx)
 	a.stop = cancel
+	a.runCtx = runCtx
 	go a.status.Run(runCtx, a.manifest.Chapters, func(s models.ServerStatus) {
 		wailsrt.EventsEmit(a.ctx, services.EventServerStatus, s)
 	})
@@ -165,6 +178,9 @@ func (a *App) InstallChapter(chapterID string) (models.InstanceReport, error) {
 	if err != nil {
 		return models.InstanceReport{}, err
 	}
+	if a.games.Active(chapterID) {
+		return models.InstanceReport{}, fmt.Errorf("%s is starting or running; close the game first", chapter.Name)
+	}
 	if !engine.Found {
 		return models.InstanceReport{}, services.ErrPrismNotFound
 	}
@@ -224,13 +240,17 @@ func (a *App) InstallPrism() error {
 }
 
 // LaunchChapter starts the chapter's Prism instance, joining its server when
-// it has one. The chapter id is looked up in the validated manifest, so the
-// instance id and address that reach Prism are the manifest's, never the
-// caller's.
+// it has one, and follows the game from there (#44). The chapter id is looked
+// up in the validated manifest, so the instance id and address that reach
+// Prism are the manifest's, never the caller's. A chapter whose game is
+// already starting or running is refused.
 func (a *App) LaunchChapter(chapterID string) error {
 	chapter, ok := a.chapter(chapterID)
 	if !ok {
 		return fmt.Errorf("no chapter %q", chapterID)
+	}
+	if a.games.Active(chapterID) {
+		return fmt.Errorf("%s is already starting or running", chapter.Name)
 	}
 	settings, err := a.settings.Load()
 	if err != nil {
@@ -250,12 +270,68 @@ func (a *App) LaunchChapter(chapterID string) error {
 	if chapter.Server != nil && chapter.Server.JoinOnLaunch {
 		req.Server = chapter.Server.Address
 	}
-	if err := a.prism.Launch(a.context(), engine, req); err != nil {
+	// The game log as it is before Prism runs, so the log of an earlier start
+	// is not taken for this one.
+	instanceDir := a.instanceDir(settings, engine, chapter)
+	before := services.SnapshotGameLog(instanceDir)
+	startedAt := time.Now()
+	proc, err := a.prism.Launch(a.context(), engine, req)
+	if err != nil {
 		slog.Error("launch", "chapter", chapterID, "error", err)
 		return err
 	}
 	slog.Info("launched", "chapter", chapterID, "instance", req.InstanceID, "server", req.Server != "")
+	// The tracker follows the start on its own; a refusal here can only be a
+	// second Play racing the first, and Prism has been started either way.
+	err = a.games.Track(a.trackContext(), services.TrackRequest{
+		ChapterID:   chapterID,
+		InstanceDir: instanceDir,
+		Prism:       services.WatchPrism(proc),
+		PrismExe:    filepath.Base(engine.Executable),
+		StartedAt:   startedAt,
+		Before:      before,
+	})
+	if err != nil {
+		slog.Warn("track game", "chapter", chapterID, "error", err)
+	}
 	return nil
+}
+
+// GetGameStates returns where every chapter's game is: each chapter's latest
+// state, idle for one this run has not launched. The same states arrive as
+// game:state events while a start is followed (#44).
+func (a *App) GetGameStates() ([]models.GameState, error) {
+	states := make([]models.GameState, 0, len(a.manifest.Chapters))
+	for _, c := range a.manifest.Chapters {
+		states = append(states, a.games.Latest(c.ID))
+	}
+	return states, nil
+}
+
+// instanceDir is the chapter's instance folder under the instances folder
+// GetInstances resolves, or "" when that cannot be worked out.
+func (a *App) instanceDir(settings models.AppSettings, engine models.EngineInfo, chapter models.Chapter) string {
+	report := a.prism.Instances(settings, engine, []models.Chapter{chapter})
+	if report.Dir == "" {
+		return ""
+	}
+	return filepath.Join(report.Dir, chapter.Instance.ID)
+}
+
+// chapterRunning is whether the chapter's game is running: the tracker says so
+// for a start this app made, and the game log's recent activity covers a game
+// started from Prism itself.
+func (a *App) chapterRunning(chapter models.Chapter, instanceDir string) bool {
+	return a.games.Active(chapter.ID) || services.InstanceRunning(instanceDir, time.Now())
+}
+
+// trackContext is the context the tracker's goroutines run under: cancelled in
+// shutdown, Background before the window is up.
+func (a *App) trackContext() context.Context {
+	if a.runCtx != nil {
+		return a.runCtx
+	}
+	return context.Background()
 }
 
 // GetSettings returns the persisted settings, or defaults on a fresh install.
@@ -377,7 +453,7 @@ func (a *App) SaveChapterSettings(chapterID string, settings models.ChapterSetti
 	if err := services.ValidateChapterSettings(settings, machine); err != nil {
 		return models.ChapterSettingsInfo{}, fmt.Errorf("chapter settings: %w", err)
 	}
-	if services.InstanceRunning(filepath.Dir(cfg), time.Now()) {
+	if a.chapterRunning(chapter, filepath.Dir(cfg)) {
 		return models.ChapterSettingsInfo{}, fmt.Errorf("%s looks to be running; close the game first", chapter.Name)
 	}
 	if err := services.WriteChapterSettings(cfg, settings); err != nil {
@@ -417,7 +493,7 @@ func (a *App) chapterSettingsInfo(chapter models.Chapter, cfg string, settings m
 		MachineMemoryMB: machine,
 		PrismDefaultMB:  services.PrismDefaultMaxMB(machine),
 		Presets:         services.PresetNames(),
-		Running:         services.InstanceRunning(filepath.Dir(cfg), time.Now()),
+		Running:         a.chapterRunning(chapter, filepath.Dir(cfg)),
 	}
 	if chapter.Pack.MemoryGB != nil {
 		info.PackMemoryMB = *chapter.Pack.MemoryGB * 1024

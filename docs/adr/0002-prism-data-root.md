@@ -83,3 +83,14 @@ sending players into Prism's instance settings:
 
 Optional mods, the other half of #36, wait for `kapital-packs` to mark them
 and will write `packwiz.json` under the same rules.
+
+## Third amendment, 2026-10-01
+
+Following a start the launcher began (#44) reads two more things from the
+player's side, and writes nothing. It reads the instance's
+`minecraft/logs/latest.log` as the game writes it, only to match a handful of
+marker lines (the window opening, the resource reload, the main menu, the
+stop); a line is matched and dropped, and no line or part of one is logged,
+stored or emitted. And it looks up the child processes of the Prism it
+started, by pid, parent pid and name, to wait on the game's Java; it does not
+read their command lines, memory or anything of Prism's account data.

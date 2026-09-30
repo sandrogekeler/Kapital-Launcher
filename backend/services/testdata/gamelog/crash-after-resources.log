@@ -1,0 +1,6 @@
+[01Oct2026 01:10:02.300] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher running: args [--username, Player, --version, 1.21.1, --gameDir, C:/Users/Player/AppData/Roaming/PrismLauncher/instances/kapital-frangfurd/minecraft]
+[01Oct2026 01:10:04.000] [main/WARN] [mixin/]: Mixin config create.mixins.json does not specify "minVersion" property
+[01Oct2026 01:10:20.118] [Render thread/INFO] [com.mojang.blaze3d.systems.RenderSystem/]: Backend library: LWJGL version 3.3.3-snapshot
+[01Oct2026 01:10:30.551] [Render thread/INFO] [net.minecraft.server.packs.resources.ReloadableResourceManager/]: Reloading ResourceManager: vanilla, mod_resources
+[01Oct2026 01:10:41.009] [Render thread/ERROR] [net.minecraft.client.Minecraft/]: Reported exception thrown!
+[01Oct2026 01:10:41.020] [Render thread/FATAL] [net.minecraft.client.Minecraft/]: Unreported exception thrown!

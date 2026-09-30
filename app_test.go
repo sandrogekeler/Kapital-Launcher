@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"kapital/backend/models"
+	"kapital/backend/services"
 )
 
 func newTestApp(t *testing.T) *App {
@@ -246,5 +249,73 @@ func TestInstallChapterTakesALocalPackFromSettings(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(root, "instances", "kapital-frangfurd")); !os.IsNotExist(err) {
 		t.Fatalf("a failed install left a folder: %v", err)
+	}
+}
+
+// A start the launcher follows holds Play, installs and settings saves for its
+// chapter, and GetGameStates reports it beside the chapters never launched (#44).
+func TestAChapterBeingFollowedIsRunningForEveryGuard(t *testing.T) {
+	app := newTestApp(t)
+	root := t.TempDir()
+	if err := app.SaveSettings(models.AppSettings{Theme: "dark", PrismRoot: root}); err != nil {
+		t.Fatal(err)
+	}
+	inst := filepath.Join(root, "instances", "kapital-frangfurd")
+	if err := os.MkdirAll(inst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(inst, "instance.cfg"), []byte("[General]\nname=Frangfurd\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := app.GetManifest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	idle, err := app.GetGameStates()
+	if err != nil || len(idle) != len(manifest.Chapters) {
+		t.Fatalf("one state per chapter: %v %+v", err, idle)
+	}
+	for _, s := range idle {
+		if s.Phase != models.GamePhaseIdle || s.ChapterID == "" {
+			t.Fatalf("nothing launched yet: %+v", s)
+		}
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	// No process has pid -1, so the tracker has nothing to find and stays starting.
+	err = app.games.Track(ctx, services.TrackRequest{
+		ChapterID:   "frangfurd",
+		InstanceDir: inst,
+		Prism:       services.PrismProcess{PID: -1},
+		StartedAt:   time.Now(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := app.LaunchChapter("frangfurd"); err == nil || !strings.Contains(err.Error(), "already starting or running") {
+		t.Fatalf("Play is held: %v", err)
+	}
+	if _, err := app.SaveChapterSettings("frangfurd", models.ChapterSettings{MaxMemoryMB: 4096}); err == nil || !strings.Contains(err.Error(), "running") {
+		t.Fatalf("a save is refused: %v", err)
+	}
+	if info, err := app.GetChapterSettings("frangfurd"); err != nil || !info.Running {
+		t.Fatalf("the panel is told: %v %+v", err, info)
+	}
+	if _, err := app.InstallChapter("frangfurd"); err == nil || !strings.Contains(err.Error(), "starting or running") {
+		t.Fatalf("an install is refused: %v", err)
+	}
+	states, err := app.GetGameStates()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range states {
+		want := models.GamePhaseIdle
+		if s.ChapterID == "frangfurd" {
+			want = models.GamePhaseStarting
+		}
+		if s.Phase != want {
+			t.Fatalf("%s is %s, want %s", s.ChapterID, s.Phase, want)
+		}
 	}
 }

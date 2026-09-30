@@ -1,0 +1,16 @@
+[01Oct2026 00:30:39.089] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher running: args [--username, Player, --version, 1.21.1, --gameDir, C:/Users/Player/AppData/Roaming/PrismLauncher/instances/kapital-frangfurd/minecraft, --assetsDir, C:/Users/Player/AppData/Roaming/PrismLauncher/assets, --uuid, 00000000000000000000000000000000, --accessToken, ❄❄❄❄❄❄❄❄, --launchTarget, forgeclient]
+[01Oct2026 00:30:39.091] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher 11.0.4+main.d2e20e43 starting: java version 21.0.4 by Microsoft; OS Windows 11 arch amd64 version 10.0
+[01Oct2026 00:30:41.512] [main/WARN] [mixin/]: Mixin config create.mixins.json does not specify "minVersion" property
+[01Oct2026 00:30:45.220] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/SCAN]: Found 214 mods
+[01Oct2026 00:30:52.004] [main/WARN] [mixin/]: @Inject(@At("TAIL")) Unexpected: Annotation Mixin.ordinal is not supported
+[01Oct2026 00:31:03.210] [Render thread/INFO] [com.mojang.blaze3d.systems.RenderSystem/]: Backend library: LWJGL version 3.3.3-snapshot
+[01Oct2026 00:31:05.877] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Setting user: Player
+[01Oct2026 00:31:06.100] [Worker-Main-1/INFO] [some.mod.Shutdown/]: Stopping!
+[01Oct2026 00:31:19.001] [Render thread/INFO] [net.minecraft.server.packs.resources.ReloadableResourceManager/]: Reloading ResourceManager: vanilla, mod_resources, file/C:/Users/Player/resourcepacks/Faithful.zip
+[01Oct2026 00:31:22.400] [Render thread/INFO] [FancyMenu/]: [FANCYMENU] Reloading FancyMenu..
+[01Oct2026 00:31:30.120] [Render thread/INFO] [net.minecraft.client.sounds.SoundEngine/SOUNDS]: Sound engine started
+[01Oct2026 00:31:31.500] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x1024x0 minecraft:textures/atlas/blocks.png-atlas
+[01Oct2026 00:31:38.310] [Render thread/INFO] [FancyMenu/]: [FANCYMENU] Minecraft resource reload: FINISHED
+[01Oct2026 00:31:46.740] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Game took 74.135 seconds to start
+[01Oct2026 00:33:35.002] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Stopping!
+[01Oct2026 00:33:35.120] [Render thread/INFO] [net.minecraft.client.sounds.SoundEngine/SOUNDS]: SoundEngine stopped

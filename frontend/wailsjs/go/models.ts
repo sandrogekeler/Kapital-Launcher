@@ -236,6 +236,26 @@ export namespace models {
 	        this.source = source["source"];
 	    }
 	}
+	export class GameState {
+	    chapterId: string;
+	    phase: string;
+	    since: string;
+	    startedAt: string;
+	    exitCode?: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new GameState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.chapterId = source["chapterId"];
+	        this.phase = source["phase"];
+	        this.since = source["since"];
+	        this.startedAt = source["startedAt"];
+	        this.exitCode = source["exitCode"];
+	    }
+	}
 	
 	export class InstanceReport {
 	    root: string;
