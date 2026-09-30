@@ -55,6 +55,14 @@ not hosted yet, so players cannot install it: that is #25.
    screen (its gear sits disabled in the header bar since #13). #5 also gets
    a field for `packOverrides`, set by hand in `settings.json` until then.
 3. **#36** Memory and optional mods per player.
+4. **#50** Install prepares the chapter (sign-in, Java, libraries, pack,
+   assets happen at Install, not the first Play) with one progress view in
+   the launcher; builds on #44 and #45. Filed after a clean new-player run on
+   2026-09-30: Prism uninstalled (program only; its data folder with the
+   sign-in and `kapital-lichdenstein` stays), the Frangfurd instance backed
+   up to `D:\Private\Projects\Videogames\Minecraft\Projects\KapitelKapital\backups\kapital-frangfurd-2026-09-30`
+   and removed, then Get Prism, Install and Play all worked. The managed
+   Prism now lives in `%APPDATA%\KapitalLauncher\prism`.
 
 Plan each with the author before building; they choose between the options.
 
