@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"unicode"
 
 	"kapital/backend/design"
 	"kapital/backend/models"
@@ -34,6 +35,11 @@ var (
 	wikiPathPattern   = regexp.MustCompile(`^/[^\s]*$`)
 	chapterStates     = []string{"released", "development", "planned"}
 	packTypes         = []string{"modpack", "client-visuals"}
+	// A pack.toml URL ends up on the pre-launch command line, where Prism
+	// expands $ and splits on spaces and double quotes; none of those, nor a
+	// backslash or a # (a comment in Prism's older instance.cfg format), may
+	// appear in it.
+	commandSafeURL = regexp.MustCompile(`^https?://[A-Za-z0-9._~:/?&=%+@!,;()*'-]+$`)
 )
 
 // ParseManifest decodes and validates a manifest. Unknown fields are an error:
@@ -86,6 +92,10 @@ func ValidateManifest(m models.Manifest) error {
 				return fmt.Errorf("%s: %s is empty", where, name)
 			}
 		}
+		// The name is written into the chapter's instance.cfg (#22).
+		if strings.ContainsFunc(c.Name, unicode.IsControl) {
+			return fmt.Errorf("%s: name carries a control character", where)
+		}
 		if !slices.Contains(chapterStates, c.State) {
 			return fmt.Errorf("%s: state %q is not one of %v", where, c.State, chapterStates)
 		}
@@ -101,6 +111,18 @@ func ValidateManifest(m models.Manifest) error {
 		if c.Pack.Packwiz != nil {
 			if err := checkURL(where+".pack.packwiz", *c.Pack.Packwiz); err != nil {
 				return err
+			}
+			if !commandSafeURL.MatchString(*c.Pack.Packwiz) {
+				return fmt.Errorf("%s: pack.packwiz %q carries a character a command line would read", where, *c.Pack.Packwiz)
+			}
+		}
+		if c.Pack.JVM != nil {
+			preset, ok := jvmPresets[*c.Pack.JVM]
+			if !ok {
+				return fmt.Errorf("%s: jvm preset %q is not one the launcher knows", where, *c.Pack.JVM)
+			}
+			if !minecraftAtLeast(c.Pack.Minecraft, preset.minMinecraft) {
+				return fmt.Errorf("%s: jvm preset %q needs Minecraft %s or later", where, *c.Pack.JVM, preset.minMinecraft)
 			}
 		}
 		if c.Pack.Mrpack != nil {

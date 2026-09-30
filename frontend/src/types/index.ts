@@ -58,6 +58,8 @@ export interface Pack {
   minecraft: string
   mods?: number | null
   memoryGb?: number | null
+  /** A JVM preset the launcher owns, e.g. 'zgc'; never raw arguments. */
+  jvm?: string | null
   version?: string | null
   packwiz?: string | null
   mrpack?: string | null

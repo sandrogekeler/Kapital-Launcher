@@ -35,10 +35,11 @@ Detection is injected (`lookPath`, `getenv`, `stat`, `run`) so it is tested on
 a machine with no Prism. A path that has not been observed on a real install is
 marked `[verify]` in a comment; clearing those is Roadmap milestone 2.
 
-The launcher does not write into a player's Prism data directory. When it
-needs an instance to exist (milestone 4) it asks Prism to import one. The one
-exception is the managed root it owns: `prismlauncher.cfg` and
-`prismlauncher_update.cfg` are seeded there once, before Prism first starts.
+The launcher writes one thing into a player's Prism data directory: a
+chapter's instance folder, created by `InstanceCreator` only when it does not
+exist, `instance.cfg` last, and never touched again (ADR-2, amendment). In the
+managed root it owns it also seeds `prismlauncher.cfg` and
+`prismlauncher_update.cfg` once, before Prism first starts.
 
 ## Data shapes
 

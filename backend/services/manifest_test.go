@@ -42,6 +42,12 @@ func TestBundledManifestIsValid(t *testing.T) {
 	if m.Chapters[0].Pack.Loader != "Forge" || m.Chapters[0].Pack.Minecraft != "1.19.2" {
 		t.Errorf("Luxemburg is Forge 1.19.2: %+v", m.Chapters[0].Pack)
 	}
+	if fra.Pack.JVM == nil || *fra.Pack.JVM != "zgc" {
+		t.Errorf("Frangfurd runs ZGC, which Distant Horizons asks for: %v", fra.Pack.JVM)
+	}
+	if fra.Pack.MemoryGB == nil || *fra.Pack.MemoryGB != 8 {
+		t.Errorf("Frangfurd gets 8 GB, what it runs with in Prism: %v", fra.Pack.MemoryGB)
+	}
 }
 
 func validManifest() models.Manifest {
@@ -70,17 +76,29 @@ func TestValidateManifestRefuses(t *testing.T) {
 		"duplicate id": func(m *models.Manifest) {
 			m.Chapters = append(m.Chapters, m.Chapters[0])
 		},
-		"path-like instance id": func(m *models.Manifest) { m.Chapters[0].Instance.ID = "../other" },
-		"dot instance id":       func(m *models.Manifest) { m.Chapters[0].Instance.ID = "." },
-		"bad state":             func(m *models.Manifest) { m.Chapters[0].State = "beta" },
-		"bad pack type":         func(m *models.Manifest) { m.Chapters[0].Pack.Type = "shaders" },
-		"empty loader":          func(m *models.Manifest) { m.Chapters[0].Pack.Loader = " " },
-		"http packwiz":          func(m *models.Manifest) { m.Chapters[0].Pack.Packwiz = str("http://github.com/x/pack.toml") },
-		"mrpack off allowlist":  func(m *models.Manifest) { m.Chapters[0].Pack.Mrpack = str("https://files.example/p.mrpack") },
-		"bad server address":    func(m *models.Manifest) { m.Chapters[0].Server = &models.Server{Address: "play.example:99999"} },
-		"server with scheme":    func(m *models.Manifest) { m.Chapters[0].Server = &models.Server{Address: "https://play.example"} },
-		"relative wiki path":    func(m *models.Manifest) { m.Chapters[0].Wiki.Path = "wiki/x" },
-		"no chapters":           func(m *models.Manifest) { m.Chapters = nil },
+		"path-like instance id":     func(m *models.Manifest) { m.Chapters[0].Instance.ID = "../other" },
+		"dot instance id":           func(m *models.Manifest) { m.Chapters[0].Instance.ID = "." },
+		"bad state":                 func(m *models.Manifest) { m.Chapters[0].State = "beta" },
+		"bad pack type":             func(m *models.Manifest) { m.Chapters[0].Pack.Type = "shaders" },
+		"empty loader":              func(m *models.Manifest) { m.Chapters[0].Pack.Loader = " " },
+		"http packwiz":              func(m *models.Manifest) { m.Chapters[0].Pack.Packwiz = str("http://github.com/x/pack.toml") },
+		"mrpack off allowlist":      func(m *models.Manifest) { m.Chapters[0].Pack.Mrpack = str("https://files.example/p.mrpack") },
+		"bad server address":        func(m *models.Manifest) { m.Chapters[0].Server = &models.Server{Address: "play.example:99999"} },
+		"server with scheme":        func(m *models.Manifest) { m.Chapters[0].Server = &models.Server{Address: "https://play.example"} },
+		"relative wiki path":        func(m *models.Manifest) { m.Chapters[0].Wiki.Path = "wiki/x" },
+		"control character in name": func(m *models.Manifest) { m.Chapters[0].Name = "Lux\nemburg" },
+		"packwiz with a $": func(m *models.Manifest) {
+			m.Chapters[0].Pack.Packwiz = str("https://github.com/x/$INST_JAVA/pack.toml")
+		},
+		"packwiz with a space": func(m *models.Manifest) {
+			m.Chapters[0].Pack.Packwiz = str("https://github.com/x/pack.toml -jar x")
+		},
+		"unknown jvm preset": func(m *models.Manifest) { m.Chapters[0].Pack.JVM = str("-Xmx64G") },
+		"zgc before Java 21": func(m *models.Manifest) {
+			m.Chapters[0].Pack.Minecraft = "1.19.2"
+			m.Chapters[0].Pack.JVM = str("zgc")
+		},
+		"no chapters": func(m *models.Manifest) { m.Chapters = nil },
 	}
 	for name, mutate := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -98,6 +116,8 @@ func TestValidateManifestAccepts(t *testing.T) {
 	pw := "https://raw.githubusercontent.com/sandrogekeler/packs/main/frangfurd/pack.toml"
 	m.Chapters[0].Pack.Packwiz = &pw
 	m.Chapters[0].Server = &models.Server{Address: "play.kapitel-kapital.example:25565"}
+	zgc := "zgc"
+	m.Chapters[0].Pack.Minecraft, m.Chapters[0].Pack.JVM = "1.21.1", &zgc
 	if err := ValidateManifest(m); err != nil {
 		t.Fatal(err)
 	}

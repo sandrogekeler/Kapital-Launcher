@@ -58,6 +58,10 @@
             "minecraft": { "$ref": "#/$defs/placeholderOrString" },
             "mods": { "type": ["integer", "null"], "minimum": 0 },
             "memoryGb": { "type": ["integer", "null"], "minimum": 1 },
+            "jvm": {
+              "enum": ["zgc", null],
+              "description": "A JVM preset the launcher owns, never raw arguments. zgc is -XX:+UseZGC -XX:+ZGenerational and needs Java 21, so Minecraft 1.20.5 or later."
+            },
             "version": { "type": ["string", "null"] },
             "packwiz": {
               "oneOf": [{ "$ref": "#/$defs/httpsUrl" }, { "type": "null" }],

@@ -101,8 +101,9 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
 ## Open questions, all the author's
 
 - **Server addresses and `joinOnLaunch`**: #33.
-- **Memory** for Lichdenstein and Frangfurd is `null` in the manifest;
-  Frangfurd runs with 8 GB in Prism. Both feed #22.
+- **Memory** for Lichdenstein is `null` in the manifest. Frangfurd's is 8 GB
+  (decided 2026-09-30), written as the instance's maximum with a 512 MB
+  minimum.
 - **`verdigris-bright`** in the wiki: two derived tints, not brand values.
 
 ## Things a fresh session will trip on

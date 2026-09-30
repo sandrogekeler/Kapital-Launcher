@@ -17,10 +17,12 @@ substitute `$INST_JAVA`, `$INST_DIR`, `$INST_MC_DIR`, `$INST_ID` and
 
 As proposed, with two things stated more precisely than the handoff did:
 
-- **The pre-launch command is a template in Go**, of the form
-  `"$INST_JAVA" -jar "$INST_MC_DIR/packwiz-installer-bootstrap.jar" <pack.toml url>`.
+- **The pre-launch command is a template in Go** (`preLaunchCommand` in
+  `backend/services/packinstance.go`):
+  `"$INST_JAVA" -jar "$INST_MC_DIR/packwiz-installer-bootstrap.jar" --bootstrap-no-update --bootstrap-main-jar "$INST_MC_DIR/packwiz-installer.jar" <pack.toml url>`.
   The manifest contributes only the URL, already validated as https on an
-  allowlisted host. No manifest field can ever carry a command.
+  allowlisted host and free of anything Prism's command line reads (`$`,
+  quotes, spaces). No manifest field can ever carry a command.
 - **Hashes are required.** `.mrpack` files carry per-file hashes and packwiz's
   `index.toml` does; a file whose hash is missing or does not match is
   refused, not skipped.
@@ -69,7 +71,25 @@ replacement for it.
   lines): `-I` always opens the New Instance dialog and waits for OK, the
   folder name comes from that dialog's name field, and a collision gets a
   `(1)` suffix, never an overwrite. So an import cannot promise the
-  `kapital-<id>` folder `--launch` needs; #22 decides what the launcher does
-  instead.
+  `kapital-<id>` folder `--launch` needs. Decided in #22: the launcher writes
+  that folder itself (ADR-2, amendment).
 - Whether `packwiz-installer-bootstrap.jar` is fetched by the launcher (then
-  hashed) or by the pack import.
+  hashed) or by the pack import. Decided in #22: the launcher fetches both
+  jars from their GitHub releases, pinned by size and SHA-256
+  (`backend/services/packwizjars.go`), and copies them into the instance. The
+  bootstrap runs with `--bootstrap-no-update`, because it otherwise asks
+  `api.github.com` for a newer installer on every Play.
+
+## Fresh install, as built (#22)
+
+A fresh install no longer imports a `.mrpack` (option A). The launcher writes
+the instance: `instance.cfg` with the pre-launch command, the chapter's JVM
+preset (`pack.jvm`, a name the launcher maps to arguments) and memory
+(`pack.memoryGb`, as `MaxMemAlloc`, with `MinMemAlloc` at 512 MB, Prism's own
+default, so the heap starts small on any machine and grows as needed); `mmc-pack.json` with Minecraft and the loader read from the hosted
+`pack.toml`, refused when they disagree with the manifest; and the two jars.
+The first Play then installs the whole pack through the pre-launch command,
+and every later Play syncs it. Checked in a container on 2026-09-30 by
+parsing the generated `instance.cfg` with Qt's own `QSettings`, splitting the
+command with `QProcess::splitCommand`, and running it against `packwiz serve`:
+529 of 529 files, also from a path with a space in it.
