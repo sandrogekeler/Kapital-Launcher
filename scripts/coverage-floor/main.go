@@ -24,15 +24,18 @@ import (
 const targetPackage = "./backend/services/"
 
 // Floor = the last measured figure minus a little headroom, so an unrelated
-// refactor, or the few lines that differ between the Windows, macOS and Linux
-// builds, does not redden the build. It is a ratchet: raise it when coverage
+// refactor does not redden the build. It is a ratchet: raise it when coverage
 // rises, never lower it to make a red build green.
 //
-//	79.3% -> floor 77.0  the services as of the managed Prism (#26), on Linux
+// Measure it where CI judges it, the Windows backend job: the build-tagged
+// code differs by platform, and the same tests read 79.3% on Linux against
+// 76.7% on Windows.
+//
+//	76.7% -> floor 74.5  the services as of the managed Prism (#26), on Windows
 //
 // Coverage is a proxy, not the goal. A test that would have caught a real bug is
 // worth more than one that only moves this number.
-const floorPercent = 77.0
+const floorPercent = 74.5
 
 // Matches the tail of `go test -cover` output: "coverage: 79.3% of statements".
 var reCoverage = regexp.MustCompile(`coverage:\s+([0-9.]+)%\s+of\s+statements`)
