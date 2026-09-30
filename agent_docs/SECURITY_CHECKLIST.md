@@ -9,8 +9,20 @@ Two reaches matter: **network** (a manifest, a pack index, a download, a server
 ping response) and **bridge** (a bound method on `App`, callable by anything
 that runs in the WebView).
 
-Bound methods on 2026-09-28: **10** (`grep -c '^func (a \*App) [A-Z]' app.go`).
-A different count is new surface to classify.
+Bound methods on 2026-09-30: **13** (`grep -c '^func (a \*App) [A-Z]' app.go`).
+A different count is new surface to classify: add the method to this table.
+
+| Method | Takes from the bridge | Reaches | Item |
+|---|---|---|---|
+| `GetAppVersion`, `GetManifest`, `GetEngine` | nothing | values already in memory | none |
+| `GetSettings` | nothing | the settings file | S1.2 |
+| `RefreshEngine` | nothing | detection: runs the resolved Prism with `--version` | S3.1 |
+| `GetInstances` | nothing | the two reads in a Prism root | S1.1 |
+| `GetPrismRelease` | nothing | one bounded GET to Prism's fixed release URL | S4.5 |
+| `InstallPrism` | nothing | download, verify and unpack Prism's official build | S4.5 |
+| `LaunchChapter`, `OpenChapterWiki`, `GetServerStatus` | a chapter id | the manifest's instance, URL or address for it | S3.3, S6.1 |
+| `SaveSettings` | a whole `AppSettings` | the settings file, and the executable detection then runs | S3.5 |
+| `OpenExternal` | a URL | the system browser, web URLs only | S3.4 |
 
 ## S1. Credentials
 
@@ -69,14 +81,27 @@ Verify: `TestLaunchArgsRefusesAnythingThatIsNotAPlainValue`.
 Probe: `--dir` as an instance id; a newline in a profile name.
 
 **S3.3 Bridge-supplied ids resolve through the manifest.**
-Holds when: `LaunchChapter` and `OpenChapterWiki` look the chapter id up and
-use the manifest's instance id, address and path, never the caller's.
+Holds when: `LaunchChapter`, `OpenChapterWiki` and `GetServerStatus` look the
+chapter id up and use the manifest's instance id, address and path, never the
+caller's.
 Verify: read `app.go`.
 
 **S3.4 Only web URLs reach the system browser.**
 Holds when: `OpenExternal` runs `services.ExternalURL` first (http, https, host
 required).
 Verify: `TestExternalURLAcceptsOnlyWebAddresses`.
+
+**S3.5 A settings save can name any executable, so only the player may save.**
+`SaveSettings` accepts an absolute `PrismExecutable`, and detection runs it
+with `--version`; Play runs it too. That is the settings screen's purpose
+(#5), so the bridge is trusted as the player here, and what keeps it the
+player is S5: the WebView loads only the app's own bundled assets under a CSP
+with `script-src 'self'` and no raw HTML sinks.
+Holds when: `ValidateSettings` refuses a relative executable or root and a
+profile starting with `-`, and S5.1 and S5.2 hold.
+Verify: `settings_test.go`; S5.1, S5.2.
+Probe: anything that would put third-party script in the WebView (a remote
+image or page, a manifest string rendered as HTML).
 
 ## S4. Downloads (milestone 4)
 
@@ -96,7 +121,10 @@ hosts; the digest and size are checked while streaming; unpacking refuses
 escapes (S4.2) and bounds entries and bytes; the Windows executable passes
 `WinVerifyTrust` and the macOS bundle `codesign --verify` (fixed arguments);
 and nothing is placed until all of that passed. `InstallPrism` re-reads the
-release itself rather than taking one from the frontend (ADR-11).
+release itself rather than taking one from the frontend (ADR-11). The approval
+is the approval card's: `InstallPrism` takes no argument and holds no token,
+so what Go guarantees to any caller is only that the build is Prism's own and
+verified.
 Verify: `managedprism_test.go` (bad digest, redirect off the allowlist, a
 release URL off Prism's, failed signature, no executable, zip escapes).
 Probe: a release whose asset URL points elsewhere; a zip naming `../x`.
