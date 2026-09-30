@@ -92,6 +92,8 @@ What is left:
       signing decision (ADR-6)
 - [x] Create the labels in `.github/labels.yml` on the repository (`scripts/sync-labels.py`),
       done 2026-09-29
+- [ ] Vendor CodeQL and Scorecard from Kollektiv, possible since the repository
+      went public (2026-09-30)
 
 ## Download site
 
@@ -102,7 +104,7 @@ download.
 - [x] `site/`: one page on the app's tokens, no script, links as data, a
       strict CSP; built in CI
 - [ ] Connect a Cloudflare Pages project to the repository (`site/README.md`, Hosting)
-- [ ] GitHub link, once the repository is public
+- [ ] GitHub link: the repository is public since 2026-09-30
 - [ ] Download link, once the release workflow publishes a release
 - [ ] A custom domain, if one is wanted
 
