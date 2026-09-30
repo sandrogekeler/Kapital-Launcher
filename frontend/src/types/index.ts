@@ -51,6 +51,31 @@ export interface ServerStatus {
   checkedAt: string
 }
 
+/** Where a launched chapter's game is. Same strings as the Go GamePhase constants. */
+export type GamePhase =
+  | 'idle'
+  | 'starting'
+  | 'mods'
+  | 'window'
+  | 'resources'
+  | 'running'
+  | 'stopping'
+  | 'closed'
+  | 'crashed'
+  | 'failed'
+
+/** A launched chapter's game, keyed by chapter. Times are RFC 3339 in UTC. */
+export interface GameState {
+  chapterId: string
+  phase: GamePhase
+  /** When this phase began. */
+  since: string
+  /** When Play was pressed; empty for idle. */
+  startedAt: string
+  /** The game's own exit code, when the platform reports it. */
+  exitCode?: number
+}
+
 // Go pointer fields arrive optional from the bindings, so they are optional here too.
 export interface Pack {
   type: 'modpack' | 'client-visuals' | string

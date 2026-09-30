@@ -9,6 +9,7 @@ import { selectChapter, useChapterStore } from './stores/useChapterStore'
 import { useEngineStore } from './stores/useEngineStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { useServerStore } from './stores/useServerStore'
+import { useGameStore } from './stores/useGameStore'
 import { Environment } from '../wailsjs/runtime/runtime'
 import { errMsg, readOr } from './lib/ipc'
 
@@ -27,6 +28,9 @@ export default function App() {
 
   const listenServers = useServerStore((s) => s.listen)
   const checkServer = useServerStore((s) => s.check)
+
+  const listenGame = useGameStore((s) => s.listen)
+  const loadGames = useGameStore((s) => s.load)
 
   const theme = useSettingsStore((s) => s.settings.theme)
   const loadSettings = useSettingsStore((s) => s.load)
@@ -85,6 +89,15 @@ export default function App() {
   // Server status arrives as events from Go's ticker (.claude/rules/ipc.md);
   // this is the one listener, for the app's lifetime.
   useEffect(() => listenServers(), [listenServers])
+
+  // A game's phases arrive as events too (#44). The read covers a window that
+  // opens after a game began, and runs after the listener so no phase is lost
+  // between them.
+  useEffect(() => {
+    const off = listenGame()
+    void loadGames()
+    return off
+  }, [listenGame, loadGames])
 
   // Opening a chapter with a server asks for a fresh ping rather than waiting
   // for the next tick, so the line is current when it is looked at.

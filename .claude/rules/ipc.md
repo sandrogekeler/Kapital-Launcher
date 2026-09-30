@@ -47,7 +47,8 @@ Three: `server:status`, a `models.ServerStatus` emitted by
 engine store (`EVENT_PRISM_INSTALL`), the install's outcome still coming from
 the promise, so a missed event cannot leave it hanging; and `game:state`, a
 `models.GameState` per phase change of a launched game, emitted by
-`GameTracker` (`EventGameState`), with `GetGameStates` for the state now. The
+`GameTracker` (`EventGameState`), heard by the game store
+(`EVENT_GAME_STATE`), with `GetGameStates` for the state now. The
 pattern for the next one:
 
 - The name is a Go constant (`services.EventServerStatus`) and a TS constant

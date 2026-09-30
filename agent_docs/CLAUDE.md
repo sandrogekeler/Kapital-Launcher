@@ -38,10 +38,11 @@ Same shape as Konnekt, deliberately (docs/adr/0001-app-framework.md).
   whole on any violation (`services.ValidateManifest`).
 - **Every value that reaches Prism is validated first**: instance id, server
   `host[:port]`, profile name, root path. `LaunchArgs` is the one place, tested.
-- **One Zustand store per domain** (chapters, engine, settings, servers). Reads
+- **One Zustand store per domain** (chapters, engine, settings, servers, game). Reads
   degrade without a bridge (`lib/ipc.ts`), writes revert and rethrow when a real
   backend rejects. Server status arrives as `server:status` events from Go's
-  ticker; nothing in the frontend polls.
+  ticker and a game's phases as `game:state` events; nothing in the frontend
+  polls.
 - **Styling is Tailwind utilities over the token layer.** No literal colour or
   pixel size in a component; a missing value is a token to add. Inline `style` is
   an ESLint error. The chapter accent is `data-chapter` on the root and
