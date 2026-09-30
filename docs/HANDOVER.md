@@ -1,9 +1,11 @@
 # Handover
 
 Written 2026-09-30, at the end of the second local session (Windows 11, the
-author's PC), brought up to date the same day by a cloud session and again by
-the third local session (Install, the local pack override, the first real
-install). Read `agent_docs/ROADMAP.md` for the milestones, `docs/adr/` for
+author's PC), brought up to date the same day by a cloud session, by the
+third local session (Install, the local pack override, the first real
+install) and by the fourth (the settings screen and six requests from the
+author: the ping, scrolling, the facts, the wiki, the card's motion, the
+chapter settings). Read `agent_docs/ROADMAP.md` for the milestones, `docs/adr/` for
 the decisions and the GitHub issues for the work items; this file is what a
 fresh session cannot work out on its own.
 
@@ -22,18 +24,33 @@ request stacked on it.
 
 ## Open pull requests
 
-#37, #38 and #39 are merged. Merge in this order; each stacked one retargets
-to `main` when the one below it merges.
+Everything up to #51 is merged. The evening's work is one stack; merge from
+the bottom, each one retargets to `main` when the one below it merges. All
+were green in CI when this was written.
 
-| PR | What | State |
+| PR | What | Base |
 |---|---|---|
-| #40 | Install replaces Play until the instance exists (#24) | Green |
-| #42 | Install from a local `packwiz serve` (#41), stacked on #40 | Green; tested for real on the author's PC, results in its description |
-| this one | The handover, stacked on #42 | |
-| #48 | The logo's gradient colours as `color.brand` tokens | |
-| #49 | Frangfurd shown as pack 1.0.0 with 96 mods | |
-| kapital-packs#2 | The README's release steps without a `.mrpack` | |
-| #1 | Dependabot: pnpm/action-setup 6.1.0 | Not mergeable, and not a stale base: on Windows 6.1.0 leaves `pnpm install` and `pnpm build` exiting 0 with no output, so `frontend/dist` is never built. `main` passed CI on the same base with 6.0.10. The version is skipped in `.github/dependabot.yml` (#51); #1 is closed |
+| #52 | The handover rows that missed `main` after #47 | `main` |
+| this one | The handover after the fourth session | #52 |
+| #60 | Ping with protocol 0, which Frangfurd answers (#55) | `main` |
+| #54 | The settings screen with native pickers and the developer pack field (#5) | `main` |
+| #61 | The chapter view scrolls under a thumb drawn over the content (#56) | #54 |
+| #62 | Four pack facts, with the size on disk (#57) | #61 |
+| #63 | A random wiki page per chapter from the lore export (#58) | #62 |
+| #64 | The chapter card that slides by direction, the nav highlight gliding (#59) | #63 |
+| #65 | A chapter's memory and JVM preset from a pen in its hero (#36, first half) | #64 |
+| #72 | The slide the way the content moves, on a softer glide curve (#67) | #65 |
+| #73 | The card fits the window, the hero taking the height left over (#68) | #72 |
+| #74 | The logo at 16 px (#70) | #73 |
+| #75 | Title art in the hero, blurred art behind the selected nav tile (#69) | #74 |
+| #76 | "Update and play" when the synced pack.toml's hash is behind the source's, a Version row (#71) | #75 |
+| #53 | Dependabot: `golang.org/x/sys` 0.48.0 | `main` |
+
+Owed on the author's PC, in the Wails window (the browser pane cannot do
+them): one Browse each on the settings screen (#54); one save on a chapter's
+settings, then a look at its `instance.cfg` (#65); the slide's render cost
+on the 4K art (#64; `effect.motionBlur: 0` keeps the slide without the
+filter if it stutters); one start showing a wiki page per chapter (#63).
 
 ## Work items, in the order agreed
 
@@ -47,15 +64,29 @@ fullscreen off, NeoForge's early window off), tagged `frangfurd-v1.0.0` with
 a GitHub release and no `.mrpack` (it would embed the CurseForge jar). It is
 not hosted yet, so players cannot install it: that is #25.
 
+Done in the fourth session, all in the stack above: #5, #55, #56, #57,
+#58, #59, the first half of #36, then #67 to #71 from the author's second
+round of requests. Left, in order:
+
 1. **#25** Publish the packs on Cloudflare Pages, add its `pages.dev` host to
    `AllowedManifestHosts`, test-install from `packwiz serve` first.
    Frangfurd already installs and launches end to end from `packwiz serve`
    (#42), so hosting is the remaining step for it; #35 comes first.
-2. **#20** Launch the three real packs end to end, and **#5** the settings
-   screen (its gear sits disabled in the header bar since #13). #5 also gets
-   a field for `packOverrides`, set by hand in `settings.json` until then.
-3. **#36** Memory and optional mods per player.
-4. **#50** Install prepares the chapter (sign-in, Java, libraries, pack,
+2. **#20** Launch the three real packs end to end. Luxemburg is not in Prism,
+   and `kapital-lichdenstein` sits in `%APPDATA%\PrismLauncher`, the root the
+   launcher no longer looks at now that the managed Prism is the engine.
+3. **#44** Following the game from its log, the base for #50 and #43. Read
+   on 2026-09-30 from Prism 11.1.1's source and the clean run's logs: a
+   second `--launch` is forwarded to the running Prism over its local peer
+   and the process the launcher started exits at once
+   (`Application.cpp:451-492`), so it is no handle on the game; all five
+   markers, `Stopping!` included, are in the real `latest.log`; the log's
+   timestamps are two hours off the file's mtime, so freshness must come
+   from the file itself; the first line carries the player name, so lines
+   are never copied. The crash path without a process handle is undecided.
+4. **#36**, second half: mod toggles, once `kapital-packs` marks mods
+   optional. The pen panel and the `instance.cfg` rewrite exist (#65).
+5. **#50** Install prepares the chapter (sign-in, Java, libraries, pack,
    assets happen at Install, not the first Play) with one progress view in
    the launcher; builds on #44 and #45. Filed after a clean new-player run on
    2026-09-30: Prism uninstalled (program only; its data folder with the
@@ -65,6 +96,17 @@ not hosted yet, so players cannot install it: that is #25.
    Prism now lives in `%APPDATA%\KapitalLauncher\prism`.
 
 Plan each with the author before building; they choose between the options.
+
+**A finding for #50, not yet on the issue:** the pre-launch route cannot
+work. Prism runs the pre-launch command before it downloads libraries and
+assets (`MinecraftInstance.cpp`, `createLaunchTask`, 11.1.1: Java, then
+`PreLaunchCommand`, then `ClaimAccount`, `LibrariesTask`, `AssetUpdateTask`,
+then the launch), and the clean run's `PrismLauncher-0.log` agrees (Java
+check at 15 s, libraries at 32 s, the asset index at 36 s, the game JVM at
+109 s). What is left is letting the game start and closing it on the first
+marker from #44. `prismlauncher.cfg`'s console keys are `ShowConsole`
+(default false), `AutoCloseConsole`, `ShowConsoleOnError` (default true),
+`QuitAfterGameStop`; the managed root has `QuitAfterGameStop=true`.
 
 Filed 2026-09-30 for work that needs the author, a dashboard or real hardware:
 #29 (Pages build watch paths), #30 (macOS verification pass), #31 (universal
@@ -114,9 +156,11 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
 
 ## The author's PC
 
-- **Prism 11.1.0** at `%LOCALAPPDATA%\Programs\PrismLauncher`, data root
-  `%APPDATA%\PrismLauncher`. The launcher uses it; a managed Prism is only a
-  fallback.
+- **Prism's own install is gone** since the clean run: the launcher uses the
+  managed Prism 11.1.1 in `%APPDATA%\KapitalLauncher\prism` (`root/` is its
+  data root, `kapital-frangfurd` in it). `%APPDATA%\PrismLauncher` still
+  holds the old data with `kapital-lichdenstein`, which the launcher no
+  longer sees.
 - **`kapital-frangfurd` is the instance Install wrote** from `packwiz serve`
   on 2026-09-30 (ZGC, 512 MB to 8 GB, Drippy loading screen), and the author
   chose it as the one they edit before the pack is uploaded; the importer in
@@ -132,9 +176,9 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
   then needs `packwiz serve` running. Once #25 hosts the pack, the clean way
   is to delete the instance and Install from the hosted `pack.toml`.
 - `%APPDATA%\KapitalLauncher\settings.json` carries
-  `"packOverrides": {"frangfurd": "http://localhost:8080/pack.toml"}`. Remove it
-  to go back to the manifest's pack (none is hosted yet, so Install is then
-  disabled again).
+  `"packOverrides": {"frangfurd": "http://localhost:8080/pack.toml"}`. Clear
+  the field under Developer on the settings screen (#54) to go back to the
+  manifest's pack (none is hosted yet, so Install is then disabled again).
 - Default Options seeds `options.txt`, keybindings and the server list
   "Frangfurd (Global)" (`female-specified.gl.joinmc.link`) and "Frangfurd
   (Germany)" (`rails-enjoyed.tun.ply.gg`) on a first start.
@@ -158,6 +202,23 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
 
 ## Things a fresh session will trip on
 
+- **`.claude/suite-check.py` needs `PYTHONUTF8=1`** on this PC once any
+  test prints a non-cp1252 character (a `✓`, an em dash in a diff): the
+  vendored runner decodes subprocess output as cp1252 and dies with
+  `UnicodeDecodeError` instead of reporting the failing check.
+- **`wails dev`'s Go watcher did not rebuild** after edits to `backend/`
+  twice on 2026-09-30; the frontend reloaded, the bindings did not. Restart
+  it. A `wails dev` from an earlier session may still hold port 34115
+  (`Get-CimInstance Win32_Process` shows `wails dev` and
+  `kapital-launcher-dev.exe`); the `wails-dev` preset in
+  `.claude/launch.json` starts a fresh one with live bindings.
+- **jsdom has no `AnimationEvent`**, so React listens for
+  `webkitAnimationEnd` there: a test that must end a CSS animation
+  dispatches that name (`ChapterStage.test.tsx`, `App.test.tsx`'s
+  `switchTo`), or the leaving card stays mounted.
+- **Vite keeps a stale `wailsjs/go/main/App.js`** after `wails generate
+  module` adds a method; restart the frontend dev server or the page fails
+  with "does not provide an export".
 - **Git Bash heredocs collapse backslashes** in Python and TypeScript written
   through them. Write files with the editor tool, not `cat <<'EOF'`, when a
   backslash or an apostrophe inside quotes matters. It happened again this
