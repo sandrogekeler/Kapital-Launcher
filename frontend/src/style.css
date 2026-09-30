@@ -25,6 +25,16 @@
   }
 }
 
+/* The native scrollbar is never drawn (#56). A scroll container that should
+   show where it is wraps itself in components/ui/Scrollable, which draws a
+   thumb over the content instead; the native bar would take a strip beside it. */
+* {
+  scrollbar-width: none;
+}
+::-webkit-scrollbar {
+  display: none;
+}
+
 /* Where a chapter has no screenshot yet: a fine grid in the chapter's accent
    over the page ground. The same pattern at two scales serves the hero and
    the sidebar thumbnail. */

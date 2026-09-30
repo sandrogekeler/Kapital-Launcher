@@ -168,13 +168,18 @@
     },
     "layout": {
       "type": "object",
-      "required": ["unit", "sidebar", "hero", "titlebar", "icon", "window"],
+      "required": ["unit", "sidebar", "hero", "titlebar", "icon", "scrollbar", "window"],
       "additionalProperties": false,
       "properties": {
         "unit": { "const": "px" },
         "sidebar": { "type": "integer", "minimum": 1 },
         "hero": { "type": "integer", "minimum": 1 },
         "titlebar": { "type": "integer", "minimum": 1 },
+        "scrollbar": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The width of the app's own scroll thumb (components/ui/Scrollable): a pill drawn over the content; the native bar is hidden."
+        },
         "icon": {
           "type": "object",
           "description": "Icon box sizes, the px value lucide draws at, and the stroke weight in screen px that lucide's absoluteStrokeWidth holds constant across sizes.",

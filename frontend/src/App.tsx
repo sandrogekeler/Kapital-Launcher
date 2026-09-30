@@ -5,6 +5,7 @@ import { Hero } from './components/main/Hero'
 import { ActionBar } from './components/main/ActionBar'
 import { Panels } from './components/main/Panels'
 import { SettingsPanel } from './components/settings/SettingsPanel'
+import { Scrollable } from './components/ui/Scrollable'
 import { selectChapter, useChapterStore } from './stores/useChapterStore'
 import { selectInstalled, selectInstancePack, useEngineStore } from './stores/useEngineStore'
 import { useSettingsStore } from './stores/useSettingsStore'
@@ -128,7 +129,10 @@ export default function App() {
       <HeaderBar platform={platform} onOpenSettings={() => setSettingsOpen((open) => !open)} />
       <div className="flex min-h-0 grow">
         <Sidebar />
-        <main className="flex min-w-0 grow flex-col">
+        {/* The chapter view scrolls under the header bar and beside the
+            sidebar when the window is shorter than it (#56); the padding
+            keeps the last row clear of the fixed disclaimer. */}
+        <Scrollable as="main" className="flex flex-col pb-8">
           {settingsOpen ? (
             <SettingsPanel onClose={closeSettings} />
           ) : (
@@ -158,7 +162,7 @@ export default function App() {
               <Panels chapter={chapter} status={status} onOpenWiki={openWiki} />
             </>
           )}
-        </main>
+        </Scrollable>
       </div>
       <footer className="text-fg-faint text-2xs pointer-events-none fixed inset-x-0 bottom-2 text-center">
         NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.

@@ -251,6 +251,7 @@ function emitLayout(src, push) {
   push(`  --layout-sidebar: ${src.layout.sidebar}${src.layout.unit};`)
   push(`  --layout-hero: ${src.layout.hero}${src.layout.unit};`)
   push(`  --layout-titlebar: ${src.layout.titlebar}${src.layout.unit};`)
+  push(`  --layout-scrollbar: ${src.layout.scrollbar}${src.layout.unit};`)
   push(`  --layout-icon-sm: ${src.layout.icon.sm}${src.layout.unit};`)
   push(`  --layout-icon-md: ${src.layout.icon.md}${src.layout.unit};`)
   push(`}`)
