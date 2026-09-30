@@ -1,5 +1,5 @@
 import type { Chapter } from '../../types'
-import { chapterArt } from '../../lib/art'
+import { chapterArt, chapterTitleArt } from '../../lib/art'
 import { factValue, isPlaceholder, stateLabel } from '../../lib/manifest'
 import { BookOpen, Pencil } from '../../lib/icons'
 import { IconButton } from '../ui/IconButton'
@@ -20,6 +20,7 @@ interface Props {
  */
 export function Hero({ chapter, onOpenWiki, onOpenSettings }: Props) {
   const art = chapterArt(chapter.id)
+  const title = chapterTitleArt(chapter.id)
   const loader = isPlaceholder(chapter.pack.loader) ? '[Loader]' : chapter.pack.loader
   const mc = isPlaceholder(chapter.pack.minecraft) ? '[MC version]' : chapter.pack.minecraft
   const mods = chapter.pack.mods == null ? '[N] mods' : `${factValue(chapter.pack.mods)} mods`
@@ -55,7 +56,14 @@ export function Hero({ chapter, onOpenWiki, onOpenSettings }: Props) {
           <span className="text-accent font-mono">{chapter.number}</span>
           <span>{chapter.kind}</span>
         </div>
-        <h1 className="font-display text-display m-0 font-semibold">{chapter.name}</h1>
+        {/* The heading is the artwork when there is one; its alt keeps the name for readers. */}
+        <h1 className="font-display text-display m-0 font-semibold">
+          {title ? (
+            <img src={title} alt={chapter.name} className="block h-auto w-full" draggable={false} />
+          ) : (
+            chapter.name
+          )}
+        </h1>
         <p className="text-fg-soft m-0 text-lg leading-normal">{chapter.blurb}</p>
         <div className="flex flex-wrap gap-2">
           <Pill>

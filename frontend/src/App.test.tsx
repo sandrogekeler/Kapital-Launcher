@@ -116,13 +116,13 @@ describe('App', () => {
 
   it('renders every chapter and sets the accent from the open one', async () => {
     render(<App />)
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Luxemburg')
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveAccessibleName('Luxemburg')
     const nav = within(screen.getByRole('navigation', { name: 'Chapters' }))
     expect(nav.getAllByRole('button')).toHaveLength(3)
     expect(document.documentElement.dataset.chapter).toBe('luxemburg')
 
     switchTo(/03.*Frangfurd/)
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Frangfurd')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Frangfurd')
     expect(document.documentElement.dataset.chapter).toBe('frangfurd')
     expect(screen.getByText('NeoForge 1.21.1')).toBeInTheDocument()
   })
@@ -190,7 +190,7 @@ describe('App', () => {
     })
     render(<App />)
     await waitFor(() =>
-      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Frangfurd'),
+      expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Frangfurd'),
     )
     // Let any effect ping-pong play out before counting.
     await new Promise((r) => setTimeout(r, 50))
@@ -203,7 +203,7 @@ describe('App', () => {
     expect(Bindings.SaveSettings).toHaveBeenCalledWith(
       expect.objectContaining({ lastChapter: 'lichdenstein' }),
     )
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Lichdenstein')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Lichdenstein')
   })
 
   it('shows Install, disabled, for a chapter whose pack is not hosted, and looks again on focus', async () => {

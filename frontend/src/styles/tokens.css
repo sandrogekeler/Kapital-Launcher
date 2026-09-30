@@ -102,11 +102,13 @@
   --scrim-mid-at: 42%;
   --scrim-far: 18%;
   --scrim-wash: 84%;
+  --scrim-tile: 58%;
   --art-pending-tint: 6%;
   --art-pending-line: 8%;
   --art-pending-cell: 48px;
   --art-pending-cell-thumb: 8px;
   --effect-motion-blur: 4px;
+  --effect-tile-blur: 14px;
 }
 
 /* Dark is the default. Light is opt-in through data-theme; the system

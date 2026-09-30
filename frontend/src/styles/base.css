@@ -89,3 +89,8 @@
 @utility scrim-wash {
   background: color-mix(in srgb, var(--bg) var(--scrim-wash), transparent);
 }
+/* The even cover on a selected nav tile's blurred art: lighter than the
+   wash, so the picture shows through behind the text (#69). */
+@utility scrim-tile {
+  background: color-mix(in srgb, var(--bg) var(--scrim-tile), transparent);
+}

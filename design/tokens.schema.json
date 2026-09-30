@@ -216,7 +216,7 @@
     "effect": {
       "type": "object",
       "description": "Values a utility cannot name on its own: the hover lift on the filled button, the focus outline, the stops of the scrim over artwork, and the grid shown where a chapter has no artwork yet.",
-      "required": ["hoverBrightness", "focusRing", "scrim", "artPending", "motionBlur"],
+      "required": ["hoverBrightness", "focusRing", "scrim", "artPending", "motionBlur", "tileBlur"],
       "additionalProperties": false,
       "properties": {
         "hoverBrightness": { "type": "number", "exclusiveMinimum": 1, "maximum": 2 },
@@ -232,8 +232,8 @@
         },
         "scrim": {
           "type": "object",
-          "description": "Opacity of the page ground over artwork, in percent: edge at the text side, mid at midAt across, far at the other side; wash is the even cover on narrow screens.",
-          "required": ["unit", "edge", "mid", "midAt", "far", "wash"],
+          "description": "Opacity of the page ground over artwork, in percent: edge at the text side, mid at midAt across, far at the other side; wash is the even cover on narrow screens; tile is the even cover on a selected nav tile's blurred art (#69).",
+          "required": ["unit", "edge", "mid", "midAt", "far", "wash", "tile"],
           "additionalProperties": false,
           "properties": {
             "unit": { "const": "%" },
@@ -241,7 +241,8 @@
             "mid": { "type": "number", "minimum": 0, "maximum": 100 },
             "midAt": { "type": "number", "minimum": 0, "maximum": 100 },
             "far": { "type": "number", "minimum": 0, "maximum": 100 },
-            "wash": { "type": "number", "minimum": 0, "maximum": 100 }
+            "wash": { "type": "number", "minimum": 0, "maximum": 100 },
+            "tile": { "type": "number", "minimum": 0, "maximum": 100 }
           }
         },
         "artPending": {
@@ -255,6 +256,11 @@
             "cell": { "type": "integer", "minimum": 1 },
             "cellThumb": { "type": "integer", "minimum": 1 }
           }
+        },
+        "tileBlur": {
+          "type": "number",
+          "minimum": 0,
+          "description": "The blur in px on the chapter's art behind its selected nav tile (#69)."
         },
         "motionBlur": {
           "type": "number",
