@@ -50,9 +50,11 @@ packwiz already is:
   the audit trail an admin panel would have to build.
 - **Local testing is `packwiz serve`**, packwiz's built-in HTTP server for
   exactly this: point an instance's pre-launch installer at
-  `http://localhost:8080/pack.toml` and launch. The launcher gains a
-  developer setting for that override (Roadmap, milestone 4), so a pack can
-  be tried from a working copy before it is pushed.
+  `http://localhost:8080/pack.toml` and launch. The launcher's developer
+  setting for that is `packOverrides` in `settings.json` (#41): Install then
+  writes the instance against the local address, loopback only. The instance
+  keeps syncing from it, and the state line says "Dev pack", until it is
+  deleted in Prism and installed again from the hosted pack.
 - **Publishing is a push.** A static host serves `pack.toml` and
   `index.toml`; `packwiz modrinth export` produces the `.mrpack` a fresh
   install imports. The launcher's manifest carries the two URLs and nothing

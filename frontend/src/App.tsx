@@ -5,7 +5,7 @@ import { Hero } from './components/main/Hero'
 import { ActionBar } from './components/main/ActionBar'
 import { Panels } from './components/main/Panels'
 import { selectChapter, useChapterStore } from './stores/useChapterStore'
-import { selectInstalled, useEngineStore } from './stores/useEngineStore'
+import { selectInstalled, selectInstancePack, useEngineStore } from './stores/useEngineStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { selectStatus, useServerStore } from './stores/useServerStore'
 import { OpenChapterWiki, OpenExternal } from '../wailsjs/go/main/App'
@@ -30,6 +30,7 @@ export default function App() {
   const listenInstall = useEngineStore((s) => s.listenInstall)
   const installPrism = useEngineStore((s) => s.installPrism)
   const installed = useEngineStore(selectInstalled(selectedId))
+  const instancePack = useEngineStore(selectInstancePack(selectedId))
   const launch = useEngineStore((s) => s.launch)
   const installing = useEngineStore((s) => s.installing)
   const installedNow = useEngineStore((s) => s.installedNow)
@@ -41,6 +42,7 @@ export default function App() {
   const checkServer = useServerStore((s) => s.check)
 
   const theme = useSettingsStore((s) => s.settings.theme)
+  const devPack = useSettingsStore((s) => s.settings.packOverrides?.[selectedId])
   const loadSettings = useSettingsStore((s) => s.load)
 
   // Which OS draws the window, for the header's controls. Without a bridge
@@ -124,6 +126,8 @@ export default function App() {
             engine={engine}
             status={status}
             installed={installed}
+            devPack={devPack}
+            instancePack={instancePack}
             launching={launching === chapter.id}
             installing={installing === chapter.id}
             installedNow={installedNow === chapter.id}

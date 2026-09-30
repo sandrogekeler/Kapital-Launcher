@@ -84,23 +84,20 @@ type InstanceCreator struct {
 
 // NewInstanceCreator keeps its jar cache under dataDir.
 func NewInstanceCreator(dataDir string) *InstanceCreator {
-	c := &InstanceCreator{jars: newPackwizJarCache(dataDir), checkPackURL: checkURL}
-	c.client = &http.Client{Timeout: packTOMLTimeout, CheckRedirect: c.checkRedirect}
-	return c
-}
-
-// checkRedirect holds a redirected pack.toml to the manifest's own rules.
-func (c *InstanceCreator) checkRedirect(req *http.Request, via []*http.Request) error {
-	if len(via) >= 5 {
-		return errors.New("too many redirects")
+	// The client's CheckRedirect is set per fetch, to the rule the URL passed.
+	return &InstanceCreator{
+		jars:         newPackwizJarCache(dataDir),
+		checkPackURL: checkURL,
+		client:       &http.Client{Timeout: packTOMLTimeout},
 	}
-	return c.checkPackURL("pack.toml redirect", req.URL.String())
 }
 
 // Install creates the chapter's instance in the instances folder report
 // resolved (PrismService.Instances, read just before). It refuses when that
-// folder is unknown or the instance is already there.
-func (c *InstanceCreator) Install(ctx context.Context, chapter models.Chapter, report models.InstanceReport) error {
+// folder is unknown or the instance is already there. A non-empty override is
+// a developer's local packwiz serve address (#41), used in place of the
+// manifest's pack and held to CheckLocalPackURL instead of the allowlist.
+func (c *InstanceCreator) Install(ctx context.Context, chapter models.Chapter, report models.InstanceReport, override string) error {
 	if report.Dir == "" {
 		return errors.New("cannot work out where Prism keeps its instances")
 	}
@@ -109,16 +106,20 @@ func (c *InstanceCreator) Install(ctx context.Context, chapter models.Chapter, r
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.Create(ctx, chapter, report.Dir)
+	if override == "" {
+		return c.Create(ctx, chapter, report.Dir)
+	}
+	if err := CheckLocalPackURL(override); err != nil {
+		return err
+	}
+	local := func(_, raw string) error { return CheckLocalPackURL(raw) }
+	return c.create(ctx, chapter, report.Dir, override, local)
 }
 
-// Create writes the chapter's instance under instancesDir. It refuses when the
-// folder already exists, and removes what it wrote when it fails part-way.
+// Create writes the chapter's instance under instancesDir from the manifest's
+// hosted pack. It refuses when the folder already exists, and removes what it
+// wrote when it fails part-way.
 func (c *InstanceCreator) Create(ctx context.Context, chapter models.Chapter, instancesDir string) error {
-	id := chapter.Instance.ID
-	if !prismInstanceID.MatchString(id) {
-		return fmt.Errorf("instance id %q is not a plain folder name", id)
-	}
 	if chapter.Pack.Packwiz == nil {
 		return fmt.Errorf("%s has no hosted pack to install", chapter.ID)
 	}
@@ -126,7 +127,17 @@ func (c *InstanceCreator) Create(ctx context.Context, chapter models.Chapter, in
 	if err := c.checkPackURL(chapter.ID+".pack.packwiz", packURL); err != nil {
 		return err
 	}
-	versions, err := c.fetchVersions(ctx, packURL)
+	return c.create(ctx, chapter, instancesDir, packURL, c.checkPackURL)
+}
+
+// create writes the instance for packURL, already checked; check holds any
+// redirect of pack.toml to the same rule the URL passed.
+func (c *InstanceCreator) create(ctx context.Context, chapter models.Chapter, instancesDir, packURL string, check func(field, raw string) error) error {
+	id := chapter.Instance.ID
+	if !prismInstanceID.MatchString(id) {
+		return fmt.Errorf("instance id %q is not a plain folder name", id)
+	}
+	versions, err := c.fetchVersions(ctx, packURL, check)
 	if err != nil {
 		return err
 	}
@@ -156,13 +167,20 @@ func (c *InstanceCreator) Create(ctx context.Context, chapter models.Chapter, in
 	return writeInstance(instancesDir, id, files, cfg)
 }
 
-func (c *InstanceCreator) fetchVersions(ctx context.Context, packURL string) (packVersions, error) {
+func (c *InstanceCreator) fetchVersions(ctx context.Context, packURL string, check func(field, raw string) error) (packVersions, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, packURL, nil)
 	if err != nil {
 		return packVersions{}, err
 	}
 	req.Header.Set("User-Agent", prismUserAgent)
-	resp, err := c.client.Do(req)
+	client := *c.client
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 5 {
+			return errors.New("too many redirects")
+		}
+		return check("pack.toml redirect", req.URL.String())
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return packVersions{}, fmt.Errorf("fetch pack.toml: %w", err)
 	}

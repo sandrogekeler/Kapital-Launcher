@@ -66,6 +66,15 @@ func (s *SettingsService) Load() (models.AppSettings, error) {
 	if err := json.Unmarshal(data, &settings); err != nil {
 		return models.DefaultSettings(), fmt.Errorf("parse settings: %w", err)
 	}
+	// Overrides are written by hand (#41). A bad one is dropped with a log
+	// line rather than failing the load, so it never blocks the settings the
+	// app writes itself; Save then refuses it if it comes back.
+	for id, raw := range settings.PackOverrides {
+		if err := checkPackOverride(id, raw); err != nil {
+			slog.Warn("settings: pack override dropped", "chapter", id, "error", err)
+			delete(settings.PackOverrides, id)
+		}
+	}
 	return normalize(settings), nil
 }
 
@@ -98,7 +107,21 @@ func ValidateSettings(s models.AppSettings) error {
 	if strings.HasPrefix(strings.TrimSpace(s.ProfileName), "-") {
 		return fmt.Errorf("settings: profile name %q could be read as an option", s.ProfileName)
 	}
+	for id, raw := range s.PackOverrides {
+		if err := checkPackOverride(id, raw); err != nil {
+			return fmt.Errorf("settings: %w", err)
+		}
+	}
 	return nil
+}
+
+// checkPackOverride holds one packOverrides entry to a chapter-shaped key and
+// a loopback packwiz serve address.
+func checkPackOverride(id, raw string) error {
+	if !chapterIDPattern.MatchString(id) {
+		return fmt.Errorf("pack override for %q: not a chapter id", id)
+	}
+	return CheckLocalPackURL(strings.TrimSpace(raw))
 }
 
 func normalize(s models.AppSettings) models.AppSettings {
@@ -110,6 +133,15 @@ func normalize(s models.AppSettings) models.AppSettings {
 	s.PrismExecutable = strings.TrimSpace(s.PrismExecutable)
 	s.ProfileName = strings.TrimSpace(s.ProfileName)
 	s.LastChapter = strings.TrimSpace(s.LastChapter)
+	if len(s.PackOverrides) > 0 {
+		trimmed := make(map[string]string, len(s.PackOverrides))
+		for id, raw := range s.PackOverrides {
+			trimmed[id] = strings.TrimSpace(raw)
+		}
+		s.PackOverrides = trimmed
+	} else {
+		s.PackOverrides = nil
+	}
 	return s
 }
 

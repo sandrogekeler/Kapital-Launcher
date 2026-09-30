@@ -127,7 +127,7 @@ func (a *App) GetInstances() (models.InstanceReport, error) {
 // InstallChapter writes the chapter's Prism instance into the instances folder
 // GetInstances resolves, and returns that report read again (#24). The chapter
 // id is looked up in the validated manifest, so the instance id and pack URL
-// are the manifest's. What is written, and the one-folder rule, is
+// are the manifest's, unless settings name a local pack for it. What is written, and the one-folder rule, is
 // services/packinstance.go's; the pack itself downloads on the first Play.
 func (a *App) InstallChapter(chapterID string) (models.InstanceReport, error) {
 	chapter, ok := a.chapter(chapterID)
@@ -141,15 +141,19 @@ func (a *App) InstallChapter(chapterID string) (models.InstanceReport, error) {
 	if !engine.Found {
 		return models.InstanceReport{}, services.ErrPrismNotFound
 	}
-	report, err := a.GetInstances()
+	settings, err := a.settings.Load()
 	if err != nil {
-		return report, err
+		return models.InstanceReport{}, err
 	}
-	if err := a.creator.Install(a.context(), chapter, report); err != nil {
+	report := a.prism.Instances(settings, engine, a.manifest.Chapters)
+	// A developer's local packwiz serve, from settings.json (#41); the
+	// creator holds it to loopback, whatever the settings file says.
+	override := settings.PackOverrides[chapter.ID]
+	if err := a.creator.Install(a.context(), chapter, report, override); err != nil {
 		slog.Error("install chapter", "chapter", chapterID, "error", err)
 		return report, err
 	}
-	slog.Info("installed", "chapter", chapterID, "instance", chapter.Instance.ID)
+	slog.Info("installed", "chapter", chapterID, "instance", chapter.Instance.ID, "local pack", override != "")
 	return a.GetInstances()
 }
 

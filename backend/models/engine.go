@@ -40,4 +40,8 @@ type InstanceReport struct {
 	Dir string `json:"dir"`
 	// Present maps a chapter id to whether <Dir>/<instance id>/instance.cfg exists.
 	Present map[string]bool `json:"present"`
+	// PackURL maps a chapter id to the pack URL its instance syncs from, read
+	// back from the pre-launch command the launcher wrote. Absent for an
+	// instance the launcher did not create (#41).
+	PackURL map[string]string `json:"packUrl"`
 }

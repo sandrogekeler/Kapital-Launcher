@@ -254,7 +254,7 @@ func newFakePackHost(t *testing.T) (*fakePackHost, *InstanceCreator) {
 	c := NewInstanceCreator(t.TempDir())
 	// One client each, sharing the test server's TLS transport: srv.Client()
 	// returns the same client every call.
-	c.client = &http.Client{Transport: h.srv.Client().Transport, CheckRedirect: c.checkRedirect}
+	c.client = &http.Client{Transport: h.srv.Client().Transport}
 	c.checkPackURL = func(_, raw string) error {
 		if !strings.HasPrefix(raw, h.srv.URL+"/") {
 			return fmt.Errorf("refusing %s", raw)
@@ -308,7 +308,7 @@ func TestCreateWritesAPrismInstance(t *testing.T) {
 func TestInstallWritesIntoTheReportedFolder(t *testing.T) {
 	h, c := newFakePackHost(t)
 	report := models.InstanceReport{Dir: filepath.Join(t.TempDir(), "instances"), Present: map[string]bool{"frangfurd": false}}
-	if err := c.Install(context.Background(), frangfurdChapter(h.srv.URL+"/frangfurd/pack.toml"), report); err != nil {
+	if err := c.Install(context.Background(), frangfurdChapter(h.srv.URL+"/frangfurd/pack.toml"), report, ""); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(report.Dir, "kapital-frangfurd", "instance.cfg")); err != nil {
@@ -325,13 +325,56 @@ func TestInstallRefusesAnUnknownFolderOrAPresentInstance(t *testing.T) {
 	}
 	for name, report := range cases {
 		t.Run(name, func(t *testing.T) {
-			if err := c.Install(context.Background(), chapter, report); err == nil {
+			if err := c.Install(context.Background(), chapter, report, ""); err == nil {
 				t.Fatal("expected a refusal")
 			}
 		})
 	}
 	if n := h.jarGets.Load(); n != 0 {
 		t.Fatalf("a refused install still fetched %d jars", n)
+	}
+}
+
+func TestInstallFromALocalPackwizServe(t *testing.T) {
+	h, c := newFakePackHost(t)
+	// packwiz serve: plain http on loopback, which the allowlist never passes.
+	local := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/pack.toml" {
+			http.NotFound(w, r)
+			return
+		}
+		if _, err := w.Write([]byte(frangfurdPackTOML)); err != nil {
+			t.Errorf("serve: %v", err)
+		}
+	}))
+	t.Cleanup(local.Close)
+	override := local.URL + "/pack.toml"
+	report := models.InstanceReport{Dir: t.TempDir(), Present: map[string]bool{}}
+	// The manifest's chapter has no hosted pack at all, as today.
+	chapter := frangfurdChapter("")
+	chapter.Pack.Packwiz = nil
+	if err := c.Install(context.Background(), chapter, report, override); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := os.ReadFile(filepath.Join(report.Dir, "kapital-frangfurd", "instance.cfg"))
+	if err != nil || !strings.Contains(string(cfg), override+`"`) {
+		t.Fatalf("instance.cfg does not sync from the override: %s, %v", cfg, err)
+	}
+	if n := h.jarGets.Load(); n != 2 {
+		t.Errorf("jars downloaded %d times, want 2", n)
+	}
+}
+
+func TestInstallRefusesAnOverrideOffThisMachine(t *testing.T) {
+	h, c := newFakePackHost(t)
+	report := models.InstanceReport{Dir: t.TempDir(), Present: map[string]bool{}}
+	for _, override := range []string{"http://192.168.1.20:8080/pack.toml", h.srv.URL + "/frangfurd/pack.toml"} {
+		if err := c.Install(context.Background(), frangfurdChapter(""), report, override); err == nil {
+			t.Errorf("%s: expected a refusal", override)
+		}
+	}
+	if n := h.jarGets.Load(); n != 0 {
+		t.Fatalf("a refused override still fetched %d jars", n)
 	}
 }
 

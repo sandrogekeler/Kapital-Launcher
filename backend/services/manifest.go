@@ -165,6 +165,40 @@ func checkURL(field, raw string) error {
 	return nil
 }
 
+// loopbackHosts are the only hosts a local pack override may name (#41).
+var loopbackHosts = []string{"localhost", "127.0.0.1", "::1"}
+
+// CheckLocalPackURL is the rule for a developer's pack override: packwiz
+// serve's address on this machine, e.g. http://localhost:8080/pack.toml. It
+// lands on the same pre-launch command line as a manifest URL, so the same
+// character rules hold, and it can never name another machine.
+func CheckLocalPackURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("pack override: %w", err)
+	}
+	switch {
+	case u.Scheme != "http":
+		return fmt.Errorf("pack override: %q is not http", raw)
+	case !slices.Contains(loopbackHosts, strings.ToLower(u.Hostname())):
+		return fmt.Errorf("pack override: %q is not on this machine (localhost, 127.0.0.1 or [::1])", raw)
+	case u.Port() == "":
+		return fmt.Errorf("pack override: %q names no port", raw)
+	case u.User != nil || u.RawQuery != "" || u.Fragment != "" || strings.Contains(raw, "#"):
+		return fmt.Errorf("pack override: %q carries user info, a query or a fragment", raw)
+	case !strings.HasSuffix(u.Path, "/pack.toml"):
+		return fmt.Errorf("pack override: %q does not end in /pack.toml", raw)
+	// [::1]'s brackets are the one addition: Prism splits the command on
+	// spaces and quotes only, and the value is quoted in instance.cfg.
+	case !commandSafeURL.MatchString(strings.Replace(raw, "//[::1]:", "//localhost:", 1)):
+		return fmt.Errorf("pack override: %q carries a character a command line would read", raw)
+	}
+	return nil
+}
+
+// IsLocalPackURL reports whether a pack URL passes CheckLocalPackURL.
+func IsLocalPackURL(raw string) bool { return CheckLocalPackURL(raw) == nil }
+
 // WikiURL joins a chapter's wiki path onto the manifest's base URL. Both were
 // validated on load, so the result is always https on the wiki's host.
 func WikiURL(m models.Manifest, c models.Chapter) string {

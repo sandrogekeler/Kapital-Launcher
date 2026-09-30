@@ -6,6 +6,7 @@ export namespace models {
 	    prismRoot: string;
 	    profileName: string;
 	    lastChapter: string;
+	    packOverrides?: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -18,6 +19,7 @@ export namespace models {
 	        this.prismRoot = source["prismRoot"];
 	        this.profileName = source["profileName"];
 	        this.lastChapter = source["lastChapter"];
+	        this.packOverrides = source["packOverrides"];
 	    }
 	}
 	export class ChangelogEntry {
@@ -183,6 +185,7 @@ export namespace models {
 	    root: string;
 	    dir: string;
 	    present: Record<string, boolean>;
+	    packUrl: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
 	        return new InstanceReport(source);
@@ -193,6 +196,7 @@ export namespace models {
 	        this.root = source["root"];
 	        this.dir = source["dir"];
 	        this.present = source["present"];
+	        this.packUrl = source["packUrl"];
 	    }
 	}
 	export class Wiki {

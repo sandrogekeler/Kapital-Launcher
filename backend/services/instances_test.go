@@ -64,7 +64,7 @@ func TestDataRootPrefersSettingThenPortableThenPlatformDefault(t *testing.T) {
 	}
 }
 
-func TestScanInstanceDirKeepsOnlyThatKey(t *testing.T) {
+func TestScanINIKeyKeepsOnlyThatKey(t *testing.T) {
 	cases := map[string]struct{ cfg, want string }{
 		"absent":        {"ProxyPass=hunter2\nLanguage=en\n", ""},
 		"top level":     {"ProxyPass=hunter2\nInstanceDir=inst\n", "inst"},
@@ -75,7 +75,7 @@ func TestScanInstanceDirKeepsOnlyThatKey(t *testing.T) {
 		"prefix only":   {"InstanceDirX=nope\n", ""},
 	}
 	for name, c := range cases {
-		got, err := scanInstanceDir(strings.NewReader(c.cfg))
+		got, err := scanINIKey(strings.NewReader(c.cfg), instanceDirKey)
 		if err != nil || got != c.want {
 			t.Errorf("%s: got %q %v, want %q", name, got, err, c.want)
 		}
@@ -121,5 +121,51 @@ func TestInstancesStatsOneFilePerChapter(t *testing.T) {
 	got = withConfigs(fakeOS("windows", nil, nil, nil, ""), nil).Instances(models.AppSettings{}, models.EngineInfo{}, chapters)
 	if got.Root != "" || len(got.Present) != 0 {
 		t.Fatalf("an unknown root reports nothing: %+v", got)
+	}
+}
+
+func TestInstancesReadBackThePackURLTheLauncherWrote(t *testing.T) {
+	root := filepath.Join("/srv", "prism")
+	local := "http://localhost:8080/pack.toml"
+	hosted := "https://kapitel-kapital.pages.dev/frangfurd/pack.toml"
+	written := func(url string) string {
+		cfg, err := renderInstanceConfig(frangfurdChapter(url), url)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(cfg)
+	}
+	cfg := func(id string) string { return filepath.Join(root, "instances", id, "instance.cfg") }
+	chapters := []models.Chapter{
+		{ID: "frangfurd", Instance: models.Instance{ID: "kapital-frangfurd"}},
+		{ID: "luxemburg", Instance: models.Instance{ID: "kapital-luxemburg"}},
+		{ID: "lichdenstein", Instance: models.Instance{ID: "kapital-lichdenstein"}},
+	}
+	files := map[string]bool{cfg("kapital-frangfurd"): false, cfg("kapital-luxemburg"): false, cfg("kapital-lichdenstein"): false}
+	p := withConfigs(fakeOS("linux", files, nil, nil, ""), map[string]string{
+		cfg("kapital-frangfurd"): written(local),
+		cfg("kapital-luxemburg"): written(hosted),
+		// Made by hand in Prism, with a command of the player's own.
+		cfg("kapital-lichdenstein"): "[General]\nOverrideCommands=true\nPreLaunchCommand=\"echo https://evil.example/pack.toml\"\n",
+	})
+	got := p.Instances(models.AppSettings{PrismRoot: root}, models.EngineInfo{}, chapters)
+	want := map[string]string{"frangfurd": local, "luxemburg": hosted}
+	if len(got.PackURL) != len(want) || got.PackURL["frangfurd"] != local || got.PackURL["luxemburg"] != hosted {
+		t.Fatalf("got %v, want %v", got.PackURL, want)
+	}
+}
+
+func TestPackURLFromCommand(t *testing.T) {
+	cases := map[string]string{
+		preLaunchCommand("https://kapitel-kapital.pages.dev/p/pack.toml"): "https://kapitel-kapital.pages.dev/p/pack.toml",
+		preLaunchCommand("http://[::1]:8080/pack.toml"):                   "http://[::1]:8080/pack.toml",
+		"":                                "",
+		"packwiz-installer-bootstrap.jar": "",
+		`java -jar packwiz-installer-bootstrap.jar $X`: "",
+	}
+	for cmd, want := range cases {
+		if got := packURLFromCommand(cmd); got != want {
+			t.Errorf("%q: got %q, want %q", cmd, got, want)
+		}
 	}
 }
