@@ -22,7 +22,8 @@ import (
 //   - <instances>/<instance id>/instance.cfg, stat only, once per manifest
 //     instance id. The instances folder is never listed.
 //
-// The launcher still never writes into a Prism root (ADR-2).
+// The one write into a Prism root is packinstance.go's, which creates a
+// chapter's instance folder when it is absent (ADR-2, amendment).
 
 const (
 	prismConfigName   = "prismlauncher.cfg"

@@ -75,6 +75,7 @@ export namespace models {
 	    version?: string;
 	    packwiz?: string;
 	    mrpack?: string;
+	    jvm?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Pack(source);
@@ -90,6 +91,7 @@ export namespace models {
 	        this.version = source["version"];
 	        this.packwiz = source["packwiz"];
 	        this.mrpack = source["mrpack"];
+	        this.jvm = source["jvm"];
 	    }
 	}
 	export class Instance {

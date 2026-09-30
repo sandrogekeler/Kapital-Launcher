@@ -22,7 +22,8 @@ directory exactly two reads happen, both in `services/instances.go`:
 `prismlauncher.cfg` is scanned for the one key `InstanceDir` (every other line,
 including any `ProxyPass`, is dropped unread and nothing from the file is
 logged), and `<instances>/<instance id>/instance.cfg` is stat'ed, once per
-manifest instance id. The instances folder is never listed.
+manifest instance id. The instances folder is never listed. The one write is
+S4.6's: a chapter's own instance folder, created when absent.
 Verify: `grep -rn 'accounts\|token\|refresh' --include=*.go . | grep -v _test`;
 `grep -rn 'p.open(\|os.Open\|ReadFile' backend/services/instances.go` shows one open;
 `TestScanInstanceDirKeepsOnlyThatKey`.
@@ -39,7 +40,12 @@ Verify: read `backend/models/settings.go`; `TestSettingsRoundTrip` checks the mo
 **S2.1 A manifest can name things and never run them.**
 Holds when: `models.Manifest` has no field for a command, an argument, a JVM
 option or a filesystem path, and `ParseManifest` refuses unknown fields.
-Verify: `TestParseManifestRefusesUnknownFields`; read `design/launcher.schema.json`.
+`pack.jvm` names a preset the launcher maps to arguments (`jvmPresets`) and is
+refused when unknown; the `pack.toml` URL is the only manifest value on the
+pre-launch command line, and `commandSafeURL` refuses the characters Prism
+reads there (`$`, quotes, spaces, a backslash, `#`).
+Verify: `TestParseManifestRefusesUnknownFields`; `TestValidateManifestRefuses`;
+`TestRenderInstanceConfigRefuses`; read `design/launcher.schema.json`.
 
 **S2.2 Every manifest URL is https on an allowlisted host.**
 Holds when: `checkURL` runs on `wiki.baseUrl`, `pack.packwiz` and `pack.mrpack`,
@@ -82,6 +88,8 @@ Verify: `TestExternalURLAcceptsOnlyWebAddresses`.
 
 **S4.1 Every downloaded file is verified against its hash before use.** `.mrpack`
 carries hashes; packwiz's `index.toml` does. A missing hash refuses.
+packwiz-installer refused a file changed on the server without a refreshed
+index on 2026-09-30 ("Hash invalid!", nothing written).
 **S4.2 Archive members cannot escape.** Reject `..`, absolute paths and anything
 resolving outside the instance directory.
 **S4.3 Every outbound request has a timeout and a size bound.**
@@ -100,6 +108,18 @@ release itself rather than taking one from the frontend (ADR-11).
 Verify: `managedprism_test.go` (bad digest, redirect off the allowlist, a
 release URL off Prism's, failed signature, no executable, zip escapes).
 Probe: a release whose asset URL points elsewhere; a zip naming `../x`.
+
+**S4.6 A chapter's instance is created once and never overwritten.**
+Holds when: `InstanceCreator.Create` makes the folder with a plain `mkdir` and
+refuses an existing one; writes `instance.cfg` last and removes only the folder
+it created on failure; fetches `pack.toml` with a timeout and a size bound, holds
+any redirect to the manifest's own URL rules, and refuses versions that
+disagree with the manifest; and takes the packwiz jars
+only from GitHub's hosts, checked against the size and SHA-256 pinned in
+`packwizjars.go`, caching nothing that fails its pin.
+Verify: `packinstance_test.go`.
+Probe: an instance folder the player made by hand with the same name; a jar
+that redirects off GitHub; a pack.toml naming two loaders.
 
 ## S5. WebView
 
@@ -161,5 +181,6 @@ them the day it is not.
 
 ## Open backlog
 
-- S2.3, S4: not built yet; the items are written so the code meets them when it is.
+- S2.3, S4.2 to S4.4: not built yet; the items are written so the code meets
+  them when it is. S4.6 is built but not yet called from the app (#24).
 - S5.3: verify the inspector setting against the first `wails build` output.

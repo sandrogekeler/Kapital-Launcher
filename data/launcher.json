@@ -22,6 +22,7 @@
         "minecraft": "1.19.2",
         "mods": 208,
         "memoryGb": 12,
+        "jvm": null,
         "version": "4.1",
         "packwiz": null,
         "mrpack": null
@@ -51,6 +52,7 @@
         "minecraft": "1.20.6",
         "mods": 31,
         "memoryGb": null,
+        "jvm": null,
         "version": null,
         "packwiz": null,
         "mrpack": null
@@ -84,6 +86,7 @@
         "minecraft": "1.21.1",
         "mods": 95,
         "memoryGb": null,
+        "jvm": "zgc",
         "version": null,
         "packwiz": null,
         "mrpack": null

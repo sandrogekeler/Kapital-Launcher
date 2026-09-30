@@ -55,6 +55,9 @@ type Pack struct {
 	Version   *string `json:"version"`
 	Packwiz   *string `json:"packwiz"`
 	Mrpack    *string `json:"mrpack"`
+	// JVM names one of the launcher's own JVM presets (services.jvmPresets),
+	// never arguments: a manifest cannot put text on Java's command line.
+	JVM *string `json:"jvm"`
 }
 
 // Server is a chapter's server: the address the status line pings, as
