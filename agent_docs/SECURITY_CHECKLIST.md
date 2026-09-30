@@ -9,7 +9,7 @@ Two reaches matter: **network** (a manifest, a pack index, a download, a server
 ping response) and **bridge** (a bound method on `App`, callable by anything
 that runs in the WebView).
 
-Bound methods on 2026-09-30: **18** (`grep -c '^func (a \*App) [A-Z]' app.go`).
+Bound methods on 2026-09-30: **20** (`grep -c '^func (a \*App) [A-Z]' app.go`).
 A different count is new surface to classify: add the method to this table.
 
 | Method | Takes from the bridge | Reaches | Item |
@@ -27,6 +27,8 @@ A different count is new surface to classify: add the method to this table.
 | `OpenExternal` | a URL | the system browser, web URLs only | S3.4 |
 | `GetWikiPages` | nothing | one bounded GET of the wiki's lore export on the manifest's wiki host, cached in the app data dir | S2.3, S4.3 |
 | `OpenWikiPage` | a URL | the system browser, only for a URL `GetWikiPages` returned | S3.3 |
+| `GetChapterSettings` | a chapter id | four keys of the chapter's own `instance.cfg` | S1.1, S3.3 |
+| `SaveChapterSettings` | a chapter id and a `ChapterSettings` | five keys rewritten in the chapter's own `instance.cfg`, held to the preset list and the machine's memory | S3.2, S3.3, S4.6 |
 
 ## S1. Credentials
 
@@ -43,7 +45,12 @@ manifest instance id and, when present, scanned the same way for the one key
 never listed; a chapter's own instance folder, when present, is walked for
 its size on disk (#57), and that walk takes names and sizes from the
 directory entries, opens nothing, follows no symlink and stops at a ceiling.
-The one write is S4.6's: a chapter's own instance folder, created when absent.
+The chapter's settings (#36) read four keys of that same `instance.cfg`
+(`OverrideMemory`, `MaxMemAlloc`, `OverrideJavaArgs`, `JvmArgs`) through
+`scanINIKeys`, and a save reads the file whole to copy every other line back
+unchanged; nothing from it is kept or logged. The writes are S4.6's: a
+chapter's own instance folder, created when absent, and those five keys of
+its `instance.cfg` on the player's request.
 Verify: `grep -rn 'accounts\|token\|refresh' --include=*.go . | grep -v _test`;
 `grep -rn 'p.open(\|os.Open\|ReadFile' backend/services/instances.go` shows two opens,
 both through `scanINIKey`; `TestScanINIKeyKeepsOnlyThatKey`;
@@ -164,15 +171,23 @@ Verify: `managedprism_test.go` (bad digest, redirect off the allowlist, a
 release URL off Prism's, failed signature, no executable, zip escapes).
 Probe: a release whose asset URL points elsewhere; a zip naming `../x`.
 
-**S4.6 A chapter's instance is created once and never overwritten.**
+**S4.6 A chapter's instance is created once, and only its own settings keys are ever rewritten.**
 Holds when: `InstanceCreator.Create` makes the folder with a plain `mkdir` and
 refuses an existing one; writes `instance.cfg` last and removes only the folder
 it created on failure; fetches `pack.toml` with a timeout and a size bound, holds
 any redirect to the manifest's own URL rules, and refuses versions that
 disagree with the manifest; and takes the packwiz jars
 only from GitHub's hosts, checked against the size and SHA-256 pinned in
-`packwizjars.go`, caching nothing that fails its pin.
-Verify: `packinstance_test.go`.
+`packwizjars.go`, caching nothing that fails its pin. After that,
+`WriteChapterSettings` (#36, ADR-2's second amendment) rewrites five keys of
+`instance.cfg` and nothing else, atomically, with the preset's arguments from
+the launcher's fixed list and a memory the machine has
+(`ValidateChapterSettings`), and `SaveChapterSettings` refuses while the
+instance looks to be running.
+Verify: `packinstance_test.go`; `TestWriteChapterSettingsTouchesOnlyItsKeys`,
+`TestRewriteINIKeysAddsMissingKeysToGeneralOnly`,
+`TestValidateChapterSettingsHoldsToThePresetsAndTheMachine`,
+`TestChapterSettingsRoundTripThroughTheInstance`.
 Probe: an instance folder the player made by hand with the same name; a jar
 that redirects off GitHub; a pack.toml naming two loaders.
 

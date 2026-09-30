@@ -102,6 +102,46 @@ func TestPickersNeedTheWindow(t *testing.T) {
 	}
 }
 
+// A chapter's settings are read from and written into its own instance.cfg,
+// only when the instance exists, only within the preset list and the
+// machine's memory (#36).
+func TestChapterSettingsRoundTripThroughTheInstance(t *testing.T) {
+	app := newTestApp(t)
+	root := t.TempDir()
+	if err := app.SaveSettings(models.AppSettings{Theme: "dark", PrismRoot: root}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.GetChapterSettings("frangfurd"); err == nil || !strings.Contains(err.Error(), "not installed") {
+		t.Fatalf("no instance yet: %v", err)
+	}
+	inst := filepath.Join(root, "instances", "kapital-frangfurd")
+	if err := os.MkdirAll(inst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := "[General]\nname=Frangfurd\nOverrideMemory=true\nMinMemAlloc=512\nMaxMemAlloc=8192\n"
+	if err := os.WriteFile(filepath.Join(inst, "instance.cfg"), []byte(cfg), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	info, err := app.GetChapterSettings("frangfurd")
+	if err != nil || info.Settings.MaxMemoryMB != 8192 || info.Settings.JVM != "" || info.PackMemoryMB != 8192 || info.Running {
+		t.Fatalf("%v %+v", err, info)
+	}
+	if _, err := app.SaveChapterSettings("frangfurd", models.ChapterSettings{MaxMemoryMB: 4096, JVM: "-Xmx1g"}); err == nil {
+		t.Fatal("raw arguments are refused")
+	}
+	saved, err := app.SaveChapterSettings("frangfurd", models.ChapterSettings{MaxMemoryMB: 4096, JVM: "zgc"})
+	if err != nil || saved.Settings.MaxMemoryMB != 4096 || saved.Settings.JVM != "zgc" {
+		t.Fatalf("%v %+v", err, saved)
+	}
+	raw, err := os.ReadFile(filepath.Join(inst, "instance.cfg"))
+	if err != nil || !strings.HasPrefix(string(raw), "[General]\nname=Frangfurd\n") {
+		t.Fatalf("the other lines stay: %v %q", err, raw)
+	}
+	if _, err := app.SaveChapterSettings("atlantis", models.ChapterSettings{MaxMemoryMB: 4096}); err == nil {
+		t.Fatal("unknown chapter")
+	}
+}
+
 // The bridge may only open a wiki page the app itself listed (#58).
 func TestOpenWikiPageRefusesAnUnlistedURL(t *testing.T) {
 	app := newTestApp(t)

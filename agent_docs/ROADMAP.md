@@ -59,6 +59,9 @@ the scaffold changed the picture.
       from the manifest
 - [ ] Verify every download by hash; refuse a mismatch
 - [ ] Update pack button and sync state line
+- [x] A chapter's own settings from the pen in its hero: memory and the JVM
+      preset, written into its `instance.cfg` (#36, first half; ADR-2's second
+      amendment). Optional mods follow once the pack marks them
 - [x] Developer setting: override a chapter's `pack.toml` URL with a local
       `packwiz serve` address, so a pack is tried from a working copy first
       (`packOverrides` in settings.json, #41; edited on the settings screen

@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	wailsrt "github.com/wailsapp/wails/v2/pkg/runtime"
 
@@ -322,6 +324,83 @@ func (a *App) GetServerStatus(chapterID string) (models.ServerStatus, error) {
 		wailsrt.EventsEmit(a.ctx, services.EventServerStatus, status)
 	}
 	return status, nil
+}
+
+// GetChapterSettings reads a chapter's memory and JVM preset from its
+// instance, with what the panel needs around them (#36). The chapter id is
+// looked up in the manifest; the instance must exist.
+func (a *App) GetChapterSettings(chapterID string) (models.ChapterSettingsInfo, error) {
+	chapter, cfg, err := a.chapterInstance(chapterID)
+	if err != nil {
+		return models.ChapterSettingsInfo{}, err
+	}
+	machine := services.MachineMemoryMB()
+	settings, err := services.ReadChapterSettings(cfg, machine)
+	if err != nil {
+		return models.ChapterSettingsInfo{}, err
+	}
+	return a.chapterSettingsInfo(chapter, cfg, settings, machine), nil
+}
+
+// SaveChapterSettings writes a chapter's memory and JVM preset into its
+// instance.cfg, those keys and nothing else, and reads the result back. The
+// value is held to the fixed preset list and the machine's memory, and a
+// running instance is refused rather than raced with the game.
+func (a *App) SaveChapterSettings(chapterID string, settings models.ChapterSettings) (models.ChapterSettingsInfo, error) {
+	chapter, cfg, err := a.chapterInstance(chapterID)
+	if err != nil {
+		return models.ChapterSettingsInfo{}, err
+	}
+	machine := services.MachineMemoryMB()
+	if err := services.ValidateChapterSettings(settings, machine); err != nil {
+		return models.ChapterSettingsInfo{}, fmt.Errorf("chapter settings: %w", err)
+	}
+	if services.InstanceRunning(filepath.Dir(cfg), time.Now()) {
+		return models.ChapterSettingsInfo{}, fmt.Errorf("%s looks to be running; close the game first", chapter.Name)
+	}
+	if err := services.WriteChapterSettings(cfg, settings); err != nil {
+		slog.Error("save chapter settings", "chapter", chapterID, "error", err)
+		return models.ChapterSettingsInfo{}, err
+	}
+	slog.Info("chapter settings saved", "chapter", chapterID, "maxMemoryMb", settings.MaxMemoryMB, "jvm", settings.JVM)
+	saved, err := services.ReadChapterSettings(cfg, machine)
+	if err != nil {
+		return models.ChapterSettingsInfo{}, err
+	}
+	return a.chapterSettingsInfo(chapter, cfg, saved, machine), nil
+}
+
+// chapterInstance resolves a chapter id to its instance.cfg under the
+// instances folder GetInstances resolves, refusing a chapter whose instance
+// is not there.
+func (a *App) chapterInstance(chapterID string) (models.Chapter, string, error) {
+	chapter, ok := a.chapter(chapterID)
+	if !ok {
+		return models.Chapter{}, "", fmt.Errorf("no chapter %q", chapterID)
+	}
+	report, err := a.GetInstances()
+	if err != nil {
+		return models.Chapter{}, "", err
+	}
+	if !report.Present[chapterID] {
+		return models.Chapter{}, "", fmt.Errorf("%s is not installed", chapter.Name)
+	}
+	return chapter, filepath.Join(report.Dir, chapter.Instance.ID, "instance.cfg"), nil
+}
+
+func (a *App) chapterSettingsInfo(chapter models.Chapter, cfg string, settings models.ChapterSettings, machine int) models.ChapterSettingsInfo {
+	info := models.ChapterSettingsInfo{
+		ChapterID:       chapter.ID,
+		Settings:        settings,
+		MachineMemoryMB: machine,
+		PrismDefaultMB:  services.PrismDefaultMaxMB(machine),
+		Presets:         services.PresetNames(),
+		Running:         services.InstanceRunning(filepath.Dir(cfg), time.Now()),
+	}
+	if chapter.Pack.MemoryGB != nil {
+		info.PackMemoryMB = *chapter.Pack.MemoryGB * 1024
+	}
+	return info
 }
 
 // GetWikiPages returns the wiki's pages for the "From the wiki" panel (#58):

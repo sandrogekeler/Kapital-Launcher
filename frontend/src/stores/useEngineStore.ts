@@ -1,7 +1,15 @@
 import { create } from 'zustand'
-import type { EngineInfo, InstanceReport, PrismInstallProgress, PrismRelease } from '../types'
+import type {
+  ChapterSettings,
+  ChapterSettingsInfo,
+  EngineInfo,
+  InstanceReport,
+  PrismInstallProgress,
+  PrismRelease,
+} from '../types'
 import { errMsg, hasWailsBridge, readOr } from '../lib/ipc'
 import {
+  GetChapterSettings,
   GetEngine,
   GetInstances,
   GetPrismRelease,
@@ -9,6 +17,7 @@ import {
   InstallPrism,
   LaunchChapter,
   RefreshEngine,
+  SaveChapterSettings,
 } from '../../wailsjs/go/main/App'
 import { EventsOff, EventsOn } from '../../wailsjs/runtime/runtime'
 
@@ -33,7 +42,12 @@ interface EngineStore {
   release: PrismRelease | null
   /** The latest prism:install step while an install runs, and its outcome after. */
   install: PrismInstallProgress | null
+  /** Each chapter's instance settings, by chapter id, once read (#36). */
+  chapterSettings: Record<string, ChapterSettingsInfo | undefined>
   load: () => Promise<void>
+  loadChapterSettings: (chapterId: string) => Promise<void>
+  /** Writes the settings into the instance; rejects with Go's reason, which the panel shows. */
+  saveChapterSettings: (chapterId: string, settings: ChapterSettings) => Promise<void>
   loadRelease: () => Promise<void>
   installPrism: () => Promise<void>
   listenInstall: () => () => void
@@ -54,6 +68,21 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
   error: null,
   release: null,
   install: null,
+  chapterSettings: {},
+
+  // A read of the instance's own file: nothing to show without a bridge or
+  // an instance, and the panel says so.
+  loadChapterSettings: async (chapterId) => {
+    const info = await readOr(() => GetChapterSettings(chapterId), undefined)
+    set((s) => ({ chapterSettings: { ...s.chapterSettings, [chapterId]: info } }))
+  },
+
+  // A write into the instance: Go validates, refuses a running game, and
+  // answers with what it wrote, so the panel shows the file's truth.
+  saveChapterSettings: async (chapterId, settings) => {
+    const info = await SaveChapterSettings(chapterId, settings)
+    set((s) => ({ chapterSettings: { ...s.chapterSettings, [chapterId]: info } }))
+  },
 
   // What installing or updating Prism would fetch. A read: without a bridge,
   // or when GitHub cannot be reached, there is simply nothing to offer.

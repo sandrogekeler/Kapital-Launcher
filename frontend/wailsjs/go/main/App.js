@@ -14,6 +14,10 @@ export function GetAppVersion() {
   return window['go']['main']['App']['GetAppVersion']();
 }
 
+export function GetChapterSettings(arg1) {
+  return window['go']['main']['App']['GetChapterSettings'](arg1);
+}
+
 export function GetEngine() {
   return window['go']['main']['App']['GetEngine']();
 }
@@ -68,6 +72,10 @@ export function OpenWikiPage(arg1) {
 
 export function RefreshEngine() {
   return window['go']['main']['App']['RefreshEngine']();
+}
+
+export function SaveChapterSettings(arg1, arg2) {
+  return window['go']['main']['App']['SaveChapterSettings'](arg1, arg2);
 }
 
 export function SaveSettings(arg1) {

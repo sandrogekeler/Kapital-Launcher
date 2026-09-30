@@ -6,6 +6,7 @@ import { BUNDLED_MANIFEST } from '../../lib/manifest'
 vi.mock('../../../wailsjs/go/main/App')
 
 const chapters = BUNDLED_MANIFEST.chapters
+const noop = () => undefined
 const [luxemburg, lichdenstein, frangfurd] = [chapters[0]!, chapters[1]!, chapters[2]!]
 
 /** The card that is leaving, or null once its animation has ended. */
@@ -18,15 +19,17 @@ describe('ChapterStage', () => {
   afterEach(cleanup)
 
   it('shows the first chapter still, with no card leaving', () => {
-    render(<ChapterStage chapter={luxemburg} chapters={chapters} />)
+    render(<ChapterStage chapter={luxemburg} chapters={chapters} onOpenSettings={noop} />)
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Luxemburg')
     expect(leaving()).toBeNull()
     expect(document.querySelector('.card-in-down, .card-in-up')).toBeNull()
   })
 
   it('slides down to a later chapter and up to an earlier one, keeping the old card until its animation ends', () => {
-    const { rerender } = render(<ChapterStage chapter={luxemburg} chapters={chapters} />)
-    rerender(<ChapterStage chapter={frangfurd} chapters={chapters} />)
+    const { rerender } = render(
+      <ChapterStage chapter={luxemburg} chapters={chapters} onOpenSettings={noop} />,
+    )
+    rerender(<ChapterStage chapter={frangfurd} chapters={chapters} onOpenSettings={noop} />)
     // The new card comes in from above, the old one goes down and out, inert.
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Frangfurd')
     const out = leaving()!
@@ -36,15 +39,17 @@ describe('ChapterStage', () => {
     endAnimation(out)
     expect(leaving()).toBeNull()
 
-    rerender(<ChapterStage chapter={lichdenstein} chapters={chapters} />)
+    rerender(<ChapterStage chapter={lichdenstein} chapters={chapters} onOpenSettings={noop} />)
     expect(leaving()).toHaveClass('card-out-up')
     expect(document.querySelector('.card-in-up')).toHaveTextContent('Lichdenstein')
   })
 
   it('replaces a card still leaving when the selection moves again', () => {
-    const { rerender } = render(<ChapterStage chapter={luxemburg} chapters={chapters} />)
-    rerender(<ChapterStage chapter={lichdenstein} chapters={chapters} />)
-    rerender(<ChapterStage chapter={frangfurd} chapters={chapters} />)
+    const { rerender } = render(
+      <ChapterStage chapter={luxemburg} chapters={chapters} onOpenSettings={noop} />,
+    )
+    rerender(<ChapterStage chapter={lichdenstein} chapters={chapters} onOpenSettings={noop} />)
+    rerender(<ChapterStage chapter={frangfurd} chapters={chapters} onOpenSettings={noop} />)
     expect(document.querySelectorAll('[inert]').length).toBe(1)
     expect(leaving()).toHaveTextContent('Lichdenstein')
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Frangfurd')

@@ -1,17 +1,19 @@
 import type { Chapter } from '../../types'
 import { chapterArt } from '../../lib/art'
 import { factValue, isPlaceholder, stateLabel } from '../../lib/manifest'
-import { BookOpen } from '../../lib/icons'
+import { BookOpen, Pencil } from '../../lib/icons'
 import { IconButton } from '../ui/IconButton'
 import { Pill } from '../ui/Pill'
 
 interface Props {
   chapter: Chapter
   onOpenWiki: () => void
+  /** Opens the chapter's own settings: memory and JVM preset (#36). */
+  onOpenSettings: () => void
 }
 
 /** The chapter's picture, name and blurb. Art is a bundled screenshot or the accent grid. */
-export function Hero({ chapter, onOpenWiki }: Props) {
+export function Hero({ chapter, onOpenWiki, onOpenSettings }: Props) {
   const art = chapterArt(chapter.id)
   const loader = isPlaceholder(chapter.pack.loader) ? '[Loader]' : chapter.pack.loader
   const mc = isPlaceholder(chapter.pack.minecraft) ? '[MC version]' : chapter.pack.minecraft
@@ -39,6 +41,7 @@ export function Hero({ chapter, onOpenWiki }: Props) {
       )}
 
       <div className="absolute top-5 right-6 flex gap-1">
+        <IconButton icon={Pencil} title={`${chapter.name} settings`} onClick={onOpenSettings} />
         <IconButton icon={BookOpen} title="Read the history on the wiki" onClick={onOpenWiki} />
       </div>
 
