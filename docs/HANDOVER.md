@@ -33,7 +33,7 @@ to `main` when the one below it merges.
 | #48 | The logo's gradient colours as `color.brand` tokens | |
 | #49 | Frangfurd shown as pack 1.0.0 with 96 mods | |
 | kapital-packs#2 | The README's release steps without a `.mrpack` | |
-| #1 | Dependabot: pnpm/action-setup 6.1.0 | Its base is `cedad35`, 22 commits behind `main`, and `backend` failed there (`pattern all:frontend/dist: no matching files found`). A fresh `@dependabot rebase` should clear it |
+| #1 | Dependabot: pnpm/action-setup 6.1.0 | Not mergeable, and not a stale base: on Windows 6.1.0 leaves `pnpm install` and `pnpm build` exiting 0 with no output, so `frontend/dist` is never built. `main` passed CI on the same base with 6.0.10. The version is skipped in `.github/dependabot.yml` (#51); #1 is closed |
 
 ## Work items, in the order agreed
 

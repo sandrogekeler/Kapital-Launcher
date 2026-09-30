@@ -74,7 +74,11 @@
           "allOf": [{ "$ref": "#/$defs/colorGroup" }],
           "description": "One accent per chapter, keyed by the chapter id the launcher manifest uses. --accent resolves to whichever is active."
         },
-        "status": { "$ref": "#/$defs/colorGroup" }
+        "status": { "$ref": "#/$defs/colorGroup" },
+        "brand": {
+          "allOf": [{ "$ref": "#/$defs/colorGroup" }],
+          "description": "Colours of the Kapitel Kapital artwork itself, the same in both themes: logo-gradient-top and logo-gradient-bottom are the two ends of the lettering's vertical gradient in the Kapitel Kapital and Kapital Launcher logos, as the author gave them on 2026-09-30."
+        }
       }
     },
     "type": {

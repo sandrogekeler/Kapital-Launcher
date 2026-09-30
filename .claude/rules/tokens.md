@@ -60,5 +60,7 @@ The `generated` check in `.claude/suite.json` diffs them; CI runs it.
 
 The neutrals, hairlines, fonts, radii and motion are the Kapitel Kapital wiki's
 (`src/styles/tokens.css` there); `fg-soft` and the chapter accents are the
-handoff's. `docs/adr/0008-design-tokens.md` is the plan for the wiki to become
+handoff's. `color.brand` is the logo artwork's own: the two ends of the
+lettering's gradient (`logo-gradient-top` `#f9ae9f`, `logo-gradient-bottom`
+`#6d3939`), from the author, 2026-09-30. `docs/adr/0008-design-tokens.md` is the plan for the wiki to become
 the file both sites and this app read.
