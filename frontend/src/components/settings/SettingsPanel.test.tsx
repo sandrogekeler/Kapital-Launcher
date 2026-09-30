@@ -28,6 +28,7 @@ describe('SettingsPanel', () => {
       dir: '',
       present: {},
       packUrl: {},
+      sizeBytes: {},
     })
     useSettingsStore.setState({ settings: DEFAULT_SETTINGS, loaded: true, error: null })
     useEngineStore.setState({ engine, instances: null })

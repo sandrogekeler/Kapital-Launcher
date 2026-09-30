@@ -48,9 +48,9 @@ describe('settingsView', () => {
 
   it('shows the resolved root and says when the managed Prism ignores it', () => {
     expect(rootPlaceholder(null)).toBe("Prism's own data folder")
-    expect(rootPlaceholder({ root: 'C:\\data', dir: '', present: {}, packUrl: {} })).toBe(
-      'C:\\data',
-    )
+    expect(
+      rootPlaceholder({ root: 'C:\\data', dir: '', present: {}, packUrl: {}, sizeBytes: {} }),
+    ).toBe('C:\\data')
     expect(rootHint(DEFAULT_SETTINGS, found('managed'))).toContain('managed Prism')
     expect(rootHint(DEFAULT_SETTINGS, found('path'))).toContain('default')
     expect(rootHint({ ...DEFAULT_SETTINGS, prismRoot: 'D:\\p' }, found('path'))).toContain(

@@ -94,6 +94,8 @@ export interface InstanceReport {
   present: Record<string, boolean>
   /** The pack URL each launcher-made instance syncs from (#41). */
   packUrl: Record<string, string>
+  /** What each present instance takes on disk, in bytes (#57). */
+  sizeBytes: Record<string, number>
 }
 
 /** A Prism release the launcher can install for a player without Prism (ADR-11). */

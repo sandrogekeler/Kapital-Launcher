@@ -7,7 +7,12 @@ import { Panels } from './components/main/Panels'
 import { SettingsPanel } from './components/settings/SettingsPanel'
 import { Scrollable } from './components/ui/Scrollable'
 import { selectChapter, useChapterStore } from './stores/useChapterStore'
-import { selectInstalled, selectInstancePack, useEngineStore } from './stores/useEngineStore'
+import {
+  selectInstalled,
+  selectInstancePack,
+  selectInstanceSize,
+  useEngineStore,
+} from './stores/useEngineStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { selectStatus, useServerStore } from './stores/useServerStore'
 import { OpenChapterWiki, OpenExternal } from '../wailsjs/go/main/App'
@@ -33,6 +38,7 @@ export default function App() {
   const installPrism = useEngineStore((s) => s.installPrism)
   const installed = useEngineStore(selectInstalled(selectedId))
   const instancePack = useEngineStore(selectInstancePack(selectedId))
+  const instanceSize = useEngineStore(selectInstanceSize(selectedId))
   const launch = useEngineStore((s) => s.launch)
   const installing = useEngineStore((s) => s.installing)
   const installedNow = useEngineStore((s) => s.installedNow)
@@ -159,7 +165,7 @@ export default function App() {
                 onOpenReleasePage={openReleasePage}
                 onCheckServer={() => void checkServer(chapter.id)}
               />
-              <Panels chapter={chapter} status={status} onOpenWiki={openWiki} />
+              <Panels chapter={chapter} sizeBytes={instanceSize} onOpenWiki={openWiki} />
             </>
           )}
         </Scrollable>

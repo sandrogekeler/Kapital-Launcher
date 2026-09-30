@@ -7,6 +7,7 @@ import {
   isPlaceholder,
   isPlaceholderAddress,
   playLabel,
+  sizeValue,
   stateLabel,
 } from './manifest'
 import { CHAPTER_IDS } from '../styles/tokens'
@@ -68,5 +69,16 @@ describe('labels', () => {
   it('spells states as the reference does', () => {
     expect(stateLabel('development')).toBe('In development')
     expect(stateLabel('odd')).toBe('odd')
+  })
+})
+
+describe('sizeValue', () => {
+  it('formats a size on disk for the fact row', () => {
+    expect(sizeValue(undefined)).toBe('[PLACEHOLDER]')
+    expect(sizeValue(-1)).toBe('[PLACEHOLDER]')
+    expect(sizeValue(0)).toBe('0 MB')
+    expect(sizeValue(512_400_000)).toBe('512 MB')
+    expect(sizeValue(1e9)).toBe('1.0 GB')
+    expect(sizeValue(4_250_000_000)).toBe('4.3 GB')
   })
 })

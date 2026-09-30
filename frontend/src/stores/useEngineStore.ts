@@ -150,6 +150,10 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
 export const selectInstancePack = (chapterId: string) => (s: EngineStore) =>
   s.instances?.packUrl?.[chapterId]
 
+/** What the chapter's instance takes on disk, or undefined when it is missing or unmeasured. */
+export const selectInstanceSize = (chapterId: string) => (s: EngineStore) =>
+  s.instances?.sizeBytes?.[chapterId]
+
 /** Whether the chapter's instance exists: true, false, or undefined for unknown. */
 export const selectInstalled = (chapterId: string) => (s: EngineStore) =>
   s.instances?.present[chapterId]

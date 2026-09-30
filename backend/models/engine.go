@@ -44,4 +44,8 @@ type InstanceReport struct {
 	// back from the pre-launch command the launcher wrote. Absent for an
 	// instance the launcher did not create (#41).
 	PackURL map[string]string `json:"packUrl"`
+	// SizeBytes maps a chapter id to what its instance folder takes on disk,
+	// summed from directory entries (#57). Absent for a missing instance or
+	// a folder that could not be walked.
+	SizeBytes map[string]int64 `json:"sizeBytes"`
 }

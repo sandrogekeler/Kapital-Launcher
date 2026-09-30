@@ -1,10 +1,11 @@
-import type { Chapter, ServerStatus } from '../../types'
-import { addressValue, factValue } from '../../lib/manifest'
+import type { Chapter } from '../../types'
+import { factValue, sizeValue } from '../../lib/manifest'
 import { Fact } from '../ui/Fact'
 
 interface Props {
   chapter: Chapter
-  status: ServerStatus | undefined
+  /** The chapter's size on disk, from the instance report; undefined until it is installed. */
+  sizeBytes: number | undefined
   onOpenWiki: () => void
 }
 
@@ -12,30 +13,21 @@ function PanelTitle({ children }: { children: string }) {
   return <h2 className="text-fg-faint m-0 text-xs font-medium">{children}</h2>
 }
 
-/** The three columns under the actions: the pack's facts, its changelog, and a line from the wiki. */
-export function Panels({ chapter, status, onOpenWiki }: Props) {
-  const { pack, server } = chapter
-  const facts: [string, string][] =
-    pack.type === 'client-visuals'
-      ? [
-          ['Type', 'Client visuals'],
-          ['Minecraft', factValue(pack.minecraft)],
-          ['Mods', factValue(pack.mods)],
-        ]
-      : [
-          ['Loader', factValue(pack.loader)],
-          ['Minecraft', factValue(pack.minecraft)],
-          ['Mods', factValue(pack.mods)],
-          ['Memory', pack.memoryGb == null ? factValue(null) : `${pack.memoryGb} GB`],
-        ]
-  if (server) {
-    facts.push(['Server', addressValue(server.address)])
-    // What the server itself reports wins over what the manifest says it runs.
-    facts.push([
-      'Runs',
-      status?.online && status.version ? status.version : factValue(server.software),
-    ])
-  }
+/**
+ * The three columns under the actions: the pack's four facts, its changelog,
+ * and a line from the wiki. The facts are what a player compares packs by
+ * (#57): the loader, the game version, the mod count and the size on disk.
+ * Memory is edited in the chapter's own settings (#36), and the server is on
+ * the action bar's state line with its ping.
+ */
+export function Panels({ chapter, sizeBytes, onOpenWiki }: Props) {
+  const { pack } = chapter
+  const facts: [string, string][] = [
+    ['Loader', pack.type === 'client-visuals' ? 'Client visuals' : factValue(pack.loader)],
+    ['Minecraft', factValue(pack.minecraft)],
+    ['Mods', factValue(pack.mods)],
+    ['Size', sizeValue(sizeBytes)],
+  ]
 
   return (
     <section className="grid min-h-0 grow grid-cols-3">

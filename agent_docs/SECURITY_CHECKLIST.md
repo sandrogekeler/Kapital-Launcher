@@ -17,7 +17,7 @@ A different count is new surface to classify: add the method to this table.
 | `GetAppVersion`, `GetManifest`, `GetEngine` | nothing | values already in memory | none |
 | `GetSettings` | nothing | the settings file | S1.2 |
 | `RefreshEngine` | nothing | detection: runs the resolved Prism with `--version` | S3.1 |
-| `GetInstances` | nothing | the two reads in a Prism root | S1.1 |
+| `GetInstances` | nothing | the two reads in a Prism root, and the size walk of each present instance folder | S1.1 |
 | `GetPrismRelease` | nothing | one bounded GET to Prism's fixed release URL | S4.5 |
 | `InstallPrism` | nothing | download, verify and unpack Prism's official build | S4.5 |
 | `InstallChapter` | a chapter id | the manifest's instance and pack URL: one instance folder written into the Prism root | S3.3, S4.6 |
@@ -38,13 +38,17 @@ including any `ProxyPass`, is dropped unread and nothing from the file is
 logged), and `<instances>/<instance id>/instance.cfg` is stat'ed once per
 manifest instance id and, when present, scanned the same way for the one key
 `PreLaunchCommand`, to read back the pack URL (#41). The instances folder is
-never listed. The one write is
-S4.6's: a chapter's own instance folder, created when absent.
+never listed; a chapter's own instance folder, when present, is walked for
+its size on disk (#57), and that walk takes names and sizes from the
+directory entries, opens nothing, follows no symlink and stops at a ceiling.
+The one write is S4.6's: a chapter's own instance folder, created when absent.
 Verify: `grep -rn 'accounts\|token\|refresh' --include=*.go . | grep -v _test`;
 `grep -rn 'p.open(\|os.Open\|ReadFile' backend/services/instances.go` shows two opens,
-both through `scanINIKey`; `TestScanINIKeyKeepsOnlyThatKey`.
+both through `scanINIKey`; `TestScanINIKeyKeepsOnlyThatKey`;
+`TestInstancesSumTheInstanceFolderSize`.
 Probe: a setting that points `PrismRoot` at a folder. Does anything read more
-than those two files, and more than one key from each?
+than those two files, and more than one key from each? Does the size walk
+ever open a file or leave the instance folder?
 
 **S1.2 App data holds no secrets.**
 Holds when: `models.AppSettings` carries no password, token or key, and the

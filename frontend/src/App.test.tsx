@@ -34,8 +34,13 @@ const prismFound = {
   source: 'standard-location',
 }
 
-const report = (present: Record<string, boolean>) =>
-  models.InstanceReport.createFrom({ root: 'C:/Prism', dir: 'C:/Prism/instances', present })
+const report = (present: Record<string, boolean>, sizeBytes: Record<string, number> = {}) =>
+  models.InstanceReport.createFrom({
+    root: 'C:/Prism',
+    dir: 'C:/Prism/instances',
+    present,
+    sizeBytes,
+  })
 
 /** The bundled manifest with Lichdenstein's server at a settled address. */
 function withLichdensteinAt(address: string) {
@@ -130,7 +135,8 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: /02.*Lichdenstein/ }))
     expect(await screen.findByText('● Server online')).toBeInTheDocument()
     expect(screen.getByText(/2\/20 players/)).toBeInTheDocument()
-    expect(screen.getByText('Paper 1.20.6')).toBeInTheDocument()
+    // The server's version is on the state line now; the facts are the pack's (#57).
+    expect(screen.queryByText('Runs')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Join Lichdenstein' })).toBeEnabled()
 
     // Frangfurd has a server too, but is played as a pack.
@@ -153,9 +159,7 @@ describe('App', () => {
     expect(await screen.findByText('○ No server yet')).toBeInTheDocument()
     expect(screen.queryByText(/placeholder\.invalid/)).not.toBeInTheDocument()
     expect(screen.getByText('Address pending')).toBeInTheDocument()
-    const serverFact = screen.getByText('Server').nextElementSibling
-    expect(serverFact).toHaveTextContent('[PLACEHOLDER]')
-    expect(serverFact).toHaveClass('text-fg-faint')
+    expect(screen.queryByText('Server')).not.toBeInTheDocument()
   })
 
   // Restoring the saved chapter and saving a new selection once fed each
@@ -192,11 +196,17 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Install Luxemburg' })).toBeDisabled()
     expect(screen.queryByRole('button', { name: 'Play Luxemburg' })).not.toBeInTheDocument()
 
+    // The size fact waits for an instance to measure (#57).
+    expect(screen.getByText('Size').nextElementSibling).toHaveTextContent('[PLACEHOLDER]')
+
     // Made in Prism by hand while the launcher was in the background.
-    vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ luxemburg: true }))
+    vi.mocked(Bindings.GetInstances).mockResolvedValue(
+      report({ luxemburg: true }, { luxemburg: 12_300_000_000 }),
+    )
     fireEvent.focus(window)
     expect(await screen.findByRole('button', { name: 'Play Luxemburg' })).toBeEnabled()
     expect(screen.queryByText('○ Not published yet')).not.toBeInTheDocument()
+    expect(screen.getByText('Size').nextElementSibling).toHaveTextContent('12.3 GB')
   })
 
   it('keeps Play when the instance cannot be looked for', async () => {
