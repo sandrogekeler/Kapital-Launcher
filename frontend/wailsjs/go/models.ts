@@ -186,6 +186,7 @@ export namespace models {
 	    dir: string;
 	    present: Record<string, boolean>;
 	    packUrl: Record<string, string>;
+	    sizeBytes: Record<string, number>;
 	
 	    static createFrom(source: any = {}) {
 	        return new InstanceReport(source);
@@ -197,6 +198,7 @@ export namespace models {
 	        this.dir = source["dir"];
 	        this.present = source["present"];
 	        this.packUrl = source["packUrl"];
+	        this.sizeBytes = source["sizeBytes"];
 	    }
 	}
 	export class Wiki {

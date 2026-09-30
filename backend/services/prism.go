@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -49,6 +50,7 @@ type PrismService struct {
 	getenv   func(key string) string
 	stat     func(name string) (os.FileInfo, error)
 	open     func(name string) (io.ReadCloser, error)
+	walkDir  func(root string, fn fs.WalkDirFunc) error
 	run      func(ctx context.Context, exe string, args ...string) ([]byte, error)
 	goos     string
 	home     string
@@ -79,6 +81,7 @@ func NewPrismService(goos string) *PrismService {
 		getenv:   os.Getenv,
 		stat:     os.Stat,
 		open:     func(name string) (io.ReadCloser, error) { return os.Open(name) },
+		walkDir:  filepath.WalkDir,
 		run: func(ctx context.Context, exe string, args ...string) ([]byte, error) {
 			return exec.CommandContext(ctx, exe, args...).Output()
 		},

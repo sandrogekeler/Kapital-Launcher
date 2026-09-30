@@ -34,6 +34,18 @@ export const addressValue = (address: string | null | undefined): string =>
 export const factValue = (value: string | number | null | undefined): string =>
   value == null || value === PLACEHOLDER ? PLACEHOLDER : String(value)
 
+/**
+ * A size on disk for a fact row: gigabytes with one decimal from a gigabyte
+ * up, whole megabytes below, the placeholder when nothing is installed to
+ * measure (#57). Decimal units, as the OS file dialogs show them.
+ */
+export function sizeValue(bytes: number | undefined): string {
+  if (bytes == null || bytes < 0) return PLACEHOLDER
+  const gb = bytes / 1e9
+  if (gb >= 1) return `${gb.toFixed(1)} GB`
+  return `${Math.round(bytes / 1e6)} MB`
+}
+
 export function chapterById(manifest: Manifest, id: string): Chapter | undefined {
   return manifest.chapters.find((c) => c.id === id)
 }

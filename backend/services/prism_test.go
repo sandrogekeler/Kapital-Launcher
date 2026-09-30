@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -109,6 +110,9 @@ func fakeOS(goos string, files map[string]bool, env map[string]string, onPath ma
 			return nil, os.ErrNotExist
 		},
 		getenv: func(k string) string { return env[k] },
+		// No folder to walk: a present instance reports no size unless a
+		// test wires a walk of its own.
+		walkDir: func(string, fs.WalkDirFunc) error { return os.ErrNotExist },
 		lookPath: func(file string) (string, error) {
 			if p, ok := onPath[file]; ok {
 				return p, nil

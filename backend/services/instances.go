@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -23,6 +24,10 @@ import (
 //     stat'ed, and when it is there scanned for the one key PreLaunchCommand,
 //     to read back the pack URL the launcher wrote (#41). Every other line is
 //     dropped unread. The instances folder is never listed.
+//   - <instances>/<instance id>/, once per instance that exists: walked for
+//     its size on disk (#57). Names and sizes come from the directory
+//     entries; no file inside is opened, symlinks are not followed, and the
+//     walk stops at a ceiling of entries.
 //
 // The one write into a Prism root is packinstance.go's, which creates a
 // chapter's instance folder when it is absent (ADR-2, amendment).
@@ -35,6 +40,10 @@ const (
 	instanceDirKey    = "InstanceDir"
 	preLaunchKey      = "PreLaunchCommand"
 	maxPrismConfigLen = 1 << 20
+	// maxSizeWalkEntries bounds the size walk. Frangfurd's instance holds a
+	// few tens of thousands of files; a folder past this ceiling reports the
+	// sum so far, which is still a size and never a hang.
+	maxSizeWalkEntries = 250_000
 )
 
 // DataRoot resolves the Prism data directory the launcher's instances live in:
@@ -149,7 +158,7 @@ func scanINIKey(r io.Reader, want string) (string, error) {
 // under the resolved root. A chapter whose instance id is not a plain folder
 // name is left out (unknown) rather than joined onto a path.
 func (p *PrismService) Instances(settings models.AppSettings, engine models.EngineInfo, chapters []models.Chapter) models.InstanceReport {
-	report := models.InstanceReport{Present: map[string]bool{}, PackURL: map[string]string{}}
+	report := models.InstanceReport{Present: map[string]bool{}, PackURL: map[string]string{}, SizeBytes: map[string]int64{}}
 	report.Root = p.DataRoot(settings, engine)
 	if report.Root == "" {
 		return report
@@ -165,9 +174,47 @@ func (p *PrismService) Instances(settings models.AppSettings, engine models.Engi
 			if url := p.instancePackURL(cfg); url != "" {
 				report.PackURL[c.ID] = url
 			}
+			if size, ok := p.instanceSize(filepath.Join(report.Dir, c.Instance.ID)); ok {
+				report.SizeBytes[c.ID] = size
+			}
 		}
 	}
 	return report
+}
+
+// instanceSize sums the sizes of the files under an instance folder from the
+// directory entries alone. A walk error on one entry skips it; an error on
+// the folder itself reports no size. Injected as walkDir so the fake OS in
+// the tests can answer without a disk.
+func (p *PrismService) instanceSize(dir string) (int64, bool) {
+	var total int64
+	entries := 0
+	err := p.walkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			if path == dir {
+				return err
+			}
+			return nil
+		}
+		entries++
+		if entries > maxSizeWalkEntries {
+			return fs.SkipAll
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		info, err := d.Info()
+		if err != nil {
+			return nil
+		}
+		total += info.Size()
+		return nil
+	})
+	if err != nil {
+		slog.Warn("instance size", "path", dir, "error", err)
+		return 0, false
+	}
+	return total, true
 }
 
 // instancePackURL reads back the pack URL at the end of the pre-launch

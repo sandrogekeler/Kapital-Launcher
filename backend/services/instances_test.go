@@ -2,6 +2,7 @@ package services
 
 import (
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -167,5 +168,42 @@ func TestPackURLFromCommand(t *testing.T) {
 		if got := packURLFromCommand(cmd); got != want {
 			t.Errorf("%q: got %q, want %q", cmd, got, want)
 		}
+	}
+}
+
+// The size on disk is summed from directory entries of the instance folder,
+// on a real temp folder since the walk is the OS's (#57).
+func TestInstancesSumTheInstanceFolderSize(t *testing.T) {
+	root := t.TempDir()
+	inst := filepath.Join(root, "instances", "kapital-frangfurd")
+	for name, size := range map[string]int{
+		"instance.cfg":                              100,
+		filepath.Join("minecraft", "a.jar"):         2048,
+		filepath.Join("minecraft", "mods", "b.jar"): 4096,
+	} {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(inst, name)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(inst, name), make([]byte, size), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	p := NewPrismService("linux")
+	chapters := []models.Chapter{
+		{ID: "frangfurd", Instance: models.Instance{ID: "kapital-frangfurd"}},
+		{ID: "luxemburg", Instance: models.Instance{ID: "kapital-luxemburg"}},
+	}
+	got := p.Instances(models.AppSettings{PrismRoot: root}, models.EngineInfo{}, chapters)
+	if got.SizeBytes["frangfurd"] != 100+2048+4096 {
+		t.Fatalf("size: %+v", got.SizeBytes)
+	}
+	if _, ok := got.SizeBytes["luxemburg"]; ok {
+		t.Fatal("a missing instance has no size")
+	}
+
+	// A walk that fails on the folder itself reports no size and no panic.
+	p.walkDir = func(string, fs.WalkDirFunc) error { return os.ErrPermission }
+	if _, ok := p.Instances(models.AppSettings{PrismRoot: root}, models.EngineInfo{}, chapters).SizeBytes["frangfurd"]; ok {
+		t.Fatal("an unwalkable folder must report no size")
 	}
 }
