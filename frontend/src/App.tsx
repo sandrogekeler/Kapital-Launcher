@@ -127,7 +127,8 @@ export default function App() {
           )}
         </Scrollable>
       </div>
-      <footer className="text-fg-faint text-2xs pointer-events-none fixed inset-x-0 bottom-2 text-center">
+      {/* Centred on the main column, beside the sidebar, not on the window. */}
+      <footer className="text-fg-faint text-2xs pointer-events-none fixed right-0 bottom-2 left-(--layout-sidebar) text-center">
         NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.
       </footer>
     </div>

@@ -3,7 +3,7 @@ import { Icon } from './Icon'
 
 interface Props {
   icon: LucideIcon
-  /** Both the tooltip and the accessible name; the icon carries neither. */
+  /** The accessible name; the icon carries none, and no tooltip is drawn (the author, 2026-09-30). */
   title: string
   onClick: () => void
   /** `md` is the 44px box the hero tools use; `sm` the 32px one in the account card. */
@@ -22,7 +22,6 @@ export function IconButton({ icon, title, onClick, size = 'md', disabled }: Prop
     <button
       type="button"
       onClick={onClick}
-      title={title}
       aria-label={title}
       disabled={disabled}
       className={`${BOX[size]} text-fg-muted hover:bg-hover hover:text-fg duration-fast ease-standard inline-flex shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent`}

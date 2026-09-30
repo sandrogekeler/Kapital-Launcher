@@ -103,7 +103,6 @@ function WindowButton({
     <button
       type="button"
       onClick={onClick}
-      title={title}
       aria-label={title}
       className={`text-fg-muted duration-fast ease-standard flex h-full w-11.5 cursor-pointer items-center justify-center transition-colors ${hover}`}
     >
