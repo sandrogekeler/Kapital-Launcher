@@ -23,6 +23,13 @@ updates:
       actions:
         patterns: ['*']
         update-types: [major, minor, patch]
+    ignore:
+      # 6.1.0 installs pnpm 12 in a way that leaves pnpm a silent no-op on
+      # the Windows runner: install and build exit 0 with no output and no
+      # frontend/dist (#1). 6.0.10 self-updates to pnpm 12 and works. Only
+      # this version is skipped, so a fixed release is still offered.
+      - dependency-name: pnpm/action-setup
+        versions: ['6.1.0']
 
   - package-ecosystem: gomod
     directory: /
