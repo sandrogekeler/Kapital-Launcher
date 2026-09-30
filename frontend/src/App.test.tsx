@@ -52,6 +52,18 @@ function withLichdensteinAt(address: string) {
   }
 }
 
+/**
+ * Picks a chapter in the nav and ends the leaving card's slide at once (#59):
+ * jsdom runs no animations, so the card that is leaving would otherwise stay
+ * mounted, inert, with a second copy of every text.
+ */
+function switchTo(name: RegExp) {
+  fireEvent.click(screen.getByRole('button', { name }))
+  const leaving = document.querySelector('[inert]')
+  // jsdom has no AnimationEvent, so React listens for the prefixed name there.
+  if (leaving) fireEvent(leaving, new Event('webkitAnimationEnd', { bubbles: true }))
+}
+
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -109,7 +121,7 @@ describe('App', () => {
     expect(nav.getAllByRole('button')).toHaveLength(3)
     expect(document.documentElement.dataset.chapter).toBe('luxemburg')
 
-    fireEvent.click(screen.getByRole('button', { name: /03.*Frangfurd/ }))
+    switchTo(/03.*Frangfurd/)
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Frangfurd')
     expect(document.documentElement.dataset.chapter).toBe('frangfurd')
     expect(screen.getByText('NeoForge 1.21.1')).toBeInTheDocument()
@@ -118,7 +130,7 @@ describe('App', () => {
   it('says Join for a server chapter and disables Play while Prism is missing', async () => {
     render(<App />)
     await screen.findByRole('heading', { level: 1 })
-    fireEvent.click(screen.getByRole('button', { name: /02.*Lichdenstein/ }))
+    switchTo(/02.*Lichdenstein/)
     const play = screen.getByRole('button', { name: 'Join Lichdenstein' })
     expect(play).toBeDisabled()
     expect(screen.getByText('○ Prism not found')).toBeInTheDocument()
@@ -139,7 +151,7 @@ describe('App', () => {
     vi.mocked(Bindings.GetManifest).mockResolvedValue(models.Manifest.createFrom(manifest))
     render(<App />)
     await screen.findByRole('heading', { level: 1 })
-    fireEvent.click(screen.getByRole('button', { name: /02.*Lichdenstein/ }))
+    switchTo(/02.*Lichdenstein/)
     expect(await screen.findByText('● Server online')).toBeInTheDocument()
     expect(screen.getByText(/2\/20 players/)).toBeInTheDocument()
     // The server's version is on the state line now; the facts are the pack's (#57).
@@ -147,7 +159,7 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Join Lichdenstein' })).toBeEnabled()
 
     // Frangfurd has a server too, but is played as a pack.
-    fireEvent.click(screen.getByRole('button', { name: /03.*Frangfurd/ }))
+    switchTo(/03.*Frangfurd/)
     expect(screen.getByRole('button', { name: 'Play Frangfurd' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Check the server now' })).toBeInTheDocument()
   })
@@ -162,7 +174,7 @@ describe('App', () => {
     })
     render(<App />)
     await screen.findByRole('heading', { level: 1 })
-    fireEvent.click(screen.getByRole('button', { name: /02.*Lichdenstein/ }))
+    switchTo(/02.*Lichdenstein/)
     expect(await screen.findByText('○ No server yet')).toBeInTheDocument()
     expect(screen.queryByText(/placeholder\.invalid/)).not.toBeInTheDocument()
     expect(screen.getByText('Address pending')).toBeInTheDocument()
@@ -184,7 +196,7 @@ describe('App', () => {
     await new Promise((r) => setTimeout(r, 50))
     expect(Bindings.SaveSettings).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole('button', { name: /02.*Lichdenstein/ }))
+    switchTo(/02.*Lichdenstein/)
     await waitFor(() => expect(Bindings.SaveSettings).toHaveBeenCalledTimes(1))
     await new Promise((r) => setTimeout(r, 50))
     expect(Bindings.SaveSettings).toHaveBeenCalledTimes(1)
@@ -403,7 +415,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Read the history →' }))
     expect(Bindings.OpenChapterWiki).toHaveBeenCalledWith('luxemburg')
 
-    fireEvent.click(screen.getByRole('button', { name: /03.*Frangfurd/ }))
+    switchTo(/03.*Frangfurd/)
     expect(await screen.findByText('The Obelisk')).toBeInTheDocument()
     expect(screen.getByText('A tower on the water.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Read the history →' }))
