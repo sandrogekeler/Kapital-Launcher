@@ -19,8 +19,10 @@ import (
 //   - <root>/prismlauncher.cfg, scanned for the one key InstanceDir. The same
 //     file can hold a proxy password in plain text, so every other line is
 //     dropped unread and nothing from it is logged.
-//   - <instances>/<instance id>/instance.cfg, stat only, once per manifest
-//     instance id. The instances folder is never listed.
+//   - <instances>/<instance id>/instance.cfg, once per manifest instance id:
+//     stat'ed, and when it is there scanned for the one key PreLaunchCommand,
+//     to read back the pack URL the launcher wrote (#41). Every other line is
+//     dropped unread. The instances folder is never listed.
 //
 // The one write into a Prism root is packinstance.go's, which creates a
 // chapter's instance folder when it is absent (ADR-2, amendment).
@@ -31,6 +33,7 @@ const (
 	portableMarker    = "portable.txt"
 	defaultInstances  = "instances"
 	instanceDirKey    = "InstanceDir"
+	preLaunchKey      = "PreLaunchCommand"
 	maxPrismConfigLen = 1 << 20
 )
 
@@ -96,7 +99,7 @@ func (p *PrismService) InstancesDir(root string) string {
 		return fallback
 	}
 	defer f.Close() //nolint:errcheck // read-only file, nothing to flush
-	dir, err := scanInstanceDir(io.LimitReader(f, maxPrismConfigLen))
+	dir, err := scanINIKey(io.LimitReader(f, maxPrismConfigLen), instanceDirKey)
 	if err != nil {
 		slog.Warn("prism config", "root", root, "error", err)
 		return fallback
@@ -110,11 +113,11 @@ func (p *PrismService) InstancesDir(root string) string {
 	return filepath.Join(root, dir)
 }
 
-// scanInstanceDir returns the InstanceDir value from a Qt INI stream, or ""
-// when the key is absent. Every other line is discarded without being kept.
-// Qt writes the key at the top level or under [General]; a value may be
-// quoted, and a quoted Windows path has its backslashes doubled.
-func scanInstanceDir(r io.Reader) (string, error) {
+// scanINIKey returns one key's value from a Qt INI stream, or "" when the key
+// is absent. Every other line is discarded without being kept. Qt writes the
+// key at the top level or under [General]; a value may be quoted, and a
+// quoted Windows path has its backslashes doubled.
+func scanINIKey(r io.Reader, want string) (string, error) {
 	sc := bufio.NewScanner(r)
 	section := ""
 	for sc.Scan() {
@@ -127,7 +130,7 @@ func scanInstanceDir(r io.Reader) (string, error) {
 			continue
 		}
 		key, value, ok := strings.Cut(line, "=")
-		if !ok || strings.TrimSpace(key) != instanceDirKey {
+		if !ok || strings.TrimSpace(key) != want {
 			continue
 		}
 		value = strings.TrimSpace(value)
@@ -137,7 +140,7 @@ func scanInstanceDir(r io.Reader) (string, error) {
 		return value, nil
 	}
 	if err := sc.Err(); err != nil {
-		return "", fmt.Errorf("scan %s: %w", prismConfigName, err)
+		return "", fmt.Errorf("scan for %s: %w", want, err)
 	}
 	return "", nil
 }
@@ -146,7 +149,7 @@ func scanInstanceDir(r io.Reader) (string, error) {
 // under the resolved root. A chapter whose instance id is not a plain folder
 // name is left out (unknown) rather than joined onto a path.
 func (p *PrismService) Instances(settings models.AppSettings, engine models.EngineInfo, chapters []models.Chapter) models.InstanceReport {
-	report := models.InstanceReport{Present: map[string]bool{}}
+	report := models.InstanceReport{Present: map[string]bool{}, PackURL: map[string]string{}}
 	report.Root = p.DataRoot(settings, engine)
 	if report.Root == "" {
 		return report
@@ -156,7 +159,49 @@ func (p *PrismService) Instances(settings models.AppSettings, engine models.Engi
 		if !prismInstanceID.MatchString(c.Instance.ID) {
 			continue
 		}
-		report.Present[c.ID] = p.isFile(filepath.Join(report.Dir, c.Instance.ID, instanceConfig))
+		cfg := filepath.Join(report.Dir, c.Instance.ID, instanceConfig)
+		report.Present[c.ID] = p.isFile(cfg)
+		if report.Present[c.ID] {
+			if url := p.instancePackURL(cfg); url != "" {
+				report.PackURL[c.ID] = url
+			}
+		}
 	}
 	return report
+}
+
+// instancePackURL reads back the pack URL at the end of the pre-launch
+// command the launcher writes (preLaunchCommand), or "" for an instance whose
+// command is not the launcher's: made by hand, or changed in Prism since.
+func (p *PrismService) instancePackURL(cfg string) string {
+	f, err := p.open(cfg)
+	if err != nil {
+		slog.Warn("instance config", "path", cfg, "error", err)
+		return ""
+	}
+	defer f.Close() //nolint:errcheck // read-only file, nothing to flush
+	cmd, err := scanINIKey(io.LimitReader(f, maxPrismConfigLen), preLaunchKey)
+	if err != nil {
+		slog.Warn("instance config", "path", cfg, "error", err)
+		return ""
+	}
+	return packURLFromCommand(cmd)
+}
+
+// packURLFromCommand is preLaunchCommand read backwards: the command as Qt
+// stores it (quotes escaped) must name the bootstrap jar and end in a URL
+// that could have been written there.
+func packURLFromCommand(cmd string) string {
+	if !strings.Contains(cmd, "packwiz-installer-bootstrap.jar") {
+		return ""
+	}
+	fields := strings.Fields(cmd)
+	if len(fields) == 0 {
+		return ""
+	}
+	url := fields[len(fields)-1]
+	if !commandSafeURL.MatchString(url) && !IsLocalPackURL(url) {
+		return ""
+	}
+	return url
 }

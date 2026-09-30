@@ -8,6 +8,7 @@ import type {
 } from '../../types'
 import { installLabel, isPlaceholderAddress, isPublished, playLabel } from '../../lib/manifest'
 import { installLine } from '../../lib/prismInstall'
+import { packHost, packSourceLine } from '../../lib/packSource'
 import { serverLine } from '../../lib/serverLine'
 import { Download, Play, RefreshCw, TriangleAlert } from '../../lib/icons'
 import { Button } from '../ui/Button'
@@ -21,6 +22,10 @@ interface Props {
   status: ServerStatus | undefined
   /** Whether the chapter's Prism instance exists; undefined when unknown. */
   installed: boolean | undefined
+  /** A local packwiz serve address from settings, which Install uses instead (#41). */
+  devPack: string | undefined
+  /** The pack URL the chapter's instance syncs from, when the launcher made it. */
+  instancePack: string | undefined
   launching: boolean
   /** Whether the chapter's instance is being written right now. */
   installing: boolean
@@ -52,6 +57,9 @@ const WORKING = ['downloading', 'unpacking', 'verifying']
  * downloads on the first Play, which the line says until then. An instance
  * that cannot be looked for (unknown) keeps Play, and Prism says the rest.
  *
+ * A developer's local pack (#41) makes Install available without a hosted
+ * one, and an instance syncing from anything but the manifest's pack says so.
+ *
  * Without Prism, the bar offers to get it (ADR-11): the approval card opens
  * below, and once confirmed the state line follows the install step by step.
  * If the release cannot be read, the button falls back to Prism's website.
@@ -61,6 +69,8 @@ export function ActionBar({
   engine,
   status,
   installed,
+  devPack,
+  instancePack,
   launching,
   installing,
   installedNow,
@@ -79,7 +89,8 @@ export function ActionBar({
   const missing = engine !== null && !engine.found
   const working = install !== null && WORKING.includes(install.phase)
   const needsInstall = installed === false
-  const published = isPublished(chapter)
+  const published = isPublished(chapter) || devPack !== undefined
+  const source = installed ? packSourceLine(instancePack, chapter.pack.packwiz) : null
   let state: string
   let meta: string
   let tone = 'text-accent'
@@ -106,11 +117,15 @@ export function ActionBar({
   } else if (needsInstall) {
     ;[state, meta, tone] = [
       '○ Not installed',
-      `Install adds ${chapter.instance.id} to Prism`,
+      devPack
+        ? `Install from the dev pack at ${packHost(devPack)}`
+        : `Install adds ${chapter.instance.id} to Prism`,
       'text-warning',
     ]
   } else if (installedNow) {
     ;[state, meta] = ['● Installed', 'The first Play downloads the pack']
+  } else if (source) {
+    ;[state, meta, tone] = [...source, 'text-warning']
   } else if (chapter.server) {
     ;[state, meta] = serverLine(status, chapter.server.address)
     if (isPlaceholderAddress(chapter.server.address) || (status?.checked && !status.online)) {

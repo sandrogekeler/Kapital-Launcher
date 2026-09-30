@@ -253,6 +253,35 @@ describe('App', () => {
     expect(screen.getByText('○ Not installed')).toBeInTheDocument()
   })
 
+  it('installs from a local pack named in settings, then marks the instance as a dev pack', async () => {
+    useChapterStore.setState({ selectedId: 'frangfurd' })
+    vi.mocked(Bindings.GetSettings).mockResolvedValue({
+      ...DEFAULT_SETTINGS,
+      lastChapter: 'frangfurd',
+      packOverrides: { frangfurd: 'http://localhost:8080/pack.toml' },
+    })
+    vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
+    vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ frangfurd: false }))
+    const installed = models.InstanceReport.createFrom({
+      root: 'C:/Prism',
+      dir: 'C:/Prism/instances',
+      present: { frangfurd: true },
+      packUrl: { frangfurd: 'http://localhost:8080/pack.toml' },
+    })
+    vi.mocked(Bindings.InstallChapter).mockResolvedValue(installed)
+    vi.mocked(Bindings.LaunchChapter).mockResolvedValue()
+    render(<App />)
+    expect(
+      await screen.findByText('Install from the dev pack at localhost:8080'),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Install Frangfurd' }))
+    expect(await screen.findByText('● Installed')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Play Frangfurd' }))
+    expect(await screen.findByText('● Dev pack')).toBeInTheDocument()
+    expect(screen.getByText('Syncs from localhost:8080')).toBeInTheDocument()
+  })
+
   it('offers to get Prism, says what it downloads, and follows the install', async () => {
     const release = models.PrismRelease.createFrom({
       version: '11.1.1',

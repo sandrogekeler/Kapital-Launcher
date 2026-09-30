@@ -58,8 +58,10 @@ the scaffold changed the picture.
       from the manifest
 - [ ] Verify every download by hash; refuse a mismatch
 - [ ] Update pack button and sync state line
-- [ ] Developer setting: override a chapter's `pack.toml` URL with a local
+- [x] Developer setting: override a chapter's `pack.toml` URL with a local
       `packwiz serve` address, so a pack is tried from a working copy first
+      (`packOverrides` in settings.json, #41; a field on the settings screen
+      comes with #5)
 
 ## Milestone 5: Manifest from the site
 

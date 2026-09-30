@@ -92,6 +92,8 @@ export interface InstanceReport {
   root: string
   dir: string
   present: Record<string, boolean>
+  /** The pack URL each launcher-made instance syncs from (#41). */
+  packUrl: Record<string, string>
 }
 
 /** A Prism release the launcher can install for a player without Prism (ADR-11). */
@@ -124,4 +126,6 @@ export interface AppSettings {
   prismRoot: string
   profileName: string
   lastChapter: string
+  /** Chapter id to a local packwiz serve address, written by hand (#41). */
+  packOverrides?: Record<string, string>
 }

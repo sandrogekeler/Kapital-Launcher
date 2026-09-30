@@ -146,6 +146,10 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
   clearError: () => set({ error: null }),
 }))
 
+/** The pack URL the chapter's instance syncs from, when the launcher made it. */
+export const selectInstancePack = (chapterId: string) => (s: EngineStore) =>
+  s.instances?.packUrl?.[chapterId]
+
 /** Whether the chapter's instance exists: true, false, or undefined for unknown. */
 export const selectInstalled = (chapterId: string) => (s: EngineStore) =>
   s.instances?.present[chapterId]

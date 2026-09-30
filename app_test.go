@@ -137,3 +137,22 @@ func TestInstallChapterRefusesBeforeWritingAnything(t *testing.T) {
 		t.Fatalf("a refused install wrote into the Prism root: %v", err)
 	}
 }
+
+func TestInstallChapterTakesALocalPackFromSettings(t *testing.T) {
+	app := newTestApp(t)
+	root := t.TempDir()
+	// Port 9 (discard) on loopback: nothing answers, so the install stops at
+	// fetching pack.toml, past the check that the manifest hosts no pack.
+	settings := models.AppSettings{Theme: "dark", PrismRoot: root, PackOverrides: map[string]string{"frangfurd": "http://127.0.0.1:9/pack.toml"}}
+	if err := app.SaveSettings(settings); err != nil {
+		t.Fatal(err)
+	}
+	app.engine = models.EngineInfo{Found: true, Source: "settings"}
+	_, err := app.InstallChapter("frangfurd")
+	if err == nil || !strings.Contains(err.Error(), "fetch pack.toml") {
+		t.Fatalf("expected the local pack to be fetched, got %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "instances", "kapital-frangfurd")); !os.IsNotExist(err) {
+		t.Fatalf("a failed install left a folder: %v", err)
+	}
+}

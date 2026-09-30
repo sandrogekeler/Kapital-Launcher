@@ -31,17 +31,19 @@ A different count is new surface to classify: add the method to this table.
 Holds when: nothing under `backend/` or `app.go` opens Prism's `accounts.json`;
 the only account-related value is the profile *name* in
 `AppSettings.ProfileName`, passed to `--profile`. Inside a Prism data
-directory exactly two reads happen, both in `services/instances.go`:
+directory exactly two files are read, both in `services/instances.go`:
 `prismlauncher.cfg` is scanned for the one key `InstanceDir` (every other line,
 including any `ProxyPass`, is dropped unread and nothing from the file is
-logged), and `<instances>/<instance id>/instance.cfg` is stat'ed, once per
-manifest instance id. The instances folder is never listed. The one write is
+logged), and `<instances>/<instance id>/instance.cfg` is stat'ed once per
+manifest instance id and, when present, scanned the same way for the one key
+`PreLaunchCommand`, to read back the pack URL (#41). The instances folder is
+never listed. The one write is
 S4.6's: a chapter's own instance folder, created when absent.
 Verify: `grep -rn 'accounts\|token\|refresh' --include=*.go . | grep -v _test`;
-`grep -rn 'p.open(\|os.Open\|ReadFile' backend/services/instances.go` shows one open;
-`TestScanInstanceDirKeepsOnlyThatKey`.
+`grep -rn 'p.open(\|os.Open\|ReadFile' backend/services/instances.go` shows two opens,
+both through `scanINIKey`; `TestScanINIKeyKeepsOnlyThatKey`.
 Probe: a setting that points `PrismRoot` at a folder. Does anything read more
-than those two paths from it?
+than those two files, and more than one key from each?
 
 **S1.2 App data holds no secrets.**
 Holds when: `models.AppSettings` carries no password, token or key, and the
@@ -105,7 +107,13 @@ with `--version`; Play runs it too. That is the settings screen's purpose
 player is S5: the WebView loads only the app's own bundled assets under a CSP
 with `script-src 'self'` and no raw HTML sinks.
 Holds when: `ValidateSettings` refuses a relative executable or root and a
-profile starting with `-`, and S5.1 and S5.2 hold.
+profile starting with `-`, and S5.1 and S5.2 hold. A `packOverrides` entry
+(#41) goes onto an instance's pre-launch command line, so it is held to
+`CheckLocalPackURL` on save, on load (a bad entry is dropped) and again by
+`InstanceCreator.Install`: plain http on `localhost`, `127.0.0.1` or `[::1]`
+with a port, a path ending in `/pack.toml`, no user info, query or fragment,
+and the manifest's command-line characters. A settings file cannot point a
+pack at another machine.
 Verify: `settings_test.go`; S5.1, S5.2.
 Probe: anything that would put third-party script in the WebView (a remote
 image or page, a manifest string rendered as HTML).

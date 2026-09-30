@@ -3,6 +3,8 @@ package services
 import (
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
 
 	"kapital/backend/models"
@@ -16,15 +18,16 @@ func TestSettingsRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != models.DefaultSettings() {
+	if !reflect.DeepEqual(got, models.DefaultSettings()) {
 		t.Fatalf("a missing file loads defaults, got %+v", got)
 	}
 
 	want := models.AppSettings{
-		Theme:       "light",
-		PrismRoot:   filepath.Join(dir, "prism"),
-		ProfileName: " Sandro ",
-		LastChapter: "frangfurd",
+		Theme:         "light",
+		PrismRoot:     filepath.Join(dir, "prism"),
+		ProfileName:   " Sandro ",
+		LastChapter:   "frangfurd",
+		PackOverrides: map[string]string{"frangfurd": " http://localhost:8080/pack.toml "},
 	}
 	if err := svc.Save(want); err != nil {
 		t.Fatal(err)
@@ -34,7 +37,8 @@ func TestSettingsRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	want.ProfileName = "Sandro"
-	if got != want {
+	want.PackOverrides = map[string]string{"frangfurd": "http://localhost:8080/pack.toml"}
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v want %+v", got, want)
 	}
 
@@ -100,4 +104,54 @@ func TestAffectsDetectionOnlyForPrismFields(t *testing.T) {
 			t.Errorf("%s: got %v, want %v", name, got, c.want)
 		}
 	}
+}
+
+func TestPackOverridesAreRefusedOnSaveAndDroppedOnLoad(t *testing.T) {
+	dir := t.TempDir()
+	svc := NewSettingsService(dir)
+	bad := map[string]string{
+		"another machine": "http://192.168.1.20:8080/pack.toml",
+		"https host":      "https://kapitel-kapital.pages.dev/frangfurd/pack.toml",
+		"no port":         "http://localhost/pack.toml",
+		"not pack.toml":   "http://localhost:8080/index.toml",
+		"a query":         "http://localhost:8080/pack.toml?x=1",
+		"a fragment":      "http://localhost:8080/pack.toml#x",
+		"user info":       "http://me@localhost:8080/pack.toml",
+		"a $":             "http://localhost:8080/$INST_JAVA/pack.toml",
+		"a quote":         `http://localhost:8080/a"b/pack.toml`,
+	}
+	for name, raw := range bad {
+		s := models.AppSettings{Theme: "dark", PackOverrides: map[string]string{"frangfurd": raw}}
+		if err := svc.Save(s); err == nil {
+			t.Errorf("%s: %s was saved", name, raw)
+		}
+	}
+	if err := svc.Save(models.AppSettings{Theme: "dark", PackOverrides: map[string]string{"../x": "http://localhost:8080/pack.toml"}}); err == nil {
+		t.Error("a key that is not a chapter id was saved")
+	}
+
+	// Written by hand: the bad entry goes, the good one and the rest stay.
+	file := `{"theme":"light","packOverrides":{"frangfurd":"http://[::1]:8080/frangfurd/pack.toml","luxemburg":"http://example.com:80/pack.toml"}}`
+	if err := os.WriteFile(filepath.Join(dir, SettingsFileName), []byte(file), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := svc.Load()
+	if err != nil || got.Theme != "light" {
+		t.Fatalf("%+v %v", got, err)
+	}
+	if want := map[string]string{"frangfurd": "http://[::1]:8080/frangfurd/pack.toml"}; !reflect.DeepEqual(got.PackOverrides, want) {
+		t.Fatalf("overrides: %v", got.PackOverrides)
+	}
+	if err := svc.Save(got); err != nil || strings.Contains(mustRead(t, filepath.Join(dir, SettingsFileName)), "example.com") {
+		t.Fatalf("the dropped entry came back: %v", err)
+	}
+}
+
+func mustRead(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
 }
