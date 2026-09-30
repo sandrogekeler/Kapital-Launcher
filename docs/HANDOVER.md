@@ -144,6 +144,9 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
   of a black window with a white rectangle, frozen for a moment before Drippy
   draws. The author wants players to see only the launcher's splash instead
   (#43, #45). Released in Frangfurd 1.0.0.
+- **This repository is public now**, so everything in it is: the manifest
+  with the tunnel addresses, the art, the checklists. Nothing secret was in
+  it (S1.2). `kapital-packs` and the wiki are still private.
 - **Not hosted yet.** The Pages project for `kapital-packs` does not exist;
   that is #25. Hosting makes every indexed file public, not only the
   metadata: #35.
@@ -263,7 +266,11 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
   packwiz-installer with `LC_ALL=C.UTF-8` (#32). The bootstrap's update check
   against `api.github.com` gets a 403 there; fetch `packwiz-installer.jar`
   from its release page and pass `--bootstrap-no-update`.
-- **CodeQL and Scorecard are not vendored**: the repo is private.
+- **The repository is public since 2026-09-30 evening**, made so because the
+  private allowance of Actions minutes ran out mid-stack (`backend-macos`
+  costs ten Linux minutes a run) and every job failed unstarted. Actions on
+  standard runners is free now. CodeQL and Scorecard can be vendored from
+  Kollektiv; noted in the roadmap under milestone 7.
 - The vendored files (`.claude/suite-*.py`, three workflows, the notes
   generator, `.aislop/base.yml`) are copied from `kollektiv-mc/Kollektiv` by
   hand. Re-copy to update.
