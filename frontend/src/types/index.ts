@@ -130,6 +130,15 @@ export interface PrismInstallProgress {
   error: string
 }
 
+/** Whether a chapter's installed pack is the one its source serves now (#71). */
+export interface PackState {
+  chapterId: string
+  installed: boolean
+  checked: boolean
+  upToDate: boolean
+  version: string
+}
+
 /** What a player may change about a chapter's installed instance (#36). */
 export interface ChapterSettings {
   maxMemoryMb: number

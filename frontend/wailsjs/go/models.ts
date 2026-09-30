@@ -306,6 +306,26 @@ export namespace models {
 		}
 	}
 	
+	export class PackState {
+	    chapterId: string;
+	    installed: boolean;
+	    checked: boolean;
+	    upToDate: boolean;
+	    version: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PackState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.chapterId = source["chapterId"];
+	        this.installed = source["installed"];
+	        this.checked = source["checked"];
+	        this.upToDate = source["upToDate"];
+	        this.version = source["version"];
+	    }
+	}
 	export class PrismRelease {
 	    version: string;
 	    asset: string;

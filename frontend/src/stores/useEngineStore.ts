@@ -4,6 +4,7 @@ import type {
   ChapterSettingsInfo,
   EngineInfo,
   InstanceReport,
+  PackState,
   PrismInstallProgress,
   PrismRelease,
 } from '../types'
@@ -12,6 +13,7 @@ import {
   GetChapterSettings,
   GetEngine,
   GetInstances,
+  GetPackStates,
   GetPrismRelease,
   InstallChapter,
   InstallPrism,
@@ -32,6 +34,8 @@ export const EVENT_PRISM_INSTALL = 'prism:install'
 interface EngineStore {
   engine: EngineInfo | null
   instances: InstanceReport | null
+  /** Whether each installed pack is its source's current one (#71), by chapter id. */
+  packStates: Record<string, PackState | undefined>
   launching: string | null
   /** The chapter whose instance is being written, while InstallChapter runs. */
   installing: string | null
@@ -62,6 +66,7 @@ interface EngineStore {
 export const useEngineStore = create<EngineStore>((set, get) => ({
   engine: null,
   instances: null,
+  packStates: {},
   launching: null,
   installing: null,
   installedNow: null,
@@ -131,6 +136,10 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
   // one in Prism, so App calls this again when the window regains focus.
   loadInstances: async () => {
     set({ instances: await readOr(GetInstances, null) })
+    // The pack state follows the instances: same moments, one more read.
+    const raw: unknown = await readOr(GetPackStates, [])
+    const states = Array.isArray(raw) ? (raw as PackState[]) : []
+    set({ packStates: Object.fromEntries(states.map((s) => [s.chapterId, s])) })
   },
 
   refresh: async () => {
@@ -178,6 +187,9 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
 /** The pack URL the chapter's instance syncs from, when the launcher made it. */
 export const selectInstancePack = (chapterId: string) => (s: EngineStore) =>
   s.instances?.packUrl?.[chapterId]
+
+/** Whether the chapter's installed pack is its source's current one; undefined until checked. */
+export const selectPackState = (chapterId: string) => (s: EngineStore) => s.packStates[chapterId]
 
 /** What the chapter's instance takes on disk, or undefined when it is missing or unmeasured. */
 export const selectInstanceSize = (chapterId: string) => (s: EngineStore) =>

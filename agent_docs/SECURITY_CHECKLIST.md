@@ -9,7 +9,7 @@ Two reaches matter: **network** (a manifest, a pack index, a download, a server
 ping response) and **bridge** (a bound method on `App`, callable by anything
 that runs in the WebView).
 
-Bound methods on 2026-09-30: **20** (`grep -c '^func (a \*App) [A-Z]' app.go`).
+Bound methods on 2026-09-30: **21** (`grep -c '^func (a \*App) [A-Z]' app.go`).
 A different count is new surface to classify: add the method to this table.
 
 | Method | Takes from the bridge | Reaches | Item |
@@ -18,6 +18,7 @@ A different count is new surface to classify: add the method to this table.
 | `GetSettings` | nothing | the settings file | S1.2 |
 | `RefreshEngine` | nothing | detection: runs the resolved Prism with `--version` | S3.1 |
 | `GetInstances` | nothing | the two reads in a Prism root, and the size walk of each present instance folder | S1.1 |
+| `GetPackStates` | nothing | one value of each instance's `packwiz.json`, and one bounded GET of each chapter's `pack.toml` on its allowlisted or loopback source | S1.1, S4.3 |
 | `GetPrismRelease` | nothing | one bounded GET to Prism's fixed release URL | S4.5 |
 | `InstallPrism` | nothing | download, verify and unpack Prism's official build | S4.5 |
 | `InstallChapter` | a chapter id | the manifest's instance and pack URL: one instance folder written into the Prism root | S3.3, S4.6 |
@@ -45,6 +46,8 @@ manifest instance id and, when present, scanned the same way for the one key
 never listed; a chapter's own instance folder, when present, is walked for
 its size on disk (#57), and that walk takes names and sizes from the
 directory entries, opens nothing, follows no symlink and stops at a ceiling.
+The pack state (#71) reads one value of the instance's `packwiz.json`, the
+synced `pack.toml`'s hash; the file list in it is dropped unread.
 The chapter's settings (#36) read four keys of that same `instance.cfg`
 (`OverrideMemory`, `MaxMemAlloc`, `OverrideJavaArgs`, `JvmArgs`) through
 `scanINIKeys`, and a save reads the file whole to copy every other line back

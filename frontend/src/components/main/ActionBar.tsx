@@ -2,12 +2,14 @@ import { useState } from 'react'
 import type {
   Chapter,
   EngineInfo,
+  PackState,
   PrismInstallProgress,
   PrismRelease,
   ServerStatus,
 } from '../../types'
 import { installLabel, isPlaceholderAddress, isPublished, playLabel } from '../../lib/manifest'
 import { installLine } from '../../lib/prismInstall'
+import { updateAvailable } from '../../lib/packState'
 import { packHost, packSourceLine } from '../../lib/packSource'
 import { serverLine } from '../../lib/serverLine'
 import { Download, Play, RefreshCw, TriangleAlert } from '../../lib/icons'
@@ -26,6 +28,8 @@ interface Props {
   devPack: string | undefined
   /** The pack URL the chapter's instance syncs from, when the launcher made it. */
   instancePack: string | undefined
+  /** Whether the installed pack is its source's current one (#71). */
+  packState: PackState | undefined
   launching: boolean
   /** Whether the chapter's instance is being written right now. */
   installing: boolean
@@ -60,6 +64,11 @@ const WORKING = ['downloading', 'unpacking', 'verifying']
  * A developer's local pack (#41) makes Install available without a hosted
  * one, and an instance syncing from anything but the manifest's pack says so.
  *
+ * When the installed pack is behind its source (#71), Play reads "Update and
+ * play": Prism has no command that syncs without launching, and packwiz
+ * syncs in the pre-launch step before the game starts, so the launch is the
+ * update.
+ *
  * Without Prism, the bar offers to get it (ADR-11): the approval card opens
  * below, and once confirmed the state line follows the install step by step.
  * If the release cannot be read, the button falls back to Prism's website.
@@ -71,6 +80,7 @@ export function ActionBar({
   installed,
   devPack,
   instancePack,
+  packState,
   launching,
   installing,
   installedNow,
@@ -89,6 +99,7 @@ export function ActionBar({
   const missing = engine !== null && !engine.found
   const working = install !== null && WORKING.includes(install.phase)
   const needsInstall = installed === false
+  const behind = updateAvailable(packState)
   const published = isPublished(chapter) || devPack !== undefined
   const source = installed ? packSourceLine(instancePack, chapter.pack.packwiz) : null
   let state: string
@@ -124,6 +135,14 @@ export function ActionBar({
     ]
   } else if (installedNow) {
     ;[state, meta] = ['● Installed', 'The first Play downloads the pack']
+  } else if (behind) {
+    ;[state, meta, tone] = [
+      '● Update available',
+      packState?.version
+        ? `Pack ${packState.version}; it syncs before the game starts`
+        : 'It syncs before the game starts',
+      'text-warning',
+    ]
   } else if (source) {
     ;[state, meta, tone] = [...source, 'text-warning']
   } else if (chapter.server) {
@@ -156,20 +175,20 @@ export function ActionBar({
             onClick={onPlay}
             disabled={launching || installing || missing || working}
           >
-            <Icon icon={Play} size="sm" className="fill-current" />
-            <span>{playLabel(chapter)}</span>
+            {behind ? (
+              <Icon icon={RefreshCw} size="sm" />
+            ) : (
+              <Icon icon={Play} size="sm" className="fill-current" />
+            )}
+            <span>{behind ? 'Update and play' : playLabel(chapter)}</span>
           </Button>
         )}
-        {missing ? (
+        {missing && (
           <Button
             onClick={() => (release ? setOffering(true) : onOpenPrismSite())}
             disabled={working || offering}
           >
             {install?.phase === 'failed' ? 'Try again' : 'Get Prism Launcher'}
-          </Button>
-        ) : (
-          <Button onClick={() => undefined} disabled title="Pack sync arrives with milestone 4">
-            Update pack
           </Button>
         )}
         <div className="grow" />

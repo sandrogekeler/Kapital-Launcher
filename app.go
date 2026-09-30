@@ -129,6 +129,28 @@ func (a *App) GetInstances() (models.InstanceReport, error) {
 	return a.prism.Instances(settings, engine, a.manifest.Chapters), nil
 }
 
+// GetPackStates says, per chapter, whether the installed pack is the one its
+// source serves now (#71): the source's pack.toml is fetched (the manifest's
+// URL rules or the loopback rule, bounded) and its hash compared with the one
+// packwiz-installer recorded at the last sync. Called when the instances are
+// read, never on a timer.
+func (a *App) GetPackStates() ([]models.PackState, error) {
+	settings, err := a.settings.Load()
+	if err != nil {
+		return nil, err
+	}
+	engine, err := a.GetEngine()
+	if err != nil {
+		return nil, err
+	}
+	report := a.prism.Instances(settings, engine, a.manifest.Chapters)
+	states := make([]models.PackState, 0, len(a.manifest.Chapters))
+	for _, chapter := range a.manifest.Chapters {
+		states = append(states, a.creator.PackState(a.context(), chapter, report, settings.PackOverrides[chapter.ID]))
+	}
+	return states, nil
+}
+
 // InstallChapter writes the chapter's Prism instance into the instances folder
 // GetInstances resolves, and returns that report read again (#24). The chapter
 // id is looked up in the validated manifest, so the instance id and pack URL

@@ -16,6 +16,8 @@ export function GetInstances():Promise<models.InstanceReport>;
 
 export function GetManifest():Promise<models.Manifest>;
 
+export function GetPackStates():Promise<Array<models.PackState>>;
+
 export function GetPrismRelease():Promise<models.PrismRelease>;
 
 export function GetServerStatus(arg1:string):Promise<models.ServerStatus>;

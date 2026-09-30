@@ -58,7 +58,9 @@ the scaffold changed the picture.
       `"$INST_JAVA" -jar packwiz-installer-bootstrap.jar <pack.toml>`, never
       from the manifest
 - [ ] Verify every download by hash; refuse a mismatch
-- [ ] Update pack button and sync state line
+- [x] Update pack button and sync state line: "Update and play" in Play's place
+      and a Version row when the synced pack.toml's hash differs from the
+      source's (#71); the sync itself is still the pre-launch step
 - [x] A chapter's own settings from the pen in its hero: memory and the JVM
       preset, written into its `instance.cfg` (#36, first half; ADR-2's second
       amendment). Optional mods follow once the pack marks them

@@ -2,6 +2,7 @@ package services
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -64,11 +65,14 @@ const (
 
 var versionPattern = regexp.MustCompile(`^[0-9A-Za-z][0-9A-Za-z.+_-]{0,63}$`)
 
-// packVersions is what mmc-pack.json needs from a pack.toml.
+// packVersions is what mmc-pack.json needs from a pack.toml, and the pack's
+// own version for the Pack panel (#71).
 type packVersions struct {
 	minecraft string
 	loader    string // pack.toml's key: neoforge, forge, fabric or quilt
 	version   string
+	// pack is the top-level `version` key, "" when the pack names none.
+	pack string
 }
 
 // InstanceCreator writes a chapter's Prism instance.
@@ -168,9 +172,20 @@ func (c *InstanceCreator) create(ctx context.Context, chapter models.Chapter, in
 }
 
 func (c *InstanceCreator) fetchVersions(ctx context.Context, packURL string, check func(field, raw string) error) (packVersions, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, packURL, nil)
+	raw, err := c.fetchPackTOML(ctx, packURL, check)
 	if err != nil {
 		return packVersions{}, err
+	}
+	return scanPackVersions(bytes.NewReader(raw))
+}
+
+// fetchPackTOML downloads a pack.toml, bounded, with every redirect held to
+// the rule the URL itself passed. The bytes are returned whole because the
+// pack state (#71) hashes them the way packwiz-installer does.
+func (c *InstanceCreator) fetchPackTOML(ctx context.Context, packURL string, check func(field, raw string) error) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, packURL, nil)
+	if err != nil {
+		return nil, err
 	}
 	req.Header.Set("User-Agent", prismUserAgent)
 	client := *c.client
@@ -182,13 +197,20 @@ func (c *InstanceCreator) fetchVersions(ctx context.Context, packURL string, che
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return packVersions{}, fmt.Errorf("fetch pack.toml: %w", err)
+		return nil, fmt.Errorf("fetch pack.toml: %w", err)
 	}
 	defer resp.Body.Close() //nolint:errcheck // read-only response
 	if resp.StatusCode != http.StatusOK {
-		return packVersions{}, fmt.Errorf("fetch pack.toml: %s", resp.Status)
+		return nil, fmt.Errorf("fetch pack.toml: %s", resp.Status)
 	}
-	return scanPackVersions(io.LimitReader(resp.Body, maxPackTOML))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, maxPackTOML+1))
+	if err != nil {
+		return nil, fmt.Errorf("fetch pack.toml: %w", err)
+	}
+	if len(raw) > maxPackTOML {
+		return nil, errors.New("fetch pack.toml: larger than the limit")
+	}
+	return raw, nil
 }
 
 // scanPackVersions reads the [versions] table packwiz writes: one minecraft
@@ -198,6 +220,7 @@ func scanPackVersions(r io.Reader) (packVersions, error) {
 	var v packVersions
 	sc := bufio.NewScanner(r)
 	inVersions := false
+	topLevel := true
 	for sc.Scan() {
 		line := strings.TrimSpace(sc.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
@@ -205,6 +228,17 @@ func scanPackVersions(r io.Reader) (packVersions, error) {
 		}
 		if strings.HasPrefix(line, "[") {
 			inVersions = line == "[versions]"
+			topLevel = false
+			continue
+		}
+		if topLevel {
+			// The pack's own version, before any table; other top-level
+			// keys (name, author, pack-format) are not read.
+			if key, raw, ok := strings.Cut(line, "="); ok && strings.TrimSpace(key) == "version" {
+				if value, err := strconv.Unquote(strings.TrimSpace(raw)); err == nil && versionPattern.MatchString(value) {
+					v.pack = value
+				}
+			}
 			continue
 		}
 		if !inVersions {

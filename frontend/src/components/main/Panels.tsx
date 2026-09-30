@@ -1,11 +1,14 @@
-import type { Chapter, WikiPage } from '../../types'
+import type { Chapter, PackState, WikiPage } from '../../types'
 import { factValue, sizeValue } from '../../lib/manifest'
+import { versionValue } from '../../lib/packState'
 import { Fact } from '../ui/Fact'
 
 interface Props {
   chapter: Chapter
   /** The chapter's size on disk, from the instance report; undefined until it is installed. */
   sizeBytes: number | undefined
+  /** Whether the installed pack is its source's current one (#71); undefined until checked. */
+  packState: PackState | undefined
   /** The wiki page picked for this chapter (#58); undefined shows the manifest's teaser. */
   wikiPage: WikiPage | undefined
   onOpenWiki: () => void
@@ -16,16 +19,18 @@ function PanelTitle({ children }: { children: string }) {
 }
 
 /**
- * The three columns under the actions: the pack's four facts, its changelog,
- * and a line from the wiki. The facts are what a player compares packs by
- * (#57): the loader, the game version, the mod count and the size on disk.
+ * The three columns under the actions: the pack's facts, its changelog, and
+ * a line from the wiki. The facts are what a player compares packs by (#57):
+ * the installed pack's version (#71), the loader, the game version, the mod
+ * count and the size on disk.
  * Memory is edited in the chapter's own settings (#36), and the server is on
  * the action bar's state line with its ping.
  */
-export function Panels({ chapter, sizeBytes, wikiPage, onOpenWiki }: Props) {
+export function Panels({ chapter, sizeBytes, packState, wikiPage, onOpenWiki }: Props) {
   const { pack } = chapter
   const wiki = wikiPage ?? chapter.wiki
   const facts: [string, string][] = [
+    ['Version', versionValue(packState)],
     ['Loader', pack.type === 'client-visuals' ? 'Client visuals' : factValue(pack.loader)],
     ['Minecraft', factValue(pack.minecraft)],
     ['Mods', factValue(pack.mods)],
