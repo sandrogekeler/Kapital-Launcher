@@ -87,6 +87,7 @@
   --layout-titlebar: 40px;
   --layout-scrollbar: 6px;
   --layout-slide: 32px;
+  --layout-title: 68px;
   --layout-icon-sm: 16px;
   --layout-icon-md: 18px;
 }
@@ -109,6 +110,7 @@
   --art-pending-cell-thumb: 8px;
   --effect-motion-blur: 4px;
   --effect-tile-blur: 14px;
+  --effect-tile-tint: 75%;
 }
 
 /* Dark is the default. Light is opt-in through data-theme; the system

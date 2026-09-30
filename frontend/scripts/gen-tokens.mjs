@@ -253,13 +253,15 @@ function emitLayout(src, push) {
   push(`  --layout-titlebar: ${src.layout.titlebar}${src.layout.unit};`)
   push(`  --layout-scrollbar: ${src.layout.scrollbar}${src.layout.unit};`)
   push(`  --layout-slide: ${src.layout.slide}${src.layout.unit};`)
+  push(`  --layout-title: ${src.layout.title}${src.layout.unit};`)
   push(`  --layout-icon-sm: ${src.layout.icon.sm}${src.layout.unit};`)
   push(`  --layout-icon-md: ${src.layout.icon.md}${src.layout.unit};`)
   push(`}`)
 }
 
 function emitEffects(src, push) {
-  const { hoverBrightness, focusRing, scrim, artPending, motionBlur, tileBlur } = src.effect
+  const { hoverBrightness, focusRing, scrim, artPending, motionBlur, tileBlur, tileTint } =
+    src.effect
   push(`/* Effects: values a utility cannot name on its own. Read by the shared`)
   push(`   styles/base.css and by brightness-(--effect-hover-brightness). */`)
   push(`:root {`)
@@ -278,6 +280,7 @@ function emitEffects(src, push) {
   push(`  --art-pending-cell-thumb: ${artPending.cellThumb}px;`)
   push(`  --effect-motion-blur: ${motionBlur}px;`)
   push(`  --effect-tile-blur: ${tileBlur}px;`)
+  push(`  --effect-tile-tint: ${tileTint}%;`)
   push(`}`)
 }
 
