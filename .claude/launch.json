@@ -30,6 +30,15 @@
       ],
       "port": 5198,
       "autoPort": false
+    },
+    {
+      "name": "wails-dev",
+      "runtimeExecutable": "wails",
+      "runtimeArgs": [
+        "dev"
+      ],
+      "port": 34115,
+      "autoPort": false
     }
   ]
 }

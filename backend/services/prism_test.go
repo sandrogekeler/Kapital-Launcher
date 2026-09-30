@@ -175,3 +175,35 @@ func TestLaunchRefusesWhenPrismIsMissing(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+func TestCheckExecutableWantsAnExistingFileOrNothing(t *testing.T) {
+	p := fakeOS("windows", map[string]bool{`C:\Prism\prismlauncher.exe`: false, `C:\Prism`: true}, nil, nil, "")
+	if err := p.CheckExecutable(""); err != nil {
+		t.Fatalf("empty means detect: %v", err)
+	}
+	if err := p.CheckExecutable(`  C:\Prism\prismlauncher.exe `); err != nil {
+		t.Fatalf("an existing file passes: %v", err)
+	}
+	if err := p.CheckExecutable(`C:\Prism`); err == nil || !strings.Contains(err.Error(), "folder") {
+		t.Fatalf("a folder is refused: %v", err)
+	}
+	if err := p.CheckExecutable(`C:\Nowhere\prismlauncher.exe`); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("a missing file is refused with the OS error: %v", err)
+	}
+}
+
+func TestResolvePrismExecutableEntersAMacAppBundle(t *testing.T) {
+	cases := []struct{ goos, picked, want string }{
+		{"darwin", "/Applications/Prism Launcher.app", "/Applications/Prism Launcher.app/Contents/MacOS/prismlauncher"},
+		{"darwin", "/Applications/Prism Launcher.app/", "/Applications/Prism Launcher.app/Contents/MacOS/prismlauncher"},
+		{"darwin", "/Applications/Prism Launcher.app/Contents/MacOS/prismlauncher", "/Applications/Prism Launcher.app/Contents/MacOS/prismlauncher"},
+		{"windows", `C:\Prism\prismlauncher.exe`, `C:\Prism\prismlauncher.exe`},
+		{"linux", " /usr/bin/prismlauncher ", "/usr/bin/prismlauncher"},
+		{"linux", "", ""},
+	}
+	for _, tc := range cases {
+		if got := ResolvePrismExecutable(tc.goos, tc.picked); got != tc.want {
+			t.Errorf("%s %q: got %q want %q", tc.goos, tc.picked, got, tc.want)
+		}
+	}
+}

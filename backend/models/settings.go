@@ -18,8 +18,8 @@ type AppSettings struct {
 	LastChapter string `json:"lastChapter"`
 	// PackOverrides maps a chapter id to a local packwiz serve address that
 	// Install uses in place of the manifest's pack.packwiz (#41). A developer
-	// setting, written by hand until the settings screen (#5); loopback only
-	// (services.CheckLocalPackURL).
+	// setting, edited under Developer on the settings screen (#5); loopback
+	// only (services.CheckLocalPackURL).
 	PackOverrides map[string]string `json:"packOverrides,omitempty"`
 }
 

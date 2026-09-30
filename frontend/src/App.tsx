@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { HeaderBar } from './components/shell/HeaderBar'
 import { Sidebar } from './components/sidebar/Sidebar'
 import { Hero } from './components/main/Hero'
 import { ActionBar } from './components/main/ActionBar'
 import { Panels } from './components/main/Panels'
+import { SettingsPanel } from './components/settings/SettingsPanel'
 import { selectChapter, useChapterStore } from './stores/useChapterStore'
 import { selectInstalled, selectInstancePack, useEngineStore } from './stores/useEngineStore'
 import { useSettingsStore } from './stores/useSettingsStore'
@@ -51,6 +52,14 @@ export default function App() {
   useEffect(() => {
     void readOr(Environment, null).then((env) => env && setPlatform(env.platform))
   }, [])
+
+  // The settings screen takes the main column while open (#5). The gear
+  // toggles it, Back and Escape close it, and so does picking a chapter: the
+  // effect fires on the selection, including the restore at startup, when the
+  // panel is closed anyway.
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const closeSettings = useCallback(() => setSettingsOpen(false), [])
+  useEffect(() => setSettingsOpen(false), [selectedId])
 
   // One read per store on mount. These are reads of state Go holds, not
   // events, so an effect is the right tool.
@@ -116,33 +125,39 @@ export default function App() {
   return (
     <div className="bg-canvas flex h-full flex-col">
       <ChapterSelectionSync />
-      <HeaderBar platform={platform} />
+      <HeaderBar platform={platform} onOpenSettings={() => setSettingsOpen((open) => !open)} />
       <div className="flex min-h-0 grow">
         <Sidebar />
         <main className="flex min-w-0 grow flex-col">
-          <Hero chapter={chapter} onOpenWiki={openWiki} />
-          <ActionBar
-            chapter={chapter}
-            engine={engine}
-            status={status}
-            installed={installed}
-            devPack={devPack}
-            instancePack={instancePack}
-            launching={launching === chapter.id}
-            installing={installing === chapter.id}
-            installedNow={installedNow === chapter.id}
-            checking={checking === chapter.id}
-            error={launchError}
-            onPlay={() => void launch(chapter.id)}
-            onInstall={() => void installChapter(chapter.id)}
-            release={release}
-            install={install}
-            onGetPrism={() => void installPrism()}
-            onOpenPrismSite={openPrismSite}
-            onOpenReleasePage={openReleasePage}
-            onCheckServer={() => void checkServer(chapter.id)}
-          />
-          <Panels chapter={chapter} status={status} onOpenWiki={openWiki} />
+          {settingsOpen ? (
+            <SettingsPanel onClose={closeSettings} />
+          ) : (
+            <>
+              <Hero chapter={chapter} onOpenWiki={openWiki} />
+              <ActionBar
+                chapter={chapter}
+                engine={engine}
+                status={status}
+                installed={installed}
+                devPack={devPack}
+                instancePack={instancePack}
+                launching={launching === chapter.id}
+                installing={installing === chapter.id}
+                installedNow={installedNow === chapter.id}
+                checking={checking === chapter.id}
+                error={launchError}
+                onPlay={() => void launch(chapter.id)}
+                onInstall={() => void installChapter(chapter.id)}
+                release={release}
+                install={install}
+                onGetPrism={() => void installPrism()}
+                onOpenPrismSite={openPrismSite}
+                onOpenReleasePage={openReleasePage}
+                onCheckServer={() => void checkServer(chapter.id)}
+              />
+              <Panels chapter={chapter} status={status} onOpenWiki={openWiki} />
+            </>
+          )}
         </main>
       </div>
       <footer className="text-fg-faint text-2xs pointer-events-none fixed inset-x-0 bottom-2 text-center">

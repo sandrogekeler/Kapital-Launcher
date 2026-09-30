@@ -106,6 +106,19 @@ func TestAffectsDetectionOnlyForPrismFields(t *testing.T) {
 	}
 }
 
+func TestExecutableChangedIgnoresEverythingElse(t *testing.T) {
+	base := models.AppSettings{Theme: "dark", PrismExecutable: "/usr/bin/prismlauncher"}
+	if ExecutableChanged(base, models.AppSettings{Theme: "light", PrismExecutable: " /usr/bin/prismlauncher ", PrismRoot: "/srv/prism"}) {
+		t.Fatal("the same executable, trimmed, is not a change")
+	}
+	if !ExecutableChanged(base, models.AppSettings{Theme: "dark"}) {
+		t.Fatal("clearing the executable is a change")
+	}
+	if !ExecutableChanged(base, models.AppSettings{Theme: "dark", PrismExecutable: "/opt/prism/prismlauncher"}) {
+		t.Fatal("another executable is a change")
+	}
+}
+
 func TestPackOverridesAreRefusedOnSaveAndDroppedOnLoad(t *testing.T) {
 	dir := t.TempDir()
 	svc := NewSettingsService(dir)
