@@ -126,6 +126,6 @@ export interface AppSettings {
   prismRoot: string
   profileName: string
   lastChapter: string
-  /** Chapter id to a local packwiz serve address, written by hand (#41). */
+  /** Chapter id to a local packwiz serve address (#41), edited on the settings screen (#5). */
   packOverrides?: Record<string, string>
 }

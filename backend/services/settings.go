@@ -193,3 +193,10 @@ func AffectsDetection(before, after models.AppSettings) bool {
 	b, a := normalize(before), normalize(after)
 	return b.PrismExecutable != a.PrismExecutable || b.PrismRoot != a.PrismRoot
 }
+
+// ExecutableChanged reports whether a save names a different Prism executable
+// than the one on file, after normalizing. The one field whose new value must
+// exist on disk before it is written (App.SaveSettings, #5).
+func ExecutableChanged(before, after models.AppSettings) bool {
+	return normalize(before).PrismExecutable != normalize(after).PrismExecutable
+}

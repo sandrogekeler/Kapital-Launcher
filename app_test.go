@@ -59,6 +59,49 @@ func TestSaveSettingsValidatesAndRedetects(t *testing.T) {
 	}
 }
 
+// A Prism executable that changed must exist as a file when it is saved; one
+// already on file may vanish without blocking the next save (#5).
+func TestSaveSettingsChecksAChangedExecutableOnly(t *testing.T) {
+	app := newTestApp(t)
+	dir := t.TempDir()
+	missing := filepath.Join(dir, "prismlauncher.exe")
+	err := app.SaveSettings(models.AppSettings{Theme: "dark", PrismExecutable: missing})
+	if err == nil || !strings.Contains(err.Error(), "prism executable") {
+		t.Fatalf("a missing program must be refused: %v", err)
+	}
+	if err := app.SaveSettings(models.AppSettings{Theme: "dark", PrismExecutable: dir}); err == nil {
+		t.Fatal("a folder must be refused")
+	}
+	if err := os.WriteFile(missing, []byte("not really prism"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.SaveSettings(models.AppSettings{Theme: "dark", PrismExecutable: missing}); err != nil {
+		t.Fatalf("an existing file is accepted: %v", err)
+	}
+	if err := os.Remove(missing); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.SaveSettings(models.AppSettings{Theme: "dark", PrismExecutable: missing, LastChapter: "frangfurd"}); err != nil {
+		t.Fatalf("an unchanged executable is not checked again: %v", err)
+	}
+	got, err := app.GetSettings()
+	if err != nil || got.LastChapter != "frangfurd" {
+		t.Fatalf("%v %+v", err, got)
+	}
+}
+
+// The pickers need the window; before it exists they refuse rather than hang,
+// and they never save (the frontend commits the pick through SaveSettings).
+func TestPickersNeedTheWindow(t *testing.T) {
+	app := newTestApp(t)
+	if _, err := app.ChoosePrismExecutable(); err == nil || !strings.Contains(err.Error(), "window") {
+		t.Fatalf("got %v", err)
+	}
+	if _, err := app.ChoosePrismRoot(); err == nil || !strings.Contains(err.Error(), "window") {
+		t.Fatalf("got %v", err)
+	}
+}
+
 func TestOpenExternalRefusesNonWebURLsBeforeTheWindowExists(t *testing.T) {
 	app := newTestApp(t)
 	if err := app.OpenExternal("file:///etc/passwd"); err == nil || strings.Contains(err.Error(), "window") {

@@ -13,11 +13,13 @@
 export type { LucideIcon } from 'lucide-react'
 
 export {
+  ArrowLeft,
   BookOpen,
   Copy,
   Download,
   ExternalLink,
   Folder,
+  FolderOpen,
   Minus,
   Play,
   RefreshCw,

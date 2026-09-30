@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime"
+	"strings"
 	"sync"
 
 	wailsrt "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -239,12 +240,22 @@ func (a *App) GetSettings() (models.AppSettings, error) {
 // SaveSettings validates and persists, then re-detects the engine when a field
 // detection reads has changed. Detection runs Prism's --version, so a save
 // that only records the open chapter must not reach it (#6).
+//
+// A Prism executable that changed must exist as a file, so the settings
+// screen can say so under the field rather than detection quietly falling
+// past it (#5). Only when it changed: every save writes the whole settings,
+// and a program removed since must not stop the open chapter being saved.
 func (a *App) SaveSettings(settings models.AppSettings) error {
 	before, err := a.settings.Load()
 	if err != nil {
 		// An unreadable file is about to be replaced; re-detect to be safe.
 		before = models.AppSettings{}
 		slog.Warn("settings before save", "error", err)
+	}
+	if services.ExecutableChanged(before, settings) {
+		if err := a.prism.CheckExecutable(settings.PrismExecutable); err != nil {
+			return fmt.Errorf("settings: %w", err)
+		}
 	}
 	if err := a.settings.Save(settings); err != nil {
 		return err
@@ -254,6 +265,46 @@ func (a *App) SaveSettings(settings models.AppSettings) error {
 	}
 	_, err = a.RefreshEngine()
 	return err
+}
+
+// ChoosePrismExecutable opens the native file picker for the Prism program and
+// returns the pick, or "" when the player cancelled. Nothing is saved here: the
+// frontend puts the path into the field and commits it through SaveSettings,
+// so a path always arrives by the same validated route, picked or typed (#5).
+// On macOS the pick is the .app bundle and resolves to its executable.
+func (a *App) ChoosePrismExecutable() (string, error) {
+	if a.ctx == nil {
+		return "", errors.New("window is not ready")
+	}
+	opts := wailsrt.OpenDialogOptions{Title: "Choose the Prism Launcher program"}
+	switch runtime.GOOS {
+	case "windows":
+		opts.Filters = []wailsrt.FileFilter{{DisplayName: "Programs (*.exe)", Pattern: "*.exe"}}
+	case "darwin":
+		opts.Filters = []wailsrt.FileFilter{{DisplayName: "Applications (*.app)", Pattern: "*.app"}}
+	}
+	picked, err := wailsrt.OpenFileDialog(a.ctx, opts)
+	if err != nil {
+		return "", fmt.Errorf("choose prism executable: %w", err)
+	}
+	return services.ResolvePrismExecutable(runtime.GOOS, picked), nil
+}
+
+// ChoosePrismRoot opens the native folder picker for a Prism data root and
+// returns the pick, or "" when the player cancelled. Saved by the frontend
+// through SaveSettings, as ChoosePrismExecutable's pick is.
+func (a *App) ChoosePrismRoot() (string, error) {
+	if a.ctx == nil {
+		return "", errors.New("window is not ready")
+	}
+	picked, err := wailsrt.OpenDirectoryDialog(a.ctx, wailsrt.OpenDialogOptions{
+		Title:                "Choose the Prism data folder",
+		CanCreateDirectories: true,
+	})
+	if err != nil {
+		return "", fmt.Errorf("choose prism root: %w", err)
+	}
+	return strings.TrimSpace(picked), nil
 }
 
 // GetServerStatus pings the chapter's server now and returns the result. The

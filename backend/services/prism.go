@@ -279,6 +279,44 @@ func (p *PrismService) isFile(path string) bool {
 	return err == nil && !info.IsDir()
 }
 
+// CheckExecutable says whether a path the player typed or picked for the Prism
+// executable names a file that exists. Detection would silently fall past a
+// path that does not, so the settings screen asks here first (#5). The empty
+// path means "detect" and passes.
+func (p *PrismService) CheckExecutable(path string) error {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return nil
+	}
+	info, err := p.stat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		// The OS wording ("GetFileAttributesEx ... cannot find the path") is
+		// for a log, not for the line under a field.
+		return fmt.Errorf("prism executable %q was not found: %w", path, os.ErrNotExist)
+	}
+	if err != nil {
+		return fmt.Errorf("prism executable %q: %w", path, err)
+	}
+	if info.IsDir() {
+		return fmt.Errorf("prism executable %q is a folder, not a program", path)
+	}
+	return nil
+}
+
+// ResolvePrismExecutable turns what a file picker returns into the path to
+// run. On macOS the picker hands back the `.app` bundle, whose executable sits
+// at Contents/MacOS/prismlauncher (checked against Prism 11.1.1's macOS zip,
+// docs/adr/0011-getting-prism.md); everywhere else the pick is the program.
+func ResolvePrismExecutable(goos, picked string) string {
+	picked = strings.TrimSpace(picked)
+	if bundle := strings.TrimRight(picked, "/"); goos == "darwin" && strings.HasSuffix(bundle, ".app") {
+		// A macOS path, joined with the separator macOS uses whatever host
+		// runs the tests.
+		return bundle + "/Contents/MacOS/prismlauncher"
+	}
+	return picked
+}
+
 func (p *PrismService) flatpakInstalled(ctx context.Context, flatpak string) bool {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

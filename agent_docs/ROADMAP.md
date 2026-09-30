@@ -34,7 +34,8 @@ the scaffold changed the picture.
       settings gear (ADR-10, #11)
 - [x] Get Prism for a player who has none, on approval: a verified,
       launcher-managed portable copy with a one-click update offer (ADR-11, #23)
-- [ ] Settings screen: Prism executable, Prism root, profile name, theme
+- [x] Settings screen: Prism executable, Prism root, profile name, theme, and
+      the developer's local pack address per chapter (#5)
 - [x] Know whether a chapter's instance exists under the resolved root, and
       warn on the state line when it does not; Install replaces Play once
       milestone 4 can install (#24)
@@ -60,8 +61,8 @@ the scaffold changed the picture.
 - [ ] Update pack button and sync state line
 - [x] Developer setting: override a chapter's `pack.toml` URL with a local
       `packwiz serve` address, so a pack is tried from a working copy first
-      (`packOverrides` in settings.json, #41; a field on the settings screen
-      comes with #5)
+      (`packOverrides` in settings.json, #41; edited on the settings screen
+      since #5)
 
 ## Milestone 5: Manifest from the site
 

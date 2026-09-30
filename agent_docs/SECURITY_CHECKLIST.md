@@ -9,7 +9,7 @@ Two reaches matter: **network** (a manifest, a pack index, a download, a server
 ping response) and **bridge** (a bound method on `App`, callable by anything
 that runs in the WebView).
 
-Bound methods on 2026-09-30: **14** (`grep -c '^func (a \*App) [A-Z]' app.go`).
+Bound methods on 2026-09-30: **16** (`grep -c '^func (a \*App) [A-Z]' app.go`).
 A different count is new surface to classify: add the method to this table.
 
 | Method | Takes from the bridge | Reaches | Item |
@@ -23,6 +23,7 @@ A different count is new surface to classify: add the method to this table.
 | `InstallChapter` | a chapter id | the manifest's instance and pack URL: one instance folder written into the Prism root | S3.3, S4.6 |
 | `LaunchChapter`, `OpenChapterWiki`, `GetServerStatus` | a chapter id | the manifest's instance, URL or address for it | S3.3, S6.1 |
 | `SaveSettings` | a whole `AppSettings` | the settings file, and the executable detection then runs | S3.5 |
+| `ChoosePrismExecutable`, `ChoosePrismRoot` | nothing | a native file or folder picker; the pick is returned, never saved here | S3.5 |
 | `OpenExternal` | a URL | the system browser, web URLs only | S3.4 |
 
 ## S1. Credentials
@@ -107,7 +108,10 @@ with `--version`; Play runs it too. That is the settings screen's purpose
 player is S5: the WebView loads only the app's own bundled assets under a CSP
 with `script-src 'self'` and no raw HTML sinks.
 Holds when: `ValidateSettings` refuses a relative executable or root and a
-profile starting with `-`, and S5.1 and S5.2 hold. A `packOverrides` entry
+profile starting with `-`, `SaveSettings` refuses an executable that changed
+and is not an existing file, and S5.1 and S5.2 hold. The two pickers only
+return what the player chose in the OS dialog; the frontend commits it through
+`SaveSettings`, so a picked path and a typed one take the same route. A `packOverrides` entry
 (#41) goes onto an instance's pre-launch command line, so it is held to
 `CheckLocalPackURL` on save, on load (a bad entry is dropped) and again by
 `InstanceCreator.Install`: plain http on `localhost`, `127.0.0.1` or `[::1]`
