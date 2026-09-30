@@ -19,11 +19,11 @@ interface Outgoing {
 const CARD = 'bg-raised border-line overflow-hidden rounded-lg border'
 
 /**
- * The chapter card and its motion (#59). The open chapter's view sits in a
- * card; when the selection moves to another chapter, the card moves the way
- * the selection moved in the nav: picking a chapter further down slides the
- * old card down and out and brings the new one in from above, further up the
- * reverse. The leaving card stays mounted over the new one, inert, until its
+ * The chapter card and its motion (#59, #67). The open chapter's view sits
+ * in a card; when the selection moves to another chapter, the content moves
+ * the way it would on a long page: picking a chapter higher in the nav
+ * brings the new card down from above while the old one leaves downward,
+ * further down the reverse. The leaving card stays mounted over the new one, inert, until its
  * animation ends. The keyframes, the blur and the reduced-motion fade live
  * in style.css; the distance and the blur are tokens.
  *
@@ -37,7 +37,7 @@ export function ChapterStage({ chapter, chapters, onOpenSettings }: Props) {
   if (shown.id !== chapter.id) {
     const from = chapters.findIndex((c) => c.id === shown.id)
     const to = chapters.findIndex((c) => c.id === chapter.id)
-    setOutgoing({ chapter: shown, direction: to > from ? 'down' : 'up' })
+    setOutgoing({ chapter: shown, direction: to < from ? 'down' : 'up' })
     setShown(chapter)
   }
   const entering = outgoing ? (outgoing.direction === 'down' ? 'card-in-down' : 'card-in-up') : ''

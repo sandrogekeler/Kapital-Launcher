@@ -47,7 +47,7 @@ export function ChapterNav() {
           // style rule allows, as the scroll thumb's is.
           // eslint-disable-next-line no-restricted-syntax
           style={{ transform: `translateY(${place.top}px)`, height: place.height }}
-          className={`bg-raised border-line-strong pointer-events-none absolute inset-x-0 top-0 rounded-lg border ease-out motion-reduce:transition-none ${
+          className={`bg-raised border-line-strong ease-glide pointer-events-none absolute inset-x-0 top-0 rounded-lg border motion-reduce:transition-none ${
             settled ? 'duration-slow transition-[transform,height]' : ''
           }`}
         />

@@ -25,23 +25,24 @@ describe('ChapterStage', () => {
     expect(document.querySelector('.card-in-down, .card-in-up')).toBeNull()
   })
 
-  it('slides down to a later chapter and up to an earlier one, keeping the old card until its animation ends', () => {
+  it('slides up to a later chapter and down to an earlier one, keeping the old card until its animation ends', () => {
     const { rerender } = render(
       <ChapterStage chapter={luxemburg} chapters={chapters} onOpenSettings={noop} />,
     )
     rerender(<ChapterStage chapter={frangfurd} chapters={chapters} onOpenSettings={noop} />)
-    // The new card comes in from above, the old one goes down and out, inert.
+    // A chapter further down: the content moves up, so the new card comes
+    // in from below and the old one leaves upward, inert.
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Frangfurd')
     const out = leaving()!
-    expect(out).toHaveClass('card-out-down')
+    expect(out).toHaveClass('card-out-up')
     expect(out).toHaveTextContent('Luxemburg')
-    expect(document.querySelector('.card-in-down')).toHaveTextContent('Frangfurd')
+    expect(document.querySelector('.card-in-up')).toHaveTextContent('Frangfurd')
     endAnimation(out)
     expect(leaving()).toBeNull()
 
     rerender(<ChapterStage chapter={lichdenstein} chapters={chapters} onOpenSettings={noop} />)
-    expect(leaving()).toHaveClass('card-out-up')
-    expect(document.querySelector('.card-in-up')).toHaveTextContent('Lichdenstein')
+    expect(leaving()).toHaveClass('card-out-down')
+    expect(document.querySelector('.card-in-down')).toHaveTextContent('Lichdenstein')
   })
 
   it('replaces a card still leaving when the selection moves again', () => {
