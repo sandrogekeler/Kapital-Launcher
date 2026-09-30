@@ -75,10 +75,17 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
   (kapital-packs#1) is a two-pass 4K60 re-encode at a 40 Mbit/s target, which
   x264 settled at 31 Mbit/s, 11.7 MB. The master is
   `D:\Private\Projects\Videogames\Minecraft\Projects\KapitelKapital\assets\intro\frangfurd\Frangfurd-Intro.mp4`.
-- **FancyMenu's `force_fullscreen` must stay off** while Drippy Loading Screen
-  is in the pack: together they leave the title screen drawn in the bottom-left
-  corner of a black fullscreen screen (kapital-packs#1). Minecraft's own
-  `fullscreen:true` in the default options is what makes the game fullscreen.
+- **Frangfurd's fullscreen start** (the comment on #46): the title screen
+  could stay in the bottom-left corner of a black screen, drawn at 854x480,
+  the early window's size, because the game missed the resize to fullscreen.
+  FancyMenu's `force_fullscreen` is off (kapital-packs#1); Minecraft's own
+  `fullscreen:true` in the default options makes the game fullscreen.
+  `earlyWindowMaximized = true` left the background shifted under a black band.
+  **`earlyWindowControl = false` in `config/fml.toml` fixed it**, at the cost
+  of a black window with a white rectangle, frozen for a moment before Drippy
+  draws. The author wants players to see only the launcher's splash instead
+  (#43, #45). The setting is in the author's instance, not yet in
+  `kapital-packs`: it goes in with the next import.
 - **Not hosted yet.** The Pages project for `kapital-packs` does not exist;
   that is #25. Hosting makes every indexed file public, not only the
   metadata: #35.
