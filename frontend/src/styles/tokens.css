@@ -26,6 +26,8 @@
   --color-chapter-frangfurd: var(--chapter-frangfurd);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
+  --color-logo-gradient-top: var(--logo-gradient-top);
+  --color-logo-gradient-bottom: var(--logo-gradient-bottom);
   /* The active chapter's accent. Set by [data-chapter] below. */
   --color-accent: var(--accent);
   --color-accent-wash: var(--accent-wash);
@@ -126,6 +128,8 @@
   --chapter-frangfurd: #7cbfe0;
   --warning: #e0aa4e;
   --danger: #ef7a5e;
+  --logo-gradient-top: #f9ae9f;
+  --logo-gradient-bottom: #6d3939;
 }
 
 [data-theme='light'] {
