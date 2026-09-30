@@ -34,9 +34,10 @@ const TITLE_ART: Record<string, string> = {
 export const chapterTitleArt = (id: string): string | undefined => TITLE_ART[id]
 
 /**
- * The pack's own icon for its nav row (#77), from the author's art folders
- * at 160 px: four times the 40 px thumbnail. A chapter without one shows
- * its screenshot there instead.
+ * The pack's own icon for its nav row (#77): the letter mark from the
+ * author's art folders, transparent, fitted into 160 px, four times the 40 px
+ * box it is drawn contained in. A chapter without one shows its screenshot
+ * there instead.
  */
 const ICON: Record<string, string> = {
   luxemburg: luxemburgIcon,

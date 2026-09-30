@@ -56,12 +56,7 @@ export function ChapterButton({ chapter, current, onSelect, ref }: Props) {
         </div>
       )}
       {icon ? (
-        <img
-          src={icon}
-          alt=""
-          className="border-line-strong size-10 shrink-0 rounded-sm border object-cover"
-          draggable={false}
-        />
+        <img src={icon} alt="" className="size-10 shrink-0 object-contain" draggable={false} />
       ) : (
         <div
           className="art-pending art-pending-thumb border-line-strong size-10 shrink-0 rounded-sm border"
