@@ -85,7 +85,7 @@
         "loader": "NeoForge",
         "minecraft": "1.21.1",
         "mods": 95,
-        "memoryGb": null,
+        "memoryGb": 8,
         "jvm": "zgc",
         "version": null,
         "packwiz": null,

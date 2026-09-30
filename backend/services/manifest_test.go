@@ -45,6 +45,9 @@ func TestBundledManifestIsValid(t *testing.T) {
 	if fra.Pack.JVM == nil || *fra.Pack.JVM != "zgc" {
 		t.Errorf("Frangfurd runs ZGC, which Distant Horizons asks for: %v", fra.Pack.JVM)
 	}
+	if fra.Pack.MemoryGB == nil || *fra.Pack.MemoryGB != 8 {
+		t.Errorf("Frangfurd gets 8 GB, what it runs with in Prism: %v", fra.Pack.MemoryGB)
+	}
 }
 
 func validManifest() models.Manifest {

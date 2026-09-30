@@ -57,6 +57,8 @@ var packLoaders = map[string]string{
 const (
 	maxPackTOML     = 64 << 10
 	packTOMLTimeout = 15 * time.Second
+	// Prism's own default minimum (launcher/Application.cpp, MinMemAlloc).
+	minMemMiB = 512
 )
 
 var versionPattern = regexp.MustCompile(`^[0-9A-Za-z][0-9A-Za-z.+_-]{0,63}$`)
@@ -262,9 +264,14 @@ func renderInstanceConfig(chapter models.Chapter, packURL string) ([]byte, error
 		lines = append(lines, [2]string{"OverrideJavaArgs", "true"}, [2]string{"JvmArgs", qtString(preset.args)})
 	}
 	if gb := chapter.Pack.MemoryGB; gb != nil {
-		// The minimum is left to the player's global setting, which is what an
-		// overridden instance falls back to when the key is absent.
-		lines = append(lines, [2]string{"OverrideMemory", "true"}, [2]string{"MaxMemAlloc", strconv.Itoa(*gb * 1024)})
+		// The minimum is written rather than left to the player's global
+		// setting, which an overridden instance would otherwise inherit and
+		// which a player may have raised. The heap grows to the maximum as
+		// the game needs it, so a low start runs on any machine.
+		lines = append(lines,
+			[2]string{"OverrideMemory", "true"},
+			[2]string{"MinMemAlloc", strconv.Itoa(minMemMiB)},
+			[2]string{"MaxMemAlloc", strconv.Itoa(*gb * 1024)})
 	}
 	var b strings.Builder
 	b.WriteString("[General]\n")

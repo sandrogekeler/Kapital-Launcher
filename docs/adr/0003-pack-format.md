@@ -85,8 +85,8 @@ replacement for it.
 A fresh install no longer imports a `.mrpack` (option A). The launcher writes
 the instance: `instance.cfg` with the pre-launch command, the chapter's JVM
 preset (`pack.jvm`, a name the launcher maps to arguments) and memory
-(`pack.memoryGb`, as `MaxMemAlloc`; the minimum stays the player's global
-setting); `mmc-pack.json` with Minecraft and the loader read from the hosted
+(`pack.memoryGb`, as `MaxMemAlloc`, with `MinMemAlloc` at 512 MB, Prism's own
+default, so the heap starts small on any machine and grows as needed); `mmc-pack.json` with Minecraft and the loader read from the hosted
 `pack.toml`, refused when they disagree with the manifest; and the two jars.
 The first Play then installs the whole pack through the pre-launch command,
 and every later Play syncs it. Checked in a container on 2026-09-30 by

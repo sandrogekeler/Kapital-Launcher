@@ -84,6 +84,7 @@ PreLaunchCommand="\"$INST_JAVA\" -jar \"$INST_MC_DIR/packwiz-installer-bootstrap
 OverrideJavaArgs=true
 JvmArgs="-XX:+UseZGC -XX:+ZGenerational"
 OverrideMemory=true
+MinMemAlloc=512
 MaxMemAlloc=8192
 `
 	if string(got) != want {
@@ -98,7 +99,7 @@ func TestRenderInstanceConfigLeavesUnsetFactsToPrism(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range []string{"OverrideJavaArgs", "JvmArgs", "OverrideMemory", "MaxMemAlloc"} {
+	for _, key := range []string{"OverrideJavaArgs", "JvmArgs", "OverrideMemory", "MinMemAlloc", "MaxMemAlloc"} {
 		if strings.Contains(string(got), key) {
 			t.Errorf("%s written with no preset or memory set:\n%s", key, got)
 		}
