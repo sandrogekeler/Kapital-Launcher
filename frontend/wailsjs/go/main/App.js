@@ -38,6 +38,10 @@ export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }
 
+export function GetWikiPages() {
+  return window['go']['main']['App']['GetWikiPages']();
+}
+
 export function InstallChapter(arg1) {
   return window['go']['main']['App']['InstallChapter'](arg1);
 }
@@ -56,6 +60,10 @@ export function OpenChapterWiki(arg1) {
 
 export function OpenExternal(arg1) {
   return window['go']['main']['App']['OpenExternal'](arg1);
+}
+
+export function OpenWikiPage(arg1) {
+  return window['go']['main']['App']['OpenWikiPage'](arg1);
 }
 
 export function RefreshEngine() {

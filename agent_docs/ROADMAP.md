@@ -69,6 +69,9 @@ the scaffold changed the picture.
 - [ ] `launcher.json` endpoint on the Kapitel Kapital Astro site, in the shape of
       `design/launcher.schema.json`
 - [ ] Fetch with a unique User-Agent, cache, fall back to the bundled copy offline
+- [x] The wiki's lore export (`/data/lore.json`) fetched the same way, cached in
+      the app data dir, the bundled teaser as the fallback; the "From the wiki"
+      panel picks a random page of the chapter's era on every switch (#58)
 - [ ] Screenshots by URL; CSP `img-src` grows by the site's host
 
 ## Milestone 6: Server status, the rest

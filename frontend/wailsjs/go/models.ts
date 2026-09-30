@@ -306,6 +306,24 @@ export namespace models {
 	    }
 	}
 	
+	export class WikiPage {
+	    title: string;
+	    line: string;
+	    url: string;
+	    eras: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new WikiPage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.title = source["title"];
+	        this.line = source["line"];
+	        this.url = source["url"];
+	        this.eras = source["eras"];
+	    }
+	}
 
 }
 

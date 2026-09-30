@@ -31,6 +31,7 @@ type App struct {
 	managed  *services.ManagedPrism
 	status   *services.StatusService
 	creator  *services.InstanceCreator
+	wiki     *services.WikiService
 	stop     context.CancelFunc
 
 	mu     sync.Mutex
@@ -54,6 +55,7 @@ func NewApp(dataDir string, manifest []byte) (*App, error) {
 		managed:  managed,
 		status:   services.NewStatusService(),
 		creator:  services.NewInstanceCreator(dataDir),
+		wiki:     services.NewWikiService(dataDir, m.Wiki.BaseURL),
 	}, nil
 }
 
@@ -320,6 +322,24 @@ func (a *App) GetServerStatus(chapterID string) (models.ServerStatus, error) {
 		wailsrt.EventsEmit(a.ctx, services.EventServerStatus, status)
 	}
 	return status, nil
+}
+
+// GetWikiPages returns the wiki's pages for the "From the wiki" panel (#58):
+// fetched from the manifest's wiki host once per start, cached in the app
+// data dir, or read from that cache offline. An error means neither was
+// possible, and the panel keeps the manifest's teaser.
+func (a *App) GetWikiPages() ([]models.WikiPage, error) {
+	return a.wiki.Pages(a.context())
+}
+
+// OpenWikiPage opens one of the pages GetWikiPages returned in the system
+// browser. The URL must be one of those, so the bridge picks a page and never
+// names an address of its own.
+func (a *App) OpenWikiPage(url string) error {
+	if !a.wiki.Known(url) {
+		return fmt.Errorf("not a wiki page this app listed: %q", url)
+	}
+	return a.openURL(url)
 }
 
 // OpenChapterWiki opens the chapter's wiki page in the system browser. The URL

@@ -9,7 +9,7 @@ Two reaches matter: **network** (a manifest, a pack index, a download, a server
 ping response) and **bridge** (a bound method on `App`, callable by anything
 that runs in the WebView).
 
-Bound methods on 2026-09-30: **16** (`grep -c '^func (a \*App) [A-Z]' app.go`).
+Bound methods on 2026-09-30: **18** (`grep -c '^func (a \*App) [A-Z]' app.go`).
 A different count is new surface to classify: add the method to this table.
 
 | Method | Takes from the bridge | Reaches | Item |
@@ -25,6 +25,8 @@ A different count is new surface to classify: add the method to this table.
 | `SaveSettings` | a whole `AppSettings` | the settings file, and the executable detection then runs | S3.5 |
 | `ChoosePrismExecutable`, `ChoosePrismRoot` | nothing | a native file or folder picker; the pick is returned, never saved here | S3.5 |
 | `OpenExternal` | a URL | the system browser, web URLs only | S3.4 |
+| `GetWikiPages` | nothing | one bounded GET of the wiki's lore export on the manifest's wiki host, cached in the app data dir | S2.3, S4.3 |
+| `OpenWikiPage` | a URL | the system browser, only for a URL `GetWikiPages` returned | S3.3 |
 
 ## S1. Credentials
 
@@ -77,6 +79,14 @@ Probe: a URL with credentials, an `http://` scheme, a lookalike host.
 Not yet built (milestone 5). Holds when: fetched over https from the site only,
 with a timeout and a size bound, parsed by the same `ParseManifest`, and the
 bundled copy is the fallback on any failure.
+The wiki's lore export (#58) is the first remote file and follows the same
+rule: `WikiService` fetches it from the manifest's validated `wiki.baseUrl`
+only, 15 s and 4 MiB, no redirects, and `parseWikiExport` keeps a page only
+when its URL is a plain `/wiki/...` path (joined onto that same base), its
+title and excerpt are non-empty text and it names an era; the cached copy is
+parsed the same way, and the manifest's teaser is the fallback.
+Verify: `TestParseWikiExportKeepsOnlyPagesThePanelMayShow`,
+`TestWikiPagesRefuseAnOversizedOrRedirectedExport`, `TestOpenWikiPageRefusesAnUnlistedURL`.
 
 ## S3. Paths and processes
 

@@ -6,7 +6,7 @@ import { ActionBar } from './components/main/ActionBar'
 import { Panels } from './components/main/Panels'
 import { SettingsPanel } from './components/settings/SettingsPanel'
 import { Scrollable } from './components/ui/Scrollable'
-import { selectChapter, useChapterStore } from './stores/useChapterStore'
+import { selectChapter, selectWikiPick, useChapterStore } from './stores/useChapterStore'
 import {
   selectInstalled,
   selectInstancePack,
@@ -15,7 +15,7 @@ import {
 } from './stores/useEngineStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { selectStatus, useServerStore } from './stores/useServerStore'
-import { OpenChapterWiki, OpenExternal } from '../wailsjs/go/main/App'
+import { OpenChapterWiki, OpenExternal, OpenWikiPage } from '../wailsjs/go/main/App'
 import { Environment } from '../wailsjs/runtime/runtime'
 import { errMsg, readOr } from './lib/ipc'
 
@@ -25,6 +25,8 @@ export default function App() {
   const chapter = useChapterStore(selectChapter)
   const selectedId = useChapterStore((s) => s.selectedId)
   const loadChapters = useChapterStore((s) => s.load)
+  const loadWikiPages = useChapterStore((s) => s.loadWikiPages)
+  const wikiPick = useChapterStore(selectWikiPick)
 
   const engine = useEngineStore((s) => s.engine)
   const launching = useEngineStore((s) => s.launching)
@@ -74,7 +76,8 @@ export default function App() {
     void loadChapters()
     void loadEngine()
     void loadSettings()
-  }, [loadChapters, loadEngine, loadSettings])
+    void loadWikiPages()
+  }, [loadChapters, loadEngine, loadSettings, loadWikiPages])
 
   // An instance appears when the user imports one in Prism, which happens in
   // another window. Coming back is the moment to look again; a focus event,
@@ -120,8 +123,12 @@ export default function App() {
 
   if (!chapter) return null
 
+  // The page the panel shows is the one that opens: the pick, or the
+  // manifest's teaser when there is none.
   const openWiki = () =>
-    OpenChapterWiki(chapter.id).catch((e) => console.warn('open wiki', errMsg(e)))
+    (wikiPick ? OpenWikiPage(wikiPick.url) : OpenChapterWiki(chapter.id)).catch((e) =>
+      console.warn('open wiki', errMsg(e)),
+    )
   const openPrismSite = () =>
     OpenExternal(PRISM_SITE).catch((e) => console.warn('open prism site', errMsg(e)))
   const openReleasePage = () =>
@@ -165,7 +172,12 @@ export default function App() {
                 onOpenReleasePage={openReleasePage}
                 onCheckServer={() => void checkServer(chapter.id)}
               />
-              <Panels chapter={chapter} sizeBytes={instanceSize} onOpenWiki={openWiki} />
+              <Panels
+                chapter={chapter}
+                sizeBytes={instanceSize}
+                wikiPage={wikiPick}
+                onOpenWiki={openWiki}
+              />
             </>
           )}
         </Scrollable>

@@ -102,6 +102,15 @@ func TestPickersNeedTheWindow(t *testing.T) {
 	}
 }
 
+// The bridge may only open a wiki page the app itself listed (#58).
+func TestOpenWikiPageRefusesAnUnlistedURL(t *testing.T) {
+	app := newTestApp(t)
+	err := app.OpenWikiPage("https://kapitel-kapital.pages.dev/wiki/locations/the-obelisk")
+	if err == nil || !strings.Contains(err.Error(), "not a wiki page") {
+		t.Fatalf("nothing listed yet, so nothing opens: %v", err)
+	}
+}
+
 func TestOpenExternalRefusesNonWebURLsBeforeTheWindowExists(t *testing.T) {
 	app := newTestApp(t)
 	if err := app.OpenExternal("file:///etc/passwd"); err == nil || strings.Contains(err.Error(), "window") {

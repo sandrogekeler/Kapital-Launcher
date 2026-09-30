@@ -55,7 +55,13 @@ function withLichdensteinAt(address: string) {
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useChapterStore.setState({ manifest: BUNDLED_MANIFEST, selectedId: 'luxemburg', loaded: false })
+    useChapterStore.setState({
+      manifest: BUNDLED_MANIFEST,
+      selectedId: 'luxemburg',
+      loaded: false,
+      wikiPages: [],
+      wikiPick: {},
+    })
     useEngineStore.setState({
       engine: null,
       instances: null,
@@ -92,6 +98,7 @@ describe('App', () => {
     vi.mocked(Bindings.OpenExternal).mockResolvedValue()
     vi.mocked(Bindings.GetSettings).mockResolvedValue(DEFAULT_SETTINGS)
     vi.mocked(Bindings.SaveSettings).mockResolvedValue()
+    vi.mocked(Bindings.GetWikiPages).mockResolvedValue([])
   })
   afterEach(cleanup)
 
@@ -376,5 +383,32 @@ describe('App', () => {
   it('shows the disclaimer the usage guidelines require', () => {
     render(<App />)
     expect(screen.getByText(/NOT AN OFFICIAL MINECRAFT PRODUCT/)).toBeInTheDocument()
+  })
+
+  it('shows a wiki page of the open chapter and opens that page, else the teaser', async () => {
+    vi.mocked(Bindings.GetWikiPages).mockResolvedValue([
+      {
+        title: 'The Obelisk',
+        line: 'A tower on the water.',
+        url: 'https://kapitel-kapital.pages.dev/wiki/locations/the-obelisk',
+        eras: ['Frangfurd'],
+      },
+    ])
+    vi.mocked(Bindings.OpenWikiPage).mockResolvedValue()
+    vi.mocked(Bindings.OpenChapterWiki).mockResolvedValue()
+    render(<App />)
+    await screen.findByRole('heading', { level: 1 })
+    // Luxemburg has no page in the export: the manifest's teaser stands.
+    expect(screen.getByText('Bellum Castle')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Read the history →' }))
+    expect(Bindings.OpenChapterWiki).toHaveBeenCalledWith('luxemburg')
+
+    fireEvent.click(screen.getByRole('button', { name: /03.*Frangfurd/ }))
+    expect(await screen.findByText('The Obelisk')).toBeInTheDocument()
+    expect(screen.getByText('A tower on the water.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Read the history →' }))
+    expect(Bindings.OpenWikiPage).toHaveBeenCalledWith(
+      'https://kapitel-kapital.pages.dev/wiki/locations/the-obelisk',
+    )
   })
 })
