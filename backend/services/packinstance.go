@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"kapital/backend/models"
@@ -72,6 +73,9 @@ type packVersions struct {
 
 // InstanceCreator writes a chapter's Prism instance.
 type InstanceCreator struct {
+	// mu holds installs to one at a time: a second press, or a second chapter,
+	// waits rather than racing the first for the jar cache or the folder.
+	mu     sync.Mutex
 	jars   *packwizJarCache
 	client *http.Client
 	// checkPackURL is checkURL in the app; tests swap it for a local server.
@@ -91,6 +95,21 @@ func (c *InstanceCreator) checkRedirect(req *http.Request, via []*http.Request) 
 		return errors.New("too many redirects")
 	}
 	return c.checkPackURL("pack.toml redirect", req.URL.String())
+}
+
+// Install creates the chapter's instance in the instances folder report
+// resolved (PrismService.Instances, read just before). It refuses when that
+// folder is unknown or the instance is already there.
+func (c *InstanceCreator) Install(ctx context.Context, chapter models.Chapter, report models.InstanceReport) error {
+	if report.Dir == "" {
+		return errors.New("cannot work out where Prism keeps its instances")
+	}
+	if report.Present[chapter.ID] {
+		return fmt.Errorf("%s is already installed as %s", chapter.Name, chapter.Instance.ID)
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.Create(ctx, chapter, report.Dir)
 }
 
 // Create writes the chapter's instance under instancesDir. It refuses when the

@@ -16,6 +16,8 @@ export function GetServerStatus(arg1:string):Promise<models.ServerStatus>;
 
 export function GetSettings():Promise<models.AppSettings>;
 
+export function InstallChapter(arg1:string):Promise<models.InstanceReport>;
+
 export function InstallPrism():Promise<void>;
 
 export function LaunchChapter(arg1:string):Promise<void>;

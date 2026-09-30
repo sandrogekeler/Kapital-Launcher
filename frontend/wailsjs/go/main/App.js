@@ -30,6 +30,10 @@ export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }
 
+export function InstallChapter(arg1) {
+  return window['go']['main']['App']['InstallChapter'](arg1);
+}
+
 export function InstallPrism() {
   return window['go']['main']['App']['InstallPrism']();
 }

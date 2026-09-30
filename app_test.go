@@ -114,3 +114,26 @@ func TestGetInstancesAnswersForEveryChapterUnderAConfiguredRoot(t *testing.T) {
 		t.Fatalf("%+v", got.Present)
 	}
 }
+
+func TestInstallChapterRefusesBeforeWritingAnything(t *testing.T) {
+	app := newTestApp(t)
+	root := t.TempDir()
+	if err := app.SaveSettings(models.AppSettings{Theme: "dark", PrismRoot: root}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.InstallChapter("atlantis"); err == nil {
+		t.Error("an unknown chapter was not refused")
+	}
+	app.engine = models.EngineInfo{}
+	if _, err := app.InstallChapter("frangfurd"); err == nil {
+		t.Error("an install without Prism was not refused")
+	}
+	// The bundled manifest hosts no pack yet (#25): Install has nothing to write.
+	app.engine = models.EngineInfo{Found: true, Source: "settings"}
+	if _, err := app.InstallChapter("frangfurd"); err == nil || !strings.Contains(err.Error(), "no hosted pack") {
+		t.Errorf("expected the missing pack to be refused, got %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "instances", "kapital-frangfurd")); !os.IsNotExist(err) {
+		t.Fatalf("a refused install wrote into the Prism root: %v", err)
+	}
+}

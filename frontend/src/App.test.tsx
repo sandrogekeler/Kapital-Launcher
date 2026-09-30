@@ -11,6 +11,32 @@ import { BUNDLED_MANIFEST } from './lib/manifest'
 
 vi.mock('../wailsjs/go/main/App')
 
+/** The bundled manifest with Frangfurd's pack hosted, as #25 will make it. */
+function withFrangfurdHosted() {
+  return {
+    ...BUNDLED_MANIFEST,
+    chapters: BUNDLED_MANIFEST.chapters.map((c) =>
+      c.id === 'frangfurd'
+        ? {
+            ...c,
+            pack: { ...c.pack, packwiz: 'https://kapitel-kapital.pages.dev/frangfurd/pack.toml' },
+          }
+        : c,
+    ),
+  }
+}
+
+const prismFound = {
+  found: true,
+  executable: 'C:/Prism/prismlauncher.exe',
+  version: '11.1.0',
+  root: '',
+  source: 'standard-location',
+}
+
+const report = (present: Record<string, boolean>) =>
+  models.InstanceReport.createFrom({ root: 'C:/Prism', dir: 'C:/Prism/instances', present })
+
 /** The bundled manifest with Lichdenstein's server at a settled address. */
 function withLichdensteinAt(address: string) {
   return {
@@ -29,6 +55,8 @@ describe('App', () => {
       engine: null,
       instances: null,
       launching: null,
+      installing: null,
+      installedNow: null,
       error: null,
       release: null,
       install: null,
@@ -155,25 +183,74 @@ describe('App', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Lichdenstein')
   })
 
-  it('warns when the chapter has no Prism instance but keeps Play, and looks again on focus', async () => {
-    vi.mocked(Bindings.GetEngine).mockResolvedValue({
-      found: true,
-      executable: 'C:/Prism/prismlauncher.exe',
-      version: '11.1.0',
-      root: '',
-      source: 'standard-location',
-    })
-    const report = (present: Record<string, boolean>) =>
-      models.InstanceReport.createFrom({ root: 'C:/Prism', dir: 'C:/Prism/instances', present })
+  it('shows Install, disabled, for a chapter whose pack is not hosted, and looks again on focus', async () => {
+    vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
     vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ luxemburg: false }))
     render(<App />)
-    expect(await screen.findByText('○ Not in Prism yet')).toBeInTheDocument()
-    expect(screen.getByText('No kapital-luxemburg instance was found')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Play Luxemburg' })).toBeEnabled()
+    expect(await screen.findByText('○ Not published yet')).toBeInTheDocument()
+    expect(screen.getByText('Its pack is not hosted yet')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Install Luxemburg' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Play Luxemburg' })).not.toBeInTheDocument()
 
+    // Made in Prism by hand while the launcher was in the background.
     vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ luxemburg: true }))
     fireEvent.focus(window)
-    await waitFor(() => expect(screen.queryByText('○ Not in Prism yet')).not.toBeInTheDocument())
+    expect(await screen.findByRole('button', { name: 'Play Luxemburg' })).toBeEnabled()
+    expect(screen.queryByText('○ Not published yet')).not.toBeInTheDocument()
+  })
+
+  it('keeps Play when the instance cannot be looked for', async () => {
+    vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
+    render(<App />)
+    expect(await screen.findByRole('button', { name: 'Play Luxemburg' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /Install/ })).not.toBeInTheDocument()
+  })
+
+  it('installs a hosted chapter, then offers Play and says the pack comes with it', async () => {
+    const manifest = withFrangfurdHosted()
+    useChapterStore.setState({ manifest, selectedId: 'frangfurd' })
+    vi.mocked(Bindings.GetManifest).mockResolvedValue(models.Manifest.createFrom(manifest))
+    vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
+    vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ frangfurd: false }))
+    let finish!: (r: models.InstanceReport) => void
+    vi.mocked(Bindings.InstallChapter).mockReturnValue(new Promise((r) => (finish = r)))
+    vi.mocked(Bindings.LaunchChapter).mockResolvedValue()
+    render(<App />)
+    expect(await screen.findByText('○ Not installed')).toBeInTheDocument()
+    expect(screen.getByText('Install adds kapital-frangfurd to Prism')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Install Frangfurd' }))
+    expect(Bindings.InstallChapter).toHaveBeenCalledWith('frangfurd')
+    expect(await screen.findByText('◐ Installing')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Install Frangfurd' })).toBeDisabled()
+
+    await act(async () => finish(report({ frangfurd: true })))
+    expect(await screen.findByText('● Installed')).toBeInTheDocument()
+    expect(screen.getByText('The first Play downloads the pack')).toBeInTheDocument()
+    const play = screen.getByRole('button', { name: 'Play Frangfurd' })
+    expect(play).toBeEnabled()
+
+    fireEvent.click(play)
+    expect(Bindings.LaunchChapter).toHaveBeenCalledWith('frangfurd')
+    await waitFor(() => expect(screen.queryByText('● Installed')).not.toBeInTheDocument())
+  })
+
+  it('keeps Install and shows why when the install fails', async () => {
+    const manifest = withFrangfurdHosted()
+    useChapterStore.setState({ manifest, selectedId: 'frangfurd' })
+    vi.mocked(Bindings.GetManifest).mockResolvedValue(models.Manifest.createFrom(manifest))
+    vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
+    vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ frangfurd: false }))
+    vi.mocked(Bindings.InstallChapter).mockRejectedValue(
+      'frangfurd: the manifest says Minecraft 1.21.1, the pack 1.21.4',
+    )
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Install Frangfurd' }))
+    expect(
+      await screen.findByText('frangfurd: the manifest says Minecraft 1.21.1, the pack 1.21.4'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Install Frangfurd' })).toBeEnabled()
+    expect(screen.getByText('○ Not installed')).toBeInTheDocument()
   })
 
   it('offers to get Prism, says what it downloads, and follows the install', async () => {

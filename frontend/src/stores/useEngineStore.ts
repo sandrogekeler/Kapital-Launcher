@@ -5,6 +5,7 @@ import {
   GetEngine,
   GetInstances,
   GetPrismRelease,
+  InstallChapter,
   InstallPrism,
   LaunchChapter,
   RefreshEngine,
@@ -23,6 +24,10 @@ interface EngineStore {
   engine: EngineInfo | null
   instances: InstanceReport | null
   launching: string | null
+  /** The chapter whose instance is being written, while InstallChapter runs. */
+  installing: string | null
+  /** The chapter installed last, until it is played: its first Play downloads the pack. */
+  installedNow: string | null
   error: string | null
   /** Prism's latest release, when the launcher could install or update it; null when unknown. */
   release: PrismRelease | null
@@ -36,6 +41,7 @@ interface EngineStore {
   loadInstances: () => Promise<void>
   refresh: () => Promise<void>
   launch: (chapterId: string) => Promise<void>
+  installChapter: (chapterId: string) => Promise<void>
   clearError: () => void
 }
 
@@ -43,6 +49,8 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
   engine: null,
   instances: null,
   launching: null,
+  installing: null,
+  installedNow: null,
   error: null,
   release: null,
   install: null,
@@ -111,13 +119,27 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
   launch: async (chapterId) => {
     // "Prism is ready, sign in on first play" has said its piece once Play is pressed.
     if (get().install?.phase === 'done') set({ install: null })
-    set({ launching: chapterId, error: null })
+    set({ launching: chapterId, installedNow: null, error: null })
     try {
       await LaunchChapter(chapterId)
     } catch (e) {
       set({ error: errMsg(e) })
     } finally {
       set({ launching: null })
+    }
+  },
+
+  // A write like launch: Go answers with the instances read again, so the
+  // button turns into Play from what is on disk, not from an assumption.
+  installChapter: async (chapterId) => {
+    set({ installing: chapterId, installedNow: null, error: null })
+    try {
+      const instances = await InstallChapter(chapterId)
+      set({ instances, installedNow: instances.present[chapterId] ? chapterId : null })
+    } catch (e) {
+      set({ error: errMsg(e) })
+    } finally {
+      set({ installing: null })
     }
   },
 

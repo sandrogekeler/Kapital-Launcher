@@ -31,6 +31,9 @@ export default function App() {
   const installPrism = useEngineStore((s) => s.installPrism)
   const installed = useEngineStore(selectInstalled(selectedId))
   const launch = useEngineStore((s) => s.launch)
+  const installing = useEngineStore((s) => s.installing)
+  const installedNow = useEngineStore((s) => s.installedNow)
+  const installChapter = useEngineStore((s) => s.installChapter)
 
   const status = useServerStore(selectStatus(selectedId))
   const checking = useServerStore((s) => s.checking)
@@ -122,9 +125,12 @@ export default function App() {
             status={status}
             installed={installed}
             launching={launching === chapter.id}
+            installing={installing === chapter.id}
+            installedNow={installedNow === chapter.id}
             checking={checking === chapter.id}
             error={launchError}
             onPlay={() => void launch(chapter.id)}
+            onInstall={() => void installChapter(chapter.id)}
             release={release}
             install={install}
             onGetPrism={() => void installPrism()}
