@@ -29,6 +29,7 @@ type App struct {
 	prism    *services.PrismService
 	managed  *services.ManagedPrism
 	status   *services.StatusService
+	creator  *services.InstanceCreator
 	stop     context.CancelFunc
 
 	mu     sync.Mutex
@@ -51,6 +52,7 @@ func NewApp(dataDir string, manifest []byte) (*App, error) {
 		prism:    prism,
 		managed:  managed,
 		status:   services.NewStatusService(),
+		creator:  services.NewInstanceCreator(dataDir),
 	}, nil
 }
 
@@ -120,6 +122,35 @@ func (a *App) GetInstances() (models.InstanceReport, error) {
 		return models.InstanceReport{}, err
 	}
 	return a.prism.Instances(settings, engine, a.manifest.Chapters), nil
+}
+
+// InstallChapter writes the chapter's Prism instance into the instances folder
+// GetInstances resolves, and returns that report read again (#24). The chapter
+// id is looked up in the validated manifest, so the instance id and pack URL
+// are the manifest's. What is written, and the one-folder rule, is
+// services/packinstance.go's; the pack itself downloads on the first Play.
+func (a *App) InstallChapter(chapterID string) (models.InstanceReport, error) {
+	chapter, ok := a.chapter(chapterID)
+	if !ok {
+		return models.InstanceReport{}, fmt.Errorf("no chapter %q", chapterID)
+	}
+	engine, err := a.GetEngine()
+	if err != nil {
+		return models.InstanceReport{}, err
+	}
+	if !engine.Found {
+		return models.InstanceReport{}, services.ErrPrismNotFound
+	}
+	report, err := a.GetInstances()
+	if err != nil {
+		return report, err
+	}
+	if err := a.creator.Install(a.context(), chapter, report); err != nil {
+		slog.Error("install chapter", "chapter", chapterID, "error", err)
+		return report, err
+	}
+	slog.Info("installed", "chapter", chapterID, "instance", chapter.Instance.ID)
+	return a.GetInstances()
 }
 
 // GetPrismRelease reads Prism's latest release: what installing Prism would

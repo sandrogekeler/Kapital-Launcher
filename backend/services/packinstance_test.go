@@ -305,6 +305,36 @@ func TestCreateWritesAPrismInstance(t *testing.T) {
 	}
 }
 
+func TestInstallWritesIntoTheReportedFolder(t *testing.T) {
+	h, c := newFakePackHost(t)
+	report := models.InstanceReport{Dir: filepath.Join(t.TempDir(), "instances"), Present: map[string]bool{"frangfurd": false}}
+	if err := c.Install(context.Background(), frangfurdChapter(h.srv.URL+"/frangfurd/pack.toml"), report); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(report.Dir, "kapital-frangfurd", "instance.cfg")); err != nil {
+		t.Fatalf("no instance written: %v", err)
+	}
+}
+
+func TestInstallRefusesAnUnknownFolderOrAPresentInstance(t *testing.T) {
+	h, c := newFakePackHost(t)
+	chapter := frangfurdChapter(h.srv.URL + "/frangfurd/pack.toml")
+	cases := map[string]models.InstanceReport{
+		"no instances folder": {Present: map[string]bool{}},
+		"already installed":   {Dir: t.TempDir(), Present: map[string]bool{"frangfurd": true}},
+	}
+	for name, report := range cases {
+		t.Run(name, func(t *testing.T) {
+			if err := c.Install(context.Background(), chapter, report); err == nil {
+				t.Fatal("expected a refusal")
+			}
+		})
+	}
+	if n := h.jarGets.Load(); n != 0 {
+		t.Fatalf("a refused install still fetched %d jars", n)
+	}
+}
+
 func TestCreateRefusesAPackTheManifestDisagreesWith(t *testing.T) {
 	h, c := newFakePackHost(t)
 	h.packTOML = strings.Replace(frangfurdPackTOML, `minecraft = "1.21.1"`, `minecraft = "1.21.4"`, 1)

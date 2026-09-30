@@ -20,6 +20,8 @@ describe('useEngineStore', () => {
       engine: null,
       instances: null,
       launching: null,
+      installing: null,
+      installedNow: null,
       error: null,
       release: null,
       install: null,
@@ -30,6 +32,35 @@ describe('useEngineStore', () => {
     vi.mocked(App.GetInstances).mockReset()
     vi.mocked(App.RefreshEngine).mockReset()
     vi.mocked(App.LaunchChapter).mockReset()
+    vi.mocked(App.InstallChapter).mockReset()
+  })
+
+  it('installs a chapter and takes the instances Go read back', async () => {
+    const report = { root: 'C:/Prism', dir: 'C:/Prism/instances', present: { frangfurd: true } }
+    vi.mocked(App.InstallChapter).mockResolvedValue(models.InstanceReport.createFrom(report))
+    const pending = useEngineStore.getState().installChapter('frangfurd')
+    expect(useEngineStore.getState().installing).toBe('frangfurd')
+    await pending
+    const s = useEngineStore.getState()
+    expect(s.installing).toBeNull()
+    expect(s.installedNow).toBe('frangfurd')
+    expect(selectInstalled('frangfurd')(s)).toBe(true)
+  })
+
+  it('records a failed install and leaves the instances as they were', async () => {
+    const before = models.InstanceReport.createFrom({
+      root: 'C:/Prism',
+      dir: 'C:/Prism/instances',
+      present: { frangfurd: false },
+    })
+    useEngineStore.setState({ instances: before })
+    vi.mocked(App.InstallChapter).mockRejectedValue('frangfurd has no hosted pack to install')
+    await useEngineStore.getState().installChapter('frangfurd')
+    const s = useEngineStore.getState()
+    expect(s.error).toBe('frangfurd has no hosted pack to install')
+    expect(s.installing).toBeNull()
+    expect(s.installedNow).toBeNull()
+    expect(s.instances).toBe(before)
   })
 
   it('reads the engine and degrades to unknown without a bridge', async () => {

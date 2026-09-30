@@ -20,7 +20,7 @@ any file is opened and live in `agent_docs/CLAUDE.md`. The rest is here.
   is generated and never edited.
 - A bound method that takes an id from the frontend resolves it through the
   validated manifest (`a.chapter(id)`) and uses the manifest's values, never
-  the caller's. `LaunchChapter` and `OpenChapterWiki` are the pattern.
+  the caller's. `LaunchChapter`, `InstallChapter` and `OpenChapterWiki` are the pattern.
 
 ## Where errors are handled
 

@@ -36,8 +36,8 @@ the scaffold changed the picture.
       launcher-managed portable copy with a one-click update offer (ADR-11, #23)
 - [ ] Settings screen: Prism executable, Prism root, profile name, theme
 - [x] Know whether a chapter's instance exists under the resolved root, and
-      warn on the state line when it does not; Play stays Play until
-      milestone 4 can install (decided 2026-09-29)
+      warn on the state line when it does not; Install replaces Play once
+      milestone 4 can install (#24)
 
 ## Milestone 3: Launch end to end
 
@@ -50,8 +50,9 @@ the scaffold changed the picture.
 ## Milestone 4: Packs
 
 - [ ] Author the Frangfurd pack in packwiz; host `pack.toml` and `index.toml`
-- [ ] Fresh install: `prismlauncher -I <mrpack url>`; observe the import dialog
-      and what happens to an instance with the same name
+- [ ] Fresh install: Install writes the `kapital-<id>` instance itself (#22,
+      #24; `-I` cannot fix the folder name, ADR-2 amendment). Built; left is a
+      real Prism opening it and the first Play installing the pack
 - [ ] Day-to-day sync: pre-launch command built locally from a template,
       `"$INST_JAVA" -jar packwiz-installer-bootstrap.jar <pack.toml>`, never
       from the manifest

@@ -42,6 +42,12 @@ export function chapterById(manifest: Manifest, id: string): Chapter | undefined
 export const playLabel = (chapter: Chapter) =>
   chapter.server?.joinOnLaunch ? `Join ${chapter.name}` : `Play ${chapter.name}`
 
+/** Whether the chapter's pack is hosted, so Install has something to install (#25). */
+export const isPublished = (chapter: Chapter) => chapter.pack.packwiz != null
+
+/** The verb on the button when the chapter's instance is missing. */
+export const installLabel = (chapter: Chapter) => `Install ${chapter.name}`
+
 /** The one-word pill for the chapter's state, as the reference writes it. */
 export const stateLabel = (state: string) =>
   ({ released: 'Released', development: 'In development', planned: 'Planned' })[state] ?? state

@@ -9,7 +9,7 @@ Two reaches matter: **network** (a manifest, a pack index, a download, a server
 ping response) and **bridge** (a bound method on `App`, callable by anything
 that runs in the WebView).
 
-Bound methods on 2026-09-30: **13** (`grep -c '^func (a \*App) [A-Z]' app.go`).
+Bound methods on 2026-09-30: **14** (`grep -c '^func (a \*App) [A-Z]' app.go`).
 A different count is new surface to classify: add the method to this table.
 
 | Method | Takes from the bridge | Reaches | Item |
@@ -20,6 +20,7 @@ A different count is new surface to classify: add the method to this table.
 | `GetInstances` | nothing | the two reads in a Prism root | S1.1 |
 | `GetPrismRelease` | nothing | one bounded GET to Prism's fixed release URL | S4.5 |
 | `InstallPrism` | nothing | download, verify and unpack Prism's official build | S4.5 |
+| `InstallChapter` | a chapter id | the manifest's instance and pack URL: one instance folder written into the Prism root | S3.3, S4.6 |
 | `LaunchChapter`, `OpenChapterWiki`, `GetServerStatus` | a chapter id | the manifest's instance, URL or address for it | S3.3, S6.1 |
 | `SaveSettings` | a whole `AppSettings` | the settings file, and the executable detection then runs | S3.5 |
 | `OpenExternal` | a URL | the system browser, web URLs only | S3.4 |
@@ -210,5 +211,5 @@ them the day it is not.
 ## Open backlog
 
 - S2.3, S4.2 to S4.4: not built yet; the items are written so the code meets
-  them when it is. S4.6 is built but not yet called from the app (#24).
+  them when it is.
 - S5.3: verify the inspector setting against the first `wails build` output.
