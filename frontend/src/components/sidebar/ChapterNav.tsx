@@ -5,8 +5,9 @@ import { ChapterButton } from './ChapterButton'
 /**
  * The chapter list with one highlight behind it (#59). The highlight is a
  * single element that glides to the selected row, with the same duration and
- * easing as the chapter card's slide, so the two movements read as one. The
- * rows stay pure: they draw no selected state of their own beyond the dot.
+ * easing as the chapter card's slide, so the two movements read as one, and
+ * its border is the open chapter's accent (#77). The rows stay pure: they
+ * draw no selected state of their own beyond their tinted art.
  *
  * Its place is measured from the selected row before paint, so the first
  * render shows it in place with no transition; every later selection moves
@@ -47,7 +48,7 @@ export function ChapterNav() {
           // style rule allows, as the scroll thumb's is.
           // eslint-disable-next-line no-restricted-syntax
           style={{ transform: `translateY(${place.top}px)`, height: place.height }}
-          className={`bg-raised border-line-strong ease-glide pointer-events-none absolute inset-x-0 top-0 rounded-lg border motion-reduce:transition-none ${
+          className={`bg-raised border-accent-edge ease-glide pointer-events-none absolute inset-x-0 top-0 rounded-lg border motion-reduce:transition-none ${
             settled ? 'duration-slow transition-[transform,height]' : ''
           }`}
         />

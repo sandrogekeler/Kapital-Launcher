@@ -12,9 +12,9 @@ interface Props {
 
 /**
  * One row of the chapter nav: the pack's icon (#77), number and name in the
- * chapter's own accent, era underneath, and a dot that lights when the
- * chapter is open. The selected row's border is the nav's highlight, drawn
- * behind the rows; the row itself fades its own art in behind its text,
+ * chapter's own accent, era underneath. The selected row's border is the
+ * nav's highlight, drawn behind the rows in the open chapter's accent; the
+ * row itself fades its own art in behind its text,
  * blurred, tinted toward its accent and washed, while it is the one open
  * (#69, #77), and stops its hover tint.
  *
@@ -56,7 +56,7 @@ export function ChapterButton({ chapter, current, onSelect, ref }: Props) {
         </div>
       )}
       {icon ? (
-        <img src={icon} alt="" className="size-10 shrink-0 object-contain" draggable={false} />
+        <img src={icon} alt="" className="size-10 shrink-0 object-contain p-1" draggable={false} />
       ) : (
         <div
           className="art-pending art-pending-thumb border-line-strong size-10 shrink-0 rounded-sm border"
@@ -70,10 +70,6 @@ export function ChapterButton({ chapter, current, onSelect, ref }: Props) {
         </div>
         <span className="text-fg-faint text-xs">{chapter.era}</span>
       </div>
-      <span
-        className={`rounded-pill size-1.75 shrink-0 ${current ? 'bg-accent' : 'bg-transparent'}`}
-        aria-hidden
-      />
     </button>
   )
 }
