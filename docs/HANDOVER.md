@@ -1,7 +1,9 @@
 # Handover
 
 Written 2026-09-30, at the end of the second local session (Windows 11, the
-author's PC), and brought up to date the same day by a cloud session. Read `agent_docs/ROADMAP.md` for the milestones, `docs/adr/` for
+author's PC), brought up to date the same day by a cloud session and again by
+the third local session (Install, the local pack override, the first real
+install). Read `agent_docs/ROADMAP.md` for the milestones, `docs/adr/` for
 the decisions and the GitHub issues for the work items; this file is what a
 fresh session cannot work out on its own.
 
@@ -20,27 +22,31 @@ request stacked on it.
 
 ## Open pull requests
 
-#26, #27 and #28 are merged; #23 is closed and `main` is green.
+#37, #38 and #39 are merged. Merge in this order; each stacked one retargets
+to `main` when the one below it merges.
 
 | PR | What | State |
 |---|---|---|
+| #40 | Install replaces Play until the instance exists (#24) | Green |
+| #42 | Install from a local `packwiz serve` (#41), stacked on #40 | Green; tested for real on the author's PC, results in its description |
+| this one | The handover, stacked on #42 | |
+| kapital-packs#1 | New Frangfurd title video, Drippy loading screen, FancyMenu's forced fullscreen off | Tested in game through #42 |
 | #1 | Dependabot: pnpm/action-setup 6.1.0 | Its base is `cedad35`, 22 commits behind `main`, and `backend` failed there (`pattern all:frontend/dist: no matching files found`). A fresh `@dependabot rebase` should clear it |
 
 ## Work items, in the order agreed
 
-1. **#22** Generate a Prism instance for a fresh install: memory from the
-   chapter's `memoryGb`, a named JVM preset (e.g. `"jvm": "zgc"`, never raw
-   arguments in the manifest), the packwiz-installer pre-launch command, the
-   loader versions. Decided 2026-09-30: the launcher writes the
-   `kapital-<id>` folder itself, because `prismlauncher -I` cannot fix the
-   folder name (see the issue's comment), and the versions come from the
-   hosted `pack.toml`.
-2. **#24** Install a chapter before it can be played: Install replaces Play
-   when the `kapital-<id>` instance is missing. Nothing comes preinstalled.
-3. **#25** Publish the packs on Cloudflare Pages, add its `pages.dev` host to
+Done this session: #22's writer (merged in #39) is called by Install (#40,
+closes #24), and #42 (closes #41) lets it install from `packwiz serve`. #22
+stays open until the author closes it.
+
+1. **#25** Publish the packs on Cloudflare Pages, add its `pages.dev` host to
    `AllowedManifestHosts`, test-install from `packwiz serve` first.
-4. **#20** Launch the three real packs end to end, and **#5** the settings
-   screen (its gear sits disabled in the header bar since #13).
+   Frangfurd already installs and launches end to end from `packwiz serve`
+   (#42), so hosting is the remaining step for it; #35 comes first.
+2. **#20** Launch the three real packs end to end, and **#5** the settings
+   screen (its gear sits disabled in the header bar since #13). #5 also gets
+   a field for `packOverrides`, set by hand in `settings.json` until then.
+3. **#36** Memory and optional mods per player.
 
 Plan each with the author before building; they choose between the options.
 
@@ -65,9 +71,14 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
 - **Files are stored byte for byte** (`.gitattributes`: `* -text`). The first
   commit normalised line endings and broke every `index.toml` hash; do not
   reintroduce `text=auto`.
-- **No file over 25 MiB** (Cloudflare Pages). The Frangfurd title video is a
-  40 Mbit/s 4K re-encode (16.8 MB); the 68 MB original stays in the author's
-  Modrinth profile.
+- **No file over 25 MiB** (Cloudflare Pages). The Frangfurd title video
+  (kapital-packs#1) is a two-pass 4K60 re-encode at a 40 Mbit/s target, which
+  x264 settled at 31 Mbit/s, 11.7 MB. The master is
+  `D:\Private\Projects\Videogames\Minecraft\Projects\KapitelKapital\assets\intro\frangfurd\Frangfurd-Intro.mp4`.
+- **FancyMenu's `force_fullscreen` must stay off** while Drippy Loading Screen
+  is in the pack: together they leave the title screen drawn in the bottom-left
+  corner of a black fullscreen screen (kapital-packs#1). Minecraft's own
+  `fullscreen:true` in the default options is what makes the game fullscreen.
 - **Not hosted yet.** The Pages project for `kapital-packs` does not exist;
   that is #25. Hosting makes every indexed file public, not only the
   metadata: #35.
@@ -83,16 +94,32 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
 - **Prism 11.1.0** at `%LOCALAPPDATA%\Programs\PrismLauncher`, data root
   `%APPDATA%\PrismLauncher`. The launcher uses it; a managed Prism is only a
   fallback.
-- **`kapital-frangfurd`** Prism instance: copied from the Modrinth profile
+- **Two Frangfurd instances since the first real install.**
+  `kapital-frangfurd` is now the one Install wrote from `packwiz serve`: its
+  pre-launch command syncs from `http://localhost:8080/pack.toml`, so **it only
+  starts while `packwiz serve` runs in `kapital-packs/frangfurd`** (a failed
+  pre-launch command fails the launch), and the launcher marks it "Dev pack".
+  Its `minecraft/options.txt.before-windowed-test*` files are leftovers of the
+  fullscreen tests. The author's hand-copied instance, the one the importer
+  reads, is now **`kapital-frangfurd-copied`**; `kapital-packs`' README still
+  names `kapital-frangfurd` in its import command. Which of the two to keep is
+  the author's call: delete the dev one and rename the copy back, or keep
+  editing the copy and point the import at it.
+- `%APPDATA%\KapitalLauncher\settings.json` carries
+  `"packOverrides": {"frangfurd": "http://localhost:8080/pack.toml"}`. Remove it
+  to go back to the manifest's pack (none is hosted yet, so Install is then
+  disabled again).
+- **The hand-copied Frangfurd instance** was copied from the Modrinth profile
   "Morner" (the Modrinth App refuses to export it: "loader mismatch"). JVM
   arguments `-XX:+UseZGC -XX:+ZGenerational` (Distant Horizons warns under
   G1), memory 3 to 8 GB, Default Options seeds `options.txt`, keybindings and
   the server list "Frangfurd (Global)" (`female-specified.gl.joinmc.link`) and
   "Frangfurd (Germany)" (`rails-enjoyed.tun.ply.gg`).
-- **Not in Prism yet:** Lichdenstein (Modrinth App profile, Fabric 0.16.10 on
-  1.20.6, 31 mods) and Luxemburg (CurseForge instance, Forge 43.5.0 on 1.19.2,
-  208 mods, 12 GB). Move them the same way: an empty Prism instance named
-  `kapital-<chapter>` with the right loader, then copy the files in.
+- **Lichdenstein** has a `kapital-lichdenstein` instance in Prism now, made
+  by the author. **Not in Prism yet:** Luxemburg (CurseForge instance, Forge
+  43.5.0 on 1.19.2, 208 mods, 12 GB). Move it the same way: an empty Prism
+  instance named `kapital-luxemburg` with the right loader, then copy the
+  files in.
 - **Never open the Modrinth App's `app.db`**: it holds account sign-ins.
 - The Cloudflare Pages project for the download site builds every pull
   request unless its build watch paths are set (`site/README.md`). Ask
@@ -110,7 +137,24 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
 
 - **Git Bash heredocs collapse backslashes** in Python and TypeScript written
   through them. Write files with the editor tool, not `cat <<'EOF'`, when a
-  backslash or an apostrophe inside quotes matters.
+  backslash or an apostrophe inside quotes matters. It happened again this
+  session: `\a` and `\f` in a Windows path became control characters.
+- **Git Bash's `sed -i` strips CRLF.** Pack files are stored byte for byte
+  and most of Frangfurd's configs have Windows line endings, so a one-line
+  `sed` rewrites the whole file. Edit pack files in binary (Python, `rb`/`wb`)
+  and check `git diff --stat` shows one line.
+- **`gh pr edit --body-file` with an empty file wipes the description.** A
+  Python step that fails on a `●` under the cp1252 console still leaves the
+  file empty; write the body with the editor tool instead.
+- **"The process cannot access the file" when renaming an instance folder:**
+  look for another Claude Code session whose working directory is inside it
+  (`list_sessions` shows each `cwd`), before blaming Explorer or Prism.
+- **`wails dev` serves the app with live Go bindings at
+  `http://localhost:34115`**, so the browser pane can drive the real backend
+  (Install, Play) without the Wails window. Wails' own `ipc.js` logs one
+  harmless `reading 'nodes'` error there.
+- **`packwiz serve --refresh=false` reads `index.toml` once at start**:
+  restart it after every `packwiz refresh`, or it serves the old index.
 - **Symlinks:** this PC cannot create them without a privilege the Windows CI
   runner has, so a test can pass here and fail in CI. Check CI, not only the
   local run.
