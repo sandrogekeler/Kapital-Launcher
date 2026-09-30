@@ -46,7 +46,8 @@ export function Hero({ chapter, onOpenWiki, onOpenSettings }: Props) {
         </>
       )}
 
-      <div className="absolute top-5 right-6 flex gap-1">
+      {/* A wash behind the tools, so they read on bright art too (#77). */}
+      <div className="bg-sunken/55 absolute top-5 right-6 flex gap-1 rounded-md backdrop-blur-sm">
         <IconButton icon={Pencil} title={`${chapter.name} settings`} onClick={onOpenSettings} />
         <IconButton icon={BookOpen} title="Read the history on the wiki" onClick={onOpenWiki} />
       </div>
