@@ -123,6 +123,9 @@ jobs:
 
       - run: go vet ./...
       - run: go test ./...
+      # backend/services' floor, a ratchet held in scripts/coverage-floor. Run on
+      # one platform only: the figure differs by a few build-tagged lines.
+      - run: go run ./scripts/coverage-floor
       - run: go build ./...
 
       # Reports only vulnerabilities whose symbols this code reaches. Pinned,

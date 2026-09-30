@@ -40,9 +40,9 @@ and by CI. Items below that a gate already holds say so; the rest are review.
   revert, reads degrade to the bundled manifest or "unknown". Gate: the store
   tests.
 - **Settings are written atomically and owner-only.** Gate: `settings_test.go`.
-- **Coverage floors are ratchets.** `vite.config.ts`'s threshold rises with
-  coverage and is never lowered to make a build pass. A Go floor arrives with
-  the first service large enough to need one.
+- **Coverage floors are ratchets.** `vite.config.ts`'s threshold and
+  `scripts/coverage-floor`'s for `backend/services` rise with coverage and are
+  never lowered to make a build pass.
 
 ## 3. Scalable
 
@@ -68,7 +68,6 @@ and by CI. Items below that a gate already holds say so; the rest are review.
 
 ## Open backlog
 
-- Coverage floor for `backend/services` once it has a floor-sized surface.
 - `[verify]` markers in `backend/services/prism.go`: the macOS and Linux install
   paths and their `--version` output. Windows was observed on 2026-09-29
   (Roadmap, milestone 2).
