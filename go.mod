@@ -6,7 +6,7 @@ toolchain go1.26.8
 
 require (
 	github.com/wailsapp/wails/v2 v2.16.0
-	golang.org/x/sys v0.46.0
+	golang.org/x/sys v0.48.0
 )
 
 require (
