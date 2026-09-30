@@ -33,7 +33,7 @@ export function Panels({ chapter, sizeBytes, wikiPage, onOpenWiki }: Props) {
   ]
 
   return (
-    <section className="grid min-h-0 grow grid-cols-3">
+    <section className="grid shrink-0 grid-cols-3">
       <div className="border-line flex flex-col gap-3 border-r py-6 pr-7 pl-14">
         <PanelTitle>Pack</PanelTitle>
         <div className="flex flex-col gap-3.5">

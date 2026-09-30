@@ -173,7 +173,11 @@
       "properties": {
         "unit": { "const": "px" },
         "sidebar": { "type": "integer", "minimum": 1 },
-        "hero": { "type": "integer", "minimum": 1 },
+        "hero": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The hero's greatest height; it shrinks below this so the chapter card fits the window (#68)."
+        },
         "titlebar": { "type": "integer", "minimum": 1 },
         "slide": {
           "type": "integer",
