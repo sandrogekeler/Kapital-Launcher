@@ -39,6 +39,11 @@ were green in CI when this was written.
 | #63 | A random wiki page per chapter from the lore export (#58) | #62 |
 | #64 | The chapter card that slides by direction, the nav highlight gliding (#59) | #63 |
 | #65 | A chapter's memory and JVM preset from a pen in its hero (#36, first half) | #64 |
+| #72 | The slide the way the content moves, on a softer glide curve (#67) | #65 |
+| #73 | The card fits the window, the hero taking the height left over (#68) | #72 |
+| #74 | The logo at 16 px (#70) | #73 |
+| #75 | Title art in the hero, blurred art behind the selected nav tile (#69) | #74 |
+| #76 | "Update and play" when the synced pack.toml's hash is behind the source's, a Version row (#71) | #75 |
 | #53 | Dependabot: `golang.org/x/sys` 0.48.0 | `main` |
 
 Owed on the author's PC, in the Wails window (the browser pane cannot do
@@ -60,7 +65,8 @@ a GitHub release and no `.mrpack` (it would embed the CurseForge jar). It is
 not hosted yet, so players cannot install it: that is #25.
 
 Done in the fourth session, all in the stack above: #5, #55, #56, #57,
-#58, #59 and the first half of #36. Left, in order:
+#58, #59, the first half of #36, then #67 to #71 from the author's second
+round of requests. Left, in order:
 
 1. **#25** Publish the packs on Cloudflare Pages, add its `pages.dev` host to
    `AllowedManifestHosts`, test-install from `packwiz serve` first.
