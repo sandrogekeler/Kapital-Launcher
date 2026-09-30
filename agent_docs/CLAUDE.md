@@ -68,6 +68,7 @@ pnpm build | preview   # preview serves dist/, without _headers
 
 # repo root
 go vet ./... && go test ./...
+go run ./scripts/coverage-floor  # backend/services' floor, held in the script
 wails dev | wails build | wails generate module
 node scripts/validate-schemas.mjs
 .claude/suite-check.py           # every gate above, from .claude/suite.json

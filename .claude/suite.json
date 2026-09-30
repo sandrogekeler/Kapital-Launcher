@@ -59,6 +59,10 @@
         "run": "go test ./..."
       },
       {
+        "name": "services coverage floor",
+        "run": "go run ./scripts/coverage-floor"
+      },
+      {
         "name": "release notes",
         "run": "python3 .github/scripts/release-notes_test.py"
       },
