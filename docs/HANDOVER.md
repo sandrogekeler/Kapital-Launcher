@@ -30,7 +30,9 @@ to `main` when the one below it merges.
 | #40 | Install replaces Play until the instance exists (#24) | Green |
 | #42 | Install from a local `packwiz serve` (#41), stacked on #40 | Green; tested for real on the author's PC, results in its description |
 | this one | The handover, stacked on #42 | |
-| kapital-packs#1 | New Frangfurd title video, Drippy loading screen, FancyMenu's forced fullscreen off | Tested in game through #42 |
+| #48 | The logo's gradient colours as `color.brand` tokens | |
+| #49 | Frangfurd shown as pack 1.0.0 with 96 mods | |
+| kapital-packs#2 | The README's release steps without a `.mrpack` | |
 | #1 | Dependabot: pnpm/action-setup 6.1.0 | Its base is `cedad35`, 22 commits behind `main`, and `backend` failed there (`pattern all:frontend/dist: no matching files found`). A fresh `@dependabot rebase` should clear it |
 
 ## Work items, in the order agreed
@@ -38,6 +40,12 @@ to `main` when the one below it merges.
 Done this session: #22's writer (merged in #39) is called by Install (#40,
 closes #24), and #42 (closes #41) lets it install from `packwiz serve`. #22
 stays open until the author closes it.
+
+**Frangfurd 1.0.0 is released** in `kapital-packs`: kapital-packs#1 merged
+(new title video, Drippy loading screen and layout, FancyMenu's forced
+fullscreen off, NeoForge's early window off), tagged `frangfurd-v1.0.0` with
+a GitHub release and no `.mrpack` (it would embed the CurseForge jar). It is
+not hosted yet, so players cannot install it: that is #25.
 
 1. **#25** Publish the packs on Cloudflare Pages, add its `pages.dev` host to
    `AllowedManifestHosts`, test-install from `packwiz serve` first.
@@ -60,10 +68,11 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
 
 - **Source repository:** `sandrogekeler/kapital-packs`, private, cloned beside
   this one (`KapitalLauncher/kapital-packs`). One packwiz folder per chapter;
-  only `frangfurd/` exists (version 1.0.0, NeoForge 21.1.252, Minecraft
-  1.21.1): 104 files referenced on Modrinth, Create Propulsion on CurseForge
-  (`mode = "metadata:curseforge"`; whether it downloads without a manual step
-  is untested), plus its config, KubeJS, menu assets and resource pack.
+  only `frangfurd/` exists (released as 1.0.0, tag `frangfurd-v1.0.0`,
+  NeoForge 21.1.252, Minecraft 1.21.1): 96 mods, 105 files referenced on
+  Modrinth, Create Propulsion on CurseForge (`mode =
+  "metadata:curseforge"`; it downloads with no manual step), plus its
+  config, KubeJS, menu assets and resource pack.
 - **`tools/import_instance.py`** regenerates a pack from a Prism instance. It
   matches jars and zips on Modrinth by hash, then CurseForge through `packwiz
   curseforge detect`, skips disabled mods, caches and per-player state, and
@@ -84,8 +93,7 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
   **`earlyWindowControl = false` in `config/fml.toml` fixed it**, at the cost
   of a black window with a white rectangle, frozen for a moment before Drippy
   draws. The author wants players to see only the launcher's splash instead
-  (#43, #45). The setting is in the author's instance, not yet in
-  `kapital-packs`: it goes in with the next import.
+  (#43, #45). Released in Frangfurd 1.0.0.
 - **Not hosted yet.** The Pages project for `kapital-packs` does not exist;
   that is #25. Hosting makes every indexed file public, not only the
   metadata: #35.
@@ -111,9 +119,10 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
   in its `instance.cfg`, so Play starts the files as they are and nothing is
   reverted. The pre-launch command, syncing from
   `http://localhost:8080/pack.toml`, is still in the file, so the launcher
-  still shows "Dev pack". After editing: run the importer, then set
-  `OverrideCommands=true` to sync again (it then needs `packwiz serve`
-  running, or a hosted pack and a fresh Install).
+  still shows "Dev pack". The author's edits were imported and released as
+  1.0.0; sync is still off. Setting `OverrideCommands=true` syncs again, and
+  then needs `packwiz serve` running. Once #25 hosts the pack, the clean way
+  is to delete the instance and Install from the hosted `pack.toml`.
 - `%APPDATA%\KapitalLauncher\settings.json` carries
   `"packOverrides": {"frangfurd": "http://localhost:8080/pack.toml"}`. Remove it
   to go back to the manifest's pack (none is hosted yet, so Install is then
