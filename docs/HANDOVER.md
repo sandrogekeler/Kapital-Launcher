@@ -94,27 +94,26 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
 - **Prism 11.1.0** at `%LOCALAPPDATA%\Programs\PrismLauncher`, data root
   `%APPDATA%\PrismLauncher`. The launcher uses it; a managed Prism is only a
   fallback.
-- **Two Frangfurd instances since the first real install.**
-  `kapital-frangfurd` is now the one Install wrote from `packwiz serve`: its
-  pre-launch command syncs from `http://localhost:8080/pack.toml`, so **it only
-  starts while `packwiz serve` runs in `kapital-packs/frangfurd`** (a failed
-  pre-launch command fails the launch), and the launcher marks it "Dev pack".
-  Its `minecraft/options.txt.before-windowed-test*` files are leftovers of the
-  fullscreen tests. The author's hand-copied instance, the one the importer
-  reads, is now **`kapital-frangfurd-copied`**; `kapital-packs`' README still
-  names `kapital-frangfurd` in its import command. Which of the two to keep is
-  the author's call: delete the dev one and rename the copy back, or keep
-  editing the copy and point the import at it.
+- **`kapital-frangfurd` is the instance Install wrote** from `packwiz serve`
+  on 2026-09-30 (ZGC, 512 MB to 8 GB, Drippy loading screen), and the author
+  chose it as the one they edit before the pack is uploaded; the importer in
+  `kapital-packs` reads it. Its hand-copied predecessor, copied from the
+  Modrinth profile "Morner", went to the Recycle Bin as
+  `kapital-frangfurd-copied` (restorable from there).
+- **Its packwiz sync is off while the author edits**: `OverrideCommands=false`
+  in its `instance.cfg`, so Play starts the files as they are and nothing is
+  reverted. The pre-launch command, syncing from
+  `http://localhost:8080/pack.toml`, is still in the file, so the launcher
+  still shows "Dev pack". After editing: run the importer, then set
+  `OverrideCommands=true` to sync again (it then needs `packwiz serve`
+  running, or a hosted pack and a fresh Install).
 - `%APPDATA%\KapitalLauncher\settings.json` carries
   `"packOverrides": {"frangfurd": "http://localhost:8080/pack.toml"}`. Remove it
   to go back to the manifest's pack (none is hosted yet, so Install is then
   disabled again).
-- **The hand-copied Frangfurd instance** was copied from the Modrinth profile
-  "Morner" (the Modrinth App refuses to export it: "loader mismatch"). JVM
-  arguments `-XX:+UseZGC -XX:+ZGenerational` (Distant Horizons warns under
-  G1), memory 3 to 8 GB, Default Options seeds `options.txt`, keybindings and
-  the server list "Frangfurd (Global)" (`female-specified.gl.joinmc.link`) and
-  "Frangfurd (Germany)" (`rails-enjoyed.tun.ply.gg`).
+- Default Options seeds `options.txt`, keybindings and the server list
+  "Frangfurd (Global)" (`female-specified.gl.joinmc.link`) and "Frangfurd
+  (Germany)" (`rails-enjoyed.tun.ply.gg`) on a first start.
 - **Lichdenstein** has a `kapital-lichdenstein` instance in Prism now, made
   by the author. **Not in Prism yet:** Luxemburg (CurseForge instance, Forge
   43.5.0 on 1.19.2, 208 mods, 12 GB). Move it the same way: an empty Prism
