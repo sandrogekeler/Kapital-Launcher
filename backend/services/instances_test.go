@@ -160,6 +160,8 @@ func TestPackURLFromCommand(t *testing.T) {
 	cases := map[string]string{
 		preLaunchCommand("https://kapitel-kapital.pages.dev/p/pack.toml"): "https://kapitel-kapital.pages.dev/p/pack.toml",
 		preLaunchCommand("http://[::1]:8080/pack.toml"):                   "http://[::1]:8080/pack.toml",
+		// An instance made before the pack sync ran headless (#95).
+		legacyPreLaunchCommand("https://kapitel-kapital.pages.dev/p/pack.toml"): "https://kapitel-kapital.pages.dev/p/pack.toml",
 		"":                                "",
 		"packwiz-installer-bootstrap.jar": "",
 		`java -jar packwiz-installer-bootstrap.jar $X`: "",

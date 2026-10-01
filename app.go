@@ -276,6 +276,9 @@ func (a *App) LaunchChapter(chapterID string) error {
 	// The game log as it is before Prism runs, so the log of an earlier start
 	// is not taken for this one.
 	instanceDir := a.instanceDir(settings, engine, chapter)
+	// An instance made with the pack sync's window gets the headless command
+	// before Prism reads it (#95).
+	a.updatePreLaunch(chapterID, instanceDir)
 	before := services.SnapshotGameLog(instanceDir)
 	// The splash: the window becomes the card before Prism starts, and holds
 	// the game's window until the handover (#43). Without a window there is

@@ -63,7 +63,10 @@ launcher logged its own hide times.
 - A start from Prism directly gets the early window and may show the corner
   glitch, since no launcher nudges it.
 - Prism's own progress dialogs and packwiz-installer's window are not the
-  game's and still show; #43 and #50 decide what happens to them.
+  game's. #95 hides Prism's "Please wait" dialogs with this same hold (by their
+  title, the one title the launcher reads, and only for the Prism it started)
+  and runs packwiz-installer headless so it has no window; #50 decides the
+  rest.
 - The foreground is Windows' to give. When the launcher is not in front at the
   handover, the game may open behind other windows.
 - Until #43 exists the setting is a developer one: with it on and no splash, a

@@ -308,9 +308,25 @@ func mmcPack(v packVersions) ([]byte, error) {
 // outside double quotes, with no shell (launch/steps/PreLaunchCommand.cpp),
 // so the quotes keep a path with spaces in one argument. The URL passed
 // commandSafeURL in the manifest check and carries no quote, space or $.
+//
+// The order is the bootstrap's flags, then the installer's, then the URL. The
+// installer runs headless (-g, #95): no window of its own while the pack syncs,
+// its progress goes to Prism's log. The bootstrap hands every argument that is
+// not its own on to the installer, so -g reaches it (and the bootstrap takes
+// -g for its own update window, which it never opens with
+// --bootstrap-no-update). Optional mods (#36) will need the window back.
 func preLaunchCommand(packURL string) string {
-	return `"$INST_JAVA" -jar "$INST_MC_DIR/packwiz-installer-bootstrap.jar" ` +
-		`--bootstrap-no-update --bootstrap-main-jar "$INST_MC_DIR/packwiz-installer.jar" ` + packURL
+	return preLaunchBase + "-g " + packURL
+}
+
+// preLaunchBase is the command up to where the installer's flags begin. It is
+// what every pre-launch command the launcher has ever written starts with, and
+// legacyPreLaunchCommand is the form before -g (RewritePreLaunchCommand reads it).
+const preLaunchBase = `"$INST_JAVA" -jar "$INST_MC_DIR/packwiz-installer-bootstrap.jar" ` +
+	`--bootstrap-no-update --bootstrap-main-jar "$INST_MC_DIR/packwiz-installer.jar" `
+
+func legacyPreLaunchCommand(packURL string) string {
+	return preLaunchBase + packURL
 }
 
 // renderInstanceConfig renders instance.cfg in the format Prism writes (QSettings

@@ -125,8 +125,12 @@ type GameTracker struct {
 	// hold starts keeping a game's window hidden (#45); injected so a fake
 	// answers in tests.
 	hold func(pid int) (WindowHolder, error)
-	// holdWarned is whether a failure to hold has been logged: once is enough.
-	holdWarned atomic.Bool
+	// holdDialogs starts keeping the launcher's own Prism's progress dialogs
+	// hidden (#95); injected likewise.
+	holdDialogs func(pid int) (DialogHolder, error)
+	// holdWarned and dialogsWarned are whether a failure to hold has been
+	// logged: once is enough.
+	holdWarned, dialogsWarned atomic.Bool
 
 	// tick is how often a run looks at the log; procInterval how often it
 	// looks for the game's process. The timeouts are fields so tests run in
@@ -150,6 +154,7 @@ func NewGameTracker(dataDir string, emit func(models.GameState)) *GameTracker {
 		now:              time.Now,
 		os:               systemGameOS(),
 		hold:             HoldGameWindow,
+		holdDialogs:      HoldPrismDialogs,
 		tick:             logPollInterval,
 		procInterval:     gameProcInterval,
 		procSlowInterval: gameProcSlowInterval,
@@ -275,6 +280,9 @@ type gameRun struct {
 	bound int
 	// holder keeps the bound game's window hidden, nil when none is held.
 	holder WindowHolder
+	// dialogs keeps the launcher's Prism's "Please wait" dialogs hidden from
+	// Play to the handover, nil when none is held (#95).
+	dialogs DialogHolder
 	// handedOver is whether the handover has begun, so it happens once.
 	handedOver bool
 	ignored    map[int]bool
@@ -290,7 +298,11 @@ func (r *gameRun) loop() {
 		// However the run ends, a window that is still alive must not stay
 		// hidden.
 		r.releaseWindow(false)
+		r.releaseDialogs(true)
 	}()
+	// On the run's own goroutine, so a slow hook never holds Play up; Prism's
+	// first dialog comes about a second after it starts.
+	r.holdPrismDialogs()
 	ticker := time.NewTicker(r.t.tick)
 	defer ticker.Stop()
 	for {
@@ -312,6 +324,10 @@ func (r *gameRun) step(now time.Time) bool {
 		select {
 		case <-r.req.Prism.Exited:
 			r.prismExitedAt = now
+			// Prism going before the handover is a launch handed to another
+			// Prism, or a Prism that failed: either way nothing of ours is
+			// left to hold, and whatever is still alive is shown.
+			r.releaseDialogs(true)
 			// Whether the game log had begun before Prism went, as of the
 			// last look: a Prism that goes first has handed the launch to
 			// another one, and one that goes after has quit with the game.
@@ -346,6 +362,12 @@ func (r *gameRun) procInterval() time.Duration {
 
 func (r *gameRun) readLog(now time.Time) {
 	phases, restarted := r.follower.poll(now)
+	// A phase is stamped with the time its line was read, not the time the
+	// step began: a line written in between would otherwise carry the earlier
+	// time (the timings test caught it under load). Never earlier than now.
+	if read := r.t.now(); read.After(now) {
+		now = read
+	}
 	if restarted {
 		// A new run wrote over the log: what was learned of the last one is
 		// void, and the phases begin again.
@@ -391,6 +413,7 @@ func (r *gameRun) set(phase string, now time.Time, code *int) {
 		r.handover()
 	case models.GamePhaseStopping, models.GamePhaseClosed, models.GamePhaseCrashed, models.GamePhaseFailed:
 		r.releaseWindow(false)
+		r.releaseDialogs(true)
 	}
 	r.state.Phase = phase
 	r.state.Since = now.UTC().Format(time.RFC3339)

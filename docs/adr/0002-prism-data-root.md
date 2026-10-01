@@ -94,3 +94,22 @@ stop); a line is matched and dropped, and no line or part of one is logged,
 stored or emitted. And it looks up the child processes of the Prism it
 started, by pid, parent pid and name, to wait on the game's Java; it does not
 read their command lines, memory or anything of Prism's account data.
+
+## Fourth amendment, 2026-10-01
+
+The pack sync runs headless now (#95): packwiz-installer's `-g` goes into the
+pre-launch command the launcher writes, so its window never opens. An instance
+made before that keeps the old command, and the author chose to have the
+launcher bring it up to date over leaving every installed instance to be
+reinstalled. So, before a launch, the launcher may rewrite one more key,
+`PreLaunchCommand`, in an instance it created:
+
+- Only from its own earlier template to its current one, keeping the pack URL.
+  The command is parsed against the template (the same jar paths and flags, and
+  a URL that passes the same check as one read back from an instance); anything
+  else in that key, hand-edited or another tool's, is left alone and logged
+  without its content.
+- Every other line is copied through unchanged with its own line ending, and
+  the file is replaced atomically, as a settings save does (second amendment).
+  It is skipped while the instance looks to be running.
+- It refuses nothing: a failed rewrite is logged and the launch goes on.

@@ -20,19 +20,24 @@ import (
 // injects nothing into the game), and hides the game's GLFW window the moment
 // that happens. At the handover it shows the window again, after resizing a
 // fullscreen one by a pixel and back (#46). It reads a window's class, owner
-// process and rectangle and nothing else, and starts no process.
+// process and rectangle and nothing else, and starts no process. The same hook
+// plumbing also serves Prism's "Please wait" dialogs (gamewindow_dialogs_windows.go,
+// #95), which are told apart by their title.
 
 const (
-	eventObjectShow   = 0x8002
-	winEventOutOfCtx  = 0x0000
-	winEventSkipOwn   = 0x0002
-	objIDWindow       = 0
-	childIDSelf       = 0
-	gaRoot            = 2
-	wmQuit            = 0x0012
-	wmUser            = 0x0400
-	pmNoRemove        = 0x0000
-	classNameCapacity = 64
+	eventObjectShow = 0x8002
+	// eventObjectNameChange is a window's title changing: Prism showed one
+	// "Please wait" dialog before giving it its title on a real start (#95).
+	eventObjectNameChange = 0x800C
+	winEventOutOfCtx      = 0x0000
+	winEventSkipOwn       = 0x0002
+	objIDWindow           = 0
+	childIDSelf           = 0
+	gaRoot                = 2
+	wmQuit                = 0x0012
+	wmUser                = 0x0400
+	pmNoRemove            = 0x0000
+	classNameCapacity     = 64
 	// holdStopTimeout bounds the wait for the hook thread to unhook and end.
 	holdStopTimeout = 2 * time.Second
 
@@ -101,6 +106,14 @@ var (
 // completed successfully" errno that Call returns on success taken for nil.
 // Only the calls that report failure through the last error use it; the rest
 // use call, as the last error of a call that succeeded is stale.
+//
+// Both wrappers carry go:uintptrescapes, as LazyProc.Call does: a pointer a
+// caller turns into a uintptr in the arguments (a RECT, a buffer, a MSG) is
+// then kept on the heap for the call. Without it the variable could stay on a
+// stack that moves during the call, and Windows would write the result into
+// the old one: a game window's rectangle read back as all zeros on real starts.
+//
+//go:uintptrescapes
 func callErr(p *windows.LazyProc, args ...uintptr) (uintptr, error) {
 	r, _, err := p.Call(args...)
 	var errno syscall.Errno
@@ -111,6 +124,8 @@ func callErr(p *windows.LazyProc, args ...uintptr) (uintptr, error) {
 }
 
 // call is a call whose result alone says what happened.
+//
+//go:uintptrescapes
 func call(p *windows.LazyProc, args ...uintptr) uintptr {
 	r, _, _ := p.Call(args...) //nolint:errcheck // see callErr: the last error is only meaningful where it is read
 	return r
@@ -120,13 +135,24 @@ func call(p *windows.LazyProc, args ...uintptr) uintptr {
 // The hook lives on a thread of its own, which pumps messages as an
 // out-of-context hook needs and ends in Release.
 func HoldGameWindow(pid int) (WindowHolder, error) {
-	if pid <= 0 {
-		return nil, fmt.Errorf("hold game window: pid %d", pid)
+	h, err := startHolder("game window", pid, isGameWindow)
+	if err != nil {
+		return nil, err
 	}
-	h := &winHolder{pid: uint32(pid), held: map[windows.HWND]struct{}{},
+	return h, nil
+}
+
+// startHolder hooks the show events of a pid and hides the windows its match
+// accepts: the game's window, or Prism's progress dialogs (#95), through the
+// one callback and the one dispatch map.
+func startHolder(what string, pid int, match func(windows.HWND, uint32) bool) (*winHolder, error) {
+	if pid <= 0 {
+		return nil, fmt.Errorf("hold %s: pid %d", what, pid)
+	}
+	h := &winHolder{pid: uint32(pid), match: match, held: map[windows.HWND]struct{}{},
 		done: make(chan struct{}), finished: make(chan struct{})}
 	ready := make(chan error, 1)
-	go h.run(ready)
+	go h.run(what, ready)
 	select {
 	case err := <-ready:
 		if err != nil {
@@ -137,15 +163,20 @@ func HoldGameWindow(pid int) (WindowHolder, error) {
 		// Whenever the thread does get going, it is told to end again.
 		go func() {
 			if err := <-ready; err == nil {
-				h.Release(false)
+				h.release(func(held []windows.HWND, r WindowReport) WindowReport {
+					showHeld(held)
+					return r
+				})
 			}
 		}()
-		return nil, fmt.Errorf("hold game window: the hook did not start within %s", holdStartTimeout)
+		return nil, fmt.Errorf("hold %s: the hook did not start within %s", what, holdStartTimeout)
 	}
 }
 
 type winHolder struct {
-	pid      uint32
+	pid uint32
+	// match is whether a top-level window of the pid is one to hide.
+	match    func(hwnd windows.HWND, pid uint32) bool
 	threadID uint32
 	done     chan struct{}
 
@@ -162,7 +193,7 @@ type winHolder struct {
 
 // run is the hook thread: it hooks, sweeps once, pumps messages until
 // WM_QUIT, and unhooks on the same thread, as the API requires.
-func (h *winHolder) run(ready chan<- error) {
+func (h *winHolder) run(what string, ready chan<- error) {
 	// The hook belongs to this thread. The goroutine never unlocks, so the
 	// runtime ends the thread with it.
 	runtime.LockOSThread()
@@ -177,11 +208,11 @@ func (h *winHolder) run(ready chan<- error) {
 	call(procPeekMessageW, uintptr(unsafe.Pointer(&msg)), 0, wmUser, wmUser, pmNoRemove)
 
 	hook, err := callErr(procSetWinEventHook,
-		eventObjectShow, eventObjectShow, 0, winEventCallback(),
+		eventObjectShow, eventObjectNameChange, 0, winEventCallback(),
 		uintptr(h.pid), 0, winEventOutOfCtx|winEventSkipOwn,
 	)
 	if hook == 0 {
-		ready <- fmt.Errorf("hold game window: SetWinEventHook: %w", err)
+		ready <- fmt.Errorf("hold %s: SetWinEventHook: %w", what, err)
 		return
 	}
 	hooksMu.Lock()
@@ -204,7 +235,7 @@ func (h *winHolder) run(ready chan<- error) {
 	delete(hooks, hook)
 	hooksMu.Unlock()
 	if ok, err := callErr(procUnhookWinEvent, hook); ok == 0 {
-		slog.Warn("game window hook: unhook", "error", err)
+		slog.Warn("window hook: unhook", "error", err)
 	}
 }
 
@@ -212,7 +243,18 @@ func (h *winHolder) run(ready chan<- error) {
 // it is: the upper half of a register is not defined for one.
 // aislop-ignore-next-line complexity/too-many-params -- Windows fixes WINEVENTPROC at seven parameters
 func winEventProc(hook, event, hwnd, idObject, idChild, _, eventTime uintptr) uintptr {
-	if uint32(event) != eventObjectShow || int32(uint32(idObject)) != objIDWindow || int32(uint32(idChild)) != childIDSelf {
+	if int32(uint32(idObject)) != objIDWindow || int32(uint32(idChild)) != childIDSelf {
+		return 0
+	}
+	switch uint32(event) {
+	case eventObjectShow:
+	case eventObjectNameChange:
+		// A title that changes on a window already in view is a show for the
+		// match; a hidden window renaming itself (the game's) is not.
+		if !windows.IsWindowVisible(windows.HWND(hwnd)) {
+			return 0
+		}
+	default:
 		return 0
 	}
 	hooksMu.Lock()
@@ -242,9 +284,9 @@ func enumWindows(fn func(windows.HWND)) {
 	}
 }
 
-// consider hides a window the sweep found, if it is the game's and visible.
+// consider hides a window the sweep found, if it is one to hide and visible.
 func (h *winHolder) consider(hwnd windows.HWND) {
-	if !isGameWindow(hwnd, h.pid) {
+	if !h.match(hwnd, h.pid) {
 		return
 	}
 	h.mu.Lock()
@@ -260,9 +302,9 @@ func (h *winHolder) consider(hwnd windows.HWND) {
 	}
 }
 
-// onShow handles a show event: the game's own window, hidden again at once.
+// onShow handles a show event: a window to hide, hidden again at once.
 func (h *winHolder) onShow(hwnd windows.HWND, eventTime uint32) {
-	if !isGameWindow(hwnd, h.pid) {
+	if !h.match(hwnd, h.pid) {
 		return
 	}
 	h.mu.Lock()
@@ -284,7 +326,7 @@ func (h *winHolder) hide(hwnd windows.HWND) bool {
 	h.mu.Unlock()
 	showWindow(hwnd, windows.SW_HIDE)
 	if windows.IsWindowVisible(hwnd) {
-		slog.Warn("game window hold: a window is still visible after a hide")
+		slog.Warn("window hold: a window is still visible after a hide")
 		return false
 	}
 	return true
@@ -294,6 +336,31 @@ func (h *winHolder) hide(hwnd windows.HWND) bool {
 // held. At the handover (foreground) a fullscreen window is nudged first and
 // given the foreground after it is shown.
 func (h *winHolder) Release(foreground bool) WindowReport {
+	return h.release(func(held []windows.HWND, r WindowReport) WindowReport {
+		for _, hwnd := range held {
+			if !showAsync(hwnd) {
+				continue // the game closed it
+			}
+			if foreground {
+				if ok := call(procSetForegroundWin, uintptr(hwnd)); ok != 0 {
+					r.Foreground = true
+				}
+				// After the show: a hidden window's rectangle read at the handover
+				// came back empty on a real start (2026-10-01), so the nudge waits
+				// for the shown window's real one.
+				if nudgeWhenShown(hwnd) {
+					r.Nudged = true
+				}
+			}
+		}
+		return r
+	})
+}
+
+// release ends the hook, once, and hands what was held to after, which shows
+// what it means to and returns the report. A second call waits for the first
+// one's report and returns it.
+func (h *winHolder) release(after func(held []windows.HWND, r WindowReport) WindowReport) WindowReport {
 	h.mu.Lock()
 	if h.released {
 		h.mu.Unlock()
@@ -309,50 +376,55 @@ func (h *winHolder) Release(foreground bool) WindowReport {
 
 	if thread != 0 {
 		if ok, err := callErr(procPostThreadMessageW, uintptr(thread), wmQuit, 0, 0); ok == 0 {
-			slog.Warn("game window hook: ask the hook thread to end", "error", err)
+			slog.Warn("window hook: ask the hook thread to end", "error", err)
 		}
 	}
 	select {
 	case <-h.done:
 	case <-time.After(holdStopTimeout):
-		slog.Warn("game window hook: the hook thread did not end in time")
+		slog.Warn("window hook: the hook thread did not end in time")
 	}
 
 	// The hook thread has ended, so nothing changes what is held. The lock is
-	// not kept across the nudge's wait.
+	// not kept across after, which may wait (the nudge).
 	h.mu.Lock()
 	r := h.tally.report()
 	r.Seen, r.Swept = h.seen, h.swept
-	windowsHeld := make([]windows.HWND, 0, len(h.held))
+	held := make([]windows.HWND, 0, len(h.held))
 	for hwnd := range h.held {
-		windowsHeld = append(windowsHeld, hwnd)
+		held = append(held, hwnd)
 	}
 	h.mu.Unlock()
 
-	for _, hwnd := range windowsHeld {
-		if exists := call(procIsWindow, uintptr(hwnd)); exists == 0 {
-			continue // the game closed it
-		}
-		// Asynchronous, so a game thread that is busy does not hold this up.
-		if posted := call(procShowWindowAsync, uintptr(hwnd), windows.SW_SHOW); posted == 0 {
-			slog.Warn("game window hold: the show could not be queued")
-		}
-		if foreground {
-			if ok := call(procSetForegroundWin, uintptr(hwnd)); ok != 0 {
-				r.Foreground = true
-			}
-			// After the show: a hidden window's rectangle read at the handover
-			// came back empty on a real start (2026-10-01), so the nudge waits
-			// for the shown window's real one.
-			if nudgeWhenShown(hwnd) {
-				r.Nudged = true
-			}
-		}
-	}
+	r = after(held, r)
 	h.mu.Lock()
 	h.report = r
 	h.mu.Unlock()
 	return r
+}
+
+// showAsync shows a window its owner has not destroyed and reports whether it
+// still exists. The show is queued, so a thread that is busy does not hold
+// this one up.
+func showAsync(hwnd windows.HWND) bool {
+	if exists := call(procIsWindow, uintptr(hwnd)); exists == 0 {
+		return false
+	}
+	if posted := call(procShowWindowAsync, uintptr(hwnd), windows.SW_SHOW); posted == 0 {
+		slog.Warn("window hold: the show could not be queued")
+	}
+	return true
+}
+
+// showHeld shows the windows that still exist and reports whether any did.
+func showHeld(held []windows.HWND) bool {
+	shown := false
+	for _, hwnd := range held {
+		if showAsync(hwnd) {
+			shown = true
+		}
+	}
+	return shown
 }
 
 // nudgeWhenShown waits, up to nudgeShownTimeout, for the window to be visible

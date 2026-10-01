@@ -7,3 +7,9 @@ package services
 func HoldGameWindow(pid int) (WindowHolder, error) {
 	return nil, errWindowHoldUnsupported
 }
+
+// HoldPrismDialogs is Windows only as well (#95): the loading splash is, and
+// it is the only thing that asks for the hold.
+func HoldPrismDialogs(pid int) (DialogHolder, error) {
+	return nil, errWindowHoldUnsupported
+}

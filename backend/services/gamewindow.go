@@ -2,13 +2,30 @@ package services
 
 import (
 	"errors"
+	"strings"
 	"time"
 )
 
 // gameWindowClass is the window class GLFW gives the game's window. It is the
-// only window the holder ever touches, and the only thing it reads of one: no
-// title, no content, no input (#45).
+// only window of the game's the holder ever touches, and the only thing it reads
+// of one: no title, no content, no input (#45). Prism's own "Please wait"
+// dialogs are the one other kind it hides (prismDialogTitlePrefix, #95).
 const gameWindowClass = "GLFW30"
+
+// prismDialogTitlePrefix begins the title of Prism's progress dialogs ("Please
+// wait... - Prism Launcher 11.1.1", class Qt6102QWindowIcon, four in a row in
+// the first seconds of a launch, measured 2026-10-01). Telling them from the
+// windows a player must answer (sign-in, an error) takes the title: ADR-0012's
+// no-title rule is about the game's window, which has a class of its own, and
+// this is Prism's, whose dialogs share a class with every other window it
+// shows. A Prism in another language matches nothing and nothing is hidden: the
+// safe failure.
+const prismDialogTitlePrefix = "Please wait"
+
+// isPrismDialogTitle is whether a window title is a Prism progress dialog's.
+func isPrismDialogTitle(title string) bool {
+	return strings.HasPrefix(title, prismDialogTitlePrefix)
+}
 
 // holdStartTimeout is how long starting to hold a window may take before the
 // run goes on without it. The hook is installed in milliseconds; the bound is
@@ -56,6 +73,27 @@ type WindowHolder interface {
 	// given the foreground after it is shown. It can take a few hundred ms.
 	// It is safe to call twice: the second call returns the first one's report.
 	Release(foreground bool) WindowReport
+}
+
+// DialogReport is what holding Prism's progress dialogs came to, for the log
+// (#95). It holds counts, never a title.
+type DialogReport struct {
+	// Hides is how many hides were made: the sweep's and every caught show.
+	Hides int
+	// ShownBack is whether any held dialog that still existed was shown again.
+	ShownBack bool
+}
+
+// DialogHolder keeps the launcher's own Prism's "Please wait" dialogs hidden
+// until Release. It is the seam the tracker is tested through;
+// HoldPrismDialogs makes the real one.
+type DialogHolder interface {
+	// Release stops hiding. With show, a dialog still alive is shown again (a
+	// run that ended before the handover: an error Prism is showing must not
+	// stay hidden). Without it the dialogs are left as they are: at the
+	// handover they are transient and Prism closes them itself. It is safe to
+	// call twice: the second call returns the first one's report.
+	Release(show bool) DialogReport
 }
 
 // screenRect is a rectangle in screen coordinates, as the OS reports one.

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"time"
 
@@ -17,6 +18,33 @@ func (a *App) instanceDir(settings models.AppSettings, engine models.EngineInfo,
 		return ""
 	}
 	return filepath.Join(report.Dir, chapter.Instance.ID)
+}
+
+// updatePreLaunch brings an instance the launcher made up to its current
+// pre-launch command before a launch (#95, ADR-2's fourth amendment). It
+// refuses nothing: a failure or a command that is not the launcher's own is
+// logged, never the command itself, and the launch goes on. An instance whose
+// game looks to be running is left alone, as a settings save is (ADR-2, second
+// amendment); Prism could be writing the file.
+func (a *App) updatePreLaunch(chapterID, instanceDir string) {
+	if instanceDir == "" {
+		return
+	}
+	if services.InstanceRunning(instanceDir, time.Now()) {
+		// A game that closed less than a minute ago looks the same; the next
+		// Play catches up.
+		slog.Info("pre-launch command left as it is", "chapter", chapterID, "reason", "the game looks to be running")
+		return
+	}
+	result, err := services.RewritePreLaunchCommand(filepath.Join(instanceDir, "instance.cfg"))
+	switch {
+	case err != nil:
+		slog.Warn("pre-launch command not updated", "chapter", chapterID, "error", err)
+	case result == services.PreLaunchRewritten:
+		slog.Info("pre-launch command updated", "chapter", chapterID, "headless", true)
+	case result == services.PreLaunchForeign:
+		slog.Info("pre-launch command left as it is", "chapter", chapterID, "reason", "not the launcher's own command")
+	}
 }
 
 // chapterRunning is whether the chapter's game is running: the tracker says so
