@@ -175,4 +175,56 @@ describe('SettingsPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
     expect(onClose).toHaveBeenCalledTimes(2)
   })
+
+  describe('loading splash toggle', () => {
+    it('is hidden where Go says the splash is not available', () => {
+      render(<SettingsPanel onClose={() => undefined} />)
+      expect(screen.queryByLabelText('Loading splash')).not.toBeInTheDocument()
+    })
+
+    it('shows its state and hint, and saves the choice', async () => {
+      useSettingsStore.setState({
+        settings: { ...DEFAULT_SETTINGS, loadingSplashAvailable: true, loadingSplashOn: true },
+        loaded: true,
+        error: null,
+      })
+      render(<SettingsPanel onClose={() => undefined} />)
+      const box = screen.getByLabelText('Loading splash')
+      expect(box).toBeChecked()
+      expect(
+        screen.getByText(
+          "Shows a small loading card from Play until the game's own loading screen.",
+        ),
+      ).toBeInTheDocument()
+
+      fireEvent.click(box)
+      await waitFor(() =>
+        expect(App.SaveSettings).toHaveBeenLastCalledWith(
+          expect.objectContaining({ loadingSplash: false }),
+        ),
+      )
+      expect(box).not.toBeChecked()
+
+      fireEvent.click(box)
+      await waitFor(() =>
+        expect(App.SaveSettings).toHaveBeenLastCalledWith(
+          expect.objectContaining({ loadingSplash: true }),
+        ),
+      )
+      expect(box).toBeChecked()
+    })
+
+    it('puts the box back and shows why when the save is refused', async () => {
+      vi.mocked(App.SaveSettings).mockRejectedValueOnce('the settings file is read-only')
+      useSettingsStore.setState({
+        settings: { ...DEFAULT_SETTINGS, loadingSplashAvailable: true, loadingSplashOn: true },
+        loaded: true,
+        error: null,
+      })
+      render(<SettingsPanel onClose={() => undefined} />)
+      fireEvent.click(screen.getByLabelText('Loading splash'))
+      expect(await screen.findByText('the settings file is read-only')).toBeInTheDocument()
+      expect(screen.getByLabelText('Loading splash')).toBeChecked()
+    })
+  })
 })

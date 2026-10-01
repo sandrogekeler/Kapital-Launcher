@@ -140,6 +140,28 @@
   }
 }
 
+/* The loading card's bar when there is no history to size it by (#43): a soft
+   band of the accent sweeping across the track. Reduced motion keeps it still
+   and solid. The duration is the slow token, four times over. */
+@keyframes splash-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@utility splash-shimmer {
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: splash-shimmer calc(var(--duration-slow) * 4) var(--ease-glide) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .splash-shimmer {
+    animation: none;
+    background: var(--accent);
+  }
+}
+
 /* Where a chapter has no screenshot yet: a fine grid in the chapter's accent
    over the page ground. The same pattern at two scales serves the hero and
    the sidebar thumbnail. */

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { GamePhase, GameState } from '../types'
-import { hasWailsBridge, readOr } from '../lib/ipc'
-import { GetGameStates } from '../../wailsjs/go/main/App'
+import { errMsg, hasWailsBridge, readOr } from '../lib/ipc'
+import { GetGameStates, LeaveSplash } from '../../wailsjs/go/main/App'
 import { EventsOff, EventsOn } from '../../wailsjs/runtime/runtime'
 
 /** The event Go emits on every phase change. Same string as services.EventGameState. */
@@ -29,13 +29,18 @@ export const isActive = (phase: GamePhase | undefined): boolean =>
  */
 interface GameStore {
   states: Record<string, GameState>
+  /** The last rejection of LeaveSplash, shown on the loading card (#43). */
+  error: string | null
   listen: () => () => void
   load: () => Promise<void>
   receive: (state: GameState) => void
+  /** Gives the launcher's window back from the loading card; Go then emits the state without `splash`. */
+  leaveSplash: () => Promise<void>
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
   states: {},
+  error: null,
 
   // Subscribes for the app's lifetime; returns the unsubscribe for tests and
   // for a StrictMode double mount. Without a bridge there is no runtime to
@@ -61,7 +66,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!state?.chapterId) return
     set((s) => ({ states: { ...s.states, [state.chapterId]: state } }))
   },
+
+  // Go restores the window and emits the state with `splash` false, which is
+  // what takes the card off the screen. Without a bridge there is no card to
+  // leave. A rejection is kept for the card to show: the player is still on it.
+  leaveSplash: async () => {
+    if (!hasWailsBridge()) return
+    set({ error: null })
+    try {
+      await LeaveSplash()
+    } catch (e) {
+      set({ error: errMsg(e) })
+    }
+  },
 }))
 
 /** The game state for one chapter, or undefined before anything is known. */
 export const selectGame = (chapterId: string) => (s: GameStore) => s.states[chapterId]
+
+/** The chapter whose loading card is up, if any; only one game runs at a time in practice. */
+export const selectSplash = (s: GameStore): GameState | undefined =>
+  Object.values(s.states).find((g) => g.splash)

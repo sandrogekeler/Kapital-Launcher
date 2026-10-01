@@ -1,16 +1,12 @@
 import { useState } from 'react'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { errMsg } from '../../lib/ipc'
+import { copyLogDone } from '../../lib/settingsView'
 import { Copy } from '../../lib/icons'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 
 type Outcome = { kind: 'done'; lines: number } | { kind: 'failed'; message: string }
-
-function copyLogDone(lines: number): string {
-  const noun = lines === 1 ? 'line' : 'lines'
-  return `Copied ${lines} ${noun} to the clipboard, with your name, folders and server addresses masked.`
-}
 
 /**
  * The Support section of the settings screen (#84): one button that puts the
