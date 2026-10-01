@@ -162,12 +162,15 @@ Probe: a chapter id that is a path; an instance folder that is a file or gone.
 Holds when: the window holder (`gamewindow_windows.go`, #45) hooks show events
 of one pid, the game's Java as the tracker bound it, and acts only on a
 top-level window of class `GLFW30` owned by that pid: `ShowWindow` hide and
-show, and `SetForegroundWindow` at the handover. It reads a window's class and
-owner and never its title, text or input, injects nothing into the process
-(out-of-context hook), starts no process, and is off unless the developer
-setting `holdGameWindow` is on. A run that ends, by any phase or by its
-context, releases the window.
+show, and at the handover (the resource reload beginning) a one pixel resize
+and back of a window that covers its monitor, then `SetForegroundWindow`. It
+reads a window's class, owner and rectangle and never its title, text or
+input, injects nothing into the process (out-of-context hook), starts no
+process, and is off unless the developer setting `holdGameWindow` is on. A run
+that ends, by any phase or by its context, releases the window.
 Verify: `TestHolderHidesAndShowsAGLFWWindow`, `TestHolderLeavesOtherWindowsAlone`,
+`TestHandoverNudgesAFullscreenWindowOnePixelAndBack`,
+`TestHandoverLeavesAWindowedWindowAlone`,
 `TestTrackerReleasesTheWindowWithoutForegroundWhenTheRunEndsOtherwise`.
 Probe: a window of another class, or of another process, shown while the hold
 is on.

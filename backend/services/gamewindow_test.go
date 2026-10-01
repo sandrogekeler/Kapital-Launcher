@@ -16,15 +16,20 @@ import (
 // fakeHolder records how it was released.
 type fakeHolder struct {
 	pid int
-	mu  sync.Mutex
-	got []bool
+	// block, when set, holds Release until it is closed: a slow handover.
+	block chan struct{}
+	mu    sync.Mutex
+	got   []bool
 }
 
 func (f *fakeHolder) Release(foreground bool) WindowReport {
+	if f.block != nil {
+		<-f.block
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.got = append(f.got, foreground)
-	return WindowReport{Seen: true, Hides: 2, FirstHideMs: 12, MaxHideMs: 30, Foreground: foreground}
+	return WindowReport{Seen: true, Hides: 2, FirstHideMs: 12, MaxHideMs: 30, Foreground: foreground, Nudged: foreground}
 }
 
 func (f *fakeHolder) releases() []bool {
@@ -38,6 +43,7 @@ func (f *fakeHolder) releases() []bool {
 type fakeHold struct {
 	mu      sync.Mutex
 	err     error
+	block   chan struct{}
 	calls   int
 	holders []*fakeHolder
 }
@@ -49,7 +55,7 @@ func (f *fakeHold) hold(pid int) (WindowHolder, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
-	h := &fakeHolder{pid: pid}
+	h := &fakeHolder{pid: pid, block: f.block}
 	f.holders = append(f.holders, h)
 	return h, nil
 }
@@ -109,7 +115,7 @@ func holdRig(t *testing.T, hold bool) (*gameRig, *fakeHold) {
 	return r, fh
 }
 
-func TestTrackerHoldsTheGameWindowUntilRunningThenHandsOver(t *testing.T) {
+func TestTrackerHoldsTheGameWindowUntilTheResourceReloadThenHandsOver(t *testing.T) {
 	logs := captureLog(t)
 	r, fh := holdRig(t, true)
 	r.procs.add(200, 100, "javaw.exe", r.play.Add(7*time.Second))
@@ -123,18 +129,22 @@ func TestTrackerHoldsTheGameWindowUntilRunningThenHandsOver(t *testing.T) {
 	r.untilPhase("mods")
 	r.log.append(render + "Backend library: LWJGL\n")
 	r.untilPhase("window")
-	r.log.append(render + "Reloading ResourceManager\n")
-	r.untilPhase("resources")
+	time.Sleep(20 * time.Millisecond)
 	if got := fh.holder(0).releases(); len(got) != 0 {
-		t.Fatalf("released before the game was ready: %v", got)
+		t.Fatalf("released while the window is only being made: %v", got)
 	}
 
-	r.log.append(render + "Sound engine started\n")
-	r.untilPhase("running")
+	// The handover is the resource reload beginning, so Drippy's loading
+	// screen is seen.
+	r.log.append(render + "Reloading ResourceManager\n")
+	r.untilPhase("resources")
+	until(t, "the handover", func() bool { return len(fh.holder(0).releases()) == 1 })
 	if got := fh.holder(0).releases(); !reflect.DeepEqual(got, []bool{true}) {
 		t.Fatalf("the handover shows the window with the foreground, once: %v", got)
 	}
 
+	r.log.append(render + "Sound engine started\n")
+	r.untilPhase("running")
 	r.log.append(render + "Stopping!\n")
 	r.untilPhase("stopping")
 	r.procs.end(200, 0)
@@ -146,15 +156,47 @@ func TestTrackerHoldsTheGameWindowUntilRunningThenHandsOver(t *testing.T) {
 		t.Fatalf("one hold for one game, got %d", fh.count())
 	}
 
+	until(t, "the log line", func() bool { return strings.Contains(logs.String(), `msg="game window"`) })
 	line := logs.String()
 	for _, want := range []string{
-		`msg="game window"`, "chapter=frangfurd", "handover=true", "seen=true", "hides=2",
-		"firstHideMs=12", "maxHideMs=30", "foreground=true",
+		"chapter=frangfurd", "handover=true", "seen=true", "hides=2",
+		"firstHideMs=12", "maxHideMs=30", "foreground=true", "nudged=true",
 	} {
 		if !strings.Contains(line, want) {
 			t.Errorf("log lacks %q:\n%s", want, line)
 		}
 	}
+}
+
+func TestTrackerHandsOverAtRunningWhenTheLogSkippedTheResourceReload(t *testing.T) {
+	r, fh := holdRig(t, true)
+	r.procs.add(200, 100, "javaw.exe", r.play.Add(7*time.Second))
+	r.start()
+	until(t, "the hold", func() bool { return fh.count() == 1 })
+	r.log.write("[00:30:39] [main/INFO]: ModLauncher running\n" + render + "Sound engine started\n")
+	r.untilPhase("running")
+	until(t, "the handover", func() bool { return len(fh.holder(0).releases()) == 1 })
+	if got := fh.holder(0).releases(); !reflect.DeepEqual(got, []bool{true}) {
+		t.Fatalf("got %v", got)
+	}
+}
+
+func TestTrackerDoesNotWaitOnASlowHandover(t *testing.T) {
+	// The nudge takes a few hundred ms; the run goes on meanwhile.
+	r, fh := holdRig(t, true)
+	fh.block = make(chan struct{})
+	r.procs.add(200, 100, "javaw.exe", r.play.Add(7*time.Second))
+	r.start()
+	until(t, "the hold", func() bool { return fh.count() == 1 })
+	r.log.write("[00:30:39] [main/INFO]: ModLauncher running\n" + render + "Reloading ResourceManager\n")
+	r.untilPhase("resources")
+	r.log.append(render + "Sound engine started\n")
+	r.untilPhase("running")
+	if got := fh.holder(0).releases(); len(got) != 0 {
+		t.Fatalf("the handover is still under way: %v", got)
+	}
+	close(fh.block)
+	until(t, "the handover", func() bool { return len(fh.holder(0).releases()) == 1 })
 }
 
 func TestTrackerNeverHoldsWhenTheSettingIsOff(t *testing.T) {
@@ -295,6 +337,30 @@ func TestHideTallyKeepsTheFirstAndTheWorstDelay(t *testing.T) {
 	got := h.report()
 	if got.Hides != 3 || got.FirstHideMs != 15 || got.MaxHideMs != 40 {
 		t.Fatalf("%+v", got)
+	}
+}
+
+func TestScreenRectCoversTellsFullscreenFromWindowed(t *testing.T) {
+	monitor := screenRect{0, 0, 2560, 1440}
+	cases := []struct {
+		name string
+		win  screenRect
+		want bool
+	}{
+		{"exactly the monitor", screenRect{0, 0, 2560, 1440}, true},
+		{"the game's 2560x1441", screenRect{0, 0, 2560, 1441}, true},
+		{"borderless with an edge off screen", screenRect{-8, -8, 2568, 1448}, true},
+		{"windowed", screenRect{100, 100, 970, 619}, false},
+		{"one pixel short", screenRect{0, 0, 2560, 1439}, false},
+		{"on the other monitor", screenRect{2560, 0, 5120, 1440}, false},
+	}
+	for _, c := range cases {
+		if got := c.win.covers(monitor); got != c.want {
+			t.Errorf("%s: covers = %v, want %v", c.name, got, c.want)
+		}
+	}
+	if r := (screenRect{10, 20, 110, 70}); r.width() != 100 || r.height() != 50 {
+		t.Fatalf("%dx%d", r.width(), r.height())
 	}
 }
 

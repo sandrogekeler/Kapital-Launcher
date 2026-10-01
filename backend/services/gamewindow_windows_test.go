@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 	"unsafe"
@@ -20,15 +21,20 @@ import (
 // The real holder, against a real window of a real child process. The test
 // binary runs itself as the child (TestGameWindowChild, gated by an
 // environment variable): it makes a window of class GLFW30 and shows it, as
-// GLFW does for the game. The parent holds the child's pid and looks at the
-// window with IsWindowVisible.
+// GLFW does for the game, and prints every WM_SIZE it receives. The parent
+// holds the child's pid and looks at the window with IsWindowVisible and
+// GetWindowRect.
 
 const (
 	childModeEnv = "KAPITAL_TEST_GLFW_CHILD"
-	// The child shows its window when the parent says so.
-	childShowOnCue = "cue"
-	// The child shows its window at once, before anything holds it.
-	childShowAtOnce = "now"
+	// The child's mode is "<when>:<size>". When: it shows its window when the
+	// parent says so (cue), or at once, before anything holds it (now). Size:
+	// the window is 400x300 (window) or covers the primary monitor (full).
+	childCueWindow = "cue:window"
+	childCueFull   = "cue:full"
+	childNowWindow = "now:window"
+
+	wmSize = 0x0005
 )
 
 var (
@@ -37,6 +43,19 @@ var (
 	procDefWindowProcW   = user32.NewProc("DefWindowProcW")
 	procDispatchMessageW = user32.NewProc("DispatchMessageW")
 	procTranslateMsg     = user32.NewProc("TranslateMessage")
+	procGetSystemMetrics = user32.NewProc("GetSystemMetrics")
+
+	// childWndProc is made once, as every callback is.
+	childWndProc = sync.OnceValue(func() uintptr {
+		return windows.NewCallback(func(hwnd, msg, wParam, lParam uintptr) uintptr {
+			// The child's stdout is the parent's view of what the game's thread
+			// was told: the client size of every WM_SIZE (not a minimize).
+			if msg == wmSize && wParam != 1 {
+				fmt.Printf("size %d %d\n", lParam&0xffff, (lParam>>16)&0xffff)
+			}
+			return call(procDefWindowProcW, hwnd, msg, wParam, lParam)
+		})
+	})
 )
 
 type wndClassEx struct {
@@ -60,8 +79,9 @@ type wndClassEx struct {
 func TestGameWindowChild(t *testing.T) {
 	mode := os.Getenv(childModeEnv)
 	if mode == "" {
-		t.Skip("runs only as the child of TestHolderHidesAndShowsAGLFWWindow")
+		t.Skip("runs only as the child of the holder tests")
 	}
+	when, size, _ := strings.Cut(mode, ":")
 	runtime.LockOSThread()
 	class, err := windows.UTF16PtrFromString(gameWindowClass)
 	if err != nil {
@@ -74,26 +94,31 @@ func TestGameWindowChild(t *testing.T) {
 	wc := wndClassEx{
 		instance:  instance,
 		className: class,
-		wndProc:   procDefWindowProcW.Addr(),
+		wndProc:   childWndProc(),
 	}
 	wc.size = uint32(unsafe.Sizeof(wc))
 	if r := call(procRegisterClassExW, uintptr(unsafe.Pointer(&wc))); r == 0 {
 		fmt.Println("nowindow")
 		return
 	}
-	const overlappedWindow = 0x00CF0000
+	x, y, w, h := uintptr(100), uintptr(100), uintptr(400), uintptr(300)
+	if size == "full" {
+		x, y = 0, 0
+		w, h = call(procGetSystemMetrics, 0), call(procGetSystemMetrics, 1)
+	}
+	const popup = 0x80000000 // no frame, so the client area is the window
 	hwnd, err := callErr(procCreateWindowExW, 0, uintptr(unsafe.Pointer(class)), uintptr(unsafe.Pointer(class)),
-		overlappedWindow, 100, 100, 400, 300, 0, 0, uintptr(instance), 0)
+		popup, x, y, w, h, 0, 0, uintptr(instance), 0)
 	if hwnd == 0 {
 		fmt.Println("nowindow", err)
 		return
 	}
-	if mode == childShowAtOnce {
+	if when == "now" {
 		showWindow(windows.HWND(hwnd), windows.SW_SHOWNORMAL)
 	}
 	fmt.Println("created")
 
-	if mode == childShowOnCue {
+	if when == "cue" {
 		if _, err := bufio.NewReader(os.Stdin).ReadString('\n'); err != nil {
 			t.Fatal(err)
 		}
@@ -102,13 +127,10 @@ func TestGameWindowChild(t *testing.T) {
 	}
 
 	var msg winMsg
-	for deadline := time.Now().Add(8 * time.Second); time.Now().Before(deadline); {
-		for {
-			if r := call(procPeekMessageW, uintptr(unsafe.Pointer(&msg)), 0, 0, 0, 1); r == 0 {
-				break
-			}
-			call(procTranslateMsg, uintptr(unsafe.Pointer(&msg)))     //nolint:errcheck // a message pump; nothing to act on
-			call(procDispatchMessageW, uintptr(unsafe.Pointer(&msg))) //nolint:errcheck // a message pump; nothing to act on
+	for deadline := time.Now().Add(15 * time.Second); time.Now().Before(deadline); {
+		for call(procPeekMessageW, uintptr(unsafe.Pointer(&msg)), 0, 0, 0, 1) != 0 {
+			call(procTranslateMsg, uintptr(unsafe.Pointer(&msg)))
+			call(procDispatchMessageW, uintptr(unsafe.Pointer(&msg)))
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
@@ -117,7 +139,9 @@ func TestGameWindowChild(t *testing.T) {
 type glfwChild struct {
 	cmd   *exec.Cmd
 	stdin io.WriteCloser
-	lines *bufio.Scanner
+
+	mu    sync.Mutex
+	lines []string
 }
 
 func startGLFWChild(t *testing.T, mode string) *glfwChild {
@@ -135,6 +159,15 @@ func startGLFWChild(t *testing.T, mode string) *glfwChild {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
+	c := &glfwChild{cmd: cmd, stdin: stdin}
+	go func() {
+		scan := bufio.NewScanner(stdout)
+		for scan.Scan() {
+			c.mu.Lock()
+			c.lines = append(c.lines, scan.Text())
+			c.mu.Unlock()
+		}
+	}()
 	t.Cleanup(func() {
 		if err := cmd.Process.Kill(); err != nil {
 			t.Logf("kill child: %v", err)
@@ -143,28 +176,40 @@ func startGLFWChild(t *testing.T, mode string) *glfwChild {
 			t.Logf("child ended: %v", err) // killed, as meant
 		}
 	})
-	return &glfwChild{cmd: cmd, stdin: stdin, lines: bufio.NewScanner(stdout)}
+	return c
 }
 
-// await reads the child's output until it prints a line with the word.
+func (c *glfwChild) output() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return append([]string(nil), c.lines...)
+}
+
+// await waits for a line with the word in the child's output.
 func (c *glfwChild) await(t *testing.T, word string) {
 	t.Helper()
-	deadline := time.AfterFunc(10*time.Second, func() {
-		if err := c.cmd.Process.Kill(); err != nil {
-			t.Logf("kill child: %v", err)
-		}
-	})
-	defer deadline.Stop()
-	for c.lines.Scan() {
-		line := c.lines.Text()
-		if strings.HasPrefix(line, "nowindow") {
-			t.Skip("this session cannot make a window: " + line)
-		}
-		if strings.Contains(line, word) {
-			return
+	for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); time.Sleep(5 * time.Millisecond) {
+		for _, line := range c.output() {
+			if strings.HasPrefix(line, "nowindow") {
+				t.Skip("this session cannot make a window: " + line)
+			}
+			if strings.Contains(line, word) {
+				return
+			}
 		}
 	}
-	t.Fatalf("the child never printed %q", word)
+	t.Fatalf("the child never printed %q; it printed %q", word, c.output())
+}
+
+// sizesSince is the client sizes the child reported after its n-th line.
+func (c *glfwChild) sizesSince(n int) []string {
+	var sizes []string
+	for _, line := range c.output()[n:] {
+		if strings.HasPrefix(line, "size ") {
+			sizes = append(sizes, strings.TrimPrefix(line, "size "))
+		}
+	}
+	return sizes
 }
 
 func visible(t *testing.T, pid int) (found, shown bool) {
@@ -186,15 +231,31 @@ func gameWindowsOf(pid uint32) []windows.HWND {
 	return out
 }
 
-func TestHolderHidesAndShowsAGLFWWindow(t *testing.T) {
+// theWindow is the child's one window.
+func theWindow(t *testing.T, pid int) windows.HWND {
+	t.Helper()
+	found := gameWindowsOf(uint32(pid))
+	if len(found) != 1 {
+		t.Fatalf("want the child's one window, found %d", len(found))
+	}
+	return found[0]
+}
+
+// holdShownChild starts a child that shows its window on cue, holds it, and
+// cues the show: the state the game is in when the holder has caught its
+// window. It returns with the window shown by the child and hidden by the
+// holder.
+func holdShownChild(t *testing.T, mode string) (*glfwChild, WindowHolder, windows.HWND) {
+	t.Helper()
 	if testing.Short() {
 		t.Skip("starts a child process with a real window")
 	}
-	child := startGLFWChild(t, childShowOnCue)
+	child := startGLFWChild(t, mode)
 	child.await(t, "created")
 	pid := child.cmd.Process.Pid
-	if found, shown := visible(t, pid); !found || shown {
-		t.Fatalf("the child's window is made hidden: found %v shown %v", found, shown)
+	hwnd := theWindow(t, pid)
+	if _, shown := visible(t, pid); shown {
+		t.Fatal("the child's window is made hidden")
 	}
 
 	holder, err := HoldGameWindow(pid)
@@ -207,28 +268,102 @@ func TestHolderHidesAndShowsAGLFWWindow(t *testing.T) {
 			holder.Release(false)
 		}
 	})
+	t.Cleanup(func() { released = true })
 	if _, err := io.WriteString(child.stdin, "\n"); err != nil {
 		t.Fatal(err)
 	}
 	child.await(t, "shown")
-
-	h := holder.(*winHolder)
-	until(t, "the show to be hidden", func() bool { return h.hideCount() >= 1 })
+	until(t, "the show to be hidden", func() bool { return holder.(*winHolder).hideCount() >= 1 })
 	if _, shown := visible(t, pid); shown {
 		t.Fatal("the window the child showed is still visible")
 	}
+	return child, holder, hwnd
+}
+
+func TestHolderHidesAndShowsAGLFWWindow(t *testing.T) {
+	child, holder, _ := holdShownChild(t, childCueWindow)
+	pid := child.cmd.Process.Pid
 
 	report := holder.Release(false)
-	released = true
 	t.Logf("report %+v", report)
-	if _, shown := visible(t, pid); !shown {
-		t.Fatal("Release brings the window back")
-	}
+	until(t, "the window to be shown again", func() bool { _, shown := visible(t, pid); return shown })
 	if !report.Seen || report.Hides < 1 || report.FirstHideMs < 0 || report.MaxHideMs < report.FirstHideMs {
 		t.Fatalf("report %+v", report)
 	}
+	if report.Nudged || report.Foreground {
+		t.Fatalf("a release that is not the handover neither nudges nor takes the foreground: %+v", report)
+	}
 	if again := holder.Release(true); again != report {
 		t.Fatalf("a second Release repeats the first: %+v then %+v", report, again)
+	}
+}
+
+func TestHandoverNudgesAFullscreenWindowOnePixelAndBack(t *testing.T) {
+	child, holder, hwnd := holdShownChild(t, childCueFull)
+	pid := child.cmd.Process.Pid
+	original, ok := windowRect(hwnd)
+	if !ok {
+		t.Fatal("no window rectangle")
+	}
+	monitor, ok := monitorRect(hwnd)
+	if !ok || !original.covers(monitor) {
+		t.Fatalf("the child's window %+v should cover its monitor %+v", original, monitor)
+	}
+	mark := len(child.output())
+
+	report := holder.Release(true)
+	t.Logf("report %+v", report)
+	if !report.Nudged || !report.Seen || report.Hides < 1 {
+		t.Fatalf("report %+v", report)
+	}
+
+	// The game's thread was told: one pixel shorter, then the full size.
+	short := fmt.Sprintf("%d %d", original.width(), original.height()-1)
+	full := fmt.Sprintf("%d %d", original.width(), original.height())
+	until(t, "the child to see the resize there and back", func() bool {
+		sizes := child.sizesSince(mark)
+		for i, s := range sizes {
+			if s == short {
+				for _, later := range sizes[i+1:] {
+					if later == full {
+						return true
+					}
+				}
+			}
+		}
+		return false
+	})
+	until(t, "the window to be shown", func() bool { _, shown := visible(t, pid); return shown })
+	if got, ok := windowRect(hwnd); !ok || got != original {
+		t.Fatalf("the window ends at %+v, want %+v", got, original)
+	}
+}
+
+func TestHandoverLeavesAWindowedWindowAlone(t *testing.T) {
+	child, holder, hwnd := holdShownChild(t, childCueWindow)
+	pid := child.cmd.Process.Pid
+	original, ok := windowRect(hwnd)
+	if !ok {
+		t.Fatal("no window rectangle")
+	}
+	mark := len(child.output())
+
+	report := holder.Release(true)
+	t.Logf("report %+v", report)
+	if report.Nudged {
+		t.Fatalf("a window that does not cover its monitor is not nudged: %+v", report)
+	}
+	until(t, "the window to be shown", func() bool { _, shown := visible(t, pid); return shown })
+	// Long enough for a nudge to have come and gone.
+	time.Sleep(handoverNudgeWait + 200*time.Millisecond)
+	short := fmt.Sprintf("%d %d", original.width(), original.height()-1)
+	for _, s := range child.sizesSince(mark) {
+		if s == short {
+			t.Fatalf("the child was resized to %s", s)
+		}
+	}
+	if got, ok := windowRect(hwnd); !ok || got != original {
+		t.Fatalf("the window ends at %+v, want %+v", got, original)
 	}
 }
 
@@ -236,7 +371,7 @@ func TestHolderSweepsAWindowThatWasAlreadyVisible(t *testing.T) {
 	if testing.Short() {
 		t.Skip("starts a child process with a real window")
 	}
-	child := startGLFWChild(t, childShowAtOnce)
+	child := startGLFWChild(t, childNowWindow)
 	child.await(t, "created")
 	pid := child.cmd.Process.Pid
 	until(t, "the child's window to show", func() bool { _, shown := visible(t, pid); return shown })
@@ -259,9 +394,7 @@ func TestHolderSweepsAWindowThatWasAlreadyVisible(t *testing.T) {
 	if report.Swept != 1 || !report.Seen || report.Hides != 0 {
 		t.Fatalf("report %+v", report)
 	}
-	if _, shown := visible(t, pid); !shown {
-		t.Fatal("Release brings it back")
-	}
+	until(t, "the window to be shown again", func() bool { _, shown := visible(t, pid); return shown })
 }
 
 func TestHolderLeavesOtherWindowsAlone(t *testing.T) {
@@ -272,7 +405,7 @@ func TestHolderLeavesOtherWindowsAlone(t *testing.T) {
 		t.Fatal(err)
 	}
 	report := holder.Release(true)
-	if report.Seen || report.Hides != 0 || report.Foreground {
+	if report.Seen || report.Hides != 0 || report.Foreground || report.Nudged {
 		t.Fatalf("report %+v", report)
 	}
 }

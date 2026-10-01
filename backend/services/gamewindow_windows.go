@@ -18,8 +18,9 @@ import (
 // The window holder, on Windows (#45). It asks the OS to tell it when a window
 // of the game's process is shown (an out-of-context WinEvent hook, which
 // injects nothing into the game), and hides the game's GLFW window the moment
-// that happens. It reads a window's class and owner process and nothing else,
-// and starts no process.
+// that happens. At the handover it shows the window again, after resizing a
+// fullscreen one by a pixel and back (#46). It reads a window's class, owner
+// process and rectangle and nothing else, and starts no process.
 
 const (
 	eventObjectShow   = 0x8002
@@ -34,6 +35,11 @@ const (
 	classNameCapacity = 64
 	// holdStopTimeout bounds the wait for the hook thread to unhook and end.
 	holdStopTimeout = 2 * time.Second
+
+	swpNoZOrder             = 0x0004
+	swpNoActivate           = 0x0010
+	swpAsyncWindowPos       = 0x4000
+	monitorDefaultToNearest = 2
 )
 
 var (
@@ -45,6 +51,11 @@ var (
 	procPeekMessageW       = user32.NewProc("PeekMessageW")
 	procPostThreadMessageW = user32.NewProc("PostThreadMessageW")
 	procShowWindow         = user32.NewProc("ShowWindow")
+	procShowWindowAsync    = user32.NewProc("ShowWindowAsync")
+	procSetWindowPos       = user32.NewProc("SetWindowPos")
+	procGetWindowRect      = user32.NewProc("GetWindowRect")
+	procMonitorFromWindow  = user32.NewProc("MonitorFromWindow")
+	procGetMonitorInfoW    = user32.NewProc("GetMonitorInfoW")
 	procSetForegroundWin   = user32.NewProc("SetForegroundWindow")
 	procGetAncestor        = user32.NewProc("GetAncestor")
 	procIsWindow           = user32.NewProc("IsWindow")
@@ -59,6 +70,14 @@ type winMsg struct {
 	lParam  uintptr
 	time    uint32
 	pt      [2]int32
+}
+
+// monitorInfo is the Win32 MONITORINFO.
+type monitorInfo struct {
+	size    uint32
+	monitor screenRect
+	work    screenRect
+	flags   uint32
 }
 
 // winEventCallback and enumCallback are made once: the runtime can hand out
@@ -104,7 +123,8 @@ func HoldGameWindow(pid int) (WindowHolder, error) {
 	if pid <= 0 {
 		return nil, fmt.Errorf("hold game window: pid %d", pid)
 	}
-	h := &winHolder{pid: uint32(pid), held: map[windows.HWND]struct{}{}, done: make(chan struct{})}
+	h := &winHolder{pid: uint32(pid), held: map[windows.HWND]struct{}{},
+		done: make(chan struct{}), finished: make(chan struct{})}
 	ready := make(chan error, 1)
 	go h.run(ready)
 	select {
@@ -136,6 +156,8 @@ type winHolder struct {
 	swept    int
 	released bool
 	report   WindowReport
+	// finished closes when Release has stored its report.
+	finished chan struct{}
 }
 
 // run is the hook thread: it hooks, sweeps once, pumps messages until
@@ -268,17 +290,21 @@ func (h *winHolder) hide(hwnd windows.HWND) bool {
 }
 
 // Release unhooks first, so no show is hidden after it, then shows what was
-// held and gives the foreground when asked.
+// held. At the handover (foreground) a fullscreen window is nudged first and
+// given the foreground after it is shown.
 func (h *winHolder) Release(foreground bool) WindowReport {
 	h.mu.Lock()
 	if h.released {
-		r := h.report
 		h.mu.Unlock()
-		return r
+		<-h.finished // a second call waits for the first one's report
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		return h.report
 	}
 	h.released = true
 	thread := h.threadID
 	h.mu.Unlock()
+	defer close(h.finished)
 
 	if thread != 0 {
 		if ok, err := callErr(procPostThreadMessageW, uintptr(thread), wmQuit, 0, 0); ok == 0 {
@@ -291,17 +317,28 @@ func (h *winHolder) Release(foreground bool) WindowReport {
 		slog.Warn("game window hook: the hook thread did not end in time")
 	}
 
+	// The hook thread has ended, so nothing changes what is held. The lock is
+	// not kept across the nudge's wait.
 	h.mu.Lock()
-	defer h.mu.Unlock()
 	r := h.tally.report()
 	r.Seen, r.Swept = h.seen, h.swept
+	windowsHeld := make([]windows.HWND, 0, len(h.held))
 	for hwnd := range h.held {
+		windowsHeld = append(windowsHeld, hwnd)
+	}
+	h.mu.Unlock()
+
+	for _, hwnd := range windowsHeld {
 		if exists := call(procIsWindow, uintptr(hwnd)); exists == 0 {
 			continue // the game closed it
 		}
-		showWindow(hwnd, windows.SW_SHOW)
-		if !windows.IsWindowVisible(hwnd) {
-			slog.Warn("game window hold: a window is still hidden after a show")
+		if foreground && nudge(hwnd) {
+			r.Nudged = true
+		}
+		// Asynchronous, so a game thread that is busy does not hold this up:
+		// the show is queued to it after the nudge's resizes, in order.
+		if posted := call(procShowWindowAsync, uintptr(hwnd), windows.SW_SHOW); posted == 0 {
+			slog.Warn("game window hold: the show could not be queued")
 		}
 		if foreground {
 			if ok := call(procSetForegroundWin, uintptr(hwnd)); ok != 0 {
@@ -309,8 +346,63 @@ func (h *winHolder) Release(foreground bool) WindowReport {
 			}
 		}
 	}
+	h.mu.Lock()
 	h.report = r
+	h.mu.Unlock()
 	return r
+}
+
+// nudge makes a fullscreen window one pixel shorter and back, so a game that
+// came up drawing at the wrong size takes its real one (#46). A window that
+// does not cover its monitor is left as it is. Both resizes are queued to the
+// game's thread (SWP_ASYNCWINDOWPOS) so a busy thread cannot block this one.
+// It reports whether the window went there and back.
+func nudge(hwnd windows.HWND) bool {
+	rect, ok := windowRect(hwnd)
+	if !ok {
+		return false
+	}
+	monitor, ok := monitorRect(hwnd)
+	if !ok || !rect.covers(monitor) || rect.height() < 2 {
+		return false
+	}
+	if !setWindowPos(hwnd, rect.Left, rect.Top, rect.width(), rect.height()-1) {
+		return false
+	}
+	time.Sleep(handoverNudgeWait)
+	if !setWindowPos(hwnd, rect.Left, rect.Top, rect.width(), rect.height()) {
+		slog.Warn("game window hold: the window could not be put back to its size")
+		return false
+	}
+	return true
+}
+
+func setWindowPos(hwnd windows.HWND, x, y, w, h int32) bool {
+	const flags = swpNoZOrder | swpNoActivate | swpAsyncWindowPos
+	// int32 to uintptr keeps the sign bits a negative coordinate needs.
+	return call(procSetWindowPos, uintptr(hwnd), 0, uintptr(x), uintptr(y), uintptr(w), uintptr(h), flags) != 0
+}
+
+// windowRect is a window's rectangle in screen coordinates.
+func windowRect(hwnd windows.HWND) (screenRect, bool) {
+	var r screenRect
+	if call(procGetWindowRect, uintptr(hwnd), uintptr(unsafe.Pointer(&r))) == 0 {
+		return screenRect{}, false
+	}
+	return r, true
+}
+
+// monitorRect is the full rectangle of the monitor a window is mostly on.
+func monitorRect(hwnd windows.HWND) (screenRect, bool) {
+	monitor := call(procMonitorFromWindow, uintptr(hwnd), monitorDefaultToNearest)
+	if monitor == 0 {
+		return screenRect{}, false
+	}
+	info := monitorInfo{size: uint32(unsafe.Sizeof(monitorInfo{}))}
+	if call(procGetMonitorInfoW, monitor, uintptr(unsafe.Pointer(&info))) == 0 {
+		return screenRect{}, false
+	}
+	return info.monitor, true
 }
 
 // hideCount is how many show events have been hidden so far; tests wait on it.

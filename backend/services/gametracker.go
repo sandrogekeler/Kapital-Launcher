@@ -104,8 +104,9 @@ type TrackRequest struct {
 	// Before is the game log as it was before Prism was started.
 	Before GameLogSnapshot
 	// HoldWindow keeps the game's window hidden from its creation until the
-	// game is running, when it is shown and given the foreground (#45). A
-	// developer setting; the splash (#43) is what it is a test for.
+	// resource reload begins, when it is shown and given the foreground
+	// (#45), so its own loading screen is seen. A developer setting; the
+	// splash (#43) is what it is a test for.
 	HoldWindow bool
 }
 
@@ -428,10 +429,10 @@ func (r *gameRun) timing() models.LaunchTiming {
 }
 
 func (r *gameRun) set(phase string, now time.Time, code *int) {
-	// The window is shown before the phase is published, so the splash that
-	// closes on it never leaves the screen empty (#45).
+	// The handover is the resource reload beginning, or the game running when
+	// the log skipped that; whichever comes first finds the window held (#45).
 	switch phase {
-	case models.GamePhaseRunning:
+	case models.GamePhaseResources, models.GamePhaseRunning:
 		r.releaseWindow(true)
 	case models.GamePhaseStopping, models.GamePhaseClosed, models.GamePhaseCrashed, models.GamePhaseFailed:
 		r.releaseWindow(false)
@@ -563,11 +564,11 @@ func (r *gameRun) findGame() {
 }
 
 // holdWindow starts keeping the game's window hidden, when asked to and while
-// the game is not yet running. It never fails the run: where it cannot hold,
-// the window shows as the game makes it.
+// the handover has not come. It never fails the run: where it cannot hold, the
+// window shows as the game makes it.
 func (r *gameRun) holdWindow(pid int) {
 	if !r.req.HoldWindow || r.t.hold == nil || r.holder != nil ||
-		phaseRank[r.state.Phase] >= phaseRank[models.GamePhaseRunning] {
+		phaseRank[r.state.Phase] >= phaseRank[models.GamePhaseResources] {
 		return
 	}
 	h, err := r.t.hold(pid)
@@ -580,19 +581,29 @@ func (r *gameRun) holdWindow(pid int) {
 	r.holder = h
 }
 
-// releaseWindow shows the held window again, giving it the foreground at the
-// handover, and logs what holding it came to: counts and milliseconds, never a
-// window title.
+// releaseWindow shows the held window again and logs what holding it came to:
+// counts and milliseconds, never a window title. The handover (foreground)
+// nudges the window and so takes a few hundred ms: it runs on its own
+// goroutine, and the run loop goes on. Any other release is quick and is done
+// before the run moves on, so a window is never left hidden behind it.
 func (r *gameRun) releaseWindow(foreground bool) {
 	if r.holder == nil {
 		return
 	}
 	h := r.holder
 	r.holder = nil
-	rep := h.Release(foreground)
-	slog.Info("game window", "chapter", r.req.ChapterID, "handover", foreground,
-		"seen", rep.Seen, "swept", rep.Swept, "hides", rep.Hides,
-		"firstHideMs", rep.FirstHideMs, "maxHideMs", rep.MaxHideMs, "foreground", rep.Foreground)
+	release := func() {
+		rep := h.Release(foreground)
+		slog.Info("game window", "chapter", r.req.ChapterID, "handover", foreground,
+			"seen", rep.Seen, "swept", rep.Swept, "hides", rep.Hides,
+			"firstHideMs", rep.FirstHideMs, "maxHideMs", rep.MaxHideMs,
+			"foreground", rep.Foreground, "nudged", rep.Nudged)
+	}
+	if foreground {
+		go release()
+		return
+	}
+	release()
 }
 
 // isJavaName is whether a process name is a Java runtime: javaw.exe or

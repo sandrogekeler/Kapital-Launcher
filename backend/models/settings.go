@@ -21,8 +21,8 @@ type AppSettings struct {
 	// setting, edited under Developer on the settings screen (#5); loopback
 	// only (services.CheckLocalPackURL).
 	PackOverrides map[string]string `json:"packOverrides,omitempty"`
-	// HoldGameWindow keeps the game's window hidden until the game is ready,
-	// then shows it and gives it the foreground (#45). A developer setting,
+	// HoldGameWindow keeps the game's window hidden until its resource reload
+	// begins, then shows it and gives it the foreground (#45). A developer setting,
 	// off by default: it is a test for the loading splash (#43), and without
 	// the splash the player sees nothing for a minute.
 	HoldGameWindow bool `json:"holdGameWindow,omitempty"`
