@@ -20,6 +20,12 @@ const holdStartTimeout = 3 * time.Second
 // pause is what the measured fix needed to take (#46).
 const handoverNudgeWait = 300 * time.Millisecond
 
+// nudgeShownTimeout is how long the handover waits for the shown game window
+// to report its real rectangle before it gives up on the nudge. The show is
+// queued to the game's thread, which handles it between frames of the
+// reload: on a real start that took more than 1.5 s.
+const nudgeShownTimeout = 15 * time.Second
+
 var errWindowHoldUnsupported = errors.New("holding the game window is not supported on this OS")
 
 // WindowReport is what holding a window came to, for the log (#45). It holds
