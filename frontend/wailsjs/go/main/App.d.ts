@@ -6,6 +6,8 @@ export function ChoosePrismExecutable():Promise<string>;
 
 export function ChoosePrismRoot():Promise<string>;
 
+export function CopyRedactedLog():Promise<number>;
+
 export function GetAppVersion():Promise<string>;
 
 export function GetChapterSettings(arg1:string):Promise<models.ChapterSettingsInfo>;

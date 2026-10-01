@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -43,6 +44,12 @@ type App struct {
 	// openFolder shows a folder in the file manager; a test swaps it.
 	openFolder func(string) error
 
+	// What CopyRedactedLog needs: where the log is, who to mask, and the
+	// clipboard. The clipboard is a field so a test needs no window.
+	dataDir      string
+	home, osUser string
+	setClipboard func(ctx context.Context, text string) error
+
 	mu     sync.Mutex
 	engine models.EngineInfo
 }
@@ -57,7 +64,16 @@ func NewApp(dataDir string, manifest []byte) (*App, error) {
 	prism := services.NewPrismService(runtime.GOOS)
 	managed := services.NewManagedPrism(dataDir, runtime.GOOS, runtime.GOARCH)
 	prism.UseManaged(managed)
+	// An unknown home is only a value the redactor then skips.
+	home, err := os.UserHomeDir()
+	if err != nil {
+		slog.Warn("home directory", "error", err)
+	}
 	a := &App{
+		dataDir:        dataDir,
+		home:           home,
+		osUser:         services.OSUserName(),
+		setClipboard:   wailsrt.ClipboardSetText,
 		manifest:       m,
 		settings:       services.NewSettingsService(dataDir),
 		prism:          prism,
@@ -412,6 +428,36 @@ func (a *App) ChoosePrismRoot() (string, error) {
 		return "", fmt.Errorf("choose prism root: %w", err)
 	}
 	return strings.TrimSpace(picked), nil
+}
+
+// CopyRedactedLog puts the end of kapital-launcher.log on the clipboard for a
+// bug report and returns how many lines went (#84). The last 256 KiB at most,
+// from a whole line, run through a redactor for this player: the home path,
+// the OS user name, the Prism profile name and every server address in the
+// manifest. Nothing is written to disk, and a path or value is never taken
+// from the frontend.
+func (a *App) CopyRedactedLog() (int, error) {
+	settings, err := a.settings.Load()
+	if err != nil {
+		return 0, err
+	}
+	servers := make([]string, 0, len(a.manifest.Chapters))
+	for _, c := range a.manifest.Chapters {
+		if c.Server != nil {
+			servers = append(servers, c.Server.Address)
+		}
+	}
+	redactor := services.NewRedactor(a.home, settings.ProfileName, servers, a.osUser)
+	text, lines, err := services.RedactedLogTail(services.LogPath(a.dataDir), redactor, services.LogCopyBytes)
+	if err != nil {
+		return 0, err
+	}
+	if err := a.setClipboard(a.context(), text); err != nil {
+		slog.Error("copy log", "error", err)
+		return 0, fmt.Errorf("copy log: %w", err)
+	}
+	slog.Info("log copied", "lines", lines)
+	return lines, nil
 }
 
 // GetServerStatus pings the chapter's server now and returns the result. The

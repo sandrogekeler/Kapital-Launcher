@@ -19,6 +19,7 @@ import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 import { TextField } from '../ui/TextField'
+import { SupportSection } from './SupportSection'
 
 interface Props {
   onClose: () => void
@@ -179,6 +180,7 @@ export function SettingsPanel({ onClose }: Props) {
             />
           ))}
         </Section>
+        <SupportSection />
       </div>
     </section>
   )

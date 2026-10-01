@@ -248,6 +248,12 @@ protocol `-1` and an empty status request, then the connection closes.
 **S7.1 The log carries no credential** and is written owner-only.
 **S7.2 The share path redacts** home directory, username, server addresses and
 IPv4 addresses. Verify: `TestRedactRemovesWhatIdentifiesTheUser`.
+**S7.3 The copy is the redacted tail and nothing else.** `CopyRedactedLog`
+(#84) reads the current log read-only, the last 256 KiB from a whole line,
+drops a line still being written, masks the home path, OS user name, profile
+name and every manifest server address, and writes only to the clipboard.
+It takes no argument from the frontend.
+Verify: `TestRedactedLogTailRedacts`, `TestCopyRedactedLogPutsTheMaskedTailOnTheClipboard`.
 
 ## S8. CI and supply chain
 
