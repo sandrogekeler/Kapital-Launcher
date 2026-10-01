@@ -1,0 +1,189 @@
+/* The launcher window on the download page, cycling through its three
+   chapters with no script: one CSS animation per moving part, all on the
+   same clock. The motion is the app's own (frontend/src/style.css): the
+   chapter card slides the way the content moves, blurring at the middle of
+   its travel, while the nav highlight glides to the next row in the same
+   duration and easing. Every length, duration and easing is a token; the
+   only numbers here are the keyframe stops, which are fractions of the cycle.
+
+   The clock: a chapter dwells (motion.duration.dwell), then the next slides
+   in over the slow duration. Three chapters make one cycle, so a step is one
+   third of it and a slide is slow / cycle of it. With dwell 3780 ms and slow
+   420 ms a step is 4200 ms, the cycle 12600 ms and a slide 3.333% of it.
+   Change either duration and the stops below must follow. */
+
+.showcase {
+  --showcase-step: calc(var(--duration-dwell) + var(--duration-slow));
+  --showcase-cycle: calc(3 * var(--showcase-step));
+}
+
+/* The second and third chapter take their turn one and two steps after the
+   first, in the stage and in the nav alike; the parts read the delay from
+   here. A negative delay starts an animation part-way through, so the second
+   chapter begins two steps in (one step from its own turn) and the third one
+   step in. */
+.showcase-stage > :nth-child(2),
+.showcase-rows > :nth-child(2) {
+  --showcase-delay: calc(-2 * var(--showcase-step));
+}
+.showcase-stage > :nth-child(3),
+.showcase-rows > :nth-child(3) {
+  --showcase-delay: calc(-1 * var(--showcase-step));
+}
+
+/* The card. Picking the chapter below brings the new card up from below and
+   sends the old one up and out; the wrap from the last chapter to the first
+   runs the other way, as it does in the app. */
+.showcase-stage > :nth-child(1) {
+  --showcase-in: calc(-1 * var(--layout-slide));
+  --showcase-out: calc(-1 * var(--layout-slide));
+}
+.showcase-stage > :nth-child(2) {
+  --showcase-in: var(--layout-slide);
+  --showcase-out: calc(-1 * var(--layout-slide));
+}
+.showcase-stage > :nth-child(3) {
+  --showcase-in: var(--layout-slide);
+  --showcase-out: var(--layout-slide);
+}
+@keyframes showcase-card {
+  0% {
+    transform: translateY(var(--showcase-in));
+    opacity: 0;
+  }
+  3.333%,
+  33.333% {
+    transform: none;
+    opacity: 1;
+  }
+  36.667%,
+  100% {
+    transform: translateY(var(--showcase-out));
+    opacity: 0;
+  }
+}
+@keyframes showcase-blur {
+  0%,
+  3.333%,
+  33.333%,
+  36.667%,
+  100% {
+    filter: blur(0);
+  }
+  1.667%,
+  35% {
+    filter: blur(var(--effect-motion-blur));
+  }
+}
+.showcase-card {
+  animation:
+    showcase-card var(--showcase-cycle) var(--ease-glide) infinite,
+    showcase-blur var(--showcase-cycle) ease-in-out infinite;
+  animation-delay: var(--showcase-delay, 0s);
+}
+
+/* The open chapter's art behind its nav row, faded in while it is the one shown. */
+@keyframes showcase-row-art {
+  0%,
+  36.667%,
+  100% {
+    opacity: 0;
+  }
+  3.333%,
+  33.333% {
+    opacity: 1;
+  }
+}
+.showcase-row-art {
+  animation: showcase-row-art var(--showcase-cycle) var(--ease-glide) infinite;
+  animation-delay: var(--showcase-delay, 0s);
+}
+
+/* The nav highlight: one element the height of a row, gliding row to row
+   behind the three, its border the open chapter's accent. The rows are
+   gap-1 apart, so a row down is its own height plus one spacing unit. */
+@keyframes showcase-highlight {
+  0% {
+    transform: translateY(calc(200% + 2 * var(--spacing)));
+    border-color: color-mix(
+      in srgb,
+      var(--chapter-frangfurd) var(--accent-edge-mix),
+      transparent
+    );
+  }
+  3.333%,
+  33.333% {
+    transform: none;
+    border-color: color-mix(
+      in srgb,
+      var(--chapter-luxemburg) var(--accent-edge-mix),
+      transparent
+    );
+  }
+  36.667%,
+  66.667% {
+    transform: translateY(calc(100% + var(--spacing)));
+    border-color: color-mix(
+      in srgb,
+      var(--chapter-lichdenstein) var(--accent-edge-mix),
+      transparent
+    );
+  }
+  70%,
+  100% {
+    transform: translateY(calc(200% + 2 * var(--spacing)));
+    border-color: color-mix(
+      in srgb,
+      var(--chapter-frangfurd) var(--accent-edge-mix),
+      transparent
+    );
+  }
+}
+.showcase-highlight {
+  height: calc((100% - 2 * var(--spacing)) / 3);
+  animation: showcase-highlight var(--showcase-cycle) var(--ease-glide) infinite;
+}
+
+/* The open chapter's colour, for what sits outside the window: the glow
+   behind it and the Download button above it. */
+@keyframes showcase-accent {
+  0%,
+  70%,
+  100% {
+    background-color: var(--chapter-frangfurd);
+  }
+  3.333%,
+  33.333% {
+    background-color: var(--chapter-luxemburg);
+  }
+  36.667%,
+  66.667% {
+    background-color: var(--chapter-lichdenstein);
+  }
+}
+.showcase-accent {
+  animation: showcase-accent var(--showcase-cycle) var(--ease-glide) infinite;
+}
+
+/* With reduced motion the cards only cross-fade, on the same clock, and the
+   highlight steps to its row instead of gliding; the colours still ease. */
+@keyframes showcase-fade {
+  0%,
+  36.667%,
+  100% {
+    opacity: 0;
+  }
+  3.333%,
+  33.333% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .showcase-card {
+    animation: showcase-fade var(--showcase-cycle) ease-in-out infinite;
+    animation-delay: var(--showcase-delay, 0s);
+  }
+  .showcase-highlight {
+    animation-timing-function: step-end;
+  }
+}

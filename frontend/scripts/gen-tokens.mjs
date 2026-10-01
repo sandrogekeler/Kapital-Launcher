@@ -260,11 +260,13 @@ function emitLayout(src, push) {
   push(`  --layout-icon-md: ${src.layout.icon.md}${src.layout.unit};`)
   push(`  --layout-splash-width: ${src.layout.splash.width}${src.layout.unit};`)
   push(`  --layout-splash-height: ${src.layout.splash.height}${src.layout.unit};`)
+  push(`  --layout-window-width: ${src.layout.window.width}${src.layout.unit};`)
+  push(`  --layout-window-height: ${src.layout.window.height}${src.layout.unit};`)
   push(`}`)
 }
 
 function emitEffects(src, push) {
-  const { hoverBrightness, focusRing, scrim, artPending, motionBlur, tileBlur, tileTint } =
+  const { hoverBrightness, focusRing, scrim, accent, artPending, motionBlur, tileBlur, tileTint } =
     src.effect
   push(`/* Effects: values a utility cannot name on its own. Read by the shared`)
   push(`   styles/base.css and by brightness-(--effect-hover-brightness). */`)
@@ -278,6 +280,8 @@ function emitEffects(src, push) {
   push(`  --scrim-far: ${scrim.far}${scrim.unit};`)
   push(`  --scrim-wash: ${scrim.wash}${scrim.unit};`)
   push(`  --scrim-tile: ${scrim.tile}${scrim.unit};`)
+  push(`  --accent-wash-mix: ${accent.wash}${accent.unit};`)
+  push(`  --accent-edge-mix: ${accent.edge}${accent.unit};`)
   push(`  --art-pending-tint: ${artPending.tint}%;`)
   push(`  --art-pending-line: ${artPending.line}%;`)
   push(`  --art-pending-cell: ${artPending.cell}px;`)
@@ -330,8 +334,8 @@ function emitAccents(src, push) {
   const chapterIds = Object.keys(src.color.chapter)
   push(`:root {`)
   push(`  --accent: var(--chapter-${chapterIds[0]});`)
-  push(`  --accent-wash: color-mix(in srgb, var(--accent) 12%, transparent);`)
-  push(`  --accent-edge: color-mix(in srgb, var(--accent) 42%, transparent);`)
+  push(`  --accent-wash: color-mix(in srgb, var(--accent) var(--accent-wash-mix), transparent);`)
+  push(`  --accent-edge: color-mix(in srgb, var(--accent) var(--accent-edge-mix), transparent);`)
   push(`}`)
   for (const id of chapterIds) {
     push(`[data-chapter='${id}'] {`)

@@ -74,6 +74,8 @@
   --transition-duration-fast: 140ms;
   --duration-slow: 420ms;
   --transition-duration-slow: 420ms;
+  --duration-dwell: 3780ms;
+  --transition-duration-dwell: 3780ms;
   --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-glide: cubic-bezier(0.45, 0, 0.15, 1);
@@ -92,6 +94,8 @@
   --layout-icon-md: 18px;
   --layout-splash-width: 720px;
   --layout-splash-height: 405px;
+  --layout-window-width: 1280px;
+  --layout-window-height: 800px;
 }
 
 /* Effects: values a utility cannot name on its own. Read by the shared
@@ -106,6 +110,8 @@
   --scrim-far: 18%;
   --scrim-wash: 84%;
   --scrim-tile: 58%;
+  --accent-wash-mix: 12%;
+  --accent-edge-mix: 42%;
   --art-pending-tint: 6%;
   --art-pending-line: 8%;
   --art-pending-cell: 48px;
@@ -189,8 +195,8 @@
    utilities. The first chapter is the fallback so nothing renders unaccented. */
 :root {
   --accent: var(--chapter-luxemburg);
-  --accent-wash: color-mix(in srgb, var(--accent) 12%, transparent);
-  --accent-edge: color-mix(in srgb, var(--accent) 42%, transparent);
+  --accent-wash: color-mix(in srgb, var(--accent) var(--accent-wash-mix), transparent);
+  --accent-edge: color-mix(in srgb, var(--accent) var(--accent-edge-mix), transparent);
 }
 [data-chapter='luxemburg'] {
   --accent: var(--chapter-luxemburg);

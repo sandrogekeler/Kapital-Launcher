@@ -35,7 +35,8 @@ colour is needed outside its own scope. Type: `text-2xs` to `text-2xl` and
 `text-display`; `font-ui font-display font-mono`; `tracking-control
 tracking-label tracking-eyebrow`. Radius: `rounded-sm rounded-md
 rounded-lg rounded-pill`. Motion: `duration-fast duration-slow ease-standard
-ease-out`. Layout: `w-(--layout-sidebar)`, `h-(--layout-hero)`,
+ease-out` (`duration-dwell` is the site's hold between chapters; the app
+does not use it). Layout: `w-(--layout-sidebar)`, `h-(--layout-hero)`,
 `h-(--layout-titlebar)`, `size-(--layout-icon-sm)` and `-md`. Effects:
 `hover:brightness-(--effect-hover-brightness)`, `scrim-hero`, `scrim-wash`.
 

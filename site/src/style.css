@@ -7,3 +7,7 @@
    tokens.json and run `pnpm gen:tokens` from frontend/. */
 @import "../../frontend/src/styles/tokens.css";
 @import "../../frontend/src/styles/base.css";
+
+/* The one thing the page draws that the app does not: the launcher window
+   cycling through its chapters, on the app's own motion tokens. */
+@import "./showcase.css";

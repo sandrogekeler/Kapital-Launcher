@@ -29,6 +29,7 @@ aislop).
 |---|---|---|
 | #93 | Keep the game window hidden until the resource reload (#45, ADR-0012) | Needs kapital-packs#3 |
 | this one | The handover after the fifth session | |
+| `claude/keen-meitner-kuompl` | The download page shows the launcher window cycling through the chapters (cloud session, 2026-10-01) | Checked in headless Chromium only, not in a real browser |
 | kapital-packs#3 | Frangfurd's NeoForge early window back on | The pack version stays 1.0.0; a 1.0.1 is the author's call |
 
 ## Done on 2026-10-01

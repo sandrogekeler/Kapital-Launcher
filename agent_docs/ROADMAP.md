@@ -112,6 +112,8 @@ download.
 
 - [x] `site/`: one page on the app's tokens, no script, links as data, a
       strict CSP; built in CI
+- [x] The launcher window on the page, cycling through the three chapters on
+      CSS animations, done 2026-10-01
 - [ ] Connect a Cloudflare Pages project to the repository (`site/README.md`, Hosting)
 - [ ] GitHub link: the repository is public since 2026-09-30
 - [ ] Download link, once the release workflow publishes a release
