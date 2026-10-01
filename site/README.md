@@ -1,8 +1,9 @@
 # Download site
 
-One static page: what the launcher is, and Download, GitHub and Wiki buttons.
-It is separate from the Kapitel Kapital wiki and runs no script. The decision
-record is `docs/adr/0009-download-site.md`.
+One static page: what the launcher is, the Download, GitHub and Wiki buttons,
+and under them the launcher window itself, cycling through its three
+chapters. It is separate from the Kapitel Kapital wiki and runs no script.
+The decision record is `docs/adr/0009-download-site.md`.
 
 ## Where the look comes from
 
@@ -15,6 +16,39 @@ its alt text the heading. The buttons carry the
 classes of the app's `Button` variants: `play` for Download, `ghost` for the
 others. A value the page needs and the tokens do not have is a token to add in
 `design/tokens.json`, the same rule as the app.
+
+The page is dark whatever the visitor's system preference (`data-theme="dark"`
+on the root): the artwork and the window are drawn for the dark palette.
+
+## The window
+
+Below the buttons is the launcher window at its real size
+(`layout.window` in the tokens), drawn with the classes of the app's own
+components (`frontend/src/components`): the header bar, the chapter nav with
+its gliding highlight, the account card, and the chapter card with its hero,
+action bar and panels, filled from `data/launcher.json`. The icons are
+lucide's paths inlined as SVG, the same glyphs the app renders. The window
+is a picture: nothing in it is a control, it is hidden from assistive
+technology, and a sentence before it names the three chapters.
+
+It cycles through the chapters on CSS animations alone, in `src/showcase.css`,
+with the app's own motion: the card slides the way the content moves and
+blurs at the middle of its travel (`frontend/src/style.css`), the nav
+highlight glides to the next row in the same duration and easing, the row's
+art fades in behind it, and the glow behind the window and the Download
+button take the open chapter's colour. A chapter dwells for
+`motion.duration.dwell`, then the next slides in over `motion.duration.slow`;
+the keyframe stops in `showcase.css` are fractions of that cycle and say how
+to recompute them if either duration changes. With reduced motion the cards
+cross-fade on the same clock and the highlight steps instead of gliding.
+
+Narrower than the app's minimum window (1024px) the panels and the window's
+disclaimer are left out and the window takes the height of its content;
+narrower than 768px the sidebar and the hero's tools go too, and the card
+alone is shown.
+
+A change to one of the components the window copies, or to the manifest's
+chapter facts, is a change to this page in the same pull request.
 
 ## The links
 

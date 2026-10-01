@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en" data-chapter="luxemburg">
+<html lang="en" data-theme="dark" data-chapter="luxemburg">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark light" />
+    <meta name="color-scheme" content="dark" />
     <title>Kapital Launcher</title>
     <meta
       name="description"
@@ -12,47 +12,57 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <!--
-    One section, no script. The three links are filled in at build time by
+    One page, no script. The three links are filled in at build time by
     vite.config.js from links.json and the manifest; see site/README.md. The
-    classes on the buttons are the app's Button variants (play and ghost), so
-    the two look the same.
+    classes on the buttons are the app's Button variants (play and ghost).
+
+    Below the buttons is the launcher window, drawn with the app's own
+    components' classes (frontend/src/components) and cycling through its
+    three chapters on CSS animations alone (src/showcase.css). It is a
+    picture, not a control: nothing in it is focusable, its text cannot be
+    selected, and it is hidden from assistive technology in favour of the
+    sentence before it. The hero's tools do without the app's backdrop blur:
+    a backdrop filter inside the card's blur animation left the hero's text
+    unpainted in the author's browser.
+
+    The page is dark whatever the visitor's preference (data-theme on the
+    root): the artwork and the window are drawn for the dark palette.
   -->
   <body class="flex min-h-dvh flex-col">
-    <main class="relative flex grow flex-col justify-center overflow-hidden px-6 py-16 md:px-14">
-      <img
-        src="../frontend/src/assets/screenshots/luxemburg.webp"
-        alt=""
-        class="absolute inset-0 size-full object-cover object-[center_40%]"
-      />
-      <div class="scrim-wash md:scrim-hero absolute inset-0" aria-hidden="true"></div>
-
-      <div class="relative flex max-w-140 flex-col gap-6">
-        <!-- The logo is the heading: the author's artwork, scaled to twice its
-             widest display size. The alt text is the heading's text. -->
+    <main
+      class="relative flex min-w-0 grow flex-col items-center overflow-hidden px-4 pt-16 pb-12 md:px-10 md:pt-24"
+    >
+      <div
+        class="relative flex max-w-140 flex-col items-center gap-6 text-center"
+      >
+        <!-- The logo is the heading: the author's one-line artwork, the file
+             the app's header bar draws, shown at its own pixel size. The alt
+             text is the heading's text. -->
         <h1 class="m-0">
           <img
-            src="../frontend/src/assets/brand/kapital-launcher-logo-compact.png"
+            src="../frontend/src/assets/brand/kapital-launcher-logo.png"
             alt="Kapital Launcher"
-            width="800"
-            height="219"
-            class="block h-auto w-100 max-w-full"
+            width="560"
+            height="41"
+            class="block h-auto w-140 max-w-full"
           />
         </h1>
 
         <p class="text-fg-soft m-0 text-lg leading-normal">
-          One place to play the three chapters of Kapitel Kapital. It keeps each pack ready and
-          starts the game through Prism Launcher, which handles your Microsoft sign-in.
+          One place to play the three chapters of Kapitel Kapital. It keeps each
+          pack ready and starts the game through Prism Launcher, which handles
+          your Microsoft sign-in.
         </p>
 
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-center justify-center gap-3">
           <a
             data-link="download"
-            class="bg-accent text-canvas duration-fast ease-standard inline-flex h-13 items-center gap-2 rounded-md px-7.5 text-md font-semibold tracking-control no-underline transition-[filter] hover:brightness-(--effect-hover-brightness)"
+            class="showcase-accent bg-accent text-canvas duration-fast ease-standard inline-flex h-13 items-center gap-2 rounded-md px-7.5 text-md font-semibold tracking-control no-underline transition-[filter] hover:brightness-(--effect-hover-brightness)"
             >Download</a
           >
           <span
             data-link-fallback="download"
-            class="bg-accent text-canvas inline-flex h-13 cursor-default items-center gap-2 rounded-md px-7.5 text-md font-semibold tracking-control opacity-50"
+            class="showcase-accent bg-accent text-canvas inline-flex h-13 cursor-default items-center gap-2 rounded-md px-7.5 text-md font-semibold tracking-control opacity-50"
             >Download · coming soon</span
           >
           <a
@@ -68,18 +78,918 @@
         </div>
 
         <p class="text-fg-muted m-0 text-sm">
-          For Windows 11 and macOS on Apple Silicon. Needs
-          <a
-            href="https://prismlauncher.org"
-            class="text-accent underline-offset-2 hover:underline"
-            >Prism Launcher</a
-          >, free and open source.
+          <span class="block">For Windows 11 and macOS on Apple Silicon.</span>
+          <span class="block"
+            >Needs
+            <a
+              href="https://prismlauncher.org"
+              class="text-accent underline-offset-2 hover:underline"
+              >Prism Launcher</a
+            >, free and open source.</span
+          >
         </p>
+      </div>
+
+      <p class="sr-only">
+        The launcher shows the three chapters, Luxemburg, Lichdenstein and
+        Frangfurd, and plays the one you pick.
+      </p>
+
+      <div class="relative mt-14 w-full min-w-0 max-w-(--layout-window-width)">
+        <!-- A soft glow in the open chapter's colour, behind the window. -->
+        <div
+          class="showcase-accent bg-accent pointer-events-none absolute inset-x-1/4 -top-10 bottom-1/3 rounded-full opacity-30 blur-3xl"
+          aria-hidden="true"
+        ></div>
+
+        <figure
+          class="showcase bg-canvas border-line relative m-0 flex w-full flex-col overflow-hidden rounded-lg border shadow-2xl select-none lg:h-(--layout-window-height)"
+          aria-hidden="true"
+        >
+          <!-- The header bar: shell/HeaderBar.tsx, as Windows draws it. -->
+          <div
+            class="bg-sunken border-line flex h-(--layout-titlebar) shrink-0 items-center border-b pl-5"
+          >
+            <img
+              src="../frontend/src/assets/brand/kapital-launcher-logo.png"
+              alt=""
+              width="560"
+              height="41"
+              class="block h-4 w-auto"
+            />
+            <div class="grow"></div>
+            <div class="flex h-full items-center gap-1">
+              <span
+                class="text-fg-muted inline-flex size-8 shrink-0 items-center justify-center rounded-md"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="size-(--layout-icon-md) shrink-0"
+                >
+                  <path
+                    d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"
+                  />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </span>
+              <div class="ml-1 flex h-full">
+                <span
+                  class="text-fg-muted flex h-full w-11.5 items-center justify-center"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="size-(--layout-icon-sm) shrink-0"
+                  >
+                    <path d="M5 12h14" />
+                  </svg>
+                </span>
+                <span
+                  class="text-fg-muted flex h-full w-11.5 items-center justify-center"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="size-(--layout-icon-sm) shrink-0"
+                  >
+                    <rect width="18" height="18" x="3" y="3" rx="2" />
+                  </svg>
+                </span>
+                <span
+                  class="text-fg-muted flex h-full w-11.5 items-center justify-center"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="size-(--layout-icon-sm) shrink-0"
+                  >
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
+                  </svg>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex min-h-0 grow">
+            <!-- The sidebar: sidebar/Sidebar.tsx, ChapterNav.tsx, ChapterButton.tsx
+                 and EngineCard.tsx. Each row is scoped to its chapter, so its
+                 number glows in its own colour. -->
+            <div
+              class="bg-sunken border-line hidden w-(--layout-sidebar) shrink-0 flex-col gap-7 border-r px-4 pt-5.5 pb-4 md:flex"
+            >
+              <div class="flex flex-col gap-1">
+                <div class="text-fg-faint px-2.5 pb-1.5 text-xs">Chapters</div>
+                <div class="relative">
+                  <div
+                    class="showcase-highlight bg-raised pointer-events-none absolute inset-x-0 top-0 rounded-lg border"
+                  ></div>
+                  <div class="showcase-rows flex flex-col gap-1">
+                    <div
+                      data-chapter="luxemburg"
+                      class="relative isolate flex w-full items-center gap-3 overflow-hidden rounded-lg border border-transparent p-2.5 text-left"
+                    >
+                      <div
+                        class="showcase-row-art pointer-events-none absolute inset-0 -z-10"
+                      >
+                        <img
+                          src="../frontend/src/assets/screenshots/luxemburg.webp"
+                          alt=""
+                          class="size-full scale-125 object-cover blur-(--effect-tile-blur)"
+                        />
+                        <div
+                          class="bg-accent absolute inset-0 opacity-(--effect-tile-tint) mix-blend-color"
+                        ></div>
+                        <div class="scrim-tile absolute inset-0"></div>
+                      </div>
+                      <img
+                        src="../frontend/src/assets/icons/luxemburg.png"
+                        alt=""
+                        class="size-10 shrink-0 object-contain p-1"
+                      />
+                      <div class="flex min-w-0 grow flex-col gap-0.5">
+                        <div class="flex items-baseline gap-2">
+                          <span class="text-accent text-2xs font-mono">01</span>
+                          <span
+                            class="font-display truncate text-lg font-semibold"
+                            >Luxemburg</span
+                          >
+                        </div>
+                        <span class="text-fg-faint text-xs">1200 – 2300</span>
+                      </div>
+                    </div>
+                    <div
+                      data-chapter="lichdenstein"
+                      class="relative isolate flex w-full items-center gap-3 overflow-hidden rounded-lg border border-transparent p-2.5 text-left"
+                    >
+                      <div
+                        class="showcase-row-art pointer-events-none absolute inset-0 -z-10"
+                      >
+                        <img
+                          src="../frontend/src/assets/screenshots/lichdenstein.webp"
+                          alt=""
+                          class="size-full scale-125 object-cover blur-(--effect-tile-blur)"
+                        />
+                        <div
+                          class="bg-accent absolute inset-0 opacity-(--effect-tile-tint) mix-blend-color"
+                        ></div>
+                        <div class="scrim-tile absolute inset-0"></div>
+                      </div>
+                      <img
+                        src="../frontend/src/assets/icons/lichdenstein.png"
+                        alt=""
+                        class="size-10 shrink-0 object-contain p-1"
+                      />
+                      <div class="flex min-w-0 grow flex-col gap-0.5">
+                        <div class="flex items-baseline gap-2">
+                          <span class="text-accent text-2xs font-mono">02</span>
+                          <span
+                            class="font-display truncate text-lg font-semibold"
+                            >Lichdenstein</span
+                          >
+                        </div>
+                        <span class="text-fg-faint text-xs">2300 – 2500</span>
+                      </div>
+                    </div>
+                    <div
+                      data-chapter="frangfurd"
+                      class="relative isolate flex w-full items-center gap-3 overflow-hidden rounded-lg border border-transparent p-2.5 text-left"
+                    >
+                      <div
+                        class="showcase-row-art pointer-events-none absolute inset-0 -z-10"
+                      >
+                        <img
+                          src="../frontend/src/assets/screenshots/frangfurd.webp"
+                          alt=""
+                          class="size-full scale-125 object-cover blur-(--effect-tile-blur)"
+                        />
+                        <div
+                          class="bg-accent absolute inset-0 opacity-(--effect-tile-tint) mix-blend-color"
+                        ></div>
+                        <div class="scrim-tile absolute inset-0"></div>
+                      </div>
+                      <img
+                        src="../frontend/src/assets/icons/frangfurd.png"
+                        alt=""
+                        class="size-10 shrink-0 object-contain p-1"
+                      />
+                      <div class="flex min-w-0 grow flex-col gap-0.5">
+                        <div class="flex items-baseline gap-2">
+                          <span class="text-accent text-2xs font-mono">03</span>
+                          <span
+                            class="font-display truncate text-lg font-semibold"
+                            >Frangfurd</span
+                          >
+                        </div>
+                        <span class="text-fg-faint text-xs"
+                          >2500 – present</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="grow"></div>
+              <div
+                class="bg-raised border-line flex flex-col gap-2.5 rounded-lg border p-3"
+              >
+                <div class="flex items-center gap-2.5">
+                  <div
+                    class="bg-hover flex size-8 items-center justify-center rounded-sm font-mono text-xs"
+                  >
+                    DP
+                  </div>
+                  <div class="flex min-w-0 grow flex-col gap-0.5">
+                    <span class="truncate text-sm font-semibold"
+                      >Default profile</span
+                    >
+                    <span class="text-fg-faint text-2xs"
+                      >Microsoft account · via Prism</span
+                    >
+                  </div>
+                  <span
+                    class="text-fg-muted inline-flex size-8 shrink-0 items-center justify-center rounded-md"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="size-(--layout-icon-md) shrink-0"
+                    >
+                      <path
+                        d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+                      />
+                      <path d="M21 3v5h-5" />
+                      <path
+                        d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+                      />
+                      <path d="M8 16H3v5" />
+                    </svg>
+                  </span>
+                </div>
+                <div class="bg-line h-px"></div>
+                <div
+                  class="text-fg-faint text-2xs flex justify-between gap-2 font-mono whitespace-nowrap"
+                >
+                  <span>engine</span>
+                  <span class="text-fg-muted">Prism 11.1.1 · managed</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- The main column: main/ChapterStage.tsx, one card per chapter,
+                 all three in the one grid cell so the tallest sets the height
+                 and the others stretch to it. Each card is scoped to its
+                 chapter for its accent. -->
+            <div class="flex min-w-0 grow flex-col">
+              <div
+                class="showcase-stage relative m-5 mb-8 grid min-h-0 min-w-0 grow grid-cols-1"
+              >
+                <!-- 01 Luxemburg -->
+                <div
+                  data-chapter="luxemburg"
+                  class="showcase-card bg-raised border-line col-start-1 row-start-1 flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border"
+                >
+                  <div
+                    class="border-line relative flex max-h-(--layout-hero) min-h-0 grow flex-col justify-end overflow-hidden border-b px-6 py-8 md:px-14 md:py-11"
+                  >
+                    <img
+                      src="../frontend/src/assets/screenshots/luxemburg.webp"
+                      alt=""
+                      class="absolute inset-0 size-full object-cover object-[center_40%]"
+                    />
+                    <div class="scrim-hero absolute inset-0"></div>
+                    <div
+                      class="bg-sunken/55 absolute top-5 right-6 hidden gap-1 rounded-md md:flex"
+                    >
+                      <span
+                        class="text-fg-muted inline-flex size-11 shrink-0 items-center justify-center rounded-md"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.6"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          class="size-(--layout-icon-md) shrink-0"
+                        >
+                          <path
+                            d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+                          />
+                          <path d="m15 5 4 4" />
+                        </svg>
+                      </span>
+                      <span
+                        class="text-fg-muted inline-flex size-11 shrink-0 items-center justify-center rounded-md"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.6"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          class="size-(--layout-icon-md) shrink-0"
+                        >
+                          <path d="M12 5v16" />
+                          <path
+                            d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z"
+                          />
+                        </svg>
+                      </span>
+                    </div>
+                    <div class="relative flex max-w-140 flex-col gap-3.5">
+                      <div
+                        class="text-fg-muted flex items-baseline gap-2.5 text-sm"
+                      >
+                        <span class="text-accent font-mono">01</span>
+                        <span>Modpack · creative building expansion</span>
+                      </div>
+                      <div class="font-display text-display font-semibold">
+                        <img
+                          src="../frontend/src/assets/titles/luxemburg.png"
+                          alt="Luxemburg"
+                          width="1200"
+                          height="195"
+                          class="block h-(--layout-title) w-full object-contain object-left"
+                        />
+                      </div>
+                      <p class="text-fg-soft m-0 text-lg leading-normal">
+                        A creative building expansion filled with tools,
+                        decorations, blocks and automations.
+                      </p>
+                      <div class="flex flex-wrap gap-2">
+                        <span
+                          class="border-line-strong text-fg-soft rounded-pill bg-sunken/55 inline-flex h-6.5 items-center border px-2.5 text-xs"
+                          >Forge 1.19.2</span
+                        >
+                        <span
+                          class="border-line-strong text-fg-soft rounded-pill bg-sunken/55 inline-flex h-6.5 items-center border px-2.5 text-xs"
+                          >208 mods</span
+                        >
+                        <span
+                          class="border-line-strong text-fg-soft rounded-pill bg-sunken/55 inline-flex h-6.5 items-center border px-2.5 text-xs"
+                          >Released</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    class="border-line flex flex-col gap-3 border-b px-6 py-5 md:px-14"
+                  >
+                    <div class="flex flex-wrap items-center gap-3">
+                      <span
+                        class="bg-accent text-canvas tracking-control inline-flex h-13 items-center gap-2 rounded-md px-7.5 text-md font-semibold whitespace-nowrap"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          class="size-(--layout-icon-sm) shrink-0"
+                        >
+                          <path
+                            d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"
+                          />
+                        </svg>
+                        <span>Play Luxemburg</span>
+                      </span>
+                      <div class="grow"></div>
+                      <div class="ml-auto flex items-center gap-2">
+                        <div class="flex flex-col items-end gap-0.5">
+                          <span class="text-accent font-mono text-xs"
+                            >● Ready</span
+                          >
+                          <span class="text-fg-faint text-xs">Pack 4.1</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="hidden shrink-0 grid-cols-3 lg:grid">
+                    <div
+                      class="border-line flex flex-col gap-3 border-r py-6 pr-7 pl-14"
+                    >
+                      <h2 class="text-fg-faint m-0 text-xs font-medium">
+                        Pack
+                      </h2>
+                      <div class="flex flex-col gap-3.5">
+                        <div class="flex justify-between text-sm">
+                          <span class="text-fg-muted">Version</span
+                          ><span class="font-mono">4.1</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                          <span class="text-fg-muted">Loader</span
+                          ><span class="font-mono">Forge</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                          <span class="text-fg-muted">Minecraft</span
+                          ><span class="font-mono">1.19.2</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                          <span class="text-fg-muted">Mods</span
+                          ><span class="font-mono">208</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                          <span class="text-fg-muted">Size</span
+                          ><span class="text-fg-faint font-mono"
+                            >[PLACEHOLDER]</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="border-line flex flex-col gap-3 border-r px-7 py-6"
+                    >
+                      <h2 class="text-fg-faint m-0 text-xs font-medium">
+                        Changelog
+                      </h2>
+                      <span class="text-fg-faint text-sm">No entries yet.</span>
+                    </div>
+                    <div class="flex flex-col gap-3 py-6 pr-14 pl-7">
+                      <h2 class="text-fg-faint m-0 text-xs font-medium">
+                        From the wiki
+                      </h2>
+                      <p class="font-display m-0 text-lg leading-snug">
+                        Bellum Castle
+                      </p>
+                      <span
+                        class="text-fg-muted line-clamp-4 text-sm leading-normal"
+                        >A trade empire grown out of a mountain pass.</span
+                      >
+                      <span class="text-accent w-fit text-sm"
+                        >Read the history →</span
+                      >
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 02 Lichdenstein -->
+                <div
+                  data-chapter="lichdenstein"
+                  class="showcase-card bg-raised border-line col-start-1 row-start-1 flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border"
+                >
+                  <div
+                    class="border-line relative flex max-h-(--layout-hero) min-h-0 grow flex-col justify-end overflow-hidden border-b px-6 py-8 md:px-14 md:py-11"
+                  >
+                    <img
+                      src="../frontend/src/assets/screenshots/lichdenstein.webp"
+                      alt=""
+                      class="absolute inset-0 size-full object-cover object-[center_40%]"
+                    />
+                    <div class="scrim-hero absolute inset-0"></div>
+                    <div
+                      class="bg-sunken/55 absolute top-5 right-6 hidden gap-1 rounded-md md:flex"
+                    >
+                      <span
+                        class="text-fg-muted inline-flex size-11 shrink-0 items-center justify-center rounded-md"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.6"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          class="size-(--layout-icon-md) shrink-0"
+                        >
+                          <path
+                            d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+                          />
+                          <path d="m15 5 4 4" />
+                        </svg>
+                      </span>
+                      <span
+                        class="text-fg-muted inline-flex size-11 shrink-0 items-center justify-center rounded-md"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.6"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          class="size-(--layout-icon-md) shrink-0"
+                        >
+                          <path d="M12 5v16" />
+                          <path
+                            d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z"
+                          />
+                        </svg>
+                      </span>
+                    </div>
+                    <div class="relative flex max-w-140 flex-col gap-3.5">
+                      <div
+                        class="text-fg-muted flex items-baseline gap-2.5 text-sm"
+                      >
+                        <span class="text-accent font-mono">02</span>
+                        <span>Server · vanilla-plus survival</span>
+                      </div>
+                      <div class="font-display text-display font-semibold">
+                        <img
+                          src="../frontend/src/assets/titles/lichdenstein.png"
+                          alt="Lichdenstein"
+                          width="1200"
+                          height="147"
+                          class="block h-(--layout-title) w-full object-contain object-left"
+                        />
+                      </div>
+                      <p class="text-fg-soft m-0 text-lg leading-normal">
+                        A plug-and-play vanilla server with economies, updated
+                        survival, and character progression. Launches with your
+                        visual pack.
+                      </p>
+                      <div class="flex flex-wrap gap-2">
+                        <span
+                          class="border-line-strong text-fg-soft rounded-pill bg-sunken/55 inline-flex h-6.5 items-center border px-2.5 text-xs"
+                          >Fabric 1.20.6</span
+                        >
+                        <span
+                          class="border-line-strong text-fg-soft rounded-pill bg-sunken/55 inline-flex h-6.5 items-center border px-2.5 text-xs"
+                          >31 mods</span
+                        >
+                        <span
+                          class="border-line-strong text-fg-soft rounded-pill bg-sunken/55 inline-flex h-6.5 items-center border px-2.5 text-xs"
+                          >Released</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    class="border-line flex flex-col gap-3 border-b px-6 py-5 md:px-14"
+                  >
+                    <div class="flex flex-wrap items-center gap-3">
+                      <span
+                        class="bg-accent text-canvas tracking-control inline-flex h-13 items-center gap-2 rounded-md px-7.5 text-md font-semibold whitespace-nowrap"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          class="size-(--layout-icon-sm) shrink-0"
+                        >
+                          <path
+                            d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"
+                          />
+                        </svg>
+                        <span>Join Lichdenstein</span>
+                      </span>
+                      <div class="grow"></div>
+                      <div class="ml-auto flex items-center gap-2">
+                        <div class="flex flex-col items-end gap-0.5">
+                          <span class="text-accent font-mono text-xs"
+                            >● Installed</span
+                          >
+                          <span class="text-fg-faint text-xs"
+                            >The first Play downloads the pack</span
+                          >
+                        </div>
+                        <span
+                          class="text-fg-muted inline-flex size-8 shrink-0 items-center justify-center rounded-md"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.6"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="size-(--layout-icon-md) shrink-0"
+                          >
+                            <path
+                              d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+                            />
+                            <path d="M21 3v5h-5" />
+                            <path
+                              d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+                            />
+                            <path d="M8 16H3v5" />
+                          </svg>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="hidden shrink-0 grid-cols-3 lg:grid">
+                    <div
+                      class="border-line flex flex-col gap-3 border-r py-6 pr-7 pl-14"
+                    >
+                      <h2 class="text-fg-faint m-0 text-xs font-medium">
+                        Pack
+                      </h2>
+                      <div class="flex flex-col gap-3.5">
+                        <div class="flex justify-between text-sm">
+                          <span class="text-fg-muted">Version</span
+                          ><span class="text-fg-faint font-mono"
+                            >[PLACEHOLDER]</span
+                          >
+                        </div>
+                        <div class="flex justify-between text-sm">
+                          <span class="text-fg-muted">Loader</span
+                          ><span class="font-mono">Client visuals</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                          <span class="text-fg-muted">Minecraft</span
+                          ><span class="font-mono">1.20.6</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                          <span class="text-fg-muted">Mods</span
+                          ><span class="font-mono">31</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                          <span class="text-fg-muted">Size</span
+                          ><span class="text-fg-faint font-mono"
+                            >[PLACEHOLDER]</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="border-line flex flex-col gap-3 border-r px-7 py-6"
+                    >
+                      <h2 class="text-fg-faint m-0 text-xs font-medium">
+                        Changelog
+                      </h2>
+                      <span class="text-fg-faint text-sm">No entries yet.</span>
+                    </div>
+                    <div class="flex flex-col gap-3 py-6 pr-14 pl-7">
+                      <h2 class="text-fg-faint m-0 text-xs font-medium">
+                        From the wiki
+                      </h2>
+                      <p class="font-display m-0 text-lg leading-snug">
+                        Lichdenstein
+                      </p>
+                      <span
+                        class="text-fg-muted line-clamp-4 text-sm leading-normal"
+                        >Small, cautious settlements on scarred land.</span
+                      >
+                      <span class="text-accent w-fit text-sm"
+                        >Read the history →</span
+                      >
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 03 Frangfurd -->
+                <div
+                  data-chapter="frangfurd"
+                  class="showcase-card bg-raised border-line col-start-1 row-start-1 flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border"
+                >
+                  <div
+                    class="border-line relative flex max-h-(--layout-hero) min-h-0 grow flex-col justify-end overflow-hidden border-b px-6 py-8 md:px-14 md:py-11"
+                  >
+                    <img
+                      src="../frontend/src/assets/screenshots/frangfurd.webp"
+                      alt=""
+                      class="absolute inset-0 size-full object-cover object-[center_40%]"
+                    />
+                    <div class="scrim-hero absolute inset-0"></div>
+                    <div
+                      class="bg-sunken/55 absolute top-5 right-6 hidden gap-1 rounded-md md:flex"
+                    >
+                      <span
+                        class="text-fg-muted inline-flex size-11 shrink-0 items-center justify-center rounded-md"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.6"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          class="size-(--layout-icon-md) shrink-0"
+                        >
+                          <path
+                            d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+                          />
+                          <path d="m15 5 4 4" />
+                        </svg>
+                      </span>
+                      <span
+                        class="text-fg-muted inline-flex size-11 shrink-0 items-center justify-center rounded-md"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.6"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          class="size-(--layout-icon-md) shrink-0"
+                        >
+                          <path d="M12 5v16" />
+                          <path
+                            d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z"
+                          />
+                        </svg>
+                      </span>
+                    </div>
+                    <div class="relative flex max-w-140 flex-col gap-3.5">
+                      <div
+                        class="text-fg-muted flex items-baseline gap-2.5 text-sm"
+                      >
+                        <span class="text-accent font-mono">03</span>
+                        <span>Modpack · modern creative expansion</span>
+                      </div>
+                      <div class="font-display text-display font-semibold">
+                        <img
+                          src="../frontend/src/assets/titles/frangfurd.png"
+                          alt="Frangfurd"
+                          width="1200"
+                          height="146"
+                          class="block h-(--layout-title) w-full object-contain object-left"
+                        />
+                      </div>
+                      <p class="text-fg-soft m-0 text-lg leading-normal">
+                        A modern creative expansion with new tools, visual
+                        improvements and alternative automations.
+                      </p>
+                      <div class="flex flex-wrap gap-2">
+                        <span
+                          class="border-line-strong text-fg-soft rounded-pill bg-sunken/55 inline-flex h-6.5 items-center border px-2.5 text-xs"
+                          >NeoForge 1.21.1</span
+                        >
+                        <span
+                          class="border-line-strong text-fg-soft rounded-pill bg-sunken/55 inline-flex h-6.5 items-center border px-2.5 text-xs"
+                          >96 mods</span
+                        >
+                        <span
+                          class="border-line-strong text-fg-soft rounded-pill bg-sunken/55 inline-flex h-6.5 items-center border px-2.5 text-xs"
+                          >In development</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    class="border-line flex flex-col gap-3 border-b px-6 py-5 md:px-14"
+                  >
+                    <div class="flex flex-wrap items-center gap-3">
+                      <span
+                        class="bg-accent text-canvas tracking-control inline-flex h-13 items-center gap-2 rounded-md px-7.5 text-md font-semibold whitespace-nowrap"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          class="size-(--layout-icon-sm) shrink-0"
+                        >
+                          <path
+                            d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"
+                          />
+                        </svg>
+                        <span>Play Frangfurd</span>
+                      </span>
+                      <div class="grow"></div>
+                      <div class="ml-auto flex items-center gap-2">
+                        <div class="flex flex-col items-end gap-0.5">
+                          <span class="text-accent font-mono text-xs"
+                            >● Ready</span
+                          >
+                          <span class="text-fg-faint text-xs">Pack 1.0.0</span>
+                        </div>
+                        <span
+                          class="text-fg-muted inline-flex size-8 shrink-0 items-center justify-center rounded-md"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.6"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="size-(--layout-icon-md) shrink-0"
+                          >
+                            <path
+                              d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+                            />
+                            <path d="M21 3v5h-5" />
+                            <path
+                              d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+                            />
+                            <path d="M8 16H3v5" />
+                          </svg>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="hidden shrink-0 grid-cols-3 lg:grid">
+                    <div
+                      class="border-line flex flex-col gap-3 border-r py-6 pr-7 pl-14"
+                    >
+                      <h2 class="text-fg-faint m-0 text-xs font-medium">
+                        Pack
+                      </h2>
+                      <div class="flex flex-col gap-3.5">
+                        <div class="flex justify-between text-sm">
+                          <span class="text-fg-muted">Version</span
+                          ><span class="font-mono">1.0.0</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                          <span class="text-fg-muted">Loader</span
+                          ><span class="font-mono">NeoForge</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                          <span class="text-fg-muted">Minecraft</span
+                          ><span class="font-mono">1.21.1</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                          <span class="text-fg-muted">Mods</span
+                          ><span class="font-mono">96</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                          <span class="text-fg-muted">Size</span
+                          ><span class="text-fg-faint font-mono"
+                            >[PLACEHOLDER]</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="border-line flex flex-col gap-3 border-r px-7 py-6"
+                    >
+                      <h2 class="text-fg-faint m-0 text-xs font-medium">
+                        Changelog
+                      </h2>
+                      <span class="text-fg-faint text-sm">No entries yet.</span>
+                    </div>
+                    <div class="flex flex-col gap-3 py-6 pr-14 pl-7">
+                      <h2 class="text-fg-faint m-0 text-xs font-medium">
+                        From the wiki
+                      </h2>
+                      <p class="font-display m-0 text-lg leading-snug">
+                        The Obelisk
+                      </p>
+                      <span
+                        class="text-fg-muted line-clamp-4 text-sm leading-normal"
+                        >A built-up city-state, read from a distance.</span
+                      >
+                      <span class="text-accent w-fit text-sm"
+                        >Read the history →</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="text-fg-faint text-2xs pointer-events-none absolute right-0 bottom-2 left-0 hidden text-center md:left-(--layout-sidebar) lg:block"
+              >
+                NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED
+                WITH MOJANG OR MICROSOFT.
+              </div>
+            </div>
+          </div>
+        </figure>
       </div>
     </main>
 
-    <footer class="text-fg-faint text-2xs border-line border-t px-6 py-4 text-center">
-      NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.
+    <footer
+      class="text-fg-faint text-2xs border-line border-t px-6 py-4 text-center"
+    >
+      NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH
+      MOJANG OR MICROSOFT.
     </footer>
   </body>
 </html>

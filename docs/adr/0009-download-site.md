@@ -31,7 +31,12 @@ Three facts read on 2026-09-28 shaped the answer:
   `frontend/src/styles/base.css` (faces, base rules, scrims) instead of
   keeping its own copy, and adds no style of its own. The page's heading
   is the Kapital Launcher logo, the same artwork as the app's header
-  (ADR-10), in place of the Kapitel Kapital wordmark.
+  (ADR-10), in place of the Kapitel Kapital wordmark. Since 2026-10-01 the
+  page shows the launcher window under the buttons, built from the app's
+  components' classes and cycling through the three chapters on CSS
+  animations in `src/showcase.css`, the site's one stylesheet of its own; a
+  dwell duration and the accent mix percentages joined the tokens for it, and
+  the window's size is emitted to CSS.
 - **Vite and Tailwind v4, no framework, no script.** One HTML page styled with
   the same token utilities as the app. The built output is HTML, one CSS file,
   fonts and two images.
@@ -55,6 +60,9 @@ Three facts read on 2026-09-28 shaped the answer:
 - The site depends on files inside `frontend/`. Moving the token output, the
   fonts or the screenshots breaks the site build, which CI runs in its own
   job for that reason.
+- The window on the page is a copy of the app's screens, not a render of
+  them. A component or a chapter fact that changes in the app has to change
+  in `site/index.html` too; nothing checks that they agree.
 - Deploys are Pages' own builds. CI builds the site but does not deploy it.
   Every other branch gets a Pages preview deployment.
 - Pages is the platform Cloudflare no longer develops. If it is ever retired

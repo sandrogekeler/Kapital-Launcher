@@ -231,7 +231,7 @@
     "effect": {
       "type": "object",
       "description": "Values a utility cannot name on its own: the hover lift on the filled button, the focus outline, the stops of the scrim over artwork, and the grid shown where a chapter has no artwork yet.",
-      "required": ["hoverBrightness", "focusRing", "scrim", "artPending", "motionBlur", "tileBlur", "tileTint"],
+      "required": ["hoverBrightness", "focusRing", "scrim", "accent", "artPending", "motionBlur", "tileBlur", "tileTint"],
       "additionalProperties": false,
       "properties": {
         "hoverBrightness": { "type": "number", "exclusiveMinimum": 1, "maximum": 2 },
@@ -258,6 +258,17 @@
             "far": { "type": "number", "minimum": 0, "maximum": 100 },
             "wash": { "type": "number", "minimum": 0, "maximum": 100 },
             "tile": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        },
+        "accent": {
+          "type": "object",
+          "description": "How much of the chapter accent goes into its two derived colours, in percent: wash is the tint behind a selected control, edge the border of the nav highlight.",
+          "required": ["unit", "wash", "edge"],
+          "additionalProperties": false,
+          "properties": {
+            "unit": { "const": "%" },
+            "wash": { "type": "number", "minimum": 0, "maximum": 100 },
+            "edge": { "type": "number", "minimum": 0, "maximum": 100 }
           }
         },
         "artPending": {
