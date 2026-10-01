@@ -126,6 +126,11 @@ describe('SettingsPanel', () => {
     expect(App.SaveSettings).not.toHaveBeenCalled()
   })
 
+  it('ends with the About section', () => {
+    render(<SettingsPanel onClose={() => undefined} />)
+    expect(screen.getByRole('heading', { name: 'About' })).toBeInTheDocument()
+  })
+
   it('saves the theme on click', async () => {
     render(<SettingsPanel onClose={() => undefined} />)
     expect(screen.getByRole('button', { name: 'Dark' })).toHaveAttribute('aria-pressed', 'true')

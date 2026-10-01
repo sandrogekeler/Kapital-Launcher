@@ -11,6 +11,7 @@ import { useSettingsStore } from './stores/useSettingsStore'
 import { useServerStore } from './stores/useServerStore'
 import { useGameStore } from './stores/useGameStore'
 import { Environment } from '../wailsjs/runtime/runtime'
+import { DISCLAIMER } from './lib/disclaimer'
 import { errMsg, readOr } from './lib/ipc'
 
 export default function App() {
@@ -142,7 +143,7 @@ export default function App() {
       </div>
       {/* Centred on the main column, beside the sidebar, not on the window. */}
       <footer className="text-fg-faint text-2xs pointer-events-none fixed right-0 bottom-2 left-(--layout-sidebar) text-center">
-        NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.
+        {DISCLAIMER}
       </footer>
     </div>
   )

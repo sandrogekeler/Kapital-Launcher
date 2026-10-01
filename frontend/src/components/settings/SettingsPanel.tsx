@@ -15,6 +15,7 @@ import {
 } from '../../lib/settingsView'
 import { ArrowLeft, FolderOpen } from '../../lib/icons'
 import { ChoosePrismExecutable, ChoosePrismRoot } from '../../../wailsjs/go/main/App'
+import { AboutSection } from './AboutSection'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
@@ -181,6 +182,8 @@ export function SettingsPanel({ onClose }: Props) {
           ))}
         </Section>
         <SupportSection />
+
+        <AboutSection />
       </div>
     </section>
   )
