@@ -93,6 +93,8 @@ questions, the issues still to file. Update it when handing over.
 Vendored from `kollektiv-mc/Kollektiv` and never edited here: the three
 `.claude/suite-*.py`, `.github/workflows/{pr-labelled,aislop,issue-priority}.yml`,
 `.github/scripts/release-notes*.py`, `.github/release.yml`, `.aislop/base.yml`.
+Vendored the same way from `kollektiv-mc/Konnekt`, which is where they live:
+`.github/workflows/{codeql,scorecard}.yml`.
 
 ## Deeper rules, loaded on demand
 
