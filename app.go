@@ -311,6 +311,7 @@ func (a *App) LaunchChapter(chapterID string) error {
 		PrismExe:    filepath.Base(engine.Executable),
 		StartedAt:   startedAt,
 		Before:      before,
+		HoldWindow:  settings.HoldGameWindow,
 	})
 	if err != nil {
 		slog.Warn("track game", "chapter", chapterID, "error", err)

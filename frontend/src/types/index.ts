@@ -192,4 +192,6 @@ export interface AppSettings {
   lastChapter: string
   /** Chapter id to a local packwiz serve address (#41), edited on the settings screen (#5). */
   packOverrides?: Record<string, string>
+  /** Keep the game window hidden until its resource reload begins (#45), a developer setting, off by default. */
+  holdGameWindow?: boolean
 }

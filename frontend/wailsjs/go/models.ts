@@ -7,6 +7,7 @@ export namespace models {
 	    profileName: string;
 	    lastChapter: string;
 	    packOverrides?: Record<string, string>;
+	    holdGameWindow?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -20,6 +21,7 @@ export namespace models {
 	        this.profileName = source["profileName"];
 	        this.lastChapter = source["lastChapter"];
 	        this.packOverrides = source["packOverrides"];
+	        this.holdGameWindow = source["holdGameWindow"];
 	    }
 	}
 	export class ChangelogEntry {

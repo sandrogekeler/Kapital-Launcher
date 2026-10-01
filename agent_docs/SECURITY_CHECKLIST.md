@@ -22,7 +22,7 @@ A different count is new surface to classify: add the method to this table.
 | `GetPrismRelease` | nothing | one bounded GET to Prism's fixed release URL | S4.5 |
 | `InstallPrism` | nothing | download, verify and unpack Prism's official build | S4.5 |
 | `InstallChapter` | a chapter id | the manifest's instance and pack URL: one instance folder written into the Prism root | S3.3, S4.6 |
-| `LaunchChapter`, `OpenChapterWiki`, `GetServerStatus` | a chapter id | the manifest's instance, URL or address for it | S3.3, S6.1 |
+| `LaunchChapter`, `OpenChapterWiki`, `GetServerStatus` | a chapter id | the manifest's instance, URL or address for it | S3.3, S3.7, S6.1 |
 | `SaveSettings` | a whole `AppSettings` | the settings file, and the executable detection then runs | S3.5 |
 | `ChoosePrismExecutable`, `ChoosePrismRoot` | nothing | a native file or folder picker; the pick is returned, never saved here | S3.5 |
 | `OpenExternal` | a URL | the system browser, web URLs only | S3.4 |
@@ -157,6 +157,23 @@ path as its only argument, other platforms refuse.
 Verify: `TestOpenInstanceFolderOpensOnlyAnInstalledChaptersFolder`,
 `TestOpenFolderChecksTheDirectoryBeforeTheOSSeesIt`.
 Probe: a chapter id that is a path; an instance folder that is a file or gone.
+
+**S3.7 The launcher touches another process's window only to hide and show the game's own.**
+Holds when: the window holder (`gamewindow_windows.go`, #45) hooks show events
+of one pid, the game's Java as the tracker bound it, and acts only on a
+top-level window of class `GLFW30` owned by that pid: `ShowWindow` hide and
+show, and at the handover (the resource reload beginning) a one pixel resize
+and back of a window that covers its monitor, then `SetForegroundWindow`. It
+reads a window's class, owner and rectangle and never its title, text or
+input, injects nothing into the process (out-of-context hook), starts no
+process, and is off unless the developer setting `holdGameWindow` is on. A run
+that ends, by any phase or by its context, releases the window.
+Verify: `TestHolderHidesAndShowsAGLFWWindow`, `TestHolderLeavesOtherWindowsAlone`,
+`TestHandoverNudgesAFullscreenWindowOnePixelAndBack`,
+`TestHandoverLeavesAWindowedWindowAlone`,
+`TestTrackerReleasesTheWindowWithoutForegroundWhenTheRunEndsOtherwise`.
+Probe: a window of another class, or of another process, shown while the hold
+is on.
 
 ## S4. Downloads (milestone 4)
 

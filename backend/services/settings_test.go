@@ -54,6 +54,30 @@ func TestSettingsRoundTrip(t *testing.T) {
 	}
 }
 
+func TestSettingsHoldGameWindowIsOffUntilSetAndLeavesNoKeyWhenOff(t *testing.T) {
+	dir := t.TempDir()
+	svc := NewSettingsService(dir)
+	if got, err := svc.Load(); err != nil || got.HoldGameWindow {
+		t.Fatalf("off by default: %+v, %v", got, err)
+	}
+	if err := svc.Save(models.AppSettings{Theme: "dark"}); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, SettingsFileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "holdGameWindow") {
+		t.Fatalf("an off setting is not written: %s", raw)
+	}
+	if err := svc.Save(models.AppSettings{Theme: "dark", HoldGameWindow: true}); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := svc.Load(); err != nil || !got.HoldGameWindow {
+		t.Fatalf("on survives a reload: %+v, %v", got, err)
+	}
+}
+
 func TestSettingsLoadRefusesACorruptFile(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, SettingsFileName), []byte("{not json"), 0o600); err != nil {
