@@ -405,6 +405,12 @@ func (c *card) onLoaded() {
 		call(procShowWindow, hwnd, swShowNormal)
 		call(procSetForegroundWindow, hwnd)
 	}
+	// The controller was made while the window was hidden, and WebView2 keeps
+	// it hidden then: on the author's PC the card showed only its background,
+	// its webview's windows all hidden. Wails shows its own the same way.
+	if err := c.chromium.Show(); err != nil {
+		slog.Warn("loading card webview not shown", "error", err)
+	}
 	c.flush()
 	c.sendResult(nil)
 }
