@@ -46,7 +46,8 @@ Beside it: `pr-labelled.yml` (one `type:` and one `area:` label),
 `pr-copy.yml` (title in sentence case, no em dash in title or body),
 `aislop.yml` (the aislop gate at 100, with ruff pinned) and
 `issue-priority.yml` (the form's answer becomes a `p*` label). The first,
-third and fourth are vendored from Kollektiv and never edited here.
+third and fourth are vendored from Kollektiv and never edited here. `codeql.yml`
+and `scorecard.yml` are vendored the same way from Konnekt.
 
 Every action is pinned to a commit SHA with the version as a trailing comment,
 and every workflow declares `permissions: contents: read`. Dependabot keeps the

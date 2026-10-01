@@ -247,10 +247,14 @@ less.
 **S8.5 Event text never reaches a shell through `${{ }}`.** `pr-copy.yml`,
 `pr-labelled.yml` and `issue-priority.yml` read titles, bodies and labels
 from `env`.
-
-CodeQL and Scorecard, which the Kollektiv suite vendors, are not here: both
-need a public repository (or Advanced Security) and this one is private. Add
-them the day it is not.
+**S8.6 CodeQL and Scorecard run**, vendored verbatim from Konnekt.
+`codeql.yml` scans actions, go, javascript-typescript and python on every pull
+request to `main`, every push to it and weekly; `scorecard.yml` runs on every
+push to `main`, on a branch protection change and weekly, and publishes its
+score. Both upload to code scanning, so results sit under Security. The default
+setup stays off so the two do not clash. `scorecard.yml` declares `read-all`
+at the top, which S8.1 reads as read-only, and widens on its one job.
+Verify: Security, Code scanning on the repository lists both tools.
 
 ## Open backlog
 

@@ -87,6 +87,8 @@ parses them, but they are read.
   `.github/scripts/release-notes*.py`, `.github/release.yml`,
   `.aislop/base.yml`, `.claude/suite-*.py`: vendored from
   `kollektiv-mc/Kollektiv`. Change them there and copy the file.
+- `.github/workflows/codeql.yml`, `scorecard.yml`: vendored from
+  `kollektiv-mc/Konnekt`. Same rule.
 - `frontend/pnpm-lock.yaml`, `pnpm-lock.yaml`: pnpm owns their layout.
 
 CI checks all of these, so a hand edit shows up as a failing job.

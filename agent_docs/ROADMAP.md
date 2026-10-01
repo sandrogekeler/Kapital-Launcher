@@ -101,8 +101,8 @@ What is left:
       signing decision (ADR-6)
 - [x] Create the labels in `.github/labels.yml` on the repository (`scripts/sync-labels.py`),
       done 2026-09-29
-- [ ] Vendor CodeQL and Scorecard from Kollektiv, possible since the repository
-      went public (2026-09-30)
+- [x] Vendor CodeQL and Scorecard from Konnekt (Kollektiv has neither), possible
+      since the repository went public (2026-09-30)
 
 ## Download site
 
