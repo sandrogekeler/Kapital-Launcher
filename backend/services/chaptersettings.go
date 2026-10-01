@@ -246,9 +246,13 @@ func scanINIKeys(r io.Reader, want ...string) (map[string]string, error) {
 			continue
 		}
 		value = strings.TrimSpace(value)
+		// Qt's INI writer escapes a quote or a backslash in every value but
+		// wraps the value in quotes only when it has to: Prism saves the
+		// launcher's quoted pre-launch command back without the quotes (#95).
 		if len(value) >= 2 && strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`) {
-			value = strings.NewReplacer(`\\`, `\`, `\"`, `"`).Replace(value[1 : len(value)-1])
+			value = value[1 : len(value)-1]
 		}
+		value = strings.NewReplacer(`\\`, `\`, `\"`, `"`).Replace(value)
 		found[key] = value
 	}
 	if err := sc.Err(); err != nil {

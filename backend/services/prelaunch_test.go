@@ -88,6 +88,23 @@ func TestRewritePreLaunchCommandMovesTheEarlierTemplateToTheCurrentOne(t *testin
 	}
 }
 
+// Prism saves instance.cfg back with Qt's writer, which escapes the quotes of
+// the launcher's command but drops the quotes around it. That is the form the
+// author's instance held on 2026-10-01, and it is still the launcher's own.
+func TestRewritePreLaunchCommandReadsTheFormPrismSavesBack(t *testing.T) {
+	url := "http://localhost:8080/pack.toml"
+	saved := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(legacyPreLaunchCommand(url))
+	path := writeCfg(t, "[General]\r\nOverrideCommands=true\r\nPreLaunchCommand="+saved+"\r\nname=Frangfurd\r\n")
+	got, err := RewritePreLaunchCommand(path)
+	if err != nil || got != PreLaunchRewritten {
+		t.Fatalf("got %v, %v", got, err)
+	}
+	want := "[General]\r\nOverrideCommands=true\r\nPreLaunchCommand=" + qtString(preLaunchCommand(url)) + "\r\nname=Frangfurd\r\n"
+	if readCfg(t, path) != want {
+		t.Fatalf("instance.cfg:\n%q\nwant:\n%q", readCfg(t, path), want)
+	}
+}
+
 func TestRewritePreLaunchCommandLeavesWhatIsNotItsOwnAlone(t *testing.T) {
 	cases := map[string]string{
 		"hand-edited, an extra flag":     legacyPreLaunchCommand(testPackURL) + " --extra",

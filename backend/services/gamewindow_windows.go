@@ -103,6 +103,14 @@ var (
 // completed successfully" errno that Call returns on success taken for nil.
 // Only the calls that report failure through the last error use it; the rest
 // use call, as the last error of a call that succeeded is stale.
+//
+// Both wrappers carry go:uintptrescapes, as LazyProc.Call does: a pointer a
+// caller turns into a uintptr in the arguments (a RECT, a buffer, a MSG) is
+// then kept on the heap for the call. Without it the variable could stay on a
+// stack that moves during the call, and Windows would write the result into
+// the old one: a game window's rectangle read back as all zeros on real starts.
+//
+//go:uintptrescapes
 func callErr(p *windows.LazyProc, args ...uintptr) (uintptr, error) {
 	r, _, err := p.Call(args...)
 	var errno syscall.Errno
@@ -113,6 +121,8 @@ func callErr(p *windows.LazyProc, args ...uintptr) (uintptr, error) {
 }
 
 // call is a call whose result alone says what happened.
+//
+//go:uintptrescapes
 func call(p *windows.LazyProc, args ...uintptr) uintptr {
 	r, _, _ := p.Call(args...) //nolint:errcheck // see callErr: the last error is only meaningful where it is read
 	return r
