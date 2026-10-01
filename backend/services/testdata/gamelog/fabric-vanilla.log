@@ -1,0 +1,12 @@
+[00:31:10] [main/INFO]: Loading Minecraft 1.20.6 with Fabric Loader 0.19.5
+[00:31:10] [main/INFO]: Loading 92 mods:
+[00:31:12] [main/WARN]: Mixin config sodium.mixins.json does not specify "minVersion" property
+[00:31:14] [main/WARN]: @Inject(@At("TAIL")) Unexpected: Annotation Mixin.ordinal is not supported
+[00:31:20] [Render thread/INFO]: Setting user: Player
+[00:31:21] [Render thread/INFO]: Backend library: LWJGL version 3.3.3-snapshot
+[00:31:26] [Render thread/INFO]: Reloading ResourceManager: vanilla, fabric, file/Faithful.zip
+[00:31:29] [Render thread/INFO]: Created: 1024x1024x0 minecraft:textures/atlas/blocks.png-atlas
+[00:31:31] [Render thread/INFO]: OpenAL initialized on device OpenAL Soft on Speakers (Realtek)
+[00:31:31] [Render thread/INFO]: Sound engine started
+[00:31:33] [Render thread/INFO]: Narrator library for x64 successfully loaded
+[00:32:40] [Render thread/INFO]: Stopping!

@@ -34,7 +34,8 @@ const (
 	jvmKeyOverride    = "OverrideJavaArgs"
 	jvmKeyArgs        = "JvmArgs"
 	// runningWindow is how recently the game's log must have changed for the
-	// instance to count as running, until #44 follows the game for real.
+	// instance to count as running. It is the fallback for a game the launcher
+	// did not start; one it did is followed by the GameTracker (#44).
 	runningWindow = time.Minute
 	// maxMemoryMB caps a value the panel sends, whatever the machine reports.
 	maxMemoryMB = 1 << 20
@@ -257,9 +258,10 @@ func scanINIKeys(r io.Reader, want ...string) (map[string]string, error) {
 }
 
 // InstanceRunning says whether the instance looks to be running: its game
-// log changed within the last minute. Prism keeps the game folder as
-// "minecraft" or, in older instances, ".minecraft". A missing log is not
-// running.
+// log changed within the last minute. It is a guess, for a game started from
+// Prism directly; the App asks the GameTracker first (#44). Prism keeps the
+// game folder as "minecraft" or, in older instances, ".minecraft". A missing
+// log is not running.
 func InstanceRunning(instanceDir string, now time.Time) bool {
 	for _, game := range []string{"minecraft", ".minecraft"} {
 		info, err := os.Stat(filepath.Join(instanceDir, game, "logs", "latest.log"))

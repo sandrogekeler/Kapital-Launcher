@@ -9,6 +9,7 @@ import {
 } from '../../stores/useEngineStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { selectStatus, useServerStore } from '../../stores/useServerStore'
+import { selectGame, useGameStore } from '../../stores/useGameStore'
 import { OpenChapterWiki, OpenExternal, OpenWikiPage } from '../../../wailsjs/go/main/App'
 import { errMsg } from '../../lib/ipc'
 import { Hero } from './Hero'
@@ -47,6 +48,7 @@ export function ChapterView({ chapter, onOpenSettings }: Props) {
   const installChapter = useEngineStore((s) => s.installChapter)
 
   const status = useServerStore(selectStatus(chapter.id))
+  const game = useGameStore(selectGame(chapter.id))
   const checking = useServerStore((s) => s.checking)
   const checkServer = useServerStore((s) => s.check)
 
@@ -80,6 +82,7 @@ export function ChapterView({ chapter, onOpenSettings }: Props) {
         devPack={devPack}
         instancePack={instancePack}
         packState={packState}
+        game={game}
         launching={launching === chapter.id}
         installing={installing === chapter.id}
         installedNow={installedNow === chapter.id}

@@ -22,6 +22,10 @@ export function GetEngine() {
   return window['go']['main']['App']['GetEngine']();
 }
 
+export function GetGameStates() {
+  return window['go']['main']['App']['GetGameStates']();
+}
+
 export function GetInstances() {
   return window['go']['main']['App']['GetInstances']();
 }

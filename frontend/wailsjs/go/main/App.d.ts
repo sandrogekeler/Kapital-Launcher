@@ -12,6 +12,8 @@ export function GetChapterSettings(arg1:string):Promise<models.ChapterSettingsIn
 
 export function GetEngine():Promise<models.EngineInfo>;
 
+export function GetGameStates():Promise<Array<models.GameState>>;
+
 export function GetInstances():Promise<models.InstanceReport>;
 
 export function GetManifest():Promise<models.Manifest>;

@@ -166,29 +166,25 @@ func LaunchArgs(req models.LaunchRequest) ([]string, error) {
 	return args, nil
 }
 
-// Launch starts Prism with the given request and returns once the process has
-// started. Prism keeps running on its own; the launcher does not wait for the
-// game to exit.
-func (p *PrismService) Launch(ctx context.Context, engine models.EngineInfo, req models.LaunchRequest) error {
+// Launch starts Prism with the given request and returns its process once it
+// has started. Prism keeps running on its own; the caller hands the process to
+// WatchPrism, which waits on it so the game tracker knows which Prism is the
+// launcher's and when it exits (#44).
+func (p *PrismService) Launch(ctx context.Context, engine models.EngineInfo, req models.LaunchRequest) (*os.Process, error) {
 	if !engine.Found {
-		return ErrPrismNotFound
+		return nil, ErrPrismNotFound
 	}
 	args, err := LaunchArgs(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	exe, prefix := p.command(engine)
 	cmd := exec.CommandContext(context.WithoutCancel(ctx), exe, append(prefix, args...)...)
 	cmd.Stdout, cmd.Stderr = nil, nil
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("start prism: %w", err)
+		return nil, fmt.Errorf("start prism: %w", err)
 	}
-	// Release the process: the launcher is not its parent in any sense that
-	// matters, and Wait would hold the handle for as long as the game runs.
-	if err := cmd.Process.Release(); err != nil {
-		return fmt.Errorf("release prism process: %w", err)
-	}
-	return nil
+	return cmd.Process, nil
 }
 
 // ParseServerAddress accepts host[:port] and nothing else: no scheme, no path,

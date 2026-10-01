@@ -22,10 +22,16 @@ through.
 
 `backend/services/prism.go` runs Prism. The command line is Prism's
 documented CLI, quoted at the top of the file; `LaunchArgs` is the pure, tested
-function that builds the argument array, and `Launch` starts the game. The only
-other process is macOS's `codesign`, with fixed arguments, in
-`verify_darwin.go`. There is no shell anywhere, and the `shell never sees a
-command string` invariant holds it.
+function that builds the argument array, and `Launch` starts Prism and returns
+its process. The only other process is macOS's `codesign`, with fixed
+arguments, in `verify_darwin.go`. There is no shell anywhere, and the `shell
+never sees a command string` invariant holds it.
+
+The game tracker (`gametracker.go`, `gameproc_*.go`) follows a launched game:
+it looks up Prism's child processes (pid, parent pid and name, nothing else)
+and waits on the game's Java, and reads the instance's `latest.log` for marker
+lines only, never keeping or logging one (ADR-2, third amendment). It starts
+no process.
 
 `managedprism.go` gets Prism for a player who has none, on approval only
 (ADR-11): downloads are verified by digest and signature before anything is

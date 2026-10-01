@@ -112,6 +112,7 @@ describe('App', () => {
     vi.mocked(Bindings.SaveSettings).mockResolvedValue()
     vi.mocked(Bindings.GetWikiPages).mockResolvedValue([])
     vi.mocked(Bindings.GetPackStates).mockResolvedValue([])
+    vi.mocked(Bindings.GetGameStates).mockResolvedValue([])
   })
   afterEach(cleanup)
 

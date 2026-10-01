@@ -41,12 +41,15 @@ A bare `catch {}` that swallows a rejection is the thing to refuse in review.
 
 ## Events
 
-Two: `server:status`, a `models.ServerStatus` emitted by
-`StatusService.Run`'s ticker and by `GetServerStatus`; and `prism:install`, a
+Three: `server:status`, a `models.ServerStatus` emitted by
+`StatusService.Run`'s ticker and by `GetServerStatus`; `prism:install`, a
 `models.PrismInstallProgress` per step while `InstallPrism` runs, heard by the
-engine store (`EVENT_PRISM_INSTALL`); the install's outcome still comes from
-the promise, so a missed event cannot leave it hanging. The pattern for the
-next one:
+engine store (`EVENT_PRISM_INSTALL`), the install's outcome still coming from
+the promise, so a missed event cannot leave it hanging; and `game:state`, a
+`models.GameState` per phase change of a launched game, emitted by
+`GameTracker` (`EventGameState`), heard by the game store
+(`EVENT_GAME_STATE`), with `GetGameStates` for the state now. The
+pattern for the next one:
 
 - The name is a Go constant (`services.EventServerStatus`) and a TS constant
   (`EVENT_SERVER_STATUS`), spelled the same.

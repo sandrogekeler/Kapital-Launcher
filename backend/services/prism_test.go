@@ -174,9 +174,30 @@ func TestDetectFlatpakOnLinux(t *testing.T) {
 
 func TestLaunchRefusesWhenPrismIsMissing(t *testing.T) {
 	p := fakeOS("linux", nil, nil, nil, "")
-	err := p.Launch(context.Background(), models.EngineInfo{}, models.LaunchRequest{InstanceID: "x"})
-	if !errors.Is(err, ErrPrismNotFound) {
-		t.Fatalf("got %v", err)
+	proc, err := p.Launch(context.Background(), models.EngineInfo{}, models.LaunchRequest{InstanceID: "x"})
+	if !errors.Is(err, ErrPrismNotFound) || proc != nil {
+		t.Fatalf("got %v %v", proc, err)
+	}
+}
+
+// Launch hands back the process it started, and WatchPrism closes its channel
+// when that process ends. The test binary stands in for Prism: it refuses the
+// unknown flag and exits at once.
+func TestLaunchReturnsTheProcessAndWatchPrismSeesItExit(t *testing.T) {
+	p := fakeOS("windows", nil, nil, nil, "")
+	engine := models.EngineInfo{Found: true, Executable: os.Args[0]}
+	proc, err := p.Launch(context.Background(), engine, models.LaunchRequest{InstanceID: "kapital-test"})
+	if err != nil || proc == nil || proc.Pid <= 0 {
+		t.Fatalf("got %v %v", proc, err)
+	}
+	watched := WatchPrism(proc)
+	if watched.PID != proc.Pid {
+		t.Fatalf("pid %d, want %d", watched.PID, proc.Pid)
+	}
+	select {
+	case <-watched.Exited:
+	case <-time.After(30 * time.Second):
+		t.Fatal("the process exited but WatchPrism never said so")
 	}
 }
 

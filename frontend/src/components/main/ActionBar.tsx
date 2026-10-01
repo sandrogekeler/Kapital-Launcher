@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type {
   Chapter,
   EngineInfo,
+  GameState,
   PackState,
   PrismInstallProgress,
   PrismRelease,
@@ -12,6 +13,8 @@ import { installLine } from '../../lib/prismInstall'
 import { updateAvailable } from '../../lib/packState'
 import { packHost, packSourceLine } from '../../lib/packSource'
 import { serverLine } from '../../lib/serverLine'
+import { gameLine } from '../../lib/gameLine'
+import { isActive } from '../../stores/useGameStore'
 import { Download, Play, RefreshCw, TriangleAlert } from '../../lib/icons'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
@@ -30,6 +33,8 @@ interface Props {
   instancePack: string | undefined
   /** Whether the installed pack is its source's current one (#71). */
   packState: PackState | undefined
+  /** Where the chapter's game is, from Play to its end (#44). */
+  game: GameState | undefined
   launching: boolean
   /** Whether the chapter's instance is being written right now. */
   installing: boolean
@@ -69,6 +74,11 @@ const WORKING = ['downloading', 'unpacking', 'verifying']
  * syncs in the pre-launch step before the game starts, so the launch is the
  * update.
  *
+ * While the chapter's game is starting, running or closing (#44) its own line
+ * takes the bar, right after the hand-over to Prism, and Play and Install wait.
+ * A game that crashed or never started keeps its line until the next Play, but
+ * below an install in progress. A game that closed normally says nothing.
+ *
  * Without Prism, the bar offers to get it (ADR-11): the approval card opens
  * below, and once confirmed the state line follows the install step by step.
  * If the release cannot be read, the button falls back to Prism's website.
@@ -81,6 +91,7 @@ export function ActionBar({
   devPack,
   instancePack,
   packState,
+  game,
   launching,
   installing,
   installedNow,
@@ -102,11 +113,15 @@ export function ActionBar({
   const behind = updateAvailable(packState)
   const published = isPublished(chapter) || devPack !== undefined
   const source = installed ? packSourceLine(instancePack, chapter.pack.packwiz) : null
+  const playing = isActive(game?.phase)
+  const gameRows = gameLine(game, chapter.name)
   let state: string
   let meta: string
   let tone = 'text-accent'
   if (launching) {
     ;[state, meta] = ['◐ Launching', 'Handing over to Prism']
+  } else if (playing && gameRows) {
+    ;[state, meta, tone] = gameRows
   } else if (installing) {
     ;[state, meta] = ['◐ Installing', `Adding ${chapter.instance.id} to Prism`]
   } else if (
@@ -115,6 +130,8 @@ export function ActionBar({
   ) {
     ;[state, meta] = installLine(install, engine?.found ? 'Updating' : 'Getting')
     if (install.phase === 'failed') tone = 'text-danger'
+  } else if (gameRows) {
+    ;[state, meta, tone] = gameRows
   } else if (missing) {
     ;[state, meta, tone] = [
       '○ Prism not found',
@@ -164,7 +181,7 @@ export function ActionBar({
           <Button
             variant="play"
             onClick={onInstall}
-            disabled={!published || installing || launching || missing || working}
+            disabled={!published || installing || launching || playing || missing || working}
           >
             <Icon icon={Download} size="sm" />
             <span>{installLabel(chapter)}</span>
@@ -173,7 +190,7 @@ export function ActionBar({
           <Button
             variant="play"
             onClick={onPlay}
-            disabled={launching || installing || missing || working}
+            disabled={launching || installing || playing || missing || working}
           >
             {behind ? (
               <Icon icon={RefreshCw} size="sm" />
