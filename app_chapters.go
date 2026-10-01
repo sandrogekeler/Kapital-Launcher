@@ -27,7 +27,13 @@ func (a *App) instanceDir(settings models.AppSettings, engine models.EngineInfo,
 // game looks to be running is left alone, as a settings save is (ADR-2, second
 // amendment); Prism could be writing the file.
 func (a *App) updatePreLaunch(chapterID, instanceDir string) {
-	if instanceDir == "" || services.InstanceRunning(instanceDir, time.Now()) {
+	if instanceDir == "" {
+		return
+	}
+	if services.InstanceRunning(instanceDir, time.Now()) {
+		// A game that closed less than a minute ago looks the same; the next
+		// Play catches up.
+		slog.Info("pre-launch command left as it is", "chapter", chapterID, "reason", "the game looks to be running")
 		return
 	}
 	result, err := services.RewritePreLaunchCommand(filepath.Join(instanceDir, "instance.cfg"))
