@@ -359,3 +359,49 @@ func TestAChapterBeingFollowedIsRunningForEveryGuard(t *testing.T) {
 		}
 	}
 }
+
+func TestCopyRedactedLogPutsTheMaskedTailOnTheClipboard(t *testing.T) {
+	app := newTestApp(t)
+	app.home = `C:\Users\sandro`
+	app.osUser = "Alessandro"
+	if err := app.SaveSettings(models.AppSettings{Theme: "dark", ProfileName: "Sandro_G"}); err != nil {
+		t.Fatal(err)
+	}
+	logText := strings.Join([]string{
+		`level=INFO msg=starting dataDir=C:\Users\sandro\AppData\Roaming\KapitalLauncher`,
+		`level=INFO msg=launched profile=Sandro_G`,
+		`level=WARN msg="ping failed" addr=rails-enjoyed.tun.ply.gg:25565 login=Alessandro`,
+	}, "\n") + "\n"
+	if err := os.WriteFile(services.LogPath(app.dataDir), []byte(logText), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var copied string
+	app.setClipboard = func(_ context.Context, text string) error { copied = text; return nil }
+
+	lines, err := app.CopyRedactedLog()
+	if err != nil || lines != 3 {
+		t.Fatalf("%v, %d lines", err, lines)
+	}
+	for _, leaked := range []string{"sandro", "Sandro_G", "Alessandro", "ply.gg"} {
+		if strings.Contains(copied, leaked) {
+			t.Errorf("%q reached the clipboard:\n%s", leaked, copied)
+		}
+	}
+	if !strings.Contains(copied, "msg=launched") {
+		t.Errorf("the rest of the line must survive:\n%s", copied)
+	}
+}
+
+func TestCopyRedactedLogReportsWhatWentWrong(t *testing.T) {
+	app := newTestApp(t)
+	app.setClipboard = func(context.Context, string) error { return errors.New("no clipboard") }
+	if _, err := app.CopyRedactedLog(); err == nil {
+		t.Fatal("a missing log must be an error, not an empty copy")
+	}
+	if err := os.WriteFile(services.LogPath(app.dataDir), []byte("a line\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CopyRedactedLog(); err == nil || !strings.Contains(err.Error(), "no clipboard") {
+		t.Fatalf("a clipboard failure must reach the caller: %v", err)
+	}
+}

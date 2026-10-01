@@ -30,6 +30,29 @@ func TestRedactRemovesWhatIdentifiesTheUser(t *testing.T) {
 	}
 }
 
+// The OS user name leaks outside the home path too: in a log line of its own,
+// or as a login name that differs from the home folder.
+func TestRedactMasksTheOSUserNameOutsideTheHomePath(t *testing.T) {
+	r := NewRedactor(`C:\Users\sandro`, "", nil, "Alessandro")
+	out := r.Redact("owner=sandro login=Alessandro path=C:\\Users\\sandro\\x sandrogekeler stays")
+	for _, leaked := range []string{"owner=sandro", "Alessandro", `C:\Users`} {
+		if strings.Contains(out, leaked) {
+			t.Errorf("%q survived: %s", leaked, out)
+		}
+	}
+	if !strings.Contains(out, "sandrogekeler stays") {
+		t.Errorf("a name only matches as a whole word: %s", out)
+	}
+}
+
+func TestRedactMasksAServersHostWithoutItsPort(t *testing.T) {
+	r := NewRedactor("", "", []string{"play.kapitel.example:25565", "[::1]:25565"})
+	out := r.Redact("dial play.kapitel.example failed; [ stays")
+	if strings.Contains(out, "play.kapitel") || !strings.Contains(out, "[ stays") {
+		t.Fatal(out)
+	}
+}
+
 func TestRedactSkipsBlankValues(t *testing.T) {
 	r := NewRedactor("", "", []string{""})
 	in := "nothing to see here"

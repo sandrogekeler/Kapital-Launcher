@@ -10,6 +10,10 @@ export function ChoosePrismRoot() {
   return window['go']['main']['App']['ChoosePrismRoot']();
 }
 
+export function CopyRedactedLog() {
+  return window['go']['main']['App']['CopyRedactedLog']();
+}
+
 export function GetAppVersion() {
   return window['go']['main']['App']['GetAppVersion']();
 }

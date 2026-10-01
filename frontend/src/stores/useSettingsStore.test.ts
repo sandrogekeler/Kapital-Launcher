@@ -48,6 +48,13 @@ describe('useSettingsStore', () => {
     expect(useSettingsStore.getState().error).toContain('absolute')
   })
 
+  it('copies the log through the backend and refuses without one', async () => {
+    await expect(useSettingsStore.getState().copyLog()).rejects.toThrow(/app window/)
+    attachBridge()
+    vi.mocked(App.CopyRedactedLog).mockResolvedValue(42)
+    await expect(useSettingsStore.getState().copyLog()).resolves.toBe(42)
+  })
+
   it('sanitize falls back to the dark theme', () => {
     expect(sanitize({ theme: 'system' } as AppSettings).theme).toBe('system')
     expect(sanitize({ theme: 'x' } as AppSettings).theme).toBe('dark')

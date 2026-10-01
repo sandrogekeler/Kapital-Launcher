@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { AppSettings, Theme } from '../types'
 import { errMsg, hasWailsBridge, readOr } from '../lib/ipc'
-import { GetSettings, SaveSettings } from '../../wailsjs/go/main/App'
+import { CopyRedactedLog, GetSettings, SaveSettings } from '../../wailsjs/go/main/App'
 
 /**
  * The persisted settings. Defaults mirror models.DefaultSettings in Go, which
@@ -23,6 +23,8 @@ interface SettingsStore {
   error: string | null
   load: () => Promise<void>
   update: (patch: Partial<AppSettings>) => Promise<void>
+  /** Puts the redacted log tail on the clipboard (#84); resolves to the lines copied. */
+  copyLog: () => Promise<number>
   clearError: () => void
 }
 
@@ -50,6 +52,13 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       set({ settings: before, error: errMsg(e) })
       throw e
     }
+  },
+
+  // The log and the clipboard are Go's. With no bridge there is neither, and
+  // saying so beats a TypeError from the binding.
+  copyLog: async () => {
+    if (!hasWailsBridge()) throw new Error('The log can only be copied from the app window.')
+    return CopyRedactedLog()
   },
 
   clearError: () => set({ error: null }),
