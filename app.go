@@ -97,93 +97,6 @@ func NewApp(dataDir string, manifest []byte) (*App, error) {
 	return a, nil
 }
 
-// splashPaintWait is how long LaunchChapter gives the webview to draw the
-// loading card before the window shrinks to it: a few frames.
-const splashPaintWait = 120 * time.Millisecond
-
-// onGameState is the tracker's emit: the event, with the splash flag on it.
-func (a *App) onGameState(s models.GameState) {
-	s.Splash = a.splash.Observe(s.ChapterID, s.Phase)
-	a.emitGameState(s)
-}
-
-func (a *App) emitGameState(s models.GameState) {
-	if a.emit != nil {
-		a.emit(s)
-		return
-	}
-	if a.ctx != nil {
-		wailsrt.EventsEmit(a.ctx, services.EventGameState, s)
-	}
-}
-
-// appWindow is the launcher's own window for the splash (#43): the Wails
-// runtime's calls on the app's context, and no window at all before startup,
-// where each is a no-op that says so in the log.
-type appWindow struct{ a *App }
-
-func (w appWindow) with(call string, f func(ctx context.Context)) {
-	if w.a.ctx == nil {
-		slog.Debug("window call without a window", "call", call)
-		return
-	}
-	f(w.a.ctx)
-}
-
-func (w appWindow) GetSize() (width, height int) {
-	w.with("GetSize", func(ctx context.Context) { width, height = wailsrt.WindowGetSize(ctx) })
-	return width, height
-}
-
-func (w appWindow) GetPosition() (x, y int) {
-	w.with("GetPosition", func(ctx context.Context) { x, y = wailsrt.WindowGetPosition(ctx) })
-	return x, y
-}
-
-func (w appWindow) IsMaximised() (maximised bool) {
-	w.with("IsMaximised", func(ctx context.Context) { maximised = wailsrt.WindowIsMaximised(ctx) })
-	return maximised
-}
-
-func (w appWindow) Maximise()   { w.with("Maximise", wailsrt.WindowMaximise) }
-func (w appWindow) Unmaximise() { w.with("Unmaximise", wailsrt.WindowUnmaximise) }
-func (w appWindow) Center()     { w.with("Center", wailsrt.WindowCenter) }
-func (w appWindow) Minimise()   { w.with("Minimise", wailsrt.WindowMinimise) }
-func (w appWindow) Unminimise() { w.with("Unminimise", wailsrt.WindowUnminimise) }
-
-func (w appWindow) SetMinSize(width, height int) {
-	w.with("SetMinSize", func(ctx context.Context) { wailsrt.WindowSetMinSize(ctx, width, height) })
-}
-
-func (w appWindow) SetSize(width, height int) {
-	w.with("SetSize", func(ctx context.Context) { wailsrt.WindowSetSize(ctx, width, height) })
-}
-
-func (w appWindow) SetPosition(x, y int) {
-	w.with("SetPosition", func(ctx context.Context) { wailsrt.WindowSetPosition(ctx, x, y) })
-}
-
-func (a *App) startup(ctx context.Context) {
-	a.ctx = ctx
-	if _, err := a.RefreshEngine(); err != nil {
-		slog.Warn("engine detection", "error", err)
-	}
-	// The status ticker lives as long as the window. Each result is an event
-	// the frontend listens for; a chapter's line updates without asking.
-	runCtx, cancel := context.WithCancel(ctx)
-	a.stop = cancel
-	a.runCtx = runCtx
-	go a.status.Run(runCtx, a.manifest.Chapters, func(s models.ServerStatus) {
-		wailsrt.EventsEmit(a.ctx, services.EventServerStatus, s)
-	})
-}
-
-func (a *App) shutdown(context.Context) {
-	if a.stop != nil {
-		a.stop()
-	}
-}
-
 // GetAppVersion returns the version stamped into this build.
 func (a *App) GetAppVersion() (string, error) {
 	return Version, nil
@@ -431,43 +344,6 @@ func (a *App) LeaveSplash() error {
 	return nil
 }
 
-// leaveSplash gives the window back and tells the view the card is gone.
-func (a *App) leaveSplash() {
-	chapterID, left := a.splash.Leave()
-	if !left {
-		return
-	}
-	s := a.games.Latest(chapterID)
-	s.Splash = false
-	a.emitGameState(s)
-}
-
-// instanceDir is the chapter's instance folder under the instances folder
-// GetInstances resolves, or "" when that cannot be worked out.
-func (a *App) instanceDir(settings models.AppSettings, engine models.EngineInfo, chapter models.Chapter) string {
-	report := a.prism.Instances(settings, engine, []models.Chapter{chapter})
-	if report.Dir == "" {
-		return ""
-	}
-	return filepath.Join(report.Dir, chapter.Instance.ID)
-}
-
-// chapterRunning is whether the chapter's game is running: the tracker says so
-// for a start this app made, and the game log's recent activity covers a game
-// started from Prism itself.
-func (a *App) chapterRunning(chapter models.Chapter, instanceDir string) bool {
-	return a.games.Active(chapter.ID) || services.InstanceRunning(instanceDir, time.Now())
-}
-
-// trackContext is the context the tracker's goroutines run under: cancelled in
-// shutdown, Background before the window is up.
-func (a *App) trackContext() context.Context {
-	if a.runCtx != nil {
-		return a.runCtx
-	}
-	return context.Background()
-}
-
 // GetSettings returns the persisted settings, or defaults on a fresh install,
 // with what the loading splash comes to on this OS (LoadingSplashAvailable
 // and LoadingSplashOn, derived here and never stored).
@@ -654,39 +530,6 @@ func (a *App) OpenInstanceFolder(chapterID string) error {
 	return nil
 }
 
-// chapterInstance resolves a chapter id to its instance.cfg under the
-// instances folder GetInstances resolves, refusing a chapter whose instance
-// is not there.
-func (a *App) chapterInstance(chapterID string) (models.Chapter, string, error) {
-	chapter, ok := a.chapter(chapterID)
-	if !ok {
-		return models.Chapter{}, "", fmt.Errorf("no chapter %q", chapterID)
-	}
-	report, err := a.GetInstances()
-	if err != nil {
-		return models.Chapter{}, "", err
-	}
-	if !report.Present[chapterID] {
-		return models.Chapter{}, "", fmt.Errorf("%s is not installed", chapter.Name)
-	}
-	return chapter, filepath.Join(report.Dir, chapter.Instance.ID, "instance.cfg"), nil
-}
-
-func (a *App) chapterSettingsInfo(chapter models.Chapter, cfg string, settings models.ChapterSettings, machine int) models.ChapterSettingsInfo {
-	info := models.ChapterSettingsInfo{
-		ChapterID:       chapter.ID,
-		Settings:        settings,
-		MachineMemoryMB: machine,
-		PrismDefaultMB:  services.PrismDefaultMaxMB(machine),
-		Presets:         services.PresetNames(),
-		Running:         a.chapterRunning(chapter, filepath.Dir(cfg)),
-	}
-	if chapter.Pack.MemoryGB != nil {
-		info.PackMemoryMB = *chapter.Pack.MemoryGB * 1024
-	}
-	return info
-}
-
 // GetWikiPages returns the wiki's pages for the "From the wiki" panel (#58):
 // fetched from the manifest's wiki host once per start, cached in the app
 // data dir, or read from that cache offline. An error means neither was
@@ -730,30 +573,4 @@ func (a *App) OpenExternal(raw string) error {
 // the number written per run are bounded in services.FrontendErrorLog.
 func (a *App) LogFrontendError(kind, message, stack string) error {
 	return a.frontendErrors.Log(kind, message, stack)
-}
-
-func (a *App) openURL(url string) error {
-	if a.ctx == nil {
-		return errors.New("window is not ready")
-	}
-	wailsrt.BrowserOpenURL(a.ctx, url)
-	return nil
-}
-
-func (a *App) chapter(id string) (models.Chapter, bool) {
-	for _, c := range a.manifest.Chapters {
-		if c.ID == id {
-			return c, true
-		}
-	}
-	return models.Chapter{}, false
-}
-
-// context is the Wails context once the window is up, or Background before
-// it: detection during NewApp must not depend on the window.
-func (a *App) context() context.Context {
-	if a.ctx != nil {
-		return a.ctx
-	}
-	return context.Background()
 }

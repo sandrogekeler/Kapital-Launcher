@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -45,9 +44,6 @@ const (
 	// so its exit is the game's; the pause lets the lookup and the log have a
 	// last say.
 	gamePrismGone = 2 * time.Second
-
-	launchTimesFile = "launchtimes.json"
-	launchTimesKept = 5
 )
 
 var errGameProcUnsupported = errors.New("process lookup is not supported on this OS")
@@ -243,92 +239,10 @@ func (t *GameTracker) begin(ctx context.Context, req TrackRequest) (*gameRun, er
 	}, nil
 }
 
-// Durations returns the timings of a chapter's last starts that reached the
-// running phase, oldest first, for the splash's estimate (#43).
-func (t *GameTracker) Durations(chapterID string) []models.LaunchTiming {
-	t.timesMu.Lock()
-	defer t.timesMu.Unlock()
-	return t.loadTimes()[chapterID]
-}
-
-// LaunchEstimate is the mean time from Play to each phase over earlier starts,
-// in milliseconds: each of "mods", "window", "resources" and "running" is
-// averaged over the starts that have it, and one no start has is left out. No
-// starts, no estimate (nil).
-func LaunchEstimate(times []models.LaunchTiming) map[string]int64 {
-	var sum, n [4]int64
-	phases := [4]string{models.GamePhaseMods, models.GamePhaseWindow, models.GamePhaseResources, models.GamePhaseRunning}
-	for _, timing := range times {
-		for i, phase := range phases {
-			if ms, ok := timing.PhaseMs[phase]; ok {
-				sum[i] += ms
-				n[i]++
-			}
-		}
-	}
-	var est map[string]int64
-	for i, phase := range phases {
-		if n[i] == 0 {
-			continue
-		}
-		if est == nil {
-			est = map[string]int64{}
-		}
-		// Rounded to the nearest millisecond.
-		est[phase] = (sum[i] + n[i]/2) / n[i]
-	}
-	return est
-}
-
 func (t *GameTracker) publish(s models.GameState) {
 	slog.Info("game phase", "chapter", s.ChapterID, "phase", s.Phase)
 	if t.emit != nil {
 		t.emit(s)
-	}
-}
-
-func (t *GameTracker) loadTimes() map[string][]models.LaunchTiming {
-	times := map[string][]models.LaunchTiming{}
-	if t.dataDir == "" {
-		return times
-	}
-	raw, err := os.ReadFile(filepath.Join(t.dataDir, launchTimesFile))
-	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			slog.Warn("launch times read", "error", err)
-		}
-		return times
-	}
-	if err := json.Unmarshal(raw, &times); err != nil {
-		// A file that cannot be read is replaced on the next write: it holds
-		// estimates, nothing the player wrote.
-		slog.Warn("launch times parse", "error", err)
-		return map[string][]models.LaunchTiming{}
-	}
-	return times
-}
-
-// recordTiming appends one start's timings for a chapter, keeping the last
-// launchTimesKept.
-func (t *GameTracker) recordTiming(chapterID string, timing models.LaunchTiming) {
-	if t.dataDir == "" {
-		return
-	}
-	t.timesMu.Lock()
-	defer t.timesMu.Unlock()
-	times := t.loadTimes()
-	kept := append(times[chapterID], timing)
-	if len(kept) > launchTimesKept {
-		kept = kept[len(kept)-launchTimesKept:]
-	}
-	times[chapterID] = kept
-	raw, err := json.MarshalIndent(times, "", "  ")
-	if err != nil {
-		slog.Warn("launch times encode", "error", err)
-		return
-	}
-	if err := writeFileAtomic(filepath.Join(t.dataDir, launchTimesFile), raw, 0o600); err != nil {
-		slog.Warn("launch times write", "error", err)
 	}
 }
 
@@ -602,73 +516,6 @@ func (r *gameRun) findGame() {
 		code, known, err := r.t.os.wait(wctx, best)
 		r.exitCh <- procExit{code: code, known: known, err: err}
 	}()
-}
-
-// holdWindow starts keeping the game's window hidden, when asked to and while
-// the handover has not come. It never fails the run: where it cannot hold, the
-// window shows as the game makes it.
-func (r *gameRun) holdWindow(pid int) {
-	if !r.req.HoldWindow || r.t.hold == nil || r.holder != nil ||
-		phaseRank[r.state.Phase] >= phaseRank[models.GamePhaseResources] {
-		return
-	}
-	h, err := r.t.hold(pid)
-	if err != nil {
-		if r.t.holdWarned.CompareAndSwap(false, true) {
-			slog.Warn("game window cannot be held", "chapter", r.req.ChapterID, "error", err)
-		}
-		return
-	}
-	r.holder = h
-}
-
-// handover is the game having the screen: the held window, if there is one,
-// is shown and given the foreground, and then OnHandover is called, once per
-// run. The foreground release nudges the window and so takes a few hundred ms:
-// it runs on its own goroutine with the callback after it, and the run loop
-// goes on. With no window held there is nothing to wait for and the callback
-// runs here.
-func (r *gameRun) handover() {
-	if r.handedOver {
-		return
-	}
-	r.handedOver = true
-	h := r.holder
-	r.holder = nil
-	done := r.req.OnHandover
-	if h == nil {
-		if done != nil {
-			done()
-		}
-		return
-	}
-	go func() {
-		r.logRelease(true, h.Release(true))
-		if done != nil {
-			done()
-		}
-	}()
-}
-
-// releaseWindow shows the held window again without the foreground and logs
-// what holding it came to. It is quick and done before the run moves on, so a
-// window is never left hidden behind a run that ended.
-func (r *gameRun) releaseWindow(foreground bool) {
-	if r.holder == nil {
-		return
-	}
-	h := r.holder
-	r.holder = nil
-	r.logRelease(foreground, h.Release(foreground))
-}
-
-// logRelease records what holding a window came to: counts and milliseconds,
-// never a window title.
-func (r *gameRun) logRelease(handover bool, rep WindowReport) {
-	slog.Info("game window", "chapter", r.req.ChapterID, "handover", handover,
-		"seen", rep.Seen, "swept", rep.Swept, "hides", rep.Hides,
-		"firstHideMs", rep.FirstHideMs, "maxHideMs", rep.MaxHideMs,
-		"foreground", rep.Foreground, "nudged", rep.Nudged)
 }
 
 // isJavaName is whether a process name is a Java runtime: javaw.exe or
