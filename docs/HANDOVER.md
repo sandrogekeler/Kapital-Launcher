@@ -1,13 +1,11 @@
 # Handover
 
-Written 2026-09-30, at the end of the second local session (Windows 11, the
-author's PC), brought up to date the same day by a cloud session, by the
-third local session (Install, the local pack override, the first real
-install) and by the fourth (the settings screen and six requests from the
-author: the ping, scrolling, the facts, the wiki, the card's motion, the
-chapter settings). Read `agent_docs/ROADMAP.md` for the milestones, `docs/adr/` for
-the decisions and the GitHub issues for the work items; this file is what a
-fresh session cannot work out on its own.
+Written 2026-09-30 over four local sessions and a cloud one, rewritten
+2026-10-01 at the end of the fifth local session (Windows 11, the author's
+PC): the game tracker (#44), five polish items (#83 to #87), and hiding the
+game window (#45, ADR-0012). Read `agent_docs/ROADMAP.md` for the milestones,
+`docs/adr/` for the decisions and the GitHub issues for the work items; this
+file is what a fresh session cannot work out on its own.
 
 ## Picking up
 
@@ -24,95 +22,74 @@ request stacked on it.
 
 ## Open pull requests
 
-Everything up to #51 is merged. The evening's work is one stack; merge from
-the bottom, each one retargets to `main` when the one below it merges. All
-were green in CI when this was written.
+Everything up to #92 is merged and `main` is green (CI, CodeQL, Scorecard,
+aislop).
 
-| PR | What | Base |
+| PR | What | Note |
 |---|---|---|
-| #52 | The handover rows that missed `main` after #47 | `main` |
-| this one | The handover after the fourth session | #52 |
-| #60 | Ping with protocol 0, which Frangfurd answers (#55) | `main` |
-| #54 | The settings screen with native pickers and the developer pack field (#5) | `main` |
-| #61 | The chapter view scrolls under a thumb drawn over the content (#56) | #54 |
-| #62 | Four pack facts, with the size on disk (#57) | #61 |
-| #63 | A random wiki page per chapter from the lore export (#58) | #62 |
-| #64 | The chapter card that slides by direction, the nav highlight gliding (#59) | #63 |
-| #65 | A chapter's memory and JVM preset from a pen in its hero (#36, first half) | #64 |
-| #72 | The slide the way the content moves, on a softer glide curve (#67) | #65 |
-| #73 | The card fits the window, the hero taking the height left over (#68) | #72 |
-| #74 | The logo at 16 px (#70) | #73 |
-| #75 | Title art in the hero, blurred art behind the selected nav tile (#69) | #74 |
-| #76 | "Update and play" when the synced pack.toml's hash is behind the source's, a Version row (#71) | #75 |
-| #53 | Dependabot: `golang.org/x/sys` 0.48.0 | `main` |
+| #93 | Keep the game window hidden until the resource reload (#45, ADR-0012) | Needs kapital-packs#3 |
+| this one | The handover after the fifth session | |
+| kapital-packs#3 | Frangfurd's NeoForge early window back on | The pack version stays 1.0.0; a 1.0.1 is the author's call |
 
-Owed on the author's PC, in the Wails window (the browser pane cannot do
-them): one Browse each on the settings screen (#54); one save on a chapter's
-settings, then a look at its `instance.cfg` (#65); the slide's render cost
-on the 4K art (#64; `effect.motionBlur: 0` keeps the slide without the
-filter if it stutters); one start showing a wiki page per chapter (#63).
+## Done on 2026-10-01
+
+- **#44, merged (#82).** `GameTracker` follows a launched start: a fresh
+  `latest.log` (judged against a snapshot taken before Play), marker lines
+  only, the game's Java found as a child of Prism (Toolhelp on Windows,
+  `kern.proc` on macOS) and waited on. Phases go out as `game:state`; the
+  state line shows them, Play and Install wait. Timings of the last five
+  starts per chapter are in `launchtimes.json` for #43's estimate. Verified
+  with a clean close (exit 0) and a killed Java (`crashed`, exit -1).
+- **#83 to #87, merged (#88 to #92):** frontend errors in the Go log, Copy log
+  (redacted, checked on the real log: no name, path or address), Open folder
+  from a chapter's pen, CodeQL and Scorecard (vendored from Konnekt, not
+  Kollektiv), the About section with the licences. All checked in the real
+  app.
+- **#45, in #93.** Hiding the game window from outside lands only when the
+  game's thread handles messages. With `earlyWindowControl = false` it does
+  not during mod loading, and the window stayed visible for 19 s; with the
+  early window on, hides landed in 0 to 31 ms and the window was never seen.
+  The handover is the resource reload beginning, so Drippy is seen; there a
+  fullscreen window is made one pixel shorter and restored, which fixes the
+  corner glitch #46 was about (3 of 4 starts had it). The author saw Drippy,
+  the intro and the title at full size. Behind the developer setting
+  `holdGameWindow` until #43 covers the hidden time.
 
 ## Work items, in the order agreed
 
-Done this session: #22's writer (merged in #39) is called by Install (#40,
-closes #24), and #42 (closes #41) lets it install from `packwiz serve`. #22
-stays open until the author closes it.
-
-**Frangfurd 1.0.0 is released** in `kapital-packs`: kapital-packs#1 merged
-(new title video, Drippy loading screen and layout, FancyMenu's forced
-fullscreen off, NeoForge's early window off), tagged `frangfurd-v1.0.0` with
-a GitHub release and no `.mrpack` (it would embed the CurseForge jar). It is
-not hosted yet, so players cannot install it: that is #25.
-
-Done in the fourth session, all in the stack above: #5, #55, #56, #57,
-#58, #59, the first half of #36, then #67 to #71 from the author's second
-round of requests. Left, in order:
-
-1. **#25** Publish the packs on Cloudflare Pages, add its `pages.dev` host to
-   `AllowedManifestHosts`, test-install from `packwiz serve` first.
-   Frangfurd already installs and launches end to end from `packwiz serve`
-   (#42), so hosting is the remaining step for it; #35 comes first.
-2. **#20** Launch the three real packs end to end. Luxemburg is not in Prism,
+1. **#43** The loading splash, now that #44 and #45 exist. Decided: launcher
+   starts only, minimise once the game has the window and come back when the
+   tracker sees it end. Open: what the splash does about Prism's "Please
+   wait..." dialogs and packwiz-installer's window, which show before the
+   game (#45's findings comment lists them).
+2. **#25** Publish the packs on Cloudflare Pages; #35 first (what becomes
+   public is the author's call).
+3. **#20** Launch the three real packs end to end. Luxemburg is not in Prism,
    and `kapital-lichdenstein` sits in `%APPDATA%\PrismLauncher`, the root the
-   launcher no longer looks at now that the managed Prism is the engine.
-3. **#44** Following the game from its log, the base for #50 and #43. Read
-   on 2026-09-30 from Prism 11.1.1's source and the clean run's logs: a
-   second `--launch` is forwarded to the running Prism over its local peer
-   and the process the launcher started exits at once
-   (`Application.cpp:451-492`), so it is no handle on the game; all five
-   markers, `Stopping!` included, are in the real `latest.log`; the log's
-   timestamps are two hours off the file's mtime, so freshness must come
-   from the file itself; the first line carries the player name, so lines
-   are never copied. The crash path without a process handle is undecided.
-4. **#36**, second half: mod toggles, once `kapital-packs` marks mods
-   optional. The pen panel and the `instance.cfg` rewrite exist (#65).
-5. **#50** Install prepares the chapter (sign-in, Java, libraries, pack,
-   assets happen at Install, not the first Play) with one progress view in
-   the launcher; builds on #44 and #45. Filed after a clean new-player run on
-   2026-09-30: Prism uninstalled (program only; its data folder with the
-   sign-in and `kapital-lichdenstein` stays), the Frangfurd instance backed
-   up to `D:\Private\Projects\Videogames\Minecraft\Projects\KapitelKapital\backups\kapital-frangfurd-2026-09-30`
-   and removed, then Get Prism, Install and Play all worked. The managed
-   Prism now lives in `%APPDATA%\KapitalLauncher\prism`.
+   launcher no longer looks at. Lichdenstein is Fabric 1.20.6 and has never
+   run in Prism, so its log markers and #45's early-window behaviour are
+   unmeasured.
+4. **#36**, second half: mod toggles, once `kapital-packs` marks mods optional.
+5. **#50** Install prepares the chapter with one progress view. The
+   pre-launch route cannot work: Prism runs the pre-launch command before it
+   downloads libraries and assets (`MinecraftInstance.cpp`,
+   `createLaunchTask`, 11.1.1). What is left is letting the game start and
+   closing it on a #44 marker. `prismlauncher.cfg`'s console keys are
+   `ShowConsole` (default false), `AutoCloseConsole`, `ShowConsoleOnError`
+   (default true; after a crash Prism stays open with its console),
+   `QuitAfterGameStop` (true in the managed root).
 
 Plan each with the author before building; they choose between the options.
-
-**A finding for #50, not yet on the issue:** the pre-launch route cannot
-work. Prism runs the pre-launch command before it downloads libraries and
-assets (`MinecraftInstance.cpp`, `createLaunchTask`, 11.1.1: Java, then
-`PreLaunchCommand`, then `ClaimAccount`, `LibrariesTask`, `AssetUpdateTask`,
-then the launch), and the clean run's `PrismLauncher-0.log` agrees (Java
-check at 15 s, libraries at 32 s, the asset index at 36 s, the game JVM at
-109 s). What is left is letting the game start and closing it on the first
-marker from #44. `prismlauncher.cfg`'s console keys are `ShowConsole`
-(default false), `AutoCloseConsole`, `ShowConsoleOnError` (default true),
-`QuitAfterGameStop`; the managed root has `QuitAfterGameStop=true`.
+Building is done by Sonnet agents from a written brief, one issue per pull
+request; parallel ones that each add a bound method conflict on `app.go` and
+the generated bindings, so stack them before handing over.
 
 Filed 2026-09-30 for work that needs the author, a dashboard or real hardware:
-#29 (Pages build watch paths), #30 (macOS verification pass), #31 (universal
-macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
-(server addresses and join on launch), #34 (first Windows build and app icon),
-#35 (what publishing the packs makes public).
+#29 (Pages build watch paths), #30 (macOS verification pass, now including
+the tracker's and the window holder's macOS paths), #31 (universal macOS build
+and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33 (server
+addresses and join on launch), #34 (first Windows build), #35 (what
+publishing the packs makes public).
 
 ## The packs
 
@@ -134,16 +111,13 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
   (kapital-packs#1) is a two-pass 4K60 re-encode at a 40 Mbit/s target, which
   x264 settled at 31 Mbit/s, 11.7 MB. The master is
   `D:\Private\Projects\Videogames\Minecraft\Projects\KapitelKapital\assets\intro\frangfurd\Frangfurd-Intro.mp4`.
-- **Frangfurd's fullscreen start** (the comment on #46): the title screen
-  could stay in the bottom-left corner of a black screen, drawn at 854x480,
-  the early window's size, because the game missed the resize to fullscreen.
-  FancyMenu's `force_fullscreen` is off (kapital-packs#1); Minecraft's own
-  `fullscreen:true` in the default options makes the game fullscreen.
-  `earlyWindowMaximized = true` left the background shifted under a black band.
-  **`earlyWindowControl = false` in `config/fml.toml` fixed it**, at the cost
-  of a black window with a white rectangle, frozen for a moment before Drippy
-  draws. The author wants players to see only the launcher's splash instead
-  (#43, #45). Released in Frangfurd 1.0.0.
+- **Frangfurd's fullscreen start** (#46): with NeoForge's early window on,
+  the title screen could stay in the bottom-left corner of a black screen,
+  drawn at 854x480, because the game missed the resize to fullscreen.
+  Frangfurd 1.0.0 turned the early window off (`earlyWindowControl = false`),
+  which #45 cannot hide in time. kapital-packs#3 turns it back on; the
+  launcher fixes the glitch with its one-pixel nudge at the handover (#93). A
+  start from Prism directly still gets the glitch now and then.
 - **This repository is public now**, so everything in it is: the manifest
   with the tunnel addresses, the art, the checklists. Nothing secret was in
   it (S1.2). `kapital-packs` and the wiki are still private.
@@ -170,18 +144,18 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
   `kapital-packs` reads it. Its hand-copied predecessor, copied from the
   Modrinth profile "Morner", went to the Recycle Bin as
   `kapital-frangfurd-copied` (restorable from there).
-- **Its packwiz sync is off while the author edits**: `OverrideCommands=false`
-  in its `instance.cfg`, so Play starts the files as they are and nothing is
-  reverted. The pre-launch command, syncing from
-  `http://localhost:8080/pack.toml`, is still in the file, so the launcher
-  still shows "Dev pack". The author's edits were imported and released as
-  1.0.0; sync is still off. Setting `OverrideCommands=true` syncs again, and
-  then needs `packwiz serve` running. Once #25 hosts the pack, the clean way
-  is to delete the instance and Install from the hosted `pack.toml`.
+- **Its packwiz sync is on again** (`OverrideCommands=true`), syncing from
+  `http://localhost:8080/pack.toml`, so Play needs `packwiz serve` running in
+  `kapital-packs/frangfurd`. On 2026-10-01 its `config/fml.toml` matched the
+  pack's hash (early window off) after the #45 tests, which ran with sync off
+  and were restored from backups.
 - `%APPDATA%\KapitalLauncher\settings.json` carries
   `"packOverrides": {"frangfurd": "http://localhost:8080/pack.toml"}`. Clear
   the field under Developer on the settings screen (#54) to go back to the
   manifest's pack (none is hosted yet, so Install is then disabled again).
+  It also carries `"holdGameWindow": true` from the #45 tests: on a build
+  with #93 the game window stays hidden until the reload (fine with the pack's
+  early window on, a late hide with it off). Untick it under Developer.
 - Default Options seeds `options.txt`, keybindings and the server list
   "Frangfurd (Global)" (`female-specified.gl.joinmc.link`) and "Frangfurd
   (Germany)" (`rails-enjoyed.tun.ply.gg`) on a first start.
@@ -204,6 +178,30 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
 - **`verdigris-bright`** in the wiki: two derived tints, not brand values.
 
 ## Things a fresh session will trip on
+
+- **aislop does not run on this PC** (no ruff 0.16.7 on `PATH`), so the local
+  suite skips it and CI is the first to judge. #93 failed it on a Win32
+  callback's seven parameters; a fixed signature gets an inline
+  `aislop-ignore-next-line <rule> -- <reason>`.
+- **Settings written behind the store's back are lost**: the frontend's
+  settings store saves its own copy (on a chapter switch, for one), so a field
+  set through `SaveSettings` from the console disappears. Change settings
+  through the settings screen.
+- **Following a real start from outside**: `Get-CimInstance Win32_Process`
+  gives parent ids (launcher, then `prismlauncher.exe`, then `javaw.exe`); a
+  PowerShell `EnumWindows` probe every 100 ms shows every window of those
+  processes; `PrintWindow` with flag 2 captures the game's window even behind
+  others. Scripts that did this on 2026-10-01 are described in #45's
+  comments. The game's window is `GLFW30`; Prism's progress dialogs are
+  `Qt6102QWindowIcon`; packwiz-installer's is `SunAwtFrame`.
+- **`kapital-packs` needs long paths**: a worktree under the scratchpad fails
+  with "Filename too long" in the resource pack. Put worktrees beside the repo
+  (`KapitalLauncher/kp-early` held kapital-packs#3) and set
+  `core.longpaths true`. Removing a launcher worktree with `node_modules` needs
+  PowerShell's `Remove-Item -LiteralPath "\\?\<path>"`.
+- **Testing a pack setting on the instance**: Play's packwiz sync puts every
+  indexed file back, so switch `OverrideCommands` off for the test, back up
+  `instance.cfg` and the file, and restore both after.
 
 - **`.claude/suite-check.py` needs `PYTHONUTF8=1`** on this PC once any
   test prints a non-cp1252 character (a `✓`, an em dash in a diff): the
@@ -259,8 +257,8 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
   `pnpm-workspace.yaml` files, on purpose (`.claude/rules/dependencies.md`).
 - **aislop needs ruff 0.16.7 on PATH** and `release notes` needs `python3`, or
   the check runner skips them locally; CI runs both.
-- **`wails build` has not been run**; `build/appicon.png` is the Wails
-  template's placeholder (#34).
+- **`wails build` has not been run** (#34); `build/appicon.png` is the
+  Kapitel Kapital mark since #79.
 - **In a cloud container** every check runs, aislop included, with ruff
   0.16.7 from a venv on `PATH`. Java there follows a POSIX locale, so run
   packwiz-installer with `LC_ALL=C.UTF-8` (#32). The bootstrap's update check
@@ -269,8 +267,8 @@ macOS build and ADR-7), #32 (two resource pack names with `§` and `⛈`), #33
 - **The repository is public since 2026-09-30 evening**, made so because the
   private allowance of Actions minutes ran out mid-stack (`backend-macos`
   costs ten Linux minutes a run) and every job failed unstarted. Actions on
-  standard runners is free now. CodeQL and Scorecard can be vendored from
-  Kollektiv; noted in the roadmap under milestone 7.
+  standard runners is free now, and CodeQL and Scorecard run (#88).
 - The vendored files (`.claude/suite-*.py`, three workflows, the notes
   generator, `.aislop/base.yml`) are copied from `kollektiv-mc/Kollektiv` by
-  hand. Re-copy to update.
+  hand, and `codeql.yml` and `scorecard.yml` from `kollektiv-mc/Konnekt`.
+  Re-copy to update.
