@@ -210,6 +210,7 @@ func (h *winHolder) run(ready chan<- error) {
 
 // winEventProc is the WINEVENTPROC. Every argument is read as the 32-bit value
 // it is: the upper half of a register is not defined for one.
+// aislop-ignore-next-line complexity/too-many-params -- Windows fixes WINEVENTPROC at seven parameters
 func winEventProc(hook, event, hwnd, idObject, idChild, _, eventTime uintptr) uintptr {
 	if uint32(event) != eventObjectShow || int32(uint32(idObject)) != objIDWindow || int32(uint32(idChild)) != childIDSelf {
 		return 0
