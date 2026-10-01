@@ -128,6 +128,22 @@ func newGameRig(t *testing.T) *gameRig {
 		defer r.mu.Unlock()
 		r.events = append(r.events, s)
 	})
+	// Registered after the TempDir and before any start's cancel, so it runs
+	// between them: every run has been cancelled, and none is still writing
+	// its launch times when the directory is removed. Bounded, so a run that
+	// ignores its cancel fails the test instead of hanging the package.
+	t.Cleanup(func() {
+		done := make(chan struct{})
+		go func() {
+			r.tracker.runs.Wait()
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-time.After(10 * time.Second):
+			t.Error("a run did not end after its cancel")
+		}
+	})
 	r.tracker.now = r.clock.Now
 	r.tracker.os = r.procs.os()
 	r.tracker.tick = time.Millisecond
@@ -153,13 +169,7 @@ func (r *gameRig) request() TrackRequest {
 func (r *gameRig) start() {
 	r.t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
-	// Registered after the TempDir, so it runs first: the loop is cancelled
-	// and waited for, so no launch-times write is in flight when the
-	// directory is removed.
-	r.t.Cleanup(func() {
-		cancel()
-		r.tracker.runs.Wait()
-	})
+	r.t.Cleanup(cancel)
 	if err := r.tracker.Track(ctx, r.request()); err != nil {
 		r.t.Fatal(err)
 	}
