@@ -37,6 +37,9 @@ const (
 	// The child's window is of class GLFW30 and titled with it unless these say
 	// otherwise: a title makes it a Prism dialog or another window of Prism's.
 	childTitleEnv = "KAPITAL_TEST_WINDOW_TITLE"
+	// childRetitleEnv gives the window a new title a moment after it is
+	// shown, as Prism did with one of its dialogs on a real start (#95).
+	childRetitleEnv = "KAPITAL_TEST_WINDOW_RETITLE"
 
 	wmSize = 0x0005
 )
@@ -48,6 +51,7 @@ var (
 	procDispatchMessageW = user32.NewProc("DispatchMessageW")
 	procTranslateMsg     = user32.NewProc("TranslateMessage")
 	procGetSystemMetrics = user32.NewProc("GetSystemMetrics")
+	procSetWindowTextW   = user32.NewProc("SetWindowTextW")
 
 	// childWndProc is made once, as every callback is.
 	childWndProc = sync.OnceValue(func() uintptr {
@@ -134,6 +138,15 @@ func TestGameWindowChild(t *testing.T) {
 		}
 		showWindow(windows.HWND(hwnd), windows.SW_SHOWNORMAL)
 		fmt.Println("shown")
+	}
+	if retitle := os.Getenv(childRetitleEnv); retitle != "" {
+		time.Sleep(200 * time.Millisecond)
+		text, err := windows.UTF16PtrFromString(retitle)
+		if err != nil {
+			t.Fatal(err)
+		}
+		call(procSetWindowTextW, hwnd, uintptr(unsafe.Pointer(text)))
+		fmt.Println("retitled")
 	}
 
 	var msg winMsg

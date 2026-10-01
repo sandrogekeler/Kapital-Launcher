@@ -25,16 +25,19 @@ import (
 // #95), which are told apart by their title.
 
 const (
-	eventObjectShow   = 0x8002
-	winEventOutOfCtx  = 0x0000
-	winEventSkipOwn   = 0x0002
-	objIDWindow       = 0
-	childIDSelf       = 0
-	gaRoot            = 2
-	wmQuit            = 0x0012
-	wmUser            = 0x0400
-	pmNoRemove        = 0x0000
-	classNameCapacity = 64
+	eventObjectShow = 0x8002
+	// eventObjectNameChange is a window's title changing: Prism showed one
+	// "Please wait" dialog before giving it its title on a real start (#95).
+	eventObjectNameChange = 0x800C
+	winEventOutOfCtx      = 0x0000
+	winEventSkipOwn       = 0x0002
+	objIDWindow           = 0
+	childIDSelf           = 0
+	gaRoot                = 2
+	wmQuit                = 0x0012
+	wmUser                = 0x0400
+	pmNoRemove            = 0x0000
+	classNameCapacity     = 64
 	// holdStopTimeout bounds the wait for the hook thread to unhook and end.
 	holdStopTimeout = 2 * time.Second
 
@@ -205,7 +208,7 @@ func (h *winHolder) run(what string, ready chan<- error) {
 	call(procPeekMessageW, uintptr(unsafe.Pointer(&msg)), 0, wmUser, wmUser, pmNoRemove)
 
 	hook, err := callErr(procSetWinEventHook,
-		eventObjectShow, eventObjectShow, 0, winEventCallback(),
+		eventObjectShow, eventObjectNameChange, 0, winEventCallback(),
 		uintptr(h.pid), 0, winEventOutOfCtx|winEventSkipOwn,
 	)
 	if hook == 0 {
@@ -240,7 +243,18 @@ func (h *winHolder) run(what string, ready chan<- error) {
 // it is: the upper half of a register is not defined for one.
 // aislop-ignore-next-line complexity/too-many-params -- Windows fixes WINEVENTPROC at seven parameters
 func winEventProc(hook, event, hwnd, idObject, idChild, _, eventTime uintptr) uintptr {
-	if uint32(event) != eventObjectShow || int32(uint32(idObject)) != objIDWindow || int32(uint32(idChild)) != childIDSelf {
+	if int32(uint32(idObject)) != objIDWindow || int32(uint32(idChild)) != childIDSelf {
+		return 0
+	}
+	switch uint32(event) {
+	case eventObjectShow:
+	case eventObjectNameChange:
+		// A title that changes on a window already in view is a show for the
+		// match; a hidden window renaming itself (the game's) is not.
+		if !windows.IsWindowVisible(windows.HWND(hwnd)) {
+			return 0
+		}
+	default:
 		return 0
 	}
 	hooksMu.Lock()

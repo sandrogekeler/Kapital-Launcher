@@ -56,6 +56,30 @@ func TestPrismDialogHoldHidesAPleaseWaitWindow(t *testing.T) {
 	}
 }
 
+// A dialog shown first and titled afterwards is hidden when its title comes.
+func TestPrismDialogHoldHidesADialogTitledAfterItWasShown(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts a child process with a real window")
+	}
+	child := startGLFWChild(t, childCueWindow, childTitleEnv+"=Untitled", childRetitleEnv+"="+dialogTitle)
+	child.await(t, "created")
+	hwnd := theWindow(t, child.cmd.Process.Pid)
+	holder, err := HoldPrismDialogs(child.cmd.Process.Pid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { holder.Release(true) })
+	if _, err := io.WriteString(child.stdin, "\n"); err != nil {
+		t.Fatal(err)
+	}
+	child.await(t, "shown")
+	child.await(t, "retitled")
+	until(t, "the retitled dialog to be hidden", func() bool { return hidesOf(holder) >= 1 })
+	if windows.IsWindowVisible(hwnd) {
+		t.Fatal("a dialog titled after its show is still visible")
+	}
+}
+
 func TestPrismDialogHoldLeavesAnyOtherWindowOfPrismVisible(t *testing.T) {
 	for _, title := range []string{signInTitle, "Error", "Minecraft account sign in - Please wait"} {
 		t.Run(title, func(t *testing.T) {
