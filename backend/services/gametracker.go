@@ -362,6 +362,12 @@ func (r *gameRun) procInterval() time.Duration {
 
 func (r *gameRun) readLog(now time.Time) {
 	phases, restarted := r.follower.poll(now)
+	// A phase is stamped with the time its line was read, not the time the
+	// step began: a line written in between would otherwise carry the earlier
+	// time (the timings test caught it under load). Never earlier than now.
+	if read := r.t.now(); read.After(now) {
+		now = read
+	}
 	if restarted {
 		// A new run wrote over the log: what was learned of the last one is
 		// void, and the phases begin again.
