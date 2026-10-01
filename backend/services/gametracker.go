@@ -143,6 +143,9 @@ type GameTracker struct {
 	states map[string]models.GameState
 
 	timesMu sync.Mutex
+	// runs counts the loops Track started that have not ended, so a caller
+	// that cancelled them can wait for their last write to the data dir.
+	runs sync.WaitGroup
 }
 
 // NewGameTracker follows games on the real OS, handing every phase change to
@@ -206,7 +209,11 @@ func (t *GameTracker) Track(ctx context.Context, req TrackRequest) error {
 	if err != nil {
 		return err
 	}
-	go r.loop()
+	t.runs.Add(1)
+	go func() {
+		defer t.runs.Done()
+		r.loop()
+	}()
 	return nil
 }
 

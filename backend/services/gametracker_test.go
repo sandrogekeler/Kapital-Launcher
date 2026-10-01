@@ -153,7 +153,13 @@ func (r *gameRig) request() TrackRequest {
 func (r *gameRig) start() {
 	r.t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
-	r.t.Cleanup(cancel)
+	// Registered after the TempDir, so it runs first: the loop is cancelled
+	// and waited for, so no launch-times write is in flight when the
+	// directory is removed.
+	r.t.Cleanup(func() {
+		cancel()
+		r.tracker.runs.Wait()
+	})
 	if err := r.tracker.Track(ctx, r.request()); err != nil {
 		r.t.Fatal(err)
 	}
@@ -197,9 +203,21 @@ func until(t *testing.T, what string, cond func() bool) {
 	}
 }
 
+// untilPhase waits for the phase's event to have reached the rig. Latest
+// shows a phase a moment before its event is emitted, so a test that waited
+// on Latest and then read the events could miss the last one.
 func (r *gameRig) untilPhase(phase string) {
 	r.t.Helper()
-	until(r.t, "phase "+phase, func() bool { return r.tracker.Latest("frangfurd").Phase == phase })
+	until(r.t, "phase "+phase, func() bool { return r.lastPhase() == phase })
+}
+
+func (r *gameRig) lastPhase() string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.events) == 0 {
+		return ""
+	}
+	return r.events[len(r.events)-1].Phase
 }
 
 // drive runs steps by hand until the condition holds, moving the clock by
