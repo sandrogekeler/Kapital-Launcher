@@ -50,7 +50,10 @@ the scaffold changed the picture.
 
 ## Milestone 4: Packs
 
-- [ ] Author the Frangfurd pack in packwiz; host `pack.toml` and `index.toml`
+- [x] Author the Frangfurd pack in packwiz; host `pack.toml` and `index.toml`:
+      a Worker with static assets serves only the chapter folders of
+      `kapital-packs` at `kapital-packs.alessandrogekeler.workers.dev` (#25,
+      2026-10-01; what is public was decided on #35)
 - [ ] Fresh install: Install writes the `kapital-<id>` instance itself (#22,
       #24; `-I` cannot fix the folder name, ADR-2 amendment). Built; left is a
       real Prism opening it and the first Play installing the pack

@@ -22,6 +22,9 @@ const ManifestVersion = 1
 // something the app will fetch or open (agent_docs/SECURITY_CHECKLIST.md, S3).
 var AllowedManifestHosts = []string{
 	"kapitel-kapital.pages.dev",
+	// The packs: kapital-packs served from a Worker with static assets, only
+	// its chapter folders (#25; kapital-packs' README, Hosting).
+	"kapital-packs.alessandrogekeler.workers.dev",
 	"github.com",
 	"raw.githubusercontent.com",
 	"modrinth.com",
