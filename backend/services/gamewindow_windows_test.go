@@ -34,6 +34,10 @@ const (
 	childCueFull   = "cue:full"
 	childNowWindow = "now:window"
 
+	// The child's window is of class GLFW30 and titled with it unless these say
+	// otherwise: a title makes it a Prism dialog or another window of Prism's.
+	childTitleEnv = "KAPITAL_TEST_WINDOW_TITLE"
+
 	wmSize = 0x0005
 )
 
@@ -107,7 +111,13 @@ func TestGameWindowChild(t *testing.T) {
 		w, h = call(procGetSystemMetrics, 0), call(procGetSystemMetrics, 1)
 	}
 	const popup = 0x80000000 // no frame, so the client area is the window
-	hwnd, err := callErr(procCreateWindowExW, 0, uintptr(unsafe.Pointer(class)), uintptr(unsafe.Pointer(class)),
+	title := class
+	if custom := os.Getenv(childTitleEnv); custom != "" {
+		if title, err = windows.UTF16PtrFromString(custom); err != nil {
+			t.Fatal(err)
+		}
+	}
+	hwnd, err := callErr(procCreateWindowExW, 0, uintptr(unsafe.Pointer(class)), uintptr(unsafe.Pointer(title)),
 		popup, x, y, w, h, 0, 0, uintptr(instance), 0)
 	if hwnd == 0 {
 		fmt.Println("nowindow", err)
@@ -144,10 +154,10 @@ type glfwChild struct {
 	lines []string
 }
 
-func startGLFWChild(t *testing.T, mode string) *glfwChild {
+func startGLFWChild(t *testing.T, mode string, env ...string) *glfwChild {
 	t.Helper()
 	cmd := exec.Command(os.Args[0], "-test.run=^TestGameWindowChild$")
-	cmd.Env = append(os.Environ(), childModeEnv+"="+mode)
+	cmd.Env = append(append(os.Environ(), childModeEnv+"="+mode), env...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatal(err)

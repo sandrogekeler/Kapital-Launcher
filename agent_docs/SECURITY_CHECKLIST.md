@@ -22,7 +22,7 @@ A different count is new surface to classify: add the method to this table.
 | `GetPrismRelease` | nothing | one bounded GET to Prism's fixed release URL | S4.5 |
 | `InstallPrism` | nothing | download, verify and unpack Prism's official build | S4.5 |
 | `InstallChapter` | a chapter id | the manifest's instance and pack URL: one instance folder written into the Prism root | S3.3, S4.6 |
-| `LaunchChapter`, `OpenChapterWiki`, `GetServerStatus` | a chapter id | the manifest's instance, URL or address for it | S3.3, S3.7, S6.1 |
+| `LaunchChapter`, `OpenChapterWiki`, `GetServerStatus` | a chapter id | the manifest's instance, URL or address for it; before a launch, the one `PreLaunchCommand` key of the chapter's own `instance.cfg`, only from the launcher's earlier template | S3.3, S3.7, S4.6, S6.1 |
 | `SaveSettings` | a whole `AppSettings` | the settings file, and the executable detection then runs | S3.5 |
 | `ChoosePrismExecutable`, `ChoosePrismRoot` | nothing | a native file or folder picker; the pick is returned, never saved here | S3.5 |
 | `OpenExternal` | a URL | the system browser, web URLs only | S3.4 |
@@ -158,7 +158,7 @@ Verify: `TestOpenInstanceFolderOpensOnlyAnInstalledChaptersFolder`,
 `TestOpenFolderChecksTheDirectoryBeforeTheOSSeesIt`.
 Probe: a chapter id that is a path; an instance folder that is a file or gone.
 
-**S3.7 The launcher touches another process's window only to hide and show the game's own.**
+**S3.7 The launcher touches another process's window only to hide and show the game's own, and Prism's progress dialogs.**
 Holds when: the window holder (`gamewindow_windows.go`, #45) hooks show events
 of one pid, the game's Java as the tracker bound it, and acts only on a
 top-level window of class `GLFW30` owned by that pid: `ShowWindow` hide and
@@ -170,12 +170,30 @@ input, injects nothing into the process (out-of-context hook), starts no
 process, and is off unless the loading splash (#43) is on for the run, which
 is the player's setting `loadingSplash`, on by default on Windows. A run
 that ends, by any phase or by its context, releases the window.
+The one other window it hides is Prism's progress dialog (#95): a top-level
+window of the pid of the Prism the launcher started, whose title begins
+`Please wait`, hidden with the same `ShowWindow` and shown back the same way.
+The title is the whole of what is read of a window there, through
+`GetWindowTextW`, kept nowhere and never logged (ADR-0012's no-title rule is
+about the game's window, which has a class of its own; a Prism dialog has none
+that tells it from a sign-in). Prism's sign-in, any error and a translated
+Prism's dialogs do not match and stay visible, which is the safe failure. The
+hold is the same `HoldWindow` as the game's, ends without showing at the
+handover, and shows back what still exists when the run ends, fails or loses
+its Prism first. A Prism that was already open and took the launch is not held.
 Verify: `TestHolderHidesAndShowsAGLFWWindow`, `TestHolderLeavesOtherWindowsAlone`,
 `TestHandoverNudgesAFullscreenWindowOnePixelAndBack`,
 `TestHandoverLeavesAWindowedWindowAlone`,
-`TestTrackerReleasesTheWindowWithoutForegroundWhenTheRunEndsOtherwise`.
+`TestTrackerReleasesTheWindowWithoutForegroundWhenTheRunEndsOtherwise`;
+`TestPrismDialogHoldHidesAPleaseWaitWindow`,
+`TestPrismDialogHoldLeavesAnyOtherWindowOfPrismVisible`,
+`TestPrismDialogReleaseAtTheHandoverLeavesThemHidden`,
+`TestPrismDialogReleaseOfAFailedRunShowsThemBack`,
+`TestTrackerHoldsPrismsDialogsOnlyWhileTheSplashIsOn`,
+`TestTrackerShowsPrismsDialogsBackWhenTheRunEndsBeforeTheHandover`.
 Probe: a window of another class, or of another process, shown while the hold
-is on.
+is on; a Prism window titled "Sign in" or "Error" shown during the first ten
+seconds of a launch.
 
 ## S4. Downloads (milestone 4)
 
@@ -205,7 +223,7 @@ Verify: `managedprism_test.go` (bad digest, redirect off the allowlist, a
 release URL off Prism's, failed signature, no executable, zip escapes).
 Probe: a release whose asset URL points elsewhere; a zip naming `../x`.
 
-**S4.6 A chapter's instance is created once, and only its own settings keys are ever rewritten.**
+**S4.6 A chapter's instance is created once, and only its own settings keys and its pre-launch command are ever rewritten.**
 Holds when: `InstanceCreator.Create` makes the folder with a plain `mkdir` and
 refuses an existing one; writes `instance.cfg` last and removes only the folder
 it created on failure; fetches `pack.toml` with a timeout and a size bound, holds
@@ -217,13 +235,24 @@ only from GitHub's hosts, checked against the size and SHA-256 pinned in
 `instance.cfg` and nothing else, atomically, with the preset's arguments from
 the launcher's fixed list and a memory the machine has
 (`ValidateChapterSettings`), and `SaveChapterSettings` refuses while the
-instance looks to be running.
+instance looks to be running. Before a launch, `RewritePreLaunchCommand`
+(`prelaunch.go`, #95, ADR-2's fourth amendment) rewrites the one key
+`PreLaunchCommand` and only when it is exactly the launcher's earlier template
+(the same jar paths and flags, a URL that passes `packURLFromCommand`), to the
+current template with the same URL, atomically, every other line and its line
+ending kept; anything else in the key is left alone, nothing of it is logged,
+and a failed rewrite never stops the launch. It is skipped while the instance
+looks to be running.
 Verify: `packinstance_test.go`; `TestWriteChapterSettingsTouchesOnlyItsKeys`,
 `TestRewriteINIKeysAddsMissingKeysToGeneralOnly`,
 `TestValidateChapterSettingsHoldsToThePresetsAndTheMachine`,
-`TestChapterSettingsRoundTripThroughTheInstance`.
+`TestChapterSettingsRoundTripThroughTheInstance`;
+`TestRewritePreLaunchCommandMovesTheEarlierTemplateToTheCurrentOne`,
+`TestRewritePreLaunchCommandLeavesWhatIsNotItsOwnAlone`,
+`TestPreLaunchCommandRunsThePackSyncHeadless`.
 Probe: an instance folder the player made by hand with the same name; a jar
-that redirects off GitHub; a pack.toml naming two loaders.
+that redirects off GitHub; a pack.toml naming two loaders; an instance whose
+pre-launch command was edited by hand (an extra flag, another jar, `echo`).
 
 ## S5. WebView
 

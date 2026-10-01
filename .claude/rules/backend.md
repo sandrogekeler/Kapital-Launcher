@@ -41,8 +41,20 @@ process and hides and shows its `GLFW30` window through user32. The handover is
 the resource reload beginning: the window is shown and given the foreground,
 then, once it reports its real rectangle, a fullscreen one is made one pixel
 shorter and back (queued to the game's thread, #46).
-It reads the class, owner and rectangle of a window, never its title, and
-starts no process.
+It reads the class, owner and rectangle of the game's window, never its title,
+and starts no process.
+
+The same holder, over the same hook and callback, also hides Prism's "Please
+wait" progress dialogs (`gamewindow_dialogs_windows.go`, #95) for the Prism the
+launcher started, while the splash is on: from the start of the run, when
+`TrackRequest.HoldWindow` is set, to the game's handover, where the hook ends
+and nothing is shown (Prism closes them itself). A run that ends first, or
+whose Prism exits first, shows back any that still exist. These are told apart
+by a title that begins `Please wait`, the one title the launcher reads (ADR-0012's
+no-title rule is about the game's window); a sign-in, an error or a translated
+Prism's dialog matches nothing and stays in view. Each release logs one
+`prism dialogs` line with the chapter, the hides and whether any were shown back,
+never a title.
 
 `SplashWindow` (`splashwindow.go`, #43) makes the launcher's own window the
 loading card for a start and gives it back, over a `WindowOps` interface that
@@ -64,7 +76,11 @@ The launcher writes one thing into a player's Prism data directory: a
 chapter's instance folder, created by `InstanceCreator` only when it does not
 exist, `instance.cfg` last, and never touched again (ADR-2, amendment). In the
 managed root it owns it also seeds `prismlauncher.cfg` and
-`prismlauncher_update.cfg` once, before Prism first starts.
+`prismlauncher_update.cfg` once, before Prism first starts. The pre-launch
+command it writes runs packwiz-installer headless (`-g`, #95); before a launch
+`RewritePreLaunchCommand` (`prelaunch.go`) brings an instance made earlier up to
+that command, only when the key is exactly the launcher's earlier template, with
+the same URL, and leaves anything else alone (ADR-2, fourth amendment).
 
 ## Data shapes
 

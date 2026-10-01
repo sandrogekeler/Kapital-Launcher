@@ -35,6 +35,9 @@ func (r *gameRun) handover() {
 		return
 	}
 	r.handedOver = true
+	// The game has the screen: Prism's progress dialogs are over, so the hook
+	// ends and nothing is shown (Prism closes them itself).
+	r.releaseDialogs(false)
 	h := r.holder
 	r.holder = nil
 	done := r.req.OnHandover
@@ -62,6 +65,41 @@ func (r *gameRun) releaseWindow(foreground bool) {
 	h := r.holder
 	r.holder = nil
 	r.logRelease(foreground, h.Release(foreground))
+}
+
+// holdPrismDialogs starts hiding the launcher's own Prism's "Please wait"
+// dialogs (#95), when asked to: the same HoldWindow that holds the game's
+// window, so only while the splash is on. It never fails the run.
+//
+// [verify] Play while Prism was already open: the launcher's Prism then hands
+// the launch to that one and exits at once, and the dialogs are the other
+// Prism's, which this does not hold (the hook is on the launcher's own pid;
+// step ends it when that Prism exits). Not yet seen on a real install (#44).
+func (r *gameRun) holdPrismDialogs() {
+	if !r.req.HoldWindow || r.t.holdDialogs == nil || r.dialogs != nil || r.req.Prism.PID <= 0 {
+		return
+	}
+	d, err := r.t.holdDialogs(r.req.Prism.PID)
+	if err != nil {
+		if r.t.dialogsWarned.CompareAndSwap(false, true) {
+			slog.Warn("prism dialogs cannot be held", "chapter", r.req.ChapterID, "error", err)
+		}
+		return
+	}
+	r.dialogs = d
+}
+
+// releaseDialogs ends the hold on Prism's dialogs and logs what it came to.
+// With show, a dialog that still exists is shown again: a run that ends before
+// the handover must not leave an error Prism is showing hidden.
+func (r *gameRun) releaseDialogs(show bool) {
+	if r.dialogs == nil {
+		return
+	}
+	d := r.dialogs
+	r.dialogs = nil
+	rep := d.Release(show)
+	slog.Info("prism dialogs", "chapter", r.req.ChapterID, "hides", rep.Hides, "shownBack", rep.ShownBack)
 }
 
 // logRelease records what holding a window came to: counts and milliseconds,
