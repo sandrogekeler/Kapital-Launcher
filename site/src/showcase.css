@@ -12,7 +12,9 @@
    420 ms a step is 4200 ms, the cycle 12600 ms and a slide 3.333% of it.
    Change either duration and the stops below must follow. */
 
-.showcase {
+/* On the root, not the window: the glow and the Download button outside it
+   run on the same clock. */
+:root {
   --showcase-step: calc(var(--duration-dwell) + var(--duration-slow));
   --showcase-cycle: calc(3 * var(--showcase-step));
 }

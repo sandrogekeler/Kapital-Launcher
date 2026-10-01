@@ -19,8 +19,11 @@
     Below the buttons is the launcher window, drawn with the app's own
     components' classes (frontend/src/components) and cycling through its
     three chapters on CSS animations alone (src/showcase.css). It is a
-    picture, not a control: nothing in it is focusable, and it is hidden
-    from assistive technology in favour of the sentence before it.
+    picture, not a control: nothing in it is focusable, its text cannot be
+    selected, and it is hidden from assistive technology in favour of the
+    sentence before it. The hero's tools do without the app's backdrop blur:
+    a backdrop filter inside the card's blur animation left the hero's text
+    unpainted in the author's browser.
 
     The page is dark whatever the visitor's preference (data-theme on the
     root): the artwork and the window are drawn for the dark palette.
@@ -32,15 +35,16 @@
       <div
         class="relative flex max-w-140 flex-col items-center gap-6 text-center"
       >
-        <!-- The logo is the heading: the author's artwork, scaled to twice its
-             widest display size. The alt text is the heading's text. -->
+        <!-- The logo is the heading: the author's one-line artwork, the file
+             the app's header bar draws, shown at its own pixel size. The alt
+             text is the heading's text. -->
         <h1 class="m-0">
           <img
-            src="../frontend/src/assets/brand/kapital-launcher-logo-compact.png"
+            src="../frontend/src/assets/brand/kapital-launcher-logo.png"
             alt="Kapital Launcher"
-            width="800"
-            height="219"
-            class="block h-auto w-100 max-w-full"
+            width="560"
+            height="41"
+            class="block h-auto w-140 max-w-full"
           />
         </h1>
 
@@ -74,12 +78,15 @@
         </div>
 
         <p class="text-fg-muted m-0 text-sm">
-          For Windows 11 and macOS on Apple Silicon. Needs
-          <a
-            href="https://prismlauncher.org"
-            class="text-accent underline-offset-2 hover:underline"
-            >Prism Launcher</a
-          >, free and open source.
+          <span class="block">For Windows 11 and macOS on Apple Silicon.</span>
+          <span class="block"
+            >Needs
+            <a
+              href="https://prismlauncher.org"
+              class="text-accent underline-offset-2 hover:underline"
+              >Prism Launcher</a
+            >, free and open source.</span
+          >
         </p>
       </div>
 
@@ -96,7 +103,7 @@
         ></div>
 
         <figure
-          class="showcase bg-canvas border-line relative m-0 flex w-full flex-col overflow-hidden rounded-lg border shadow-2xl lg:h-(--layout-window-height)"
+          class="showcase bg-canvas border-line relative m-0 flex w-full flex-col overflow-hidden rounded-lg border shadow-2xl select-none lg:h-(--layout-window-height)"
           aria-hidden="true"
         >
           <!-- The header bar: shell/HeaderBar.tsx, as Windows draws it. -->
@@ -378,7 +385,7 @@
                     />
                     <div class="scrim-hero absolute inset-0"></div>
                     <div
-                      class="bg-sunken/55 absolute top-5 right-6 hidden gap-1 rounded-md backdrop-blur-sm md:flex"
+                      class="bg-sunken/55 absolute top-5 right-6 hidden gap-1 rounded-md md:flex"
                     >
                       <span
                         class="text-fg-muted inline-flex size-11 shrink-0 items-center justify-center rounded-md"
@@ -562,7 +569,7 @@
                     />
                     <div class="scrim-hero absolute inset-0"></div>
                     <div
-                      class="bg-sunken/55 absolute top-5 right-6 hidden gap-1 rounded-md backdrop-blur-sm md:flex"
+                      class="bg-sunken/55 absolute top-5 right-6 hidden gap-1 rounded-md md:flex"
                     >
                       <span
                         class="text-fg-muted inline-flex size-11 shrink-0 items-center justify-center rounded-md"
@@ -774,7 +781,7 @@
                     />
                     <div class="scrim-hero absolute inset-0"></div>
                     <div
-                      class="bg-sunken/55 absolute top-5 right-6 hidden gap-1 rounded-md backdrop-blur-sm md:flex"
+                      class="bg-sunken/55 absolute top-5 right-6 hidden gap-1 rounded-md md:flex"
                     >
                       <span
                         class="text-fg-muted inline-flex size-11 shrink-0 items-center justify-center rounded-md"
