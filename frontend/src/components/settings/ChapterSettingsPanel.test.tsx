@@ -99,6 +99,27 @@ describe('ChapterSettingsPanel', () => {
     expect(App.GetChapterSettings).not.toHaveBeenCalled()
   })
 
+  it('opens the instance folder by chapter id and shows a failure', async () => {
+    vi.mocked(App.OpenInstanceFolder).mockResolvedValueOnce(undefined)
+    render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+    await screen.findByLabelText('Memory')
+    fireEvent.click(screen.getByRole('button', { name: 'Open folder' }))
+    await waitFor(() => expect(App.OpenInstanceFolder).toHaveBeenCalledWith('frangfurd'))
+    expect(screen.queryByText(/could not open/)).not.toBeInTheDocument()
+
+    vi.mocked(App.OpenInstanceFolder).mockRejectedValueOnce(
+      'could not open the Frangfurd folder: no file manager',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Open folder' }))
+    await screen.findByText(/could not open the Frangfurd folder/)
+  })
+
+  it('keeps Open folder disabled until the instance exists', () => {
+    useEngineStore.setState({ instances: report(false) })
+    render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+    expect(screen.getByRole('button', { name: 'Open folder' })).toBeDisabled()
+  })
+
   it('closes on Back and Escape', async () => {
     const onClose = vi.fn()
     render(<ChapterSettingsPanel chapter={frangfurd} onClose={onClose} />)

@@ -39,6 +39,8 @@ type App struct {
 	// runCtx is the context the background work runs under: cancelled in
 	// shutdown, nil before startup.
 	runCtx context.Context
+	// openFolder shows a folder in the file manager; a test swaps it.
+	openFolder func(string) error
 
 	mu     sync.Mutex
 	engine models.EngineInfo
@@ -55,13 +57,14 @@ func NewApp(dataDir string, manifest []byte) (*App, error) {
 	managed := services.NewManagedPrism(dataDir, runtime.GOOS, runtime.GOARCH)
 	prism.UseManaged(managed)
 	a := &App{
-		manifest: m,
-		settings: services.NewSettingsService(dataDir),
-		prism:    prism,
-		managed:  managed,
-		status:   services.NewStatusService(),
-		creator:  services.NewInstanceCreator(dataDir),
-		wiki:     services.NewWikiService(dataDir, m.Wiki.BaseURL),
+		manifest:   m,
+		settings:   services.NewSettingsService(dataDir),
+		prism:      prism,
+		managed:    managed,
+		status:     services.NewStatusService(),
+		creator:    services.NewInstanceCreator(dataDir),
+		wiki:       services.NewWikiService(dataDir, m.Wiki.BaseURL),
+		openFolder: services.OpenFolder,
 	}
 	// Each phase change of a launched game is an event the frontend listens
 	// for; before the window is up there is nobody to tell.
@@ -466,6 +469,22 @@ func (a *App) SaveChapterSettings(chapterID string, settings models.ChapterSetti
 		return models.ChapterSettingsInfo{}, err
 	}
 	return a.chapterSettingsInfo(chapter, cfg, saved, machine), nil
+}
+
+// OpenInstanceFolder shows a chapter's instance folder in the file manager
+// (#85), to reach a crash report, a screenshot or a config. The folder is the
+// one chapterInstance resolves: the caller names a chapter and never a path,
+// and an instance that is not there is refused.
+func (a *App) OpenInstanceFolder(chapterID string) error {
+	chapter, cfg, err := a.chapterInstance(chapterID)
+	if err != nil {
+		return err
+	}
+	if err := a.openFolder(filepath.Dir(cfg)); err != nil {
+		slog.Error("open instance folder", "chapter", chapter.ID, "error", err)
+		return fmt.Errorf("could not open the %s folder: %w", chapter.Name, err)
+	}
+	return nil
 }
 
 // chapterInstance resolves a chapter id to its instance.cfg under the
