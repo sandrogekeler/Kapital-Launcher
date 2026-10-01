@@ -333,11 +333,7 @@ func (h *winHolder) Release(foreground bool) WindowReport {
 		if exists := call(procIsWindow, uintptr(hwnd)); exists == 0 {
 			continue // the game closed it
 		}
-		if foreground && nudge(hwnd) {
-			r.Nudged = true
-		}
-		// Asynchronous, so a game thread that is busy does not hold this up:
-		// the show is queued to it after the nudge's resizes, in order.
+		// Asynchronous, so a game thread that is busy does not hold this up.
 		if posted := call(procShowWindowAsync, uintptr(hwnd), windows.SW_SHOW); posted == 0 {
 			slog.Warn("game window hold: the show could not be queued")
 		}
@@ -345,12 +341,34 @@ func (h *winHolder) Release(foreground bool) WindowReport {
 			if ok := call(procSetForegroundWin, uintptr(hwnd)); ok != 0 {
 				r.Foreground = true
 			}
+			// After the show: a hidden window's rectangle read at the handover
+			// came back empty on a real start (2026-10-01), so the nudge waits
+			// for the shown window's real one.
+			if nudgeWhenShown(hwnd) {
+				r.Nudged = true
+			}
 		}
 	}
 	h.mu.Lock()
 	h.report = r
 	h.mu.Unlock()
 	return r
+}
+
+// nudgeWhenShown waits, up to nudgeShownTimeout, for the window to be visible
+// with a rectangle of its own, then nudges it if it is fullscreen.
+func nudgeWhenShown(hwnd windows.HWND) bool {
+	deadline := time.Now().Add(nudgeShownTimeout)
+	for {
+		if rect, ok := windowRect(hwnd); ok && rect.height() > 0 && windows.IsWindowVisible(hwnd) {
+			return nudge(hwnd)
+		}
+		if time.Now().After(deadline) {
+			slog.Info("game window nudge skipped", "reason", "not shown in time")
+			return false
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
 }
 
 // nudge makes a fullscreen window one pixel shorter and back, so a game that
@@ -361,13 +379,17 @@ func (h *winHolder) Release(foreground bool) WindowReport {
 func nudge(hwnd windows.HWND) bool {
 	rect, ok := windowRect(hwnd)
 	if !ok {
+		slog.Info("game window nudge skipped", "reason", "no window rectangle")
 		return false
 	}
 	monitor, ok := monitorRect(hwnd)
 	if !ok || !rect.covers(monitor) || rect.height() < 2 {
+		slog.Info("game window nudge skipped", "reason", "not fullscreen", "monitorFound", ok,
+			"window", rect, "monitor", monitor)
 		return false
 	}
 	if !setWindowPos(hwnd, rect.Left, rect.Top, rect.width(), rect.height()-1) {
+		slog.Info("game window nudge skipped", "reason", "resize refused", "error", windows.GetLastError())
 		return false
 	}
 	time.Sleep(handoverNudgeWait)

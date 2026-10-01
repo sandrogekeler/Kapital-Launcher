@@ -133,6 +133,8 @@ func normalize(s models.AppSettings) models.AppSettings {
 	s.PrismExecutable = strings.TrimSpace(s.PrismExecutable)
 	s.ProfileName = strings.TrimSpace(s.ProfileName)
 	s.LastChapter = strings.TrimSpace(s.LastChapter)
+	// What the app derives for the screen is not the player's to set.
+	s.LoadingSplashAvailable, s.LoadingSplashOn = false, false
 	if len(s.PackOverrides) > 0 {
 		trimmed := make(map[string]string, len(s.PackOverrides))
 		for id, raw := range s.PackOverrides {
@@ -142,6 +144,28 @@ func normalize(s models.AppSettings) models.AppSettings {
 	} else {
 		s.PackOverrides = nil
 	}
+	return s
+}
+
+// LoadingSplashAvailable is whether the loading splash can run on this OS: the
+// window holder it needs is written for Windows, and macOS keeps its traffic
+// lights, so the splash waits for #30 there.
+func LoadingSplashAvailable(goos string) bool {
+	return goos == "windows"
+}
+
+// LoadingSplashOn is whether the next Play shows the loading splash: the
+// player's choice where it is available, on unless they turned it off, and
+// never elsewhere, whatever the file says.
+func LoadingSplashOn(goos string, s models.AppSettings) bool {
+	return LoadingSplashAvailable(goos) && (s.LoadingSplash == nil || *s.LoadingSplash)
+}
+
+// WithLoadingSplash fills in what the settings screen is told about the
+// loading splash on this OS (LoadingSplashAvailable and LoadingSplashOn).
+func WithLoadingSplash(goos string, s models.AppSettings) models.AppSettings {
+	s.LoadingSplashAvailable = LoadingSplashAvailable(goos)
+	s.LoadingSplashOn = LoadingSplashOn(goos, s)
 	return s
 }
 

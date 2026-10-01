@@ -54,13 +54,83 @@ func TestSettingsRoundTrip(t *testing.T) {
 	}
 }
 
-func TestSettingsHoldGameWindowIsOffUntilSetAndLeavesNoKeyWhenOff(t *testing.T) {
+func TestLoadingSplashDefaultsToOnOnlyWhereItCanRun(t *testing.T) {
+	off := false
+	on := true
+	cases := []struct {
+		name      string
+		goos      string
+		stored    *bool
+		available bool
+		want      bool
+	}{
+		{"windows, nothing stored", "windows", nil, true, true},
+		{"windows, stored on", "windows", &on, true, true},
+		{"windows, stored off", "windows", &off, true, false},
+		{"macOS, nothing stored", "darwin", nil, false, false},
+		{"macOS, stored on is still off", "darwin", &on, false, false},
+		{"linux, stored on is still off", "linux", &on, false, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			s := models.AppSettings{Theme: "dark", LoadingSplash: c.stored}
+			if got := LoadingSplashAvailable(c.goos); got != c.available {
+				t.Fatalf("available: got %v want %v", got, c.available)
+			}
+			if got := LoadingSplashOn(c.goos, s); got != c.want {
+				t.Fatalf("on: got %v want %v", got, c.want)
+			}
+			shown := WithLoadingSplash(c.goos, s)
+			if shown.LoadingSplashAvailable != c.available || shown.LoadingSplashOn != c.want {
+				t.Fatalf("shown: %+v", shown)
+			}
+		})
+	}
+}
+
+func TestSettingsLoadingSplashSurvivesAReloadAndNeverStoresWhatIsDerived(t *testing.T) {
 	dir := t.TempDir()
 	svc := NewSettingsService(dir)
-	if got, err := svc.Load(); err != nil || got.HoldGameWindow {
-		t.Fatalf("off by default: %+v, %v", got, err)
+	if got, err := svc.Load(); err != nil || got.LoadingSplash != nil {
+		t.Fatalf("nothing stored by default: %+v, %v", got, err)
 	}
-	if err := svc.Save(models.AppSettings{Theme: "dark"}); err != nil {
+	off := false
+	// A save that carries the derived fields back, as the settings screen's does.
+	err := svc.Save(models.AppSettings{Theme: "dark", LoadingSplash: &off, LoadingSplashAvailable: true, LoadingSplashOn: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, SettingsFileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"loadingSplash": false`) {
+		t.Fatalf("an explicit off is written: %s", raw)
+	}
+	if strings.Contains(string(raw), "loadingSplashAvailable") || strings.Contains(string(raw), "loadingSplashOn") {
+		t.Fatalf("derived fields are not written: %s", raw)
+	}
+	got, err := svc.Load()
+	if err != nil || got.LoadingSplash == nil || *got.LoadingSplash {
+		t.Fatalf("off survives a reload: %+v, %v", got, err)
+	}
+	if got.LoadingSplashAvailable || got.LoadingSplashOn {
+		t.Fatalf("a load derives nothing: %+v", got)
+	}
+}
+
+func TestSettingsIgnoresTheOldHoldGameWindowKey(t *testing.T) {
+	dir := t.TempDir()
+	file := `{"theme": "light", "holdGameWindow": true, "loadingSplash": true}`
+	if err := os.WriteFile(filepath.Join(dir, SettingsFileName), []byte(file), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	svc := NewSettingsService(dir)
+	got, err := svc.Load()
+	if err != nil || got.Theme != "light" || got.LoadingSplash == nil || !*got.LoadingSplash {
+		t.Fatalf("the old key is not an error: %+v, %v", got, err)
+	}
+	if err := svc.Save(got); err != nil {
 		t.Fatal(err)
 	}
 	raw, err := os.ReadFile(filepath.Join(dir, SettingsFileName))
@@ -68,13 +138,7 @@ func TestSettingsHoldGameWindowIsOffUntilSetAndLeavesNoKeyWhenOff(t *testing.T) 
 		t.Fatal(err)
 	}
 	if strings.Contains(string(raw), "holdGameWindow") {
-		t.Fatalf("an off setting is not written: %s", raw)
-	}
-	if err := svc.Save(models.AppSettings{Theme: "dark", HoldGameWindow: true}); err != nil {
-		t.Fatal(err)
-	}
-	if got, err := svc.Load(); err != nil || !got.HoldGameWindow {
-		t.Fatalf("on survives a reload: %+v, %v", got, err)
+		t.Fatalf("the next save drops it: %s", raw)
 	}
 }
 

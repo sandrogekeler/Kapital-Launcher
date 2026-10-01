@@ -21,11 +21,18 @@ type AppSettings struct {
 	// setting, edited under Developer on the settings screen (#5); loopback
 	// only (services.CheckLocalPackURL).
 	PackOverrides map[string]string `json:"packOverrides,omitempty"`
-	// HoldGameWindow keeps the game's window hidden until its resource reload
-	// begins, then shows it and gives it the foreground (#45). A developer setting,
-	// off by default: it is a test for the loading splash (#43), and without
-	// the splash the player sees nothing for a minute.
-	HoldGameWindow bool `json:"holdGameWindow,omitempty"`
+	// LoadingSplash turns the launcher's window into a loading card while a
+	// game starts, and holds the game's window until its resource reload
+	// begins (#43, #45). Nil means the default: on for Windows, always off
+	// elsewhere, whatever is stored (use services.LoadingSplashOn).
+	LoadingSplash *bool `json:"loadingSplash,omitempty"`
+	// LoadingSplashAvailable and LoadingSplashOn are what GetSettings reports
+	// about LoadingSplash on this OS: whether the splash can run at all, and
+	// whether it will for the next Play. Derived on every read, never stored
+	// and never taken from a save, so the settings screen shows the effective
+	// value rather than the file's.
+	LoadingSplashAvailable bool `json:"loadingSplashAvailable,omitempty"`
+	LoadingSplashOn        bool `json:"loadingSplashOn,omitempty"`
 }
 
 // DefaultSettings is a fresh install. Kept as a function so callers cannot

@@ -159,39 +159,6 @@ describe('SettingsPanel', () => {
     expect(vi.mocked(App.SaveSettings).mock.calls[1]?.[0].packOverrides).toBeUndefined()
   })
 
-  it('saves the hidden game window setting when the box is clicked', async () => {
-    render(<SettingsPanel onClose={() => undefined} />)
-    const box = screen.getByLabelText('Keep the game window hidden until it is ready')
-    expect(box).not.toBeChecked()
-    expect(screen.getByText(/A test for the loading splash/)).toBeInTheDocument()
-
-    fireEvent.click(box)
-    await waitFor(() =>
-      expect(App.SaveSettings).toHaveBeenLastCalledWith(
-        expect.objectContaining({ holdGameWindow: true }),
-      ),
-    )
-    expect(box).toBeChecked()
-
-    fireEvent.click(box)
-    await waitFor(() =>
-      expect(App.SaveSettings).toHaveBeenLastCalledWith(
-        expect.objectContaining({ holdGameWindow: false }),
-      ),
-    )
-    expect(box).not.toBeChecked()
-  })
-
-  it('puts the box back and shows the error when saving it is refused', async () => {
-    vi.mocked(App.SaveSettings).mockRejectedValueOnce('settings: could not write')
-    render(<SettingsPanel onClose={() => undefined} />)
-    const box = screen.getByLabelText('Keep the game window hidden until it is ready')
-    fireEvent.click(box)
-    await screen.findByText(/could not write/)
-    expect(box).not.toBeChecked()
-    expect(useSettingsStore.getState().settings.holdGameWindow).toBeFalsy()
-  })
-
   it('closes on Back and on Escape, but Escape on a dirty field reverts it first', async () => {
     const onClose = vi.fn()
     render(<SettingsPanel onClose={onClose} />)
@@ -207,5 +174,57 @@ describe('SettingsPanel', () => {
     expect(onClose).toHaveBeenCalledOnce()
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
     expect(onClose).toHaveBeenCalledTimes(2)
+  })
+
+  describe('loading splash toggle', () => {
+    it('is hidden where Go says the splash is not available', () => {
+      render(<SettingsPanel onClose={() => undefined} />)
+      expect(screen.queryByLabelText('Loading splash')).not.toBeInTheDocument()
+    })
+
+    it('shows its state and hint, and saves the choice', async () => {
+      useSettingsStore.setState({
+        settings: { ...DEFAULT_SETTINGS, loadingSplashAvailable: true, loadingSplashOn: true },
+        loaded: true,
+        error: null,
+      })
+      render(<SettingsPanel onClose={() => undefined} />)
+      const box = screen.getByLabelText('Loading splash')
+      expect(box).toBeChecked()
+      expect(
+        screen.getByText(
+          "Shows a small loading card from Play until the game's own loading screen.",
+        ),
+      ).toBeInTheDocument()
+
+      fireEvent.click(box)
+      await waitFor(() =>
+        expect(App.SaveSettings).toHaveBeenLastCalledWith(
+          expect.objectContaining({ loadingSplash: false }),
+        ),
+      )
+      expect(box).not.toBeChecked()
+
+      fireEvent.click(box)
+      await waitFor(() =>
+        expect(App.SaveSettings).toHaveBeenLastCalledWith(
+          expect.objectContaining({ loadingSplash: true }),
+        ),
+      )
+      expect(box).toBeChecked()
+    })
+
+    it('puts the box back and shows why when the save is refused', async () => {
+      vi.mocked(App.SaveSettings).mockRejectedValueOnce('the settings file is read-only')
+      useSettingsStore.setState({
+        settings: { ...DEFAULT_SETTINGS, loadingSplashAvailable: true, loadingSplashOn: true },
+        loaded: true,
+        error: null,
+      })
+      render(<SettingsPanel onClose={() => undefined} />)
+      fireEvent.click(screen.getByLabelText('Loading splash'))
+      expect(await screen.findByText('the settings file is read-only')).toBeInTheDocument()
+      expect(screen.getByLabelText('Loading splash')).toBeChecked()
+    })
   })
 })

@@ -159,6 +159,20 @@ export function SettingsPanel({ onClose }: Props) {
               <span className="text-danger text-xs select-text">{errors.theme}</span>
             )}
           </div>
+          {/* Go says where the splash can run at all (#43); elsewhere there is
+              nothing to choose. The effective value is derived, so the save
+              carries it along for the box to follow at once. */}
+          {settings.loadingSplashAvailable && (
+            <CheckboxField
+              label="Loading splash"
+              checked={settings.loadingSplashOn ?? false}
+              hint="Shows a small loading card from Play until the game's own loading screen."
+              error={errors.loadingSplash}
+              onChange={(on) =>
+                void save('loadingSplash', { loadingSplash: on, loadingSplashOn: on })
+              }
+            />
+          )}
         </Section>
 
         <Section title="Developer">
@@ -181,13 +195,6 @@ export function SettingsPanel({ onClose }: Props) {
               }
             />
           ))}
-          <CheckboxField
-            label="Keep the game window hidden until it is ready"
-            checked={settings.holdGameWindow ?? false}
-            hint="A test for the loading splash (#43). Without it you see nothing until the game is ready."
-            error={errors.holdGameWindow}
-            onChange={(v) => void save('holdGameWindow', { holdGameWindow: v })}
-          />
         </Section>
         <SupportSection />
 

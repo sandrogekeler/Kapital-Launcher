@@ -38,6 +38,15 @@ type GameState struct {
 	StartedAt string `json:"startedAt"`
 	// ExitCode is the game's own exit code, when the platform reports it.
 	ExitCode *int `json:"exitCode,omitempty"`
+	// Splash is whether this run shows the loading card and the player has not
+	// left it (#43). Set by the App on the way out, never by the tracker.
+	Splash bool `json:"splash,omitempty"`
+	// Estimate is how long this run is expected to take to reach each of
+	// "mods", "window", "resources" and "running", in milliseconds from Play:
+	// the mean of the chapter's earlier starts. A phase none of them reached is
+	// absent, and a chapter with no earlier start has no estimate. The same on
+	// every event of the run, so the card's bar needs nothing else.
+	Estimate map[string]int64 `json:"estimate,omitempty"`
 }
 
 // LaunchTiming is how long one start took to reach each phase, in

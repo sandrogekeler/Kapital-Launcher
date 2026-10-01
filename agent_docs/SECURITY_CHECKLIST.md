@@ -162,11 +162,13 @@ Probe: a chapter id that is a path; an instance folder that is a file or gone.
 Holds when: the window holder (`gamewindow_windows.go`, #45) hooks show events
 of one pid, the game's Java as the tracker bound it, and acts only on a
 top-level window of class `GLFW30` owned by that pid: `ShowWindow` hide and
-show, and at the handover (the resource reload beginning) a one pixel resize
-and back of a window that covers its monitor, then `SetForegroundWindow`. It
+show, and at the handover (the resource reload beginning) the show, then
+`SetForegroundWindow`, then a one pixel resize and back of a window that
+covers its monitor. It
 reads a window's class, owner and rectangle and never its title, text or
 input, injects nothing into the process (out-of-context hook), starts no
-process, and is off unless the developer setting `holdGameWindow` is on. A run
+process, and is off unless the loading splash (#43) is on for the run, which
+is the player's setting `loadingSplash`, on by default on Windows. A run
 that ends, by any phase or by its context, releases the window.
 Verify: `TestHolderHidesAndShowsAGLFWWindow`, `TestHolderLeavesOtherWindowsAlone`,
 `TestHandoverNudgesAFullscreenWindowOnePixelAndBack`,

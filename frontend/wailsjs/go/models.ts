@@ -7,7 +7,9 @@ export namespace models {
 	    profileName: string;
 	    lastChapter: string;
 	    packOverrides?: Record<string, string>;
-	    holdGameWindow?: boolean;
+	    loadingSplash?: boolean;
+	    loadingSplashAvailable?: boolean;
+	    loadingSplashOn?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -21,7 +23,9 @@ export namespace models {
 	        this.profileName = source["profileName"];
 	        this.lastChapter = source["lastChapter"];
 	        this.packOverrides = source["packOverrides"];
-	        this.holdGameWindow = source["holdGameWindow"];
+	        this.loadingSplash = source["loadingSplash"];
+	        this.loadingSplashAvailable = source["loadingSplashAvailable"];
+	        this.loadingSplashOn = source["loadingSplashOn"];
 	    }
 	}
 	export class ChangelogEntry {
@@ -244,6 +248,8 @@ export namespace models {
 	    since: string;
 	    startedAt: string;
 	    exitCode?: number;
+	    splash?: boolean;
+	    estimate?: Record<string, number>;
 	
 	    static createFrom(source: any = {}) {
 	        return new GameState(source);
@@ -256,6 +262,8 @@ export namespace models {
 	        this.since = source["since"];
 	        this.startedAt = source["startedAt"];
 	        this.exitCode = source["exitCode"];
+	        this.splash = source["splash"];
+	        this.estimate = source["estimate"];
 	    }
 	}
 	
