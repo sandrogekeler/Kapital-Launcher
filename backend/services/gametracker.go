@@ -105,9 +105,16 @@ type TrackRequest struct {
 	Before GameLogSnapshot
 	// HoldWindow keeps the game's window hidden from its creation until the
 	// resource reload begins, when it is shown and given the foreground
-	// (#45), so its own loading screen is seen. A developer setting; the
-	// splash (#43) is what it is a test for.
+	// (#45), so the loading splash (#43) is what the player sees meanwhile.
+	// True when the splash is on for this run.
 	HoldWindow bool
+	// OnHandover is called once, when the handover is done: the resource
+	// reload has begun (or the game is running, if the log skipped that) and
+	// the held window, if there was one, has been shown and given the
+	// foreground. The splash minimises the launcher here, and not before,
+	// because minimising first hands the foreground elsewhere. It runs on the
+	// tracker's own goroutine or one it starts, and may be nil.
+	OnHandover func()
 }
 
 // GameTracker follows each launched chapter from Play to the game's end: the
@@ -211,6 +218,9 @@ func (t *GameTracker) begin(ctx context.Context, req TrackRequest) (*gameRun, er
 		Phase:     models.GamePhaseStarting,
 		Since:     started.Format(time.RFC3339),
 		StartedAt: started.Format(time.RFC3339),
+		// Taken before this run adds its own timings, so every event of the
+		// run carries the same one.
+		Estimate: LaunchEstimate(t.Durations(req.ChapterID)),
 	}
 	t.mu.Lock()
 	if GamePhaseActive(t.states[req.ChapterID].Phase) {
@@ -239,6 +249,35 @@ func (t *GameTracker) Durations(chapterID string) []models.LaunchTiming {
 	t.timesMu.Lock()
 	defer t.timesMu.Unlock()
 	return t.loadTimes()[chapterID]
+}
+
+// LaunchEstimate is the mean time from Play to each phase over earlier starts,
+// in milliseconds: each of "mods", "window", "resources" and "running" is
+// averaged over the starts that have it, and one no start has is left out. No
+// starts, no estimate (nil).
+func LaunchEstimate(times []models.LaunchTiming) map[string]int64 {
+	var sum, n [4]int64
+	phases := [4]string{models.GamePhaseMods, models.GamePhaseWindow, models.GamePhaseResources, models.GamePhaseRunning}
+	for _, timing := range times {
+		for i, phase := range phases {
+			if ms, ok := timing.PhaseMs[phase]; ok {
+				sum[i] += ms
+				n[i]++
+			}
+		}
+	}
+	var est map[string]int64
+	for i, phase := range phases {
+		if n[i] == 0 {
+			continue
+		}
+		if est == nil {
+			est = map[string]int64{}
+		}
+		// Rounded to the nearest millisecond.
+		est[phase] = (sum[i] + n[i]/2) / n[i]
+	}
+	return est
 }
 
 func (t *GameTracker) publish(s models.GameState) {
@@ -321,7 +360,9 @@ type gameRun struct {
 	// bound is the pid of the game's Java being waited on, 0 when none.
 	bound int
 	// holder keeps the bound game's window hidden, nil when none is held.
-	holder     WindowHolder
+	holder WindowHolder
+	// handedOver is whether the handover has begun, so it happens once.
+	handedOver bool
 	ignored    map[int]bool
 	exitCh     chan procExit
 	cancelWait context.CancelFunc
@@ -433,7 +474,7 @@ func (r *gameRun) set(phase string, now time.Time, code *int) {
 	// the log skipped that; whichever comes first finds the window held (#45).
 	switch phase {
 	case models.GamePhaseResources, models.GamePhaseRunning:
-		r.releaseWindow(true)
+		r.handover()
 	case models.GamePhaseStopping, models.GamePhaseClosed, models.GamePhaseCrashed, models.GamePhaseFailed:
 		r.releaseWindow(false)
 	}
@@ -581,29 +622,53 @@ func (r *gameRun) holdWindow(pid int) {
 	r.holder = h
 }
 
-// releaseWindow shows the held window again and logs what holding it came to:
-// counts and milliseconds, never a window title. The handover (foreground)
-// nudges the window and so takes a few hundred ms: it runs on its own
-// goroutine, and the run loop goes on. Any other release is quick and is done
-// before the run moves on, so a window is never left hidden behind it.
+// handover is the game having the screen: the held window, if there is one,
+// is shown and given the foreground, and then OnHandover is called, once per
+// run. The foreground release nudges the window and so takes a few hundred ms:
+// it runs on its own goroutine with the callback after it, and the run loop
+// goes on. With no window held there is nothing to wait for and the callback
+// runs here.
+func (r *gameRun) handover() {
+	if r.handedOver {
+		return
+	}
+	r.handedOver = true
+	h := r.holder
+	r.holder = nil
+	done := r.req.OnHandover
+	if h == nil {
+		if done != nil {
+			done()
+		}
+		return
+	}
+	go func() {
+		r.logRelease(true, h.Release(true))
+		if done != nil {
+			done()
+		}
+	}()
+}
+
+// releaseWindow shows the held window again without the foreground and logs
+// what holding it came to. It is quick and done before the run moves on, so a
+// window is never left hidden behind a run that ended.
 func (r *gameRun) releaseWindow(foreground bool) {
 	if r.holder == nil {
 		return
 	}
 	h := r.holder
 	r.holder = nil
-	release := func() {
-		rep := h.Release(foreground)
-		slog.Info("game window", "chapter", r.req.ChapterID, "handover", foreground,
-			"seen", rep.Seen, "swept", rep.Swept, "hides", rep.Hides,
-			"firstHideMs", rep.FirstHideMs, "maxHideMs", rep.MaxHideMs,
-			"foreground", rep.Foreground, "nudged", rep.Nudged)
-	}
-	if foreground {
-		go release()
-		return
-	}
-	release()
+	r.logRelease(foreground, h.Release(foreground))
+}
+
+// logRelease records what holding a window came to: counts and milliseconds,
+// never a window title.
+func (r *gameRun) logRelease(handover bool, rep WindowReport) {
+	slog.Info("game window", "chapter", r.req.ChapterID, "handover", handover,
+		"seen", rep.Seen, "swept", rep.Swept, "hides", rep.Hides,
+		"firstHideMs", rep.FirstHideMs, "maxHideMs", rep.MaxHideMs,
+		"foreground", rep.Foreground, "nudged", rep.Nudged)
 }
 
 // isJavaName is whether a process name is a Java runtime: javaw.exe or

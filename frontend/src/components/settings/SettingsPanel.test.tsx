@@ -159,39 +159,6 @@ describe('SettingsPanel', () => {
     expect(vi.mocked(App.SaveSettings).mock.calls[1]?.[0].packOverrides).toBeUndefined()
   })
 
-  it('saves the hidden game window setting when the box is clicked', async () => {
-    render(<SettingsPanel onClose={() => undefined} />)
-    const box = screen.getByLabelText('Keep the game window hidden until it is ready')
-    expect(box).not.toBeChecked()
-    expect(screen.getByText(/A test for the loading splash/)).toBeInTheDocument()
-
-    fireEvent.click(box)
-    await waitFor(() =>
-      expect(App.SaveSettings).toHaveBeenLastCalledWith(
-        expect.objectContaining({ holdGameWindow: true }),
-      ),
-    )
-    expect(box).toBeChecked()
-
-    fireEvent.click(box)
-    await waitFor(() =>
-      expect(App.SaveSettings).toHaveBeenLastCalledWith(
-        expect.objectContaining({ holdGameWindow: false }),
-      ),
-    )
-    expect(box).not.toBeChecked()
-  })
-
-  it('puts the box back and shows the error when saving it is refused', async () => {
-    vi.mocked(App.SaveSettings).mockRejectedValueOnce('settings: could not write')
-    render(<SettingsPanel onClose={() => undefined} />)
-    const box = screen.getByLabelText('Keep the game window hidden until it is ready')
-    fireEvent.click(box)
-    await screen.findByText(/could not write/)
-    expect(box).not.toBeChecked()
-    expect(useSettingsStore.getState().settings.holdGameWindow).toBeFalsy()
-  })
-
   it('closes on Back and on Escape, but Escape on a dirty field reverts it first', async () => {
     const onClose = vi.fn()
     render(<SettingsPanel onClose={onClose} />)

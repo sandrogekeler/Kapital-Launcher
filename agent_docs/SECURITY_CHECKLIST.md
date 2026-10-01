@@ -166,7 +166,8 @@ show, and at the handover (the resource reload beginning) a one pixel resize
 and back of a window that covers its monitor, then `SetForegroundWindow`. It
 reads a window's class, owner and rectangle and never its title, text or
 input, injects nothing into the process (out-of-context hook), starts no
-process, and is off unless the developer setting `holdGameWindow` is on. A run
+process, and is off unless the loading splash (#43) is on for the run, which
+is the player's setting `loadingSplash`, on by default on Windows. A run
 that ends, by any phase or by its context, releases the window.
 Verify: `TestHolderHidesAndShowsAGLFWWindow`, `TestHolderLeavesOtherWindowsAlone`,
 `TestHandoverNudgesAFullscreenWindowOnePixelAndBack`,

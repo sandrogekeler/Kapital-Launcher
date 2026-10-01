@@ -35,13 +35,21 @@ and waits on the game's Java, and reads the instance's `latest.log` for marker
 lines only, never keeping or logging one (ADR-2, third amendment). It starts
 no process.
 
-The window holder (`gamewindow*.go`, #45, Windows only, behind the developer
-setting `holdGameWindow`) hooks the show events of the game's own process and
-hides and shows its `GLFW30` window through user32. The handover is the
-resource reload beginning: a fullscreen window is made one pixel shorter and
+The window holder (`gamewindow*.go`, #45, Windows only; the loading splash,
+#43, is what turns it on for a run) hooks the show events of the game's own
+process and hides and shows its `GLFW30` window through user32. The handover is
+the resource reload beginning: a fullscreen window is made one pixel shorter and
 back (queued to the game's thread, #46), then shown and given the foreground.
 It reads the class, owner and rectangle of a window, never its title, and
 starts no process.
+
+`SplashWindow` (`splashwindow.go`, #43) makes the launcher's own window the
+loading card for a start and gives it back, over a `WindowOps` interface that
+`app.go` implements on the Wails runtime: every window call is Go's, made on
+the tracker's phase changes (`Enter` before Prism runs, `Handover` from
+`TrackRequest.OnHandover` once the holder's foreground release is done,
+`Observe` per event, `Leave`), and the order of those calls was measured on a
+real window, so a test holds it.
 
 `managedprism.go` gets Prism for a player who has none, on approval only
 (ADR-11): downloads are verified by digest and signature before anything is

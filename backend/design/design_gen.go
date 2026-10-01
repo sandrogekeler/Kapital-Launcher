@@ -13,6 +13,13 @@ const (
 	WindowMinHeight = 640
 )
 
+// The loading card the window becomes while a game starts (#43), in logical
+// pixels.
+const (
+	SplashWidth  = 720
+	SplashHeight = 405
+)
+
 // WindowBackground is the page ground (color.surface.bg, dark), painted by the
 // shell before the first frame so a slow WebView never flashes white.
 var WindowBackground = [3]uint8{12, 12, 14}

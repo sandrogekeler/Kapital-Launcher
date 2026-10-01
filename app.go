@@ -36,6 +36,7 @@ type App struct {
 	creator        *services.InstanceCreator
 	wiki           *services.WikiService
 	games          *services.GameTracker
+	splash         *services.SplashWindow
 	stop           context.CancelFunc
 	frontendErrors *services.FrontendErrorLog
 	// runCtx is the context the background work runs under: cancelled in
@@ -43,6 +44,9 @@ type App struct {
 	runCtx context.Context
 	// openFolder shows a folder in the file manager; a test swaps it.
 	openFolder func(string) error
+	// emit, when set, takes the game:state events in place of the window; a
+	// test sets it.
+	emit func(models.GameState)
 
 	// What CopyRedactedLog needs: where the log is, who to mask, and the
 	// clipboard. The clipboard is a field so a test needs no window.
@@ -84,14 +88,75 @@ func NewApp(dataDir string, manifest []byte) (*App, error) {
 		openFolder:     services.OpenFolder,
 		frontendErrors: services.NewFrontendErrorLog(),
 	}
+	a.splash = services.NewSplashWindow(appWindow{a})
 	// Each phase change of a launched game is an event the frontend listens
-	// for; before the window is up there is nobody to tell.
-	a.games = services.NewGameTracker(dataDir, func(s models.GameState) {
-		if a.ctx != nil {
-			wailsrt.EventsEmit(a.ctx, services.EventGameState, s)
-		}
-	})
+	// for; before the window is up there is nobody to tell. The splash sees
+	// the phase first: a run that ends gives the window back before its event
+	// says the card is gone.
+	a.games = services.NewGameTracker(dataDir, a.onGameState)
 	return a, nil
+}
+
+// onGameState is the tracker's emit: the event, with the splash flag on it.
+func (a *App) onGameState(s models.GameState) {
+	s.Splash = a.splash.Observe(s.ChapterID, s.Phase)
+	a.emitGameState(s)
+}
+
+func (a *App) emitGameState(s models.GameState) {
+	if a.emit != nil {
+		a.emit(s)
+		return
+	}
+	if a.ctx != nil {
+		wailsrt.EventsEmit(a.ctx, services.EventGameState, s)
+	}
+}
+
+// appWindow is the launcher's own window for the splash (#43): the Wails
+// runtime's calls on the app's context, and no window at all before startup,
+// where each is a no-op that says so in the log.
+type appWindow struct{ a *App }
+
+func (w appWindow) with(call string, f func(ctx context.Context)) {
+	if w.a.ctx == nil {
+		slog.Debug("window call without a window", "call", call)
+		return
+	}
+	f(w.a.ctx)
+}
+
+func (w appWindow) GetSize() (width, height int) {
+	w.with("GetSize", func(ctx context.Context) { width, height = wailsrt.WindowGetSize(ctx) })
+	return width, height
+}
+
+func (w appWindow) GetPosition() (x, y int) {
+	w.with("GetPosition", func(ctx context.Context) { x, y = wailsrt.WindowGetPosition(ctx) })
+	return x, y
+}
+
+func (w appWindow) IsMaximised() (maximised bool) {
+	w.with("IsMaximised", func(ctx context.Context) { maximised = wailsrt.WindowIsMaximised(ctx) })
+	return maximised
+}
+
+func (w appWindow) Maximise()   { w.with("Maximise", wailsrt.WindowMaximise) }
+func (w appWindow) Unmaximise() { w.with("Unmaximise", wailsrt.WindowUnmaximise) }
+func (w appWindow) Center()     { w.with("Center", wailsrt.WindowCenter) }
+func (w appWindow) Minimise()   { w.with("Minimise", wailsrt.WindowMinimise) }
+func (w appWindow) Unminimise() { w.with("Unminimise", wailsrt.WindowUnminimise) }
+
+func (w appWindow) SetMinSize(width, height int) {
+	w.with("SetMinSize", func(ctx context.Context) { wailsrt.WindowSetMinSize(ctx, width, height) })
+}
+
+func (w appWindow) SetSize(width, height int) {
+	w.with("SetSize", func(ctx context.Context) { wailsrt.WindowSetSize(ctx, width, height) })
+}
+
+func (w appWindow) SetPosition(x, y int) {
+	w.with("SetPosition", func(ctx context.Context) { wailsrt.WindowSetPosition(ctx, x, y) })
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -295,25 +360,39 @@ func (a *App) LaunchChapter(chapterID string) error {
 	// is not taken for this one.
 	instanceDir := a.instanceDir(settings, engine, chapter)
 	before := services.SnapshotGameLog(instanceDir)
+	// The splash: the window becomes the card before Prism starts, and holds
+	// the game's window until the handover (#43). Without a window there is
+	// nothing to turn into a card.
+	splash := a.ctx != nil && services.LoadingSplashOn(runtime.GOOS, settings)
+	if splash {
+		a.splash.Enter(chapterID)
+	}
 	startedAt := time.Now()
 	proc, err := a.prism.Launch(a.context(), engine, req)
 	if err != nil {
 		slog.Error("launch", "chapter", chapterID, "error", err)
+		if splash {
+			a.leaveSplash()
+		}
 		return err
 	}
 	slog.Info("launched", "chapter", chapterID, "instance", req.InstanceID, "server", req.Server != "")
 	// The tracker follows the start on its own; a refusal here can only be a
 	// second Play racing the first, and Prism has been started either way.
-	err = a.games.Track(a.trackContext(), services.TrackRequest{
+	track := services.TrackRequest{
 		ChapterID:   chapterID,
 		InstanceDir: instanceDir,
 		Prism:       services.WatchPrism(proc),
 		PrismExe:    filepath.Base(engine.Executable),
 		StartedAt:   startedAt,
 		Before:      before,
-		HoldWindow:  settings.HoldGameWindow,
-	})
-	if err != nil {
+		HoldWindow:  splash,
+	}
+	if splash {
+		// The launcher minimises once the game has the foreground, not before.
+		track.OnHandover = func() { a.splash.Handover(chapterID) }
+	}
+	if err := a.games.Track(a.trackContext(), track); err != nil {
 		slog.Warn("track game", "chapter", chapterID, "error", err)
 	}
 	return nil
@@ -321,13 +400,37 @@ func (a *App) LaunchChapter(chapterID string) error {
 
 // GetGameStates returns where every chapter's game is: each chapter's latest
 // state, idle for one this run has not launched. The same states arrive as
-// game:state events while a start is followed (#44).
+// game:state events while a start is followed (#44), and carry the same
+// splash flag and estimate (#43).
 func (a *App) GetGameStates() ([]models.GameState, error) {
 	states := make([]models.GameState, 0, len(a.manifest.Chapters))
 	for _, c := range a.manifest.Chapters {
-		states = append(states, a.games.Latest(c.ID))
+		s := a.games.Latest(c.ID)
+		s.Splash = a.splash.Showing(c.ID)
+		states = append(states, s)
 	}
 	return states, nil
+}
+
+// LeaveSplash gives the launcher's window back to the player: restored to the
+// size and place it had, and the card is no longer shown (#43). The game keeps
+// starting and appears at the reload as usual, but the launcher does not
+// minimise then. With no splash up it does nothing. A game:state event with
+// splash false follows at once, for the chapter whose card it was.
+func (a *App) LeaveSplash() error {
+	a.leaveSplash()
+	return nil
+}
+
+// leaveSplash gives the window back and tells the view the card is gone.
+func (a *App) leaveSplash() {
+	chapterID, left := a.splash.Leave()
+	if !left {
+		return
+	}
+	s := a.games.Latest(chapterID)
+	s.Splash = false
+	a.emitGameState(s)
 }
 
 // instanceDir is the chapter's instance folder under the instances folder
@@ -356,9 +459,15 @@ func (a *App) trackContext() context.Context {
 	return context.Background()
 }
 
-// GetSettings returns the persisted settings, or defaults on a fresh install.
+// GetSettings returns the persisted settings, or defaults on a fresh install,
+// with what the loading splash comes to on this OS (LoadingSplashAvailable
+// and LoadingSplashOn, derived here and never stored).
 func (a *App) GetSettings() (models.AppSettings, error) {
-	return a.settings.Load()
+	settings, err := a.settings.Load()
+	if err != nil {
+		return settings, err
+	}
+	return services.WithLoadingSplash(runtime.GOOS, settings), nil
 }
 
 // SaveSettings validates and persists, then re-detects the engine when a field

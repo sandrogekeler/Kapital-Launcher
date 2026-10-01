@@ -17,7 +17,6 @@ import { ArrowLeft, FolderOpen } from '../../lib/icons'
 import { ChoosePrismExecutable, ChoosePrismRoot } from '../../../wailsjs/go/main/App'
 import { AboutSection } from './AboutSection'
 import { Button } from '../ui/Button'
-import { CheckboxField } from '../ui/CheckboxField'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 import { TextField } from '../ui/TextField'
@@ -181,13 +180,6 @@ export function SettingsPanel({ onClose }: Props) {
               }
             />
           ))}
-          <CheckboxField
-            label="Keep the game window hidden until it is ready"
-            checked={settings.holdGameWindow ?? false}
-            hint="A test for the loading splash (#43). Without it you see nothing until the game is ready."
-            error={errors.holdGameWindow}
-            onChange={(v) => void save('holdGameWindow', { holdGameWindow: v })}
-          />
         </Section>
         <SupportSection />
 

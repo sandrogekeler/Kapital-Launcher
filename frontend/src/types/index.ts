@@ -74,6 +74,14 @@ export interface GameState {
   startedAt: string
   /** The game's own exit code, when the platform reports it. */
   exitCode?: number
+  /** This run shows the loading card and the player has not left it (#43). */
+  splash?: boolean
+  /**
+   * Milliseconds from Play to each of mods, window, resources and running: the mean of the
+   * chapter's earlier starts. A phase none reached is absent; no history, no estimate. The same
+   * on every event of a run.
+   */
+  estimate?: Partial<Record<'mods' | 'window' | 'resources' | 'running', number>>
 }
 
 // Go pointer fields arrive optional from the bindings, so they are optional here too.
@@ -192,6 +200,10 @@ export interface AppSettings {
   lastChapter: string
   /** Chapter id to a local packwiz serve address (#41), edited on the settings screen (#5). */
   packOverrides?: Record<string, string>
-  /** Keep the game window hidden until its resource reload begins (#45), a developer setting, off by default. */
-  holdGameWindow?: boolean
+  /** The player's choice for the loading splash (#43); absent is the default, on where it is available. */
+  loadingSplash?: boolean
+  /** Whether the splash can run on this OS at all (Windows only for now). Derived by GetSettings, never saved. */
+  loadingSplashAvailable?: boolean
+  /** Whether the next Play shows the splash: the effective value of loadingSplash on this OS. Derived, never saved. */
+  loadingSplashOn?: boolean
 }

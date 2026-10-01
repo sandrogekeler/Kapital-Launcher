@@ -90,6 +90,8 @@
   --layout-title: 68px;
   --layout-icon-sm: 16px;
   --layout-icon-md: 18px;
+  --layout-splash-width: 720px;
+  --layout-splash-height: 405px;
 }
 
 /* Effects: values a utility cannot name on its own. Read by the shared

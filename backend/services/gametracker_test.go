@@ -105,6 +105,8 @@ type gameRig struct {
 	prism   chan struct{}
 	// hold is TrackRequest.HoldWindow for the requests the rig makes.
 	hold bool
+	// onHandover is TrackRequest.OnHandover for the requests the rig makes.
+	onHandover func()
 
 	mu     sync.Mutex
 	events []models.GameState
@@ -143,6 +145,7 @@ func (r *gameRig) request() TrackRequest {
 		StartedAt:   r.play,
 		Before:      SnapshotGameLog(r.log.dir),
 		HoldWindow:  r.hold,
+		OnHandover:  r.onHandover,
 	}
 }
 
