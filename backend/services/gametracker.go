@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"kapital/backend/models"
@@ -102,6 +103,10 @@ type TrackRequest struct {
 	StartedAt time.Time
 	// Before is the game log as it was before Prism was started.
 	Before GameLogSnapshot
+	// HoldWindow keeps the game's window hidden from its creation until the
+	// game is running, when it is shown and given the foreground (#45). A
+	// developer setting; the splash (#43) is what it is a test for.
+	HoldWindow bool
 }
 
 // GameTracker follows each launched chapter from Play to the game's end: the
@@ -113,6 +118,11 @@ type GameTracker struct {
 	emit    func(models.GameState)
 	now     func() time.Time
 	os      gameOS
+	// hold starts keeping a game's window hidden (#45); injected so a fake
+	// answers in tests.
+	hold func(pid int) (WindowHolder, error)
+	// holdWarned is whether a failure to hold has been logged: once is enough.
+	holdWarned atomic.Bool
 
 	// tick is how often a run looks at the log; procInterval how often it
 	// looks for the game's process. The timeouts are fields so tests run in
@@ -135,6 +145,7 @@ func NewGameTracker(dataDir string, emit func(models.GameState)) *GameTracker {
 		emit:             emit,
 		now:              time.Now,
 		os:               systemGameOS(),
+		hold:             HoldGameWindow,
 		tick:             logPollInterval,
 		procInterval:     gameProcInterval,
 		procSlowInterval: gameProcSlowInterval,
@@ -307,7 +318,9 @@ type gameRun struct {
 	procUnavailable  bool
 	lastProcPoll     time.Time
 	// bound is the pid of the game's Java being waited on, 0 when none.
-	bound      int
+	bound int
+	// holder keeps the bound game's window hidden, nil when none is held.
+	holder     WindowHolder
 	ignored    map[int]bool
 	exitCh     chan procExit
 	cancelWait context.CancelFunc
@@ -318,6 +331,9 @@ func (r *gameRun) loop() {
 		if r.cancelWait != nil {
 			r.cancelWait()
 		}
+		// However the run ends, a window that is still alive must not stay
+		// hidden.
+		r.releaseWindow(false)
 	}()
 	ticker := time.NewTicker(r.t.tick)
 	defer ticker.Stop()
@@ -412,6 +428,14 @@ func (r *gameRun) timing() models.LaunchTiming {
 }
 
 func (r *gameRun) set(phase string, now time.Time, code *int) {
+	// The window is shown before the phase is published, so the splash that
+	// closes on it never leaves the screen empty (#45).
+	switch phase {
+	case models.GamePhaseRunning:
+		r.releaseWindow(true)
+	case models.GamePhaseStopping, models.GamePhaseClosed, models.GamePhaseCrashed, models.GamePhaseFailed:
+		r.releaseWindow(false)
+	}
 	r.state.Phase = phase
 	r.state.Since = now.UTC().Format(time.RFC3339)
 	r.state.ExitCode = code
@@ -431,6 +455,9 @@ func (r *gameRun) gameExited(ex procExit, now time.Time) bool {
 	if r.cancelWait != nil {
 		r.cancelWait()
 	}
+	// The process is gone, and so is its window. A Java set aside below was
+	// not the game, and the next one is held afresh.
+	r.releaseWindow(false)
 	if ex.err != nil {
 		if errors.Is(ex.err, context.Canceled) {
 			return true
@@ -526,12 +553,46 @@ func (r *gameRun) findGame() {
 		return
 	}
 	r.bound = best
+	r.holdWindow(best)
 	wctx, cancel := context.WithCancel(r.ctx)
 	r.cancelWait = cancel
 	go func() {
 		code, known, err := r.t.os.wait(wctx, best)
 		r.exitCh <- procExit{code: code, known: known, err: err}
 	}()
+}
+
+// holdWindow starts keeping the game's window hidden, when asked to and while
+// the game is not yet running. It never fails the run: where it cannot hold,
+// the window shows as the game makes it.
+func (r *gameRun) holdWindow(pid int) {
+	if !r.req.HoldWindow || r.t.hold == nil || r.holder != nil ||
+		phaseRank[r.state.Phase] >= phaseRank[models.GamePhaseRunning] {
+		return
+	}
+	h, err := r.t.hold(pid)
+	if err != nil {
+		if r.t.holdWarned.CompareAndSwap(false, true) {
+			slog.Warn("game window cannot be held", "chapter", r.req.ChapterID, "error", err)
+		}
+		return
+	}
+	r.holder = h
+}
+
+// releaseWindow shows the held window again, giving it the foreground at the
+// handover, and logs what holding it came to: counts and milliseconds, never a
+// window title.
+func (r *gameRun) releaseWindow(foreground bool) {
+	if r.holder == nil {
+		return
+	}
+	h := r.holder
+	r.holder = nil
+	rep := h.Release(foreground)
+	slog.Info("game window", "chapter", r.req.ChapterID, "handover", foreground,
+		"seen", rep.Seen, "swept", rep.Swept, "hides", rep.Hides,
+		"firstHideMs", rep.FirstHideMs, "maxHideMs", rep.MaxHideMs, "foreground", rep.Foreground)
 }
 
 // isJavaName is whether a process name is a Java runtime: javaw.exe or

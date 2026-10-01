@@ -103,6 +103,8 @@ type gameRig struct {
 	log     *gameLog
 	play    time.Time
 	prism   chan struct{}
+	// hold is TrackRequest.HoldWindow for the requests the rig makes.
+	hold bool
 
 	mu     sync.Mutex
 	events []models.GameState
@@ -140,6 +142,7 @@ func (r *gameRig) request() TrackRequest {
 		PrismExe:    "/Prism/prismlauncher.exe",
 		StartedAt:   r.play,
 		Before:      SnapshotGameLog(r.log.dir),
+		HoldWindow:  r.hold,
 	}
 }
 
