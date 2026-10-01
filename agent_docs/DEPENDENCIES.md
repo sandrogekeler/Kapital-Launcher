@@ -27,6 +27,7 @@ package.
 | Module | Rationale |
 |---|---|
 | `github.com/wailsapp/wails/v2` | The app shell: Go to WebView bridge, binding generation. Pinned by hand, not bumped by Dependabot: a minor changes the generated bindings and the webview it links against. |
+| `github.com/wailsapp/go-webview2` | The second WebView2 window for the loading card (`backend/splashhost`, #97): Wails runs one window, and the card is a borderless window of its own. Windows only. It is the module Wails itself links, pinned at the version Wails pins (v1.0.22) and bumped only with Wails, so the card and the launcher run the same WebView2 binding. |
 
 | `golang.org/x/sys` | `windows.WinVerifyTrustEx`, Windows' own Authenticode check for the managed Prism's executable (ADR-11), called directly so no shell or external tool is involved. Already in the build through Wails; now direct. |
 

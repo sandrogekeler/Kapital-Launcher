@@ -49,9 +49,17 @@ the promise, so a missed event cannot leave it hanging; and `game:state`, a
 `models.GameState` per phase change of a launched game, emitted by
 `GameTracker` (`EventGameState`), heard by the game store
 (`EVENT_GAME_STATE`), with `GetGameStates` for the state now; it carries the
-splash flag and the start's estimate (#43), and `LeaveSplash` is the one call
-that gives the launcher's window back to the player. The
-pattern for the next one:
+splash flag (the card is up for the run) and the start's estimate (#43), and
+`LeaveSplash` closes the card and brings the launcher's window back.
+
+The loading card (#97) is a second page in a window of its own and has no Wails
+bridge: it is not on this list. What it can ask Go for is its three actions,
+`leave`, `openFolder` and `copyLog`, posted as a JSON string through the
+webview's own channel (`splashhost/protocol.go`, `frontend/src/splash/bridge.ts`),
+and Go pushes its state to `window.kapitalSplash.update`. A fourth action is
+added in `ParseMessage`, the card's handler and the bridge in one change, with
+an item in `SECURITY_CHECKLIST.md` S3.8, or not at all. The pattern for the
+next event:
 
 - The name is a Go constant (`services.EventServerStatus`) and a TS constant
   (`EVENT_SERVER_STATUS`), spelled the same.

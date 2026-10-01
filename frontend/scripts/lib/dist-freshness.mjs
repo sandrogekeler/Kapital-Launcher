@@ -19,6 +19,7 @@ const DIST_ASSETS = path.join(FRONTEND, 'dist', 'assets')
 const INPUTS = [
   path.join(FRONTEND, 'src'),
   path.join(FRONTEND, 'index.html'),
+  path.join(FRONTEND, 'splash.html'),
   path.join(FRONTEND, 'vite.config.ts'),
   path.join(FRONTEND, 'package.json'),
   path.join(FRONTEND, '..', 'design', 'tokens.json'),

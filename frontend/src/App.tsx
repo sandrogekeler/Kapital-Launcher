@@ -4,13 +4,12 @@ import { Sidebar } from './components/sidebar/Sidebar'
 import { ChapterStage } from './components/main/ChapterStage'
 import { ChapterSettingsPanel } from './components/settings/ChapterSettingsPanel'
 import { SettingsPanel } from './components/settings/SettingsPanel'
-import { SplashCard } from './components/splash/SplashCard'
 import { Scrollable } from './components/ui/Scrollable'
 import { selectChapter, useChapterStore } from './stores/useChapterStore'
 import { useEngineStore } from './stores/useEngineStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { useServerStore } from './stores/useServerStore'
-import { selectSplash, useGameStore } from './stores/useGameStore'
+import { useGameStore } from './stores/useGameStore'
 import { Environment } from '../wailsjs/runtime/runtime'
 import { DISCLAIMER } from './lib/disclaimer'
 import { errMsg, readOr } from './lib/ipc'
@@ -33,9 +32,6 @@ export default function App() {
 
   const listenGame = useGameStore((s) => s.listen)
   const loadGames = useGameStore((s) => s.load)
-  // The chapter whose loading card is up (#43), if any. Go has shrunk the
-  // window to the card, so the card takes the place of the whole layout.
-  const splash = useGameStore(selectSplash)
 
   const theme = useSettingsStore((s) => s.settings.theme)
   const loadSettings = useSettingsStore((s) => s.load)
@@ -121,16 +117,6 @@ export default function App() {
   }, [theme])
 
   if (!chapter) return null
-
-  const splashChapter = splash && chapters.find((c) => c.id === splash.chapterId)
-  if (splash && splashChapter) {
-    return (
-      <>
-        <ChapterSelectionSync />
-        <SplashCard chapter={splashChapter} state={splash} />
-      </>
-    )
-  }
 
   return (
     <div className="bg-canvas flex h-full flex-col">

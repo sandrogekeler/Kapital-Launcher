@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      The loading card's page (#97), shown in a borderless window of its own
+      and served from the embedded build: http://splash.localhost/ on Windows,
+      kapital-splash://app/ on macOS. It is the same policy as index.html, so
+      read that comment, and it never reaches the network. The one change is
+      the kapital-splash: scheme source on script, style, image and font:
+      WebKit does not reliably treat 'self' as matching a custom scheme, and
+      that scheme only ever serves this build. The page has no Wails bridge:
+      what it can ask Go for is three actions (src/splash/bridge.ts). In dev,
+      vite.config.ts strips this tag.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' kapital-splash:; style-src 'self' 'unsafe-inline' kapital-splash:; img-src 'self' data: kapital-splash:; font-src 'self' kapital-splash:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Kapital Launcher</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="./src/splash/main.tsx" type="module"></script>
+  </body>
+</html>

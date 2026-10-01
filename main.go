@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"io/fs"
 	"log/slog"
 	"runtime"
 
@@ -45,7 +46,15 @@ func main() {
 	}
 	log.Info("starting", "version", Version, "dataDir", dataDir)
 
-	app, err := NewApp(dataDir, bundledManifest)
+	// The same build, as a tree rooted at its dist folder, for the loading
+	// card's window to serve its page from (#97). Sub only fails on a bad
+	// name; without it the card is unavailable and a start goes on without one.
+	dist, err := fs.Sub(assets, "frontend/dist")
+	if err != nil {
+		log.Error("embedded frontend build", "error", err)
+	}
+
+	app, err := NewApp(dataDir, bundledManifest, dist)
 	if err != nil {
 		// The bundled manifest is part of this build; if it does not validate,
 		// the build is wrong and there is nothing sensible to show.

@@ -30,6 +30,8 @@ func (a *App) shutdown(context.Context) {
 	if a.stop != nil {
 		a.stop()
 	}
+	// A card still up would keep its window, and so the process, alive.
+	a.splash.Shutdown()
 }
 
 // trackContext is the context the tracker's goroutines run under: cancelled in

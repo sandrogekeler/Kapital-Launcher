@@ -15,7 +15,7 @@ import (
 
 func newTestApp(t *testing.T) *App {
 	t.Helper()
-	app, err := NewApp(t.TempDir(), bundledManifest)
+	app, err := NewApp(t.TempDir(), bundledManifest, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

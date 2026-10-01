@@ -54,7 +54,7 @@ func TestSettingsRoundTrip(t *testing.T) {
 	}
 }
 
-func TestLoadingSplashDefaultsToOnOnlyWhereItCanRun(t *testing.T) {
+func TestLoadingSplashDefaultsToOnOnWindowsOffOnMacOSAndNeverElsewhere(t *testing.T) {
 	off := false
 	on := true
 	cases := []struct {
@@ -67,8 +67,10 @@ func TestLoadingSplashDefaultsToOnOnlyWhereItCanRun(t *testing.T) {
 		{"windows, nothing stored", "windows", nil, true, true},
 		{"windows, stored on", "windows", &on, true, true},
 		{"windows, stored off", "windows", &off, true, false},
-		{"macOS, nothing stored", "darwin", nil, false, false},
-		{"macOS, stored on is still off", "darwin", &on, false, false},
+		{"macOS, nothing stored is off", "darwin", nil, true, false},
+		{"macOS, stored on", "darwin", &on, true, true},
+		{"macOS, stored off", "darwin", &off, true, false},
+		{"linux, nothing stored", "linux", nil, false, false},
 		{"linux, stored on is still off", "linux", &on, false, false},
 	}
 	for _, c := range cases {
