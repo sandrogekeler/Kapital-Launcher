@@ -97,6 +97,10 @@ func NewApp(dataDir string, manifest []byte) (*App, error) {
 	return a, nil
 }
 
+// splashPaintWait is how long LaunchChapter gives the webview to draw the
+// loading card before the window shrinks to it: a few frames.
+const splashPaintWait = 120 * time.Millisecond
+
 // onGameState is the tracker's emit: the event, with the splash flag on it.
 func (a *App) onGameState(s models.GameState) {
 	s.Splash = a.splash.Observe(s.ChapterID, s.Phase)
@@ -365,6 +369,11 @@ func (a *App) LaunchChapter(chapterID string) error {
 	// nothing to turn into a card.
 	splash := a.ctx != nil && services.LoadingSplashOn(runtime.GOOS, settings)
 	if splash {
+		// The card is drawn first, so the launcher's own layout is never seen
+		// squeezed into the card's size while the window shrinks. The tracker's
+		// own starting event follows with the estimate.
+		a.emitGameState(models.GameState{ChapterID: chapterID, Phase: models.GamePhaseStarting, Splash: true})
+		time.Sleep(splashPaintWait)
 		a.splash.Enter(chapterID)
 	}
 	startedAt := time.Now()
