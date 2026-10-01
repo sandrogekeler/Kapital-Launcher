@@ -263,12 +263,13 @@ func TestInstallChapterRefusesBeforeWritingAnything(t *testing.T) {
 	if _, err := app.InstallChapter("frangfurd"); err == nil {
 		t.Error("an install without Prism was not refused")
 	}
-	// The bundled manifest hosts no pack yet (#25): Install has nothing to write.
+	// Lichdenstein hosts no pack yet (Frangfurd does since #25): Install has
+	// nothing to write, and nothing is fetched.
 	app.engine = models.EngineInfo{Found: true, Source: "settings"}
-	if _, err := app.InstallChapter("frangfurd"); err == nil || !strings.Contains(err.Error(), "no hosted pack") {
+	if _, err := app.InstallChapter("lichdenstein"); err == nil || !strings.Contains(err.Error(), "no hosted pack") {
 		t.Errorf("expected the missing pack to be refused, got %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(root, "instances", "kapital-frangfurd")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(root, "instances", "kapital-lichdenstein")); !os.IsNotExist(err) {
 		t.Fatalf("a refused install wrote into the Prism root: %v", err)
 	}
 }
