@@ -66,6 +66,10 @@ export function LaunchChapter(arg1) {
   return window['go']['main']['App']['LaunchChapter'](arg1);
 }
 
+export function LogFrontendError(arg1, arg2, arg3) {
+  return window['go']['main']['App']['LogFrontendError'](arg1, arg2, arg3);
+}
+
 export function OpenChapterWiki(arg1) {
   return window['go']['main']['App']['OpenChapterWiki'](arg1);
 }

@@ -71,4 +71,3 @@ and by CI. Items below that a gate already holds say so; the rest are review.
 - `[verify]` markers in `backend/services/prism.go`: the macOS and Linux install
   paths and their `--version` output. Windows was observed on 2026-09-29
   (Roadmap, milestone 2).
-- Forward frontend render errors to the Go log (milestone 7).

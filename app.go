@@ -26,16 +26,17 @@ import (
 // argument, a path or a URL; Prism is called with an argument array, never a
 // shell string; and nothing here reads, copies or logs Prism's account data.
 type App struct {
-	ctx      context.Context
-	manifest models.Manifest
-	settings *services.SettingsService
-	prism    *services.PrismService
-	managed  *services.ManagedPrism
-	status   *services.StatusService
-	creator  *services.InstanceCreator
-	wiki     *services.WikiService
-	games    *services.GameTracker
-	stop     context.CancelFunc
+	ctx            context.Context
+	manifest       models.Manifest
+	settings       *services.SettingsService
+	prism          *services.PrismService
+	managed        *services.ManagedPrism
+	status         *services.StatusService
+	creator        *services.InstanceCreator
+	wiki           *services.WikiService
+	games          *services.GameTracker
+	stop           context.CancelFunc
+	frontendErrors *services.FrontendErrorLog
 	// runCtx is the context the background work runs under: cancelled in
 	// shutdown, nil before startup.
 	runCtx context.Context
@@ -57,14 +58,15 @@ func NewApp(dataDir string, manifest []byte) (*App, error) {
 	managed := services.NewManagedPrism(dataDir, runtime.GOOS, runtime.GOARCH)
 	prism.UseManaged(managed)
 	a := &App{
-		manifest:   m,
-		settings:   services.NewSettingsService(dataDir),
-		prism:      prism,
-		managed:    managed,
-		status:     services.NewStatusService(),
-		creator:    services.NewInstanceCreator(dataDir),
-		wiki:       services.NewWikiService(dataDir, m.Wiki.BaseURL),
-		openFolder: services.OpenFolder,
+		manifest:       m,
+		settings:       services.NewSettingsService(dataDir),
+		prism:          prism,
+		managed:        managed,
+		status:         services.NewStatusService(),
+		creator:        services.NewInstanceCreator(dataDir),
+		wiki:           services.NewWikiService(dataDir, m.Wiki.BaseURL),
+		openFolder:     services.OpenFolder,
+		frontendErrors: services.NewFrontendErrorLog(),
 	}
 	// Each phase change of a launched game is an event the frontend listens
 	// for; before the window is up there is nobody to tell.
@@ -556,6 +558,13 @@ func (a *App) OpenExternal(raw string) error {
 		return err
 	}
 	return a.openURL(checked)
+}
+
+// LogFrontendError writes an error caught in the view to the launcher's own
+// log, since a packaged build has no console. The kind, the text lengths and
+// the number written per run are bounded in services.FrontendErrorLog.
+func (a *App) LogFrontendError(kind, message, stack string) error {
+	return a.frontendErrors.Log(kind, message, stack)
 }
 
 func (a *App) openURL(url string) error {
