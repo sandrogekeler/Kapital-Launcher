@@ -34,6 +34,8 @@ export function InstallPrism():Promise<void>;
 
 export function LaunchChapter(arg1:string):Promise<void>;
 
+export function LogFrontendError(arg1:string,arg2:string,arg3:string):Promise<void>;
+
 export function OpenChapterWiki(arg1:string):Promise<void>;
 
 export function OpenExternal(arg1:string):Promise<void>;

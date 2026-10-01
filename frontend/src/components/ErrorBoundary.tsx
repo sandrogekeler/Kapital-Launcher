@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { reportError } from '../lib/reportError'
 
 interface Props {
   children: ReactNode
@@ -9,9 +10,8 @@ interface State {
 
 /**
  * The app-level boundary. A render error shows its message in the data face
- * instead of a blank window; the component stack goes to the console, which a
- * dev build shows and a packaged build discards (forwarding it to the Go log
- * is on the roadmap, milestone 7).
+ * instead of a blank window, and the error with its component stack goes to
+ * the Go log, since a packaged build has no console.
  */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null }
@@ -21,7 +21,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('render error', error, info.componentStack)
+    reportError('render', error, info.componentStack ?? undefined)
   }
 
   render() {
