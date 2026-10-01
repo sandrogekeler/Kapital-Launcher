@@ -200,9 +200,9 @@ export interface AppSettings {
   lastChapter: string
   /** Chapter id to a local packwiz serve address (#41), edited on the settings screen (#5). */
   packOverrides?: Record<string, string>
-  /** The player's choice for the loading splash (#43); absent is the default, on where it is available. */
+  /** The player's choice for the loading splash (#43, #97); absent is the default: on for Windows, off for macOS, unavailable elsewhere. */
   loadingSplash?: boolean
-  /** Whether the splash can run on this OS at all (Windows only for now). Derived by GetSettings, never saved. */
+  /** Whether the splash can run on this OS at all (Windows and macOS). Derived by GetSettings, never saved. */
   loadingSplashAvailable?: boolean
   /** Whether the next Play shows the splash: the effective value of loadingSplash on this OS. Derived, never saved. */
   loadingSplashOn?: boolean

@@ -87,7 +87,7 @@ describe('App', () => {
     })
     useSettingsStore.setState({ settings: DEFAULT_SETTINGS, loaded: false, error: null })
     useServerStore.setState({ statuses: {}, checking: null, error: null })
-    useGameStore.setState({ states: {}, error: null })
+    useGameStore.setState({ states: {} })
     vi.mocked(Bindings.GetServerStatus).mockResolvedValue({
       chapterId: 'lichdenstein',
       checked: true,
@@ -451,46 +451,22 @@ describe('App', () => {
     expect(screen.getByText('Version').nextElementSibling).toHaveTextContent('4.2')
   })
 
-  it('shows the loading card in place of the whole layout while a splash is up, and brings the layout back', async () => {
+  it('keeps the launcher as it is while a loading card is up: the card has a window of its own', async () => {
     vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
     render(<App />)
     await screen.findByRole('heading', { level: 1 })
-    expect(screen.getByRole('navigation', { name: 'Chapters' })).toBeInTheDocument()
 
-    const run = {
-      chapterId: 'luxemburg',
-      phase: 'mods' as const,
-      since: '2026-10-01T10:00:00Z',
-      startedAt: '2026-10-01T09:59:00Z',
-    }
-    act(() => useGameStore.getState().receive({ ...run, splash: true }))
-    expect(screen.getByRole('region', { name: 'Loading Luxemburg' })).toBeInTheDocument()
-    expect(screen.queryByRole('navigation', { name: 'Chapters' })).not.toBeInTheDocument()
-    expect(screen.queryByText(/NOT AN OFFICIAL MINECRAFT PRODUCT/)).not.toBeInTheDocument()
-    expect(screen.getByText('◐ Loading mods')).toBeInTheDocument()
-
-    // Go emits the state again with splash false: the card leaves.
-    act(() => useGameStore.getState().receive({ ...run, splash: false }))
-    expect(screen.queryByRole('region', { name: 'Loading Luxemburg' })).not.toBeInTheDocument()
-    expect(screen.getByRole('navigation', { name: 'Chapters' })).toBeInTheDocument()
-    expect(screen.getByText(/NOT AN OFFICIAL MINECRAFT PRODUCT/)).toBeInTheDocument()
-  })
-
-  it('shows the card for the chapter that is loading, not the one that is open', async () => {
-    render(<App />)
-    await screen.findByRole('heading', { level: 1 })
     act(() =>
       useGameStore.getState().receive({
         chapterId: 'frangfurd',
-        phase: 'starting',
+        phase: 'mods',
         since: '2026-10-01T10:00:00Z',
-        startedAt: '2026-10-01T10:00:00Z',
+        startedAt: '2026-10-01T09:59:00Z',
         splash: true,
       }),
     )
-    expect(screen.getByRole('region', { name: 'Loading Frangfurd' })).toHaveAttribute(
-      'data-chapter',
-      'frangfurd',
-    )
+    expect(screen.queryByRole('region', { name: /^Loading / })).not.toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Chapters' })).toBeInTheDocument()
+    expect(screen.getByText(/NOT AN OFFICIAL MINECRAFT PRODUCT/)).toBeInTheDocument()
   })
 })

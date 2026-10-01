@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 
 	"kapital/backend/models"
 	"kapital/backend/services"
+	"kapital/backend/splashhost"
 )
 
 // App is the one struct Wails binds. Every exported method on it is callable
@@ -36,7 +38,7 @@ type App struct {
 	creator        *services.InstanceCreator
 	wiki           *services.WikiService
 	games          *services.GameTracker
-	splash         *services.SplashWindow
+	splash         *services.SplashCard
 	stop           context.CancelFunc
 	frontendErrors *services.FrontendErrorLog
 	// runCtx is the context the background work runs under: cancelled in
@@ -59,8 +61,11 @@ type App struct {
 }
 
 // NewApp wires the services. The manifest is parsed and validated here so a
-// bad bundled manifest fails at startup rather than on the first click.
-func NewApp(dataDir string, manifest []byte) (*App, error) {
+// bad bundled manifest fails at startup rather than on the first click. dist
+// is the embedded frontend build, which the loading card's window serves its
+// page from (#97); nil makes the card unavailable and a start goes on without
+// it.
+func NewApp(dataDir string, manifest []byte, dist fs.FS) (*App, error) {
 	m, err := services.ParseManifest(manifest)
 	if err != nil {
 		return nil, err
@@ -88,10 +93,10 @@ func NewApp(dataDir string, manifest []byte) (*App, error) {
 		openFolder:     services.OpenFolder,
 		frontendErrors: services.NewFrontendErrorLog(),
 	}
-	a.splash = services.NewSplashWindow(appWindow{a})
+	a.splash = a.newSplashCard(dist, splashhost.New)
 	// Each phase change of a launched game is an event the frontend listens
-	// for; before the window is up there is nobody to tell. The splash sees
-	// the phase first: a run that ends gives the window back before its event
+	// for; before the window is up there is nobody to tell. The card sees the
+	// phase first: a run that ends brings the launcher back before its event
 	// says the card is gone.
 	a.games = services.NewGameTracker(dataDir, a.onGameState)
 	return a, nil
@@ -280,24 +285,17 @@ func (a *App) LaunchChapter(chapterID string) error {
 	// before Prism reads it (#95).
 	a.updatePreLaunch(chapterID, instanceDir)
 	before := services.SnapshotGameLog(instanceDir)
-	// The splash: the window becomes the card before Prism starts, and holds
-	// the game's window until the handover (#43). Without a window there is
-	// nothing to turn into a card.
-	splash := a.ctx != nil && services.LoadingSplashOn(runtime.GOOS, settings)
-	if splash {
-		// The card is drawn first, so the launcher's own layout is never seen
-		// squeezed into the card's size while the window shrinks. The tracker's
-		// own starting event follows with the estimate.
-		a.emitGameState(models.GameState{ChapterID: chapterID, Phase: models.GamePhaseStarting, Splash: true})
-		time.Sleep(splashPaintWait)
-		a.splash.Enter(chapterID)
-	}
+	// The splash: a card in a window of its own opens before Prism starts and
+	// the launcher steps aside (#97). Where the game's window can be held, it
+	// is held until the handover (#43); a card that could not open holds
+	// nothing, because a hidden game with no card would show nothing at all.
+	splash := a.beginSplash(chapter, settings)
 	startedAt := time.Now()
 	proc, err := a.prism.Launch(a.context(), engine, req)
 	if err != nil {
 		slog.Error("launch", "chapter", chapterID, "error", err)
 		if splash {
-			a.leaveSplash()
+			a.splash.Leave()
 		}
 		return err
 	}
@@ -311,10 +309,11 @@ func (a *App) LaunchChapter(chapterID string) error {
 		PrismExe:    filepath.Base(engine.Executable),
 		StartedAt:   startedAt,
 		Before:      before,
-		HoldWindow:  splash,
+		HoldWindow:  splash && a.splash.HoldsGameWindow(),
 	}
 	if splash {
-		// The launcher minimises once the game has the foreground, not before.
+		// On Windows the card closes once the game has the foreground, not
+		// before; macOS closes it at the game's window phase (Observe).
 		track.OnHandover = func() { a.splash.Handover(chapterID) }
 	}
 	if err := a.games.Track(a.trackContext(), track); err != nil {
@@ -337,13 +336,13 @@ func (a *App) GetGameStates() ([]models.GameState, error) {
 	return states, nil
 }
 
-// LeaveSplash gives the launcher's window back to the player: restored to the
-// size and place it had, and the card is no longer shown (#43). The game keeps
-// starting and appears at the reload as usual, but the launcher does not
-// minimise then. With no splash up it does nothing. A game:state event with
-// splash false follows at once, for the chapter whose card it was.
+// LeaveSplash closes the loading card and brings the launcher's window back
+// (#43, #97), which is what the card's own Back to launcher does. The game
+// keeps starting and appears at the reload as usual. With no card up it does
+// nothing. A game:state event with splash false follows at once, for the
+// chapter whose card it was.
 func (a *App) LeaveSplash() error {
-	a.leaveSplash()
+	a.splash.Leave()
 	return nil
 }
 

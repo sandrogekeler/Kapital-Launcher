@@ -56,13 +56,30 @@ Prism's dialog matches nothing and stays in view. Each release logs one
 `prism dialogs` line with the chapter, the hides and whether any were shown back,
 never a title.
 
-`SplashWindow` (`splashwindow.go`, #43) makes the launcher's own window the
-loading card for a start and gives it back, over a `WindowOps` interface that
-`app.go` implements on the Wails runtime: every window call is Go's, made on
-the tracker's phase changes (`Enter` before Prism runs, `Handover` from
-`TrackRequest.OnHandover` once the holder's foreground release is done,
-`Observe` per event, `Leave`), and the order of those calls was measured on a
-real window, so a test holds it.
+The loading card (#43, #97) is a window of its own: `backend/splashhost` is one
+borderless window with a webview of its own per OS (`host_windows.go`,
+`host_darwin.go`, `host_other.go`, which has none), behind `Host` (`Open`,
+`Update`, `Close`). It shows `frontend/splash.html` from the embedded build,
+which the host serves through its in-memory resource handler at
+`http://splash.localhost/` (Windows) or `kapital-splash://app/` (macOS), from
+`Page.Assets` (`AssetsFrom`, which refuses `..`, anything that is not a file and
+any type it does not list); there is no local server and no network. Go pushes
+the card's state (`splashhost.State`) with `window.kapitalSplash.update`, and the
+page posts back one of three actions, `leave`, `openFolder` and `copyLog`, as a
+string of JSON: `ParseMessage` drops anything else, and a message carries no
+argument. `protocol.go` is the whole contract.
+
+`SplashCard` (`services/splashcard.go`) drives it on the tracker's phase changes
+and keeps the launcher's window out of the way: `Begin` before Prism runs
+(opens the card centred on the launcher's window, then minimises the launcher;
+when the card cannot open it says so and the run holds nothing), `Observe` per
+game event, `Handover` from `TrackRequest.OnHandover` on Windows once the
+holder's foreground release is done, and `Leave`. On macOS there is no window
+hold, so the card closes at the game's `window` phase instead. The launcher
+comes back when the game ends, showing how it ended; a crash or failure before
+the handover keeps the card for the error until the player leaves it. The
+launcher's own window is only asked where it is, to minimise and to come back
+(`launcherWindow` in `app_splash.go`).
 
 `managedprism.go` gets Prism for a player who has none, on approval only
 (ADR-11): downloads are verified by digest and signature before anything is

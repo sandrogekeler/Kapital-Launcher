@@ -1,77 +1,70 @@
-import { useLayoutEffect, useRef, useState } from 'react'
-import type { Chapter, GameState } from '../../types'
+import { useLayoutEffect, useRef } from 'react'
+import type { GameState } from '../../types'
 import { chapterArt, chapterTitleArt } from '../../lib/art'
 import { gameLine } from '../../lib/gameLine'
-import { errMsg } from '../../lib/ipc'
 import { isPlaceholder } from '../../lib/manifest'
 import { copyLogDone } from '../../lib/settingsView'
 import { barPlan } from '../../lib/splashBar'
 import { Copy, FolderOpen } from '../../lib/icons'
-import { useEngineStore } from '../../stores/useEngineStore'
-import { useGameStore } from '../../stores/useGameStore'
-import { useSettingsStore } from '../../stores/useSettingsStore'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 
 interface Props {
-  chapter: Chapter
-  /** The chapter's game, with `splash` set: App shows the card only then. */
+  chapter: { id: string; name: string; packVersion?: string }
+  /** The chapter's game, as Go pushes it. */
   state: GameState
+  onLeave: () => void
+  onOpenFolder: () => void
+  onCopyLog: () => void
+  /** The last copy of the log: how many lines went, or why none did. */
+  copyLog?: { lines?: number; error?: string }
+  /** What a failed action says. */
+  error?: string
 }
 
-type Result = { ok: boolean; text: string }
-
 /**
- * The loading card (#43). While a game starts, Go shrinks the launcher's window
- * to a small card and App shows this in place of the whole layout: the
- * chapter's art blurred and tinted as the nav tile does it, its title in the
- * middle, the stage line and a bar along the bottom. The card ends when Go
- * emits the chapter's state with `splash` false, whether the game's own screen
- * took over or the player pressed Back to launcher.
+ * The loading card (#43, #97). While a game starts the card has a window of its
+ * own, with this in it: the chapter's art blurred and tinted as the nav tile
+ * does it, its title in the middle, the stage line and a bar along the bottom.
+ * It is presentational: Go owns the window and the state, and the callbacks
+ * are the page's three actions. The card ends when Go closes the window,
+ * whether the game's own screen took over or the player pressed Back to
+ * launcher.
  *
  * A game that stopped or never started (`crashed`, `failed`) keeps the card as
  * its error state: the bar goes, and Open folder, Copy log and Back to
  * launcher stay until the player leaves.
- *
- * The whole card drags the window, the controls opt out.
  */
-export function SplashCard({ chapter, state }: Props) {
+export function SplashCard({
+  chapter,
+  state,
+  onLeave,
+  onOpenFolder,
+  onCopyLog,
+  copyLog,
+  error,
+}: Props) {
   const art = chapterArt(chapter.id)
   const title = chapterTitleArt(chapter.id)
-  const leave = useGameStore((s) => s.leaveSplash)
-  const leaveError = useGameStore((s) => s.error)
-  const openFolder = useEngineStore((s) => s.openInstanceFolder)
-  const copyLog = useSettingsStore((s) => s.copyLog)
-  const [result, setResult] = useState<Result | null>(null)
 
   const failed = state.phase === 'crashed' || state.phase === 'failed'
   const [stage, detail, tone] = gameLine(state, chapter.name) ?? ['◐ Starting', '', 'text-accent']
-  const version = isPlaceholder(chapter.pack.version) ? null : chapter.pack.version
+  const version =
+    !chapter.packVersion || isPlaceholder(chapter.packVersion) ? null : chapter.packVersion
   const caption = [title ? chapter.name : null, version ? `Pack ${version}` : null]
     .filter(Boolean)
     .join(' · ')
-
-  const onOpenFolder = async () => {
-    try {
-      await openFolder(chapter.id)
-      setResult(null)
-    } catch (e) {
-      setResult({ ok: false, text: errMsg(e) })
-    }
-  }
-  const onCopyLog = async () => {
-    try {
-      setResult({ ok: true, text: copyLogDone(await copyLog()) })
-    } catch (e) {
-      setResult({ ok: false, text: errMsg(e) })
-    }
-  }
+  const result = copyLog?.error
+    ? { ok: false, text: copyLog.error }
+    : copyLog?.lines !== undefined
+      ? { ok: true, text: copyLogDone(copyLog.lines) }
+      : null
 
   return (
     <section
       data-chapter={chapter.id}
       aria-label={`Loading ${chapter.name}`}
-      className="bg-canvas relative isolate flex h-full w-full flex-col overflow-hidden [--wails-draggable:drag]"
+      className="bg-canvas relative isolate flex h-full w-full flex-col overflow-hidden"
     >
       {/* The nav tile's treatment (ChapterButton): art blurred, the accent's
           hue over it, a scrim for the text. */}
@@ -117,30 +110,30 @@ export function SplashCard({ chapter, state }: Props) {
           {!failed && (
             <button
               type="button"
-              onClick={() => void leave()}
-              className="text-fg-muted hover:text-fg duration-fast ease-standard cursor-pointer text-xs transition-colors [--wails-draggable:no-drag]"
+              onClick={onLeave}
+              className="text-fg-muted hover:text-fg duration-fast ease-standard cursor-pointer text-xs transition-colors"
             >
               Back to launcher
             </button>
           )}
         </div>
-        {leaveError && (
+        {error && (
           <p role="alert" className="text-danger m-0 px-8 text-xs select-text">
-            {leaveError}
+            {error}
           </p>
         )}
         {failed ? (
-          <div className="flex flex-col gap-3 px-8 pb-6 [--wails-draggable:no-drag]">
+          <div className="flex flex-col gap-3 px-8 pb-6">
             <div className="flex flex-wrap items-center gap-3">
-              <Button onClick={() => void onOpenFolder()}>
+              <Button onClick={onOpenFolder}>
                 <Icon icon={FolderOpen} size="sm" />
                 <span>Open folder</span>
               </Button>
-              <Button onClick={() => void onCopyLog()}>
+              <Button onClick={onCopyLog}>
                 <Icon icon={Copy} size="sm" />
                 <span>Copy log</span>
               </Button>
-              <Button onClick={() => void leave()}>
+              <Button onClick={onLeave}>
                 <span>Back to launcher</span>
               </Button>
             </div>

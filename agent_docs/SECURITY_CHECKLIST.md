@@ -195,6 +195,33 @@ Probe: a window of another class, or of another process, shown while the hold
 is on; a Prism window titled "Sign in" or "Error" shown during the first ten
 seconds of a launch.
 
+**S3.8 The loading card's page is the embedded build, shows nothing from the network, and can ask Go for three things.**
+Holds when: the card (#97) is a window of its own with its own webview, and the
+page it loads is `splash.html` of the build embedded in the executable, served
+by the host from `Page.Assets` (`splashhost.AssetsFrom`) at
+`http://splash.localhost/` on Windows and `kapital-splash://app/` on macOS:
+no local HTTP server, no port, nothing fetched. `AssetsFrom` serves a regular
+file only, by a clean relative path (`fs.ValidPath`, so no `..`, no empty or
+`.` element, no leading slash), with no backslash or NUL, and only for an
+extension on its list; anything else is a 404. The page has no Wails bridge
+and no bound method: it posts a string through the webview's own channel,
+`splashhost.ParseMessage` accepts exactly `{"action":"leave"}`,
+`{"action":"openFolder"}` and `{"action":"copyLog"}` and drops, with a log
+line, anything else (an unknown action, a body that is not an object, one that
+is long), and a message carries no argument: the chapter is the run's own and
+every path is Go's. A message from a card that has since closed is dropped.
+The CSP of `splash.html` is `index.html`'s plus the `kapital-splash:` scheme
+source, which only ever serves the embedded build. The state Go pushes holds
+the chapter's name and pack version, the game's phase and the outcome of the
+last action (a line count or an error text), and nothing about the player.
+Verify: `TestAssetsRefuseAnythingOutsideTheBuild`,
+`TestParseMessageAcceptsTheThreeActionsOnly`,
+`TestAMessageThatIsNotOneOfTheThreeActionsIsDropped`,
+`TestAMessageFromAnEarlierRunsCardChangesNothing`; `grep -c
+Content-Security-Policy frontend/dist/splash.html` after a build is 1.
+Probe: a page request for `../..`, `%2e%2e`, a backslash path or a `.map` file;
+a posted message that names a path or another chapter.
+
 ## S4. Downloads (milestone 4)
 
 **S4.1 Every downloaded file is verified against its hash before use.** `.mrpack`
@@ -257,11 +284,12 @@ pre-launch command was edited by hand (an extra flag, another jar, `echo`).
 ## S5. WebView
 
 **S5.1 A Content-Security-Policy ships in every build.**
-Holds when: `frontend/index.html` carries the meta tag with `script-src 'self'`,
+Holds when: `frontend/index.html` and `frontend/splash.html` (the loading card's
+page, S3.8) each carry the meta tag with `script-src 'self'`,
 `frame-src 'none'`, `object-src 'none'`, and `vite.config.ts` strips it in
 dev only.
-Verify: read both files; `grep -c Content-Security-Policy frontend/dist/index.html`
-after a build is 1.
+Verify: read the files; `grep -c Content-Security-Policy frontend/dist/index.html`
+and the same for `splash.html` after a build are 1.
 
 **S5.2 No raw HTML sinks.**
 Verify: `grep -rn 'dangerouslySetInnerHTML\|innerHTML' frontend/src` is empty.

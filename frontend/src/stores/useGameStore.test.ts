@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as App from '../../wailsjs/go/main/App'
 import * as Runtime from '../../wailsjs/runtime/runtime'
-import { EVENT_GAME_STATE, isActive, selectGame, selectSplash, useGameStore } from './useGameStore'
+import { EVENT_GAME_STATE, isActive, selectGame, useGameStore } from './useGameStore'
 import type { GamePhase, GameState } from '../types'
 
 vi.mock('../../wailsjs/go/main/App')
@@ -21,9 +21,8 @@ const running: GameState = {
 
 describe('useGameStore', () => {
   beforeEach(() => {
-    useGameStore.setState({ states: {}, error: null })
+    useGameStore.setState({ states: {} })
     vi.mocked(App.GetGameStates).mockReset()
-    vi.mocked(App.LeaveSplash).mockReset()
     vi.mocked(Runtime.EventsOn).mockReset()
     vi.mocked(Runtime.EventsOff).mockReset()
   })
@@ -84,39 +83,5 @@ describe('useGameStore', () => {
     expect(active.every(isActive)).toBe(true)
     expect(over.some(isActive)).toBe(false)
     expect(isActive(undefined)).toBe(false)
-  })
-
-  it('finds the chapter whose splash is up', () => {
-    useGameStore.getState().receive(running)
-    expect(selectSplash(useGameStore.getState())).toBeUndefined()
-    useGameStore.getState().receive({ ...running, chapterId: 'lichdenstein', splash: true })
-    expect(selectSplash(useGameStore.getState())?.chapterId).toBe('lichdenstein')
-    useGameStore.getState().receive({ ...running, chapterId: 'lichdenstein', splash: false })
-    expect(selectSplash(useGameStore.getState())).toBeUndefined()
-  })
-
-  describe('leaveSplash', () => {
-    it('asks Go to give the window back', async () => {
-      attachBridge()
-      vi.mocked(App.LeaveSplash).mockResolvedValue()
-      await useGameStore.getState().leaveSplash()
-      expect(App.LeaveSplash).toHaveBeenCalledOnce()
-      expect(useGameStore.getState().error).toBeNull()
-    })
-
-    it('does nothing without a bridge', async () => {
-      await useGameStore.getState().leaveSplash()
-      expect(App.LeaveSplash).not.toHaveBeenCalled()
-      expect(useGameStore.getState().error).toBeNull()
-    })
-
-    it('records a rejection for the card and clears it on the next try', async () => {
-      attachBridge()
-      vi.mocked(App.LeaveSplash).mockRejectedValueOnce('no window').mockResolvedValueOnce()
-      await useGameStore.getState().leaveSplash()
-      expect(useGameStore.getState().error).toBe('no window')
-      await useGameStore.getState().leaveSplash()
-      expect(useGameStore.getState().error).toBeNull()
-    })
   })
 })

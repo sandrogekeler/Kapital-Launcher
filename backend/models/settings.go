@@ -21,10 +21,11 @@ type AppSettings struct {
 	// setting, edited under Developer on the settings screen (#5); loopback
 	// only (services.CheckLocalPackURL).
 	PackOverrides map[string]string `json:"packOverrides,omitempty"`
-	// LoadingSplash turns the launcher's window into a loading card while a
-	// game starts, and holds the game's window until its resource reload
-	// begins (#43, #45). Nil means the default: on for Windows, always off
-	// elsewhere, whatever is stored (use services.LoadingSplashOn).
+	// LoadingSplash shows a loading card, a window of its own, while a game
+	// starts, and on Windows holds the game's window until its resource reload
+	// begins (#43, #45, #97). Nil means the default: on for Windows, off for
+	// macOS until #30 has verified it, and always off elsewhere, whatever is
+	// stored (use services.LoadingSplashOn).
 	LoadingSplash *bool `json:"loadingSplash,omitempty"`
 	// LoadingSplashAvailable and LoadingSplashOn are what GetSettings reports
 	// about LoadingSplash on this OS: whether the splash can run at all, and

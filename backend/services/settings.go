@@ -148,17 +148,25 @@ func normalize(s models.AppSettings) models.AppSettings {
 }
 
 // LoadingSplashAvailable is whether the loading splash can run on this OS: the
-// window holder it needs is written for Windows, and macOS keeps its traffic
-// lights, so the splash waits for #30 there.
+// card has a window of its own on Windows and macOS (#97), and nothing
+// elsewhere.
 func LoadingSplashAvailable(goos string) bool {
-	return goos == "windows"
+	return goos == "windows" || goos == "darwin"
 }
 
 // LoadingSplashOn is whether the next Play shows the loading splash: the
-// player's choice where it is available, on unless they turned it off, and
-// never elsewhere, whatever the file says.
+// player's choice where it is available. On Windows it is on unless they
+// turned it off. On macOS it is off until they turn it on, until #30 has
+// verified the card's window on a real Mac. Never elsewhere, whatever the file
+// says.
 func LoadingSplashOn(goos string, s models.AppSettings) bool {
-	return LoadingSplashAvailable(goos) && (s.LoadingSplash == nil || *s.LoadingSplash)
+	switch goos {
+	case "windows":
+		return s.LoadingSplash == nil || *s.LoadingSplash
+	case "darwin":
+		return s.LoadingSplash != nil && *s.LoadingSplash
+	}
+	return false
 }
 
 // WithLoadingSplash fills in what the settings screen is told about the
