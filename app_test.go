@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -142,6 +143,45 @@ func TestChapterSettingsRoundTripThroughTheInstance(t *testing.T) {
 	}
 	if _, err := app.SaveChapterSettings("atlantis", models.ChapterSettings{MaxMemoryMB: 4096}); err == nil {
 		t.Fatal("unknown chapter")
+	}
+}
+
+// The folder opened is the chapter's instance folder under the resolved Prism
+// root: the caller names a chapter, never a path, and a chapter whose instance
+// is missing is refused before the file manager is asked (#85).
+func TestOpenInstanceFolderOpensOnlyAnInstalledChaptersFolder(t *testing.T) {
+	app := newTestApp(t)
+	var opened []string
+	app.openFolder = func(dir string) error { opened = append(opened, dir); return nil }
+	root := t.TempDir()
+	if err := app.SaveSettings(models.AppSettings{Theme: "dark", PrismRoot: root}); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.OpenInstanceFolder("atlantis"); err == nil {
+		t.Fatal("unknown chapter")
+	}
+	if err := app.OpenInstanceFolder("frangfurd"); err == nil || !strings.Contains(err.Error(), "not installed") {
+		t.Fatalf("no instance yet: %v", err)
+	}
+	inst := filepath.Join(root, "instances", "kapital-frangfurd")
+	if err := os.MkdirAll(inst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(inst, "instance.cfg"), []byte("[General]\nname=Frangfurd\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if len(opened) != 0 {
+		t.Fatalf("opened before the instance existed: %v", opened)
+	}
+	if err := app.OpenInstanceFolder("frangfurd"); err != nil {
+		t.Fatal(err)
+	}
+	if len(opened) != 1 || opened[0] != inst {
+		t.Fatalf("opened %v, want [%s]", opened, inst)
+	}
+	app.openFolder = func(string) error { return errors.New("no file manager") }
+	if err := app.OpenInstanceFolder("frangfurd"); err == nil || !strings.Contains(err.Error(), "Frangfurd") {
+		t.Fatalf("the failure names the chapter: %v", err)
 	}
 }
 

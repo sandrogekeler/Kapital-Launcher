@@ -103,8 +103,9 @@ Verify: `TestParseWikiExportKeepsOnlyPagesThePanelMayShow`,
 **S3.1 Prism is run with an argument array.**
 Holds when: the `exec.Command`s in the tree are Prism's (launch, `--version`,
 `flatpak info`), all with argument arrays built from validated values, plus
-`/usr/bin/codesign --verify` on macOS with a fixed argument list (S4.5);
-nothing invokes `sh`, `cmd` or `powershell`.
+`/usr/bin/codesign --verify` on macOS with a fixed argument list (S4.5) and
+`/usr/bin/open` on macOS with one argument, the absolute path of a chapter's
+instance folder (S3.6); nothing invokes `sh`, `cmd` or `powershell`.
 Verify: the `shell never sees a command string` invariant in `.claude/suite.json`.
 
 **S3.2 Every argument is validated.**
@@ -145,6 +146,17 @@ pack at another machine.
 Verify: `settings_test.go`; S5.1, S5.2.
 Probe: anything that would put third-party script in the WebView (a remote
 image or page, a manifest string rendered as HTML).
+
+**S3.6 The folder the launcher opens is a chapter's instance folder, and nothing else.**
+Holds when: `OpenInstanceFolder` takes a chapter id and resolves the folder
+through `chapterInstance` (the validated manifest, the resolved Prism root, an
+instance that exists); `services.OpenFolder` then refuses anything that is not
+an absolute path to an existing directory. Windows opens it with `ShellExecute`
+(an API call, the path is one argument), macOS with `/usr/bin/open` and that
+path as its only argument, other platforms refuse.
+Verify: `TestOpenInstanceFolderOpensOnlyAnInstalledChaptersFolder`,
+`TestOpenFolderChecksTheDirectoryBeforeTheOSSeesIt`.
+Probe: a chapter id that is a path; an instance folder that is a file or gone.
 
 ## S4. Downloads (milestone 4)
 

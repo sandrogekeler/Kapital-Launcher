@@ -9,8 +9,9 @@ import {
   presetLabel,
   sliderMaxMb,
 } from '../../lib/chapterSettings'
-import { ArrowLeft } from '../../lib/icons'
+import { ArrowLeft, FolderOpen } from '../../lib/icons'
 import { Button } from '../ui/Button'
+import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 
 interface Props {
@@ -23,16 +24,19 @@ interface Props {
  * which JVM preset it runs with. Both live in the instance's instance.cfg,
  * so the panel needs the chapter installed, and Go refuses a save while the
  * game looks to be running. Save writes both at once; the value shown after
- * is what Go read back from the file.
+ * is what Go read back from the file. Open folder (#85) shows the instance in
+ * the file manager; it is there to reach a crash report or a screenshot.
  */
 export function ChapterSettingsPanel({ chapter, onClose }: Props) {
   const installed = useEngineStore(selectInstalled(chapter.id))
   const info = useEngineStore((s) => s.chapterSettings[chapter.id])
   const load = useEngineStore((s) => s.loadChapterSettings)
   const save = useEngineStore((s) => s.saveChapterSettings)
+  const openFolder = useEngineStore((s) => s.openInstanceFolder)
   const [draft, setDraft] = useState<ChapterSettings | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [folderError, setFolderError] = useState<string | null>(null)
 
   useEffect(() => {
     if (installed) void load(chapter.id)
@@ -65,6 +69,15 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
       setError(errMsg(e))
     } finally {
       setSaving(false)
+    }
+  }
+
+  const onOpenFolder = async () => {
+    setFolderError(null)
+    try {
+      await openFolder(chapter.id)
+    } catch (e) {
+      setFolderError(errMsg(e))
     }
   }
 
@@ -159,7 +172,16 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
         <IconButton icon={ArrowLeft} title="Back" onClick={onClose} />
         <h1 className="font-display m-0 text-2xl font-semibold">{chapter.name} settings</h1>
       </div>
-      <div className="flex max-w-200 flex-col gap-10 px-14 pt-8 pb-16">{body}</div>
+      <div className="flex max-w-200 flex-col gap-10 px-14 pt-8 pb-16">
+        <div className="flex items-center gap-3">
+          <Button onClick={() => void onOpenFolder()} disabled={installed !== true}>
+            <Icon icon={FolderOpen} size="sm" />
+            <span>Open folder</span>
+          </Button>
+          {folderError && <span className="text-danger text-xs select-text">{folderError}</span>}
+        </div>
+        {body}
+      </div>
     </section>
   )
 }

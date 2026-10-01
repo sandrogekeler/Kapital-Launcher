@@ -74,6 +74,10 @@ export function OpenExternal(arg1) {
   return window['go']['main']['App']['OpenExternal'](arg1);
 }
 
+export function OpenInstanceFolder(arg1) {
+  return window['go']['main']['App']['OpenInstanceFolder'](arg1);
+}
+
 export function OpenWikiPage(arg1) {
   return window['go']['main']['App']['OpenWikiPage'](arg1);
 }
