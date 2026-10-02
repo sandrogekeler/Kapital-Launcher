@@ -105,8 +105,10 @@ What is left:
 - [x] Copy redacted log action (`services.Redactor`, #84)
 - [x] About section on the settings screen: version, disclaimer, licences (#87)
 - [x] Forward frontend render errors to the Go log (#83)
-- [ ] Release workflow with attested artefacts for Windows and macOS; code
-      signing decision (ADR-6)
+- [x] Release workflow with attested artefacts for Windows and macOS; code
+      signing decision (ADR-6): `.github/workflows/build.yml` (#107) builds both
+      on every pull request and cuts an attested release from the Actions tab;
+      the first prerelease dispatch is still to run
 - [x] Create the labels in `.github/labels.yml` on the repository (`scripts/sync-labels.py`),
       done 2026-09-29
 - [x] Vendor CodeQL and Scorecard from Konnekt (Kollektiv has neither), possible
