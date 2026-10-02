@@ -30,6 +30,11 @@ func (a *App) shutdown(context.Context) {
 	if a.stop != nil {
 		a.stop()
 	}
+	// A Prism left on a hidden console is the launcher's to close, bounded so
+	// quitting never waits on it for long.
+	if a.games != nil {
+		a.games.Shutdown()
+	}
 	// A card still up would keep its window, and so the process, alive.
 	a.splash.Shutdown()
 }

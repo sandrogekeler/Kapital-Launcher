@@ -34,10 +34,12 @@ export function RunReportPanel({ chapter, onClose }: Props) {
   const read = useGameStore((s) => s.report)
   const openFolder = useEngineStore((s) => s.openInstanceFolder)
   const copyLog = useSettingsStore((s) => s.copyLog)
+  const showConsole = useGameStore((s) => s.showConsole)
   const [report, setReport] = useState<RunReport | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [folderError, setFolderError] = useState<string | null>(null)
+  // Why the folder or the console would not open, beside the buttons.
+  const [actionError, setActionError] = useState<string | null>(null)
   const [copied, setCopied] = useState<CopyResult | null>(null)
 
   // `game` is a dependency for the re-read: the store files a new object per
@@ -70,11 +72,20 @@ export function RunReportPanel({ chapter, onClose }: Props) {
   }, [onClose])
 
   const onOpenFolder = async () => {
-    setFolderError(null)
+    setActionError(null)
     try {
       await openFolder(chapter.id)
     } catch (e) {
-      setFolderError(errMsg(e))
+      setActionError(errMsg(e))
+    }
+  }
+
+  const onShowConsole = async () => {
+    setActionError(null)
+    try {
+      if (!(await showConsole(chapter.id))) setActionError("Prism's console is no longer open")
+    } catch (e) {
+      setActionError(errMsg(e))
     }
   }
 
@@ -122,13 +133,11 @@ export function RunReportPanel({ chapter, onClose }: Props) {
           </Button>
           <CopyLogButton onClick={() => void onCopyLog()} result={copied} />
           {report.consoleAvailable && (
-            // The action arrives with the change that hides the console; until
-            // then the report never says it is available.
-            <Button onClick={() => undefined}>
+            <Button onClick={() => void onShowConsole()}>
               <span>Show Prism's console</span>
             </Button>
           )}
-          {folderError && <span className="text-danger text-xs select-text">{folderError}</span>}
+          {actionError && <span className="text-danger text-xs select-text">{actionError}</span>}
         </div>
       </>
     )

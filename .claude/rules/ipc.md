@@ -54,10 +54,10 @@ splash flag (the card is up for the run) and the start's estimate (#43), and
 `LeaveSplash` closes the card and brings the launcher's window back.
 
 The loading card (#97) is a second page in a window of its own and has no Wails
-bridge: it is not on this list. What it can ask Go for is its three actions,
-`leave`, `openFolder` and `copyLog`, posted as a JSON string through the
+bridge: it is not on this list. What it can ask Go for is its four actions,
+`leave`, `openFolder`, `copyLog` and `showConsole`, posted as a JSON string through the
 webview's own channel (`splashhost/protocol.go`, `frontend/src/splash/bridge.ts`),
-and Go pushes its state to `window.kapitalSplash.update`. A fourth action is
+and Go pushes its state to `window.kapitalSplash.update`. A fifth action is
 added in `ParseMessage`, the card's handler and the bridge in one change, with
 an item in `SECURITY_CHECKLIST.md` S3.8, or not at all. The pattern for the
 next event:

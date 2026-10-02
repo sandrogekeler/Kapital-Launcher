@@ -42,6 +42,11 @@ type cardFixture struct {
 	copyN    int
 	copyErr  error
 	changed  []string
+	// consoles are the chapters the card asked to show Prism's console for, and
+	// consoleShown and consoleErr what it is told.
+	consoles     []string
+	consoleShown bool
+	consoleErr   error
 	// reports are the chapters the card asked a run report of, and report and
 	// reportErr what it is given.
 	reports   []string
@@ -67,6 +72,10 @@ func newCardFixture(goos string) *cardFixture {
 		Actions: CardActions{
 			OpenFolder: func(id string) error { f.folders = append(f.folders, id); return f.folderEr },
 			CopyLog:    func() (int, error) { return f.copyN, f.copyErr },
+			ShowConsole: func(id string) (bool, error) {
+				f.consoles = append(f.consoles, id)
+				return f.consoleShown, f.consoleErr
+			},
 		},
 		Report: func(id string) (models.RunReport, error) {
 			f.reports = append(f.reports, id)
@@ -418,7 +427,7 @@ func TestLeavingDuringANormalStartRestoresTheLauncherAndLeavesTheRestAlone(t *te
 	}
 }
 
-func TestMessagesFromThePageDriveTheThreeActions(t *testing.T) {
+func TestMessagesFromThePageDriveTheFolderAndCopyActions(t *testing.T) {
 	f := newCardFixture("windows")
 	f.begin(t)
 	f.card.Observe(game(models.GamePhaseCrashed))
@@ -461,17 +470,19 @@ func TestMessagesFromThePageDriveTheThreeActions(t *testing.T) {
 	}
 }
 
-func TestAMessageThatIsNotOneOfTheThreeActionsIsDropped(t *testing.T) {
+func TestAMessageThatIsNotOneOfTheFourActionsIsDropped(t *testing.T) {
 	f := newCardFixture("windows")
 	f.begin(t)
 	updates := len(f.host().Updates())
 	for _, msg := range []string{
 		``, `leave`, `{`, `[]`, `"leave"`, `{"action":"quit"}`, `{"action":"Leave"}`, `{"action":""}`,
 		`{"action":"openFolder","path":"C:\\Windows"}x`, `{"cmd":"leave"}`,
+		`{"action":"showConsole","pid":4}x`, `{"action":"showconsole"}`,
 	} {
 		f.host().Message(msg)
 	}
-	if f.host().Closes() != 0 || len(f.folders) != 0 || len(f.host().Updates()) != updates || len(f.launcher.calls) != 1 {
+	if f.host().Closes() != 0 || len(f.folders) != 0 || len(f.consoles) != 0 ||
+		len(f.host().Updates()) != updates || len(f.launcher.calls) != 1 {
 		t.Fatalf("something happened: %v %v %v", f.host().Calls(), f.folders, f.launcher.calls)
 	}
 }

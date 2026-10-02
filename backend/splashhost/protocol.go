@@ -33,12 +33,13 @@ const (
 // that evaluates before that must hold the newest state and retry (Host.Update).
 //
 // Page to Go. The page posts one message, a string holding the JSON
-// {"action":"leave"}, {"action":"openFolder"} or {"action":"copyLog"}:
+// {"action":"leave"}, {"action":"openFolder"}, {"action":"copyLog"} or
+// {"action":"showConsole"}:
 //
 //	Windows: window.chrome.webview.postMessage(string)
 //	macOS:   window.webkit.messageHandlers.splash.postMessage(string)
 //
-// and the host hands that string, unread, to Page.OnMessage. These three are
+// and the host hands that string, unread, to Page.OnMessage. These four are
 // the only things the page can ask Go for: ParseMessage refuses anything else
 // (an unknown action, a malformed body, a body that is not an object), logs it
 // and drops it. A message carries no argument, so there is nothing for the
@@ -47,6 +48,9 @@ const (
 	ActionLeave      = "leave"
 	ActionOpenFolder = "openFolder"
 	ActionCopyLog    = "copyLog"
+	// ActionShowConsole shows the console of the Prism the launcher hid when
+	// the start failed (ADR-0012, amendment).
+	ActionShowConsole = "showConsole"
 )
 
 // maxMessageBytes bounds what is parsed: a legitimate message is a few dozen
@@ -54,7 +58,7 @@ const (
 const maxMessageBytes = 256
 
 // ParseMessage reads a message from the page and returns its action, or false
-// for anything that is not one of the three. It logs what it refuses without
+// for anything that is not one of the four. It logs what it refuses without
 // the body, which is the page's to fill.
 func ParseMessage(msg string) (string, bool) {
 	if len(msg) > maxMessageBytes {
@@ -69,7 +73,7 @@ func ParseMessage(msg string) (string, bool) {
 		return "", false
 	}
 	switch body.Action {
-	case ActionLeave, ActionOpenFolder, ActionCopyLog:
+	case ActionLeave, ActionOpenFolder, ActionCopyLog, ActionShowConsole:
 		return body.Action, true
 	}
 	slog.Warn("splash message ignored", "reason", "unknown action", "bytes", len(msg))

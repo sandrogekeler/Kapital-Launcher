@@ -80,12 +80,13 @@ func TestAssetsFromNothingServeNothing(t *testing.T) {
 	}
 }
 
-func TestParseMessageAcceptsTheThreeActionsOnly(t *testing.T) {
+func TestParseMessageAcceptsTheFourActionsOnly(t *testing.T) {
 	for msg, want := range map[string]string{
-		`{"action":"leave"}`:      ActionLeave,
-		`{"action":"openFolder"}`: ActionOpenFolder,
-		`{"action":"copyLog"}`:    ActionCopyLog,
-		` {"action": "leave"} `:   ActionLeave,
+		`{"action":"leave"}`:       ActionLeave,
+		`{"action":"openFolder"}`:  ActionOpenFolder,
+		`{"action":"copyLog"}`:     ActionCopyLog,
+		`{"action":"showConsole"}`: ActionShowConsole,
+		` {"action": "leave"} `:    ActionLeave,
 		// A field the protocol has no use for is not an error, and is not read.
 		`{"action":"leave","path":"C:\\x"}`: ActionLeave,
 	} {
@@ -95,7 +96,7 @@ func TestParseMessageAcceptsTheThreeActionsOnly(t *testing.T) {
 	}
 	for _, msg := range []string{
 		``, `leave`, `{`, `[]`, `null`, `"leave"`, `7`, `{}`, `{"action":null}`, `{"action":1}`,
-		`{"action":"Leave"}`, `{"action":"leave "}`, `{"action":"quit"}`, `{"action":"openFolder"}x`,
+		`{"action":"Leave"}`, `{"action":"showconsole"}`, `{"action":"leave "}`, `{"action":"quit"}`, `{"action":"openFolder"}x`,
 		`{"action":"` + strings.Repeat("a", maxMessageBytes) + `"}`,
 	} {
 		if got, ok := ParseMessage(msg); ok {

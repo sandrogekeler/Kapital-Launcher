@@ -166,5 +166,5 @@ of the game's log leaves the file. It does so only here, and keeps nothing.
   launcher's own log (S7.3), not this.
 
 The report is refused when the redactor cannot be built, rather than made
-without one, and carries `consoleAvailable`, always false until the console is
-hidden and can be shown back on request.
+without one, and carries `consoleAvailable`, which is true when the console the
+launcher hid (Windows, ADR-12 amendment) can be shown back on request.

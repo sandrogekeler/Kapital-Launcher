@@ -140,4 +140,29 @@ describe('RunReportPanel', () => {
     render(<RunReportPanel chapter={chapter} onClose={() => undefined} />)
     expect(await screen.findByRole('button', { name: "Show Prism's console" })).toBeInTheDocument()
   })
+
+  it('has no console button when the report says there is none', async () => {
+    render(<RunReportPanel chapter={chapter} onClose={() => undefined} />)
+    await screen.findByLabelText('Timeline')
+    expect(screen.queryByRole('button', { name: "Show Prism's console" })).toBeNull()
+  })
+
+  it("shows Prism's console through the binding, and says when it is gone or refused", async () => {
+    vi.mocked(Bindings.GetRunReport).mockResolvedValue(
+      runReport({ consoleAvailable: true }) as never,
+    )
+    vi.mocked(Bindings.ShowPrismConsole).mockResolvedValue(true)
+    render(<RunReportPanel chapter={chapter} onClose={() => undefined} />)
+    fireEvent.click(await screen.findByRole('button', { name: "Show Prism's console" }))
+    await waitFor(() => expect(Bindings.ShowPrismConsole).toHaveBeenCalledWith(chapter.id))
+    expect(screen.queryByText(/no longer open/)).toBeNull()
+
+    vi.mocked(Bindings.ShowPrismConsole).mockResolvedValue(false)
+    fireEvent.click(screen.getByRole('button', { name: "Show Prism's console" }))
+    expect(await screen.findByText("Prism's console is no longer open")).toHaveClass('text-danger')
+
+    vi.mocked(Bindings.ShowPrismConsole).mockRejectedValue('no chapter "x"')
+    fireEvent.click(screen.getByRole('button', { name: "Show Prism's console" }))
+    expect(await screen.findByText('no chapter "x"')).toHaveClass('text-danger')
+  })
 })

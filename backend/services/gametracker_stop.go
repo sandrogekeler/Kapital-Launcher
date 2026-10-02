@@ -158,7 +158,8 @@ func (r *gameRun) stopPrism(now time.Time) {
 	pid := r.req.Prism.PID
 	r.markStopped()
 	r.stop.forceAt = now.Add(r.t.stopForce)
-	if err := r.t.os.askClose(pid); err != nil {
+	// The console's windows are hidden, which the OS routine leaves alone.
+	if err := r.t.askPrismClose(r.req.ChapterID, pid); err != nil {
 		slog.Info("stop: prism took no close request, ending it", "chapter", r.req.ChapterID, "pid", pid, "error", err)
 		r.stop.forceAt = now
 		return

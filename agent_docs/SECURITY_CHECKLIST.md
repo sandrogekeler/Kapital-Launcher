@@ -24,6 +24,7 @@ A different count is new surface to classify: add the method to this table.
 | `InstallChapter` | a chapter id | the manifest's instance and pack URL: one instance folder written into the Prism root | S3.3, S4.6 |
 | `LaunchChapter`, `OpenChapterWiki`, `GetServerStatus` | a chapter id | the manifest's instance, URL or address for it; before a launch, the one `PreLaunchCommand` key of the chapter's own `instance.cfg`, only from the launcher's earlier template | S3.3, S3.7, S4.6, S6.1 |
 | `StopGame` | a chapter id | the pid of the Prism the launcher started, or of the game's Java found as its child, for a run the tracker follows: asked to close, then ended | S3.3, S3.9 |
+| `ShowPrismConsole` | a chapter id | the console window of the Prism the launcher started for that chapter, which the launcher's own hold hid: shown and given the foreground | S3.3, S3.7 |
 | `SaveSettings` | a whole `AppSettings` | the settings file, and the executable detection then runs | S3.5 |
 | `ChoosePrismExecutable`, `ChoosePrismRoot` | nothing | a native file or folder picker; the pick is returned, never saved here | S3.5 |
 | `OpenExternal` | a URL | the system browser, web URLs only | S3.4 |
@@ -161,7 +162,7 @@ Verify: `TestOpenInstanceFolderOpensOnlyAnInstalledChaptersFolder`,
 `TestOpenFolderChecksTheDirectoryBeforeTheOSSeesIt`.
 Probe: a chapter id that is a path; an instance folder that is a file or gone.
 
-**S3.7 The launcher touches another process's window only to hide and show the game's own, and Prism's progress dialogs.**
+**S3.7 The launcher touches another process's window only to hide and show the game's own, and Prism's progress dialogs and console.**
 Holds when: the window holder (`gamewindow_windows.go`, #45) hooks show events
 of one pid, the game's Java as the tracker bound it, and acts only on a
 top-level window of class `GLFW30` owned by that pid: `ShowWindow` hide and
@@ -184,6 +185,17 @@ Prism's dialogs do not match and stay visible, which is the safe failure. The
 hold is the same `HoldWindow` as the game's, ends without showing at the
 handover, and shows back what still exists when the run ends, fails or loses
 its Prism first. A Prism that was already open and took the launch is not held.
+The third window is Prism's console (ADR-0012, amendment): a top-level window
+of that same pid whose title begins `Console window for`, hidden by the same
+hook, which is not released at the handover or when the run ends but kept on a
+per-chapter record until the next Play of the chapter, Stop or the launcher
+quitting, and shown only by `ShowPrismConsole` (`ShowWindowAsync`, then
+`SetForegroundWindow`, after the hook has ended). The prefix is matched through
+`GetWindowTextW` over the first 32 characters and is never stored or logged;
+only the launcher's own Prism's windows are held, by pid, and a handle is used
+only while it is still a window of that pid. The held windows get `WM_CLOSE`
+(the one hidden window the close routine of S3.9 reaches) and the Prism they
+belong to is closed as S3.9 closes it, only while a console window is left.
 Verify: `TestHolderHidesAndShowsAGLFWWindow`, `TestHolderLeavesOtherWindowsAlone`,
 `TestHandoverNudgesAFullscreenWindowOnePixelAndBack`,
 `TestHandoverLeavesAWindowedWindowAlone`,
@@ -193,12 +205,21 @@ Verify: `TestHolderHidesAndShowsAGLFWWindow`, `TestHolderLeavesOtherWindowsAlone
 `TestPrismDialogReleaseAtTheHandoverLeavesThemHidden`,
 `TestPrismDialogReleaseOfAFailedRunShowsThemBack`,
 `TestTrackerHoldsPrismsDialogsOnlyWhileTheSplashIsOn`,
-`TestTrackerShowsPrismsDialogsBackWhenTheRunEndsBeforeTheHandover`.
+`TestTrackerShowsPrismsDialogsBackWhenTheRunEndsBeforeTheHandover`;
+`TestIsPrismConsoleTitleMatchesOnlyTheConsole`,
+`TestPrismConsoleHoldLeavesEveryOtherWindowOfPrismVisible`,
+`TestPrismConsoleMatchIsOfThePidAndTheTitlePrefix`,
+`TestPrismConsoleHoldHidesTheConsoleAndKeepsItAfterRelease`,
+`TestTrackerEndsAStartFailedWhenTheConsoleAppearsBeforeTheGameLog`,
+`TestTrackerLeavesAConsoleThatAppearsAfterTheGameLogBeganAlone`,
+`TestTheNextPlayClosesThePrismOnTheOldConsoleAndReplacesTheHold`,
+`TestShutdownEndsAPrismThatIgnoresTheCloseAndReturnsInTime`.
 Probe: a window of another class, or of another process, shown while the hold
 is on; a Prism window titled "Sign in" or "Error" shown during the first ten
-seconds of a launch.
+seconds of a launch; a window titled "Minecraft Console window for" (the prefix
+is at the start, or it is not a match).
 
-**S3.8 The loading card's page is the embedded build, shows nothing from the network, and can ask Go for three things.**
+**S3.8 The loading card's page is the embedded build, shows nothing from the network, and can ask Go for four things.**
 Holds when: the card (#97) is a window of its own with its own webview, and the
 page it loads is `splash.html` of the build embedded in the executable, served
 by the host from `Page.Assets` (`splashhost.AssetsFrom`) at
@@ -209,7 +230,8 @@ file only, by a clean relative path (`fs.ValidPath`, so no `..`, no empty or
 extension on its list; anything else is a 404. The page has no Wails bridge
 and no bound method: it posts a string through the webview's own channel,
 `splashhost.ParseMessage` accepts exactly `{"action":"leave"}`,
-`{"action":"openFolder"}` and `{"action":"copyLog"}` and drops, with a log
+`{"action":"openFolder"}`, `{"action":"copyLog"}` and
+`{"action":"showConsole"}` and drops, with a log
 line, anything else (an unknown action, a body that is not an object, one that
 is long), and a message carries no argument: the chapter is the run's own and
 every path is Go's. A message from a card that has since closed is dropped.
@@ -218,8 +240,9 @@ source, which only ever serves the embedded build. The state Go pushes holds
 the chapter's name and pack version, the game's phase and the outcome of the
 last action (a line count or an error text), and nothing about the player.
 Verify: `TestAssetsRefuseAnythingOutsideTheBuild`,
-`TestParseMessageAcceptsTheThreeActionsOnly`,
-`TestAMessageThatIsNotOneOfTheThreeActionsIsDropped`,
+`TestParseMessageAcceptsTheFourActionsOnly`,
+`TestAMessageThatIsNotOneOfTheFourActionsIsDropped`,
+`TestShowConsoleFromThePageShowsThePrismConsoleOfTheRunsChapter`,
 `TestAMessageFromAnEarlierRunsCardChangesNothing`; `grep -c
 Content-Security-Policy frontend/dist/splash.html` after a build is 1.
 Probe: a page request for `../..`, `%2e%2e`, a backslash path or a `.map` file;
@@ -239,8 +262,11 @@ chapter id resolves through the manifest first (S3.3). On Windows the game's
 Java is ended with `TerminateProcess` on a handle opened with
 `PROCESS_TERMINATE`, and Prism is asked to close with `WM_CLOSE` posted only to
 the visible top-level windows whose owner is its pid (owner and visibility are
-all that is read of a window, never its title), then ended the same way if it
-is still there five seconds later. On macOS it is `SIGTERM` and, five seconds
+all that is read of a window, never its title) and to the console windows the
+launcher's own hold kept hidden (S3.7), then ended the same way if it is still
+there five seconds later. A Prism left on a console is closed this way when the
+chapter's next Play begins and when the launcher quits (bounded), and only while
+a console window of it is left; one with a game running is not touched. On macOS it is `SIGTERM` and, five seconds
 on, `SIGKILL`. The five seconds are judged on the run's steps, not slept on.
 Nothing is started, read or written to do it, and the pid is logged, never a
 window title.

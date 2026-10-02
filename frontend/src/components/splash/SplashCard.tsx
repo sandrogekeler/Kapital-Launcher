@@ -23,10 +23,7 @@ interface Props {
   error?: string
   /** What the launcher knows of a run that ended badly, from Go (ADR-2, sixth amendment). */
   report?: RunReport
-  /**
-   * Shows Prism's console. Offered only when the report says it can be, which
-   * nothing does yet: hiding the console is a later change, and it adds the action.
-   */
+  /** Shows Prism's console, which Go hid. Offered only when the report says it can be shown. */
   onShowConsole?: () => void
 }
 

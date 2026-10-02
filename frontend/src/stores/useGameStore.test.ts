@@ -23,6 +23,7 @@ describe('useGameStore', () => {
   beforeEach(() => {
     useGameStore.setState({ states: {}, stopErrors: {} })
     vi.mocked(App.StopGame).mockReset()
+    vi.mocked(App.ShowPrismConsole).mockReset()
     vi.mocked(App.GetGameStates).mockReset()
     vi.mocked(Runtime.EventsOn).mockReset()
     vi.mocked(Runtime.EventsOff).mockReset()
@@ -125,6 +126,17 @@ describe('useGameStore', () => {
     // Nothing of the log is held by the store.
     expect(useGameStore.getState().states).toBe(before)
     expect(JSON.stringify(useGameStore.getState())).not.toContain('line')
+  })
+
+  it("shows Prism's console through the binding, and has none to show without a bridge", async () => {
+    await expect(useGameStore.getState().showConsole('frangfurd')).resolves.toBe(false)
+    expect(App.ShowPrismConsole).not.toHaveBeenCalled()
+    attachBridge()
+    vi.mocked(App.ShowPrismConsole).mockResolvedValue(true)
+    await expect(useGameStore.getState().showConsole('frangfurd')).resolves.toBe(true)
+    expect(App.ShowPrismConsole).toHaveBeenCalledExactlyOnceWith('frangfurd')
+    vi.mocked(App.ShowPrismConsole).mockRejectedValue(new Error('no chapter "x"'))
+    await expect(useGameStore.getState().showConsole('x')).rejects.toThrow('no chapter')
   })
 
   it('degrades a run report to null without a bridge, and rethrows a real refusal', async () => {

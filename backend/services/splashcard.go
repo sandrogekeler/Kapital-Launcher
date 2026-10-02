@@ -21,7 +21,7 @@ type CardLauncher interface {
 	Unminimise()
 }
 
-// CardActions are the two things the page can ask Go to do besides leaving,
+// CardActions are the three things the page can ask Go to do besides leaving,
 // each the action the launcher's own window has.
 type CardActions struct {
 	// OpenFolder shows the chapter's instance folder.
@@ -29,6 +29,9 @@ type CardActions struct {
 	// CopyLog puts the redacted tail of the log on the clipboard and returns
 	// how many lines went.
 	CopyLog func() (int, error)
+	// ShowConsole shows the console of the chapter's Prism, which the launcher
+	// hid, and says whether there was one to show (splashcard_console.go).
+	ShowConsole func(chapterID string) (bool, error)
 }
 
 // CardConfig is what a SplashCard is made from.
@@ -391,9 +394,9 @@ func (c *SplashCard) up(run *cardRun) bool {
 	return c.live(run)
 }
 
-// handle is a message from the page: leave, or one of the two actions, whose
+// handle is a message from the page: leave, or one of the three actions, whose
 // outcome goes back into the card's state. Anything the page says that is not
-// one of the three is dropped by ParseMessage. The chapter is the run's own.
+// one of the four is dropped by ParseMessage. The chapter is the run's own.
 func (c *SplashCard) handle(run *cardRun, msg string) {
 	action, ok := splashhost.ParseMessage(msg)
 	if !ok || !c.up(run) {
@@ -410,6 +413,8 @@ func (c *SplashCard) handle(run *cardRun, msg string) {
 				run.errText = err.Error()
 			}
 		})
+	case splashhost.ActionShowConsole:
+		c.showConsole(run)
 	case splashhost.ActionCopyLog:
 		lines, err := c.cfg.Actions.CopyLog()
 		c.report(run, func() {

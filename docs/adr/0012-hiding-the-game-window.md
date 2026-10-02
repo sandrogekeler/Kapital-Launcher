@@ -71,3 +71,52 @@ launcher logged its own hide times.
   handover, the game may open behind other windows.
 - Until #43 exists the setting is a developer one: with it on and no splash, a
   player sees nothing for about a minute.
+
+## Amendment, 2026-10-02: Prism's console, hidden, kept and shown on request
+
+When a start fails, Prism opens its console window with the error
+(`ShowConsoleOnError`, its default). The author wants the launcher's own view
+of the failure (the run report, ADR-2 sixth amendment) in its place, with a way
+to open Prism's console from it. The console is not thrown away: it holds what
+exists nowhere else, the pre-launch output (confirmed in Prism 11.1.1's
+source: the launch log is never written to a file).
+
+- **Hidden with the same hold, kept past the run.** `HoldPrismConsole`
+  (`gamewindow_console_windows.go`) is the dialogs' hold (`startHolder`) on the
+  launcher's own Prism's pid, started with it and on the same condition, the
+  splash being on, and matching a top-level window whose title begins `Console
+  window for` (seen on a real PC, Prism 11.1.1: `Console window for <instance>
+  - Prism Launcher 11.1.1`). Unlike the dialogs' hold it is not released at the
+  handover or when the run ends: Prism opens the console at about the moment
+  the run ends (`LaunchController::onFailed` shows it, then logs the failure),
+  so a hook that stopped with the run could miss it. It lives on a per-chapter
+  record in the tracker, and its windows are never shown back automatically.
+- **Shown on request.** The run report says `consoleAvailable` when the hold
+  has a window left on a Prism that is still running, and the card and the
+  launcher's panel offer "Show Prism's console": the bound `ShowPrismConsole`
+  and the card's fourth action, `showConsole`. Showing ends the hook first, or
+  it would hide the window again as it is shown, then shows the held windows
+  and gives them the foreground.
+- **A second failure signal.** A console hidden while the run is still in
+  `starting` with no game log of its own is a launch step having failed, and
+  ends the run `failed`, reason `launch`, after a second for Prism's own log to
+  say which (ADR-2 fifth amendment, ADR-11: the line, when it is read, still
+  gives the reason). One that appears once the game's log is fresh is the
+  player's own (`ShowConsole=true` in their Prism) and changes nothing.
+- **Prism's lifetime is the launcher's, until the next Play, Stop or quit.** A
+  Prism that has a hidden or shown console is alive only because of it, and is
+  closed when the player presses Stop, when the next Play of that chapter begins
+  (before the new Prism starts, or it would hand its launch to the old one) and
+  when the launcher quits (bounded, so quitting never waits long). Closing is the
+  Stop routine's: `WM_CLOSE`, then ended after five seconds if it is still
+  there. The console's windows are hidden, which the routine's "visible windows
+  only" rule would skip, so the hold's own handles get the `WM_CLOSE` as well;
+  Prism exits 0 once none is left. A Prism with no console left, say one with a
+  game running, is left alone. The player closing the shown console ends Prism
+  too, which is Prism's own behaviour.
+- **What is read.** The title's first 32 characters, through `GetWindowTextW`,
+  to match the prefix: never kept, never logged. Only the launcher's own
+  Prism's windows, by pid. A Prism in another language matches nothing and shows
+  its console as it always did, the safe failure.
+- **Windows only.** macOS has no window holder, so Prism's console appears as
+  Prism makes it and the view has no button for it.

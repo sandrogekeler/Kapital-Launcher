@@ -27,6 +27,19 @@ func isPrismDialogTitle(title string) bool {
 	return strings.HasPrefix(title, prismDialogTitlePrefix)
 }
 
+// prismConsoleTitlePrefix begins the title of Prism's console window ("Console
+// window for <instance name> - Prism Launcher 11.1.1", seen on a real PC with
+// Prism 11.1.1, 2026-10-02). Prism opens it on a failed start, with the error,
+// and the launcher keeps it hidden to show on request. The same safe failure as
+// the dialogs': a Prism in another language matches nothing and its console
+// shows as Prism makes it.
+const prismConsoleTitlePrefix = "Console window for"
+
+// isPrismConsoleTitle is whether a window title is a Prism console's.
+func isPrismConsoleTitle(title string) bool {
+	return strings.HasPrefix(title, prismConsoleTitlePrefix)
+}
+
 // holdStartTimeout is how long starting to hold a window may take before the
 // run goes on without it. The hook is installed in milliseconds; the bound is
 // so a stuck call cannot stall the tracker.
@@ -94,6 +107,30 @@ type DialogHolder interface {
 	// handover they are transient and Prism closes them itself. It is safe to
 	// call twice: the second call returns the first one's report.
 	Release(show bool) DialogReport
+}
+
+// ConsoleHolder keeps the launcher's own Prism's console window hidden, and
+// kept, for the launcher's failure view to show on request (ADR-0012,
+// amendment). Unlike the other holders it is not released when the run ends:
+// its windows are the only place Prism's pre-launch output exists (the launch
+// log is never written to a file), so they stay until the next Play of the
+// chapter, Stop or the launcher quitting. It is the seam the tracker is tested
+// through; HoldPrismConsole makes the real one.
+type ConsoleHolder interface {
+	// Hides is how many console windows were hidden so far: a counter the run
+	// reads, so a console appearing before the game's log is a failed start.
+	Hides() int
+	// Held is how many of the windows it hid still exist.
+	Held() int
+	// Show ends the hold, so nothing hides a window again, shows the held
+	// windows that still exist and gives the foreground to them. False when none
+	// is left. Safe to call again.
+	Show() bool
+	// Close posts WM_CLOSE to the held windows that still exist, hidden or not,
+	// and returns how many it reached. Prism exits once none is left.
+	Close() int
+	// Release ends the hook and shows nothing. Safe to call twice.
+	Release()
 }
 
 // screenRect is a rectangle in screen coordinates, as the OS reports one.

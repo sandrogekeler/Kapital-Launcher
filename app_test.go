@@ -71,6 +71,34 @@ func TestStopGameEndsAFollowedRunAndReturnsItsState(t *testing.T) {
 	}
 }
 
+// ShowPrismConsole resolves the chapter through the manifest, and a chapter with
+// no hidden console is false and no error: the button was offered for one that
+// has since gone.
+func TestShowPrismConsoleRefusesAnUnknownChapterAndSaysFalseWithNone(t *testing.T) {
+	app := newTestApp(t)
+	if shown, err := app.ShowPrismConsole("atlantis"); shown || err == nil || !strings.Contains(err.Error(), "no chapter") {
+		t.Fatalf("got %v, %v", shown, err)
+	}
+	if shown, err := app.ShowPrismConsole("frangfurd"); shown || err != nil {
+		t.Fatalf("got %v, %v", shown, err)
+	}
+}
+
+// Quitting with no Prism on a console returns at once.
+func TestShutdownWithNoConsoleHeldReturnsAtOnce(t *testing.T) {
+	app := newTestApp(t)
+	done := make(chan struct{})
+	go func() {
+		app.shutdown(t.Context())
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("shutdown did not return")
+	}
+}
+
 // A start that was waiting on the loading card when the player quit must not
 // go on to run Prism: the process is exiting, and a Prism started now would
 // outlive the launcher that is meant to follow it.
