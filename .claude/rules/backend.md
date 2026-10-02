@@ -26,8 +26,12 @@ function that builds the argument array, and `Launch` starts Prism and returns
 its process. The only other processes are macOS's `codesign`, with fixed
 arguments, in `verify_darwin.go`, and macOS's `open`, with the absolute path of
 a folder that exists as its only argument, in `openfolder_darwin.go`. Windows
-opens a folder with `ShellExecute`, an API call and not a process. There is no
-shell anywhere, and the `shell never sees a command string` invariant holds it.
+opens a folder with `ShellExecute`, an API call and not a process. Copying the
+log (`CopyRedactedLog`) goes through Wails' `ClipboardSetText`, which on macOS
+runs `pbcopy` with no argument and the redacted text on its stdin
+(`internal/frontend/desktop/darwin/clipboard.go` in Wails): a process of
+Wails' and not one this app starts. There is no shell anywhere, and the `shell
+never sees a command string` invariant holds it.
 
 The game tracker (`gametracker.go`, `gameproc_*.go`) follows a launched game:
 it looks up Prism's child processes (pid, parent pid and name, nothing else)
