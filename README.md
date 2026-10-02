@@ -37,6 +37,7 @@ cd frontend && pnpm dev
 | `data/launcher.json` | The manifest built into the app |
 | `backend/` | Go: models, services (Prism, settings, logging, redaction), generated design values |
 | `frontend/` | React, TypeScript, Vite, Tailwind |
+| `docs/PACKS.md` | How a pack is authored, published, installed, synced and updated, in plain words |
 | `docs/HANDOFF.md` | The brief this project was started from |
 | `docs/HANDOVER.md` | Where things stand, for the next session |
 | `docs/adr/` | Architecture decisions |
