@@ -59,8 +59,9 @@ chapter facts, is a change to this page in the same pull request.
 | Wiki | `data/launcher.json` `wiki.baseUrl` | Never null; the build fails |
 
 `vite.config.js` fills them in at build time and refuses anything that is not
-https. Both start `null`: the repository is private and has no release yet.
-When they exist, set:
+https. Download stays `null` until there is a release to point at; GitHub
+was set on 2026-10-02, the repository being public. When the release exists,
+set:
 
 ```json
 {
