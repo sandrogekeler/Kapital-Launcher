@@ -51,6 +51,11 @@ static const int kMaxEvalRetries = 50;
 @property (nonatomic, strong) WKWebView *webView;
 // The newest state not yet delivered, and whether the page has loaded to take it.
 @property (nonatomic, copy) NSString *pending;
+// The newest state Go has pushed, kept after it is delivered, for a page that
+// has to be loaded again and starts from nothing.
+@property (nonatomic, copy) NSString *latest;
+// The page's address, to load it again when there is nothing to reload.
+@property (nonatomic, strong) NSURL *pageURL;
 @property (nonatomic) BOOL loaded;
 @property (nonatomic) BOOL reported;
 @property (nonatomic) BOOL closed;
@@ -94,6 +99,7 @@ static const int kMaxEvalRetries = 50;
 - (void)teardown {
     self.closed = YES;
     self.pending = nil;
+    self.latest = nil;
     [self.webView stopLoading];
     self.webView.navigationDelegate = nil;
     [self.webView.configuration.userContentController removeScriptMessageHandlerForName:kMessageHandlerName];
@@ -186,9 +192,23 @@ static const int kMaxEvalRetries = 50;
 }
 
 // The page's process dying before the first load ends it would otherwise leave
-// Open waiting out its timeout.
+// Open waiting out its timeout. After it, the card would stay blank for the rest
+// of the run, so the page is loaded again and the newest state goes back in once
+// it has: didFinishNavigation flushes pending, as it does for the first load.
+// https://developer.apple.com/documentation/webkit/wknavigationdelegate/webviewwebcontentprocessdidterminate(_:)
 - (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView {
-    [self report:NO message:@"the page's process ended"];
+    if (self.closed) return;
+    if (!self.loaded) {
+        [self report:NO message:@"the page's process ended"];
+        return;
+    }
+    self.loaded = NO;
+    self.pending = self.latest;
+    self.retries = 0;
+    // reload answers nil when there is no page to reload, which a terminated
+    // process can leave; the page is then requested again.
+    // https://developer.apple.com/documentation/webkit/wkwebview/reload()
+    if ([webView reload] == nil) [webView loadRequest:[NSURLRequest requestWithURL:self.pageURL]];
 }
 
 @end
@@ -268,6 +288,7 @@ static KSplash *makeSplash(uintptr_t handle, NSRect frame, NSColor *colour, NSSt
     KSplash *splash = [[KSplash alloc] init];
     splash.handle = handle;
     splash.scheme = scheme;
+    splash.pageURL = url;
 
     KSplashWindow *window = [[KSplashWindow alloc] initWithContentRect:frame
                                                              styleMask:NSWindowStyleMaskBorderless
@@ -357,6 +378,7 @@ void splashEval(void *ref, const char *stateJSON) {
     dispatch_async(dispatch_get_main_queue(), ^{
         if (splash.closed) return;
         splash.pending = state;
+        splash.latest = state;
         splash.retries = 0;
         [splash flush];
     });
