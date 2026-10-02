@@ -20,15 +20,13 @@ wails dev                    # Wails CLI v2.16.0, the version go.mod names
 deletes a branch when its pull request merges, which also retargets a pull
 request stacked on it.
 
-## Open pull requests
+## The pull requests of 2026-10-02
 
-Everything up to #104 is merged and `main` is green (CI, CodeQL, Scorecard,
-aislop). The six below were opened on 2026-10-02 from one cloud session; each
-is one concern, built by a Sonnet agent from a written brief and reviewed by
-the session before it was opened. None has been run on real hardware. Merge
-order does not matter: they touch different files, except that #106, #109 and
-#110 all touch `app.go` or `app_splash.go` in different places, so a later one
-may need a trivial base merge.
+The six below were opened from one cloud session; each is one concern, built
+by a Sonnet agent from a written brief and reviewed by the session before it
+was opened. #105 to #109 merged the same day and `main` is green (CI, CodeQL,
+Scorecard, aislop, Build); #110 took a base merge after #106 and #109 and was
+still open with this handover. None has been run on real hardware.
 
 | PR | What | Verified | Still to see |
 |---|---|---|---|
@@ -66,7 +64,7 @@ call.
 
 ## Work items, in the order agreed
 
-1. **Merge the six pull requests**, then run the first prerelease from the
+1. **Merge #110 and #111**, then run the first prerelease from the
    Actions tab (Build, "Run workflow", `v0.1.0-alpha.1`). That is the test of
    the release half of #107, and it gives the iMac a universal bundle for #30
    without building there. Then set `site/links.json`'s `download`.
