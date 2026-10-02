@@ -46,7 +46,7 @@ the scaffold changed the picture.
       instance, all three chapters
 - [ ] Behaviour when Prism is already running (single-instance handling is
       Prism's; observe what `--launch` does then)
-- [ ] Open instance folder action
+- [x] Open instance folder action, from a chapter's pen (#85, 2026-10-01)
 
 ## Milestone 4: Packs
 
@@ -54,13 +54,18 @@ the scaffold changed the picture.
       a Worker with static assets serves only the chapter folders of
       `kapital-packs` at `kapital-packs.alessandrogekeler.workers.dev` (#25,
       2026-10-01; what is public was decided on #35)
-- [ ] Fresh install: Install writes the `kapital-<id>` instance itself (#22,
-      #24; `-I` cannot fix the folder name, ADR-2 amendment). Built; left is a
-      real Prism opening it and the first Play installing the pack
-- [ ] Day-to-day sync: pre-launch command built locally from a template,
+- [x] Fresh install: Install writes the `kapital-<id>` instance itself (#22,
+      #24; `-I` cannot fix the folder name, ADR-2 amendment). Seen end to end
+      on a clean new-player run (2026-09-30: managed Prism, Install, Play) and
+      from the hosted pack headless (#101, 2026-10-01)
+- [x] Day-to-day sync: pre-launch command built locally from a template,
       `"$INST_JAVA" -jar packwiz-installer-bootstrap.jar <pack.toml>`, never
-      from the manifest
-- [ ] Verify every download by hash; refuse a mismatch
+      from the manifest (`preLaunchCommand` in `packinstance.go`, ADR-3;
+      headless since #95)
+- [x] Verify every download by hash; refuse a mismatch: packwiz-installer
+      checks every indexed file against `index.toml` and refuses a changed one
+      (seen 2026-09-30, the comment on #25); the two installer jars are pinned
+      by size and SHA-256 (#22)
 - [x] Update pack button and sync state line: "Update and play" in Play's place
       and a Version row when the synced pack.toml's hash differs from the
       source's (#71); the sync itself is still the pre-launch step
@@ -97,11 +102,13 @@ What is left:
 ## Milestone 7: Polish
 
 - [ ] Changelog panel fed by the manifest
-- [ ] Copy redacted log action (`services.Redactor`)
-- [ ] About screen: version, disclaimer, licences (fonts, lucide, Prism's GPL notice)
-- [ ] Forward frontend render errors to the Go log
-- [ ] Release workflow with attested artefacts for Windows and macOS; code
-      signing decision (ADR-6)
+- [x] Copy redacted log action (`services.Redactor`, #84)
+- [x] About section on the settings screen: version, disclaimer, licences (#87)
+- [x] Forward frontend render errors to the Go log (#83)
+- [x] Release workflow with attested artefacts for Windows and macOS; code
+      signing decision (ADR-6): `.github/workflows/build.yml` (#107) builds both
+      on every pull request and cuts an attested release from the Actions tab;
+      the first prerelease dispatch is still to run
 - [x] Create the labels in `.github/labels.yml` on the repository (`scripts/sync-labels.py`),
       done 2026-09-29
 - [x] Vendor CodeQL and Scorecard from Konnekt (Kollektiv has neither), possible
@@ -117,8 +124,11 @@ download.
       strict CSP; built in CI
 - [x] The launcher window on the page, cycling through the three chapters on
       CSS animations, done 2026-10-01
-- [ ] Connect a Cloudflare Pages project to the repository (`site/README.md`, Hosting)
-- [ ] GitHub link: the repository is public since 2026-09-30
+- [x] Connect a Cloudflare Pages project to the repository (`site/README.md`,
+      Hosting): `kapital-launcher` exists and deploys every pull request; its
+      build watch paths are #29
+- [x] GitHub link: the repository is public since 2026-09-30 (`site/links.json`,
+      2026-10-02)
 - [ ] Download link, once the release workflow publishes a release
 - [ ] A custom domain, if one is wanted
 
