@@ -295,6 +295,14 @@ func (a *App) LaunchChapter(chapterID string) error {
 	// is held until the handover (#43); a card that could not open holds
 	// nothing, because a hidden game with no card would show nothing at all.
 	splash := a.beginSplash(chapter, settings)
+	// The window may have been closed while the card opened, which can take a
+	// while: never start Prism from a process that is exiting.
+	if a.trackContext().Err() != nil {
+		if splash {
+			a.splash.Leave()
+		}
+		return errors.New("the launcher is closing")
+	}
 	startedAt := time.Now()
 	proc, err := a.prism.Launch(a.context(), engine, req)
 	if err != nil {

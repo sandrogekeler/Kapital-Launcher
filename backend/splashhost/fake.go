@@ -1,12 +1,22 @@
 package splashhost
 
-import "sync"
+import (
+	"errors"
+	"sync"
+)
 
 // Fake is a Host that records what it is asked, for tests of what drives it.
-// It opens at once unless OpenErr is set.
+// It opens at once unless OpenErr or Hold is set.
 type Fake struct {
 	// OpenErr, when set, is what Open returns.
 	OpenErr error
+	// Hold, when set, makes Open wait, as a real host's does for the page,
+	// until Hold is closed (the page has loaded) or Close is called (the wait
+	// ends with ErrClosedWhileOpening, nothing opened).
+	Hold chan struct{}
+	// Entered, when set, is closed once Open is waiting on Hold, so a test
+	// knows the call is in flight.
+	Entered chan struct{}
 
 	mu      sync.Mutex
 	opens   []Rect
@@ -16,6 +26,20 @@ type Fake struct {
 	open    bool
 	// log is every call in order: "open", "update", "close".
 	log []string
+	// done is closed by Close, which ends an Open that is still waiting.
+	done     chan struct{}
+	doneOnce sync.Once
+}
+
+// ErrClosedWhileOpening is what a held Open returns when Close ends its wait.
+var ErrClosedWhileOpening = errors.New("the window was closed while it opened")
+
+// closed is the channel Close closes; made on first use, under mu.
+func (f *Fake) closed() chan struct{} {
+	if f.done == nil {
+		f.done = make(chan struct{})
+	}
+	return f.done
 }
 
 // Open records the rect and the page.
@@ -23,6 +47,23 @@ func (f *Fake) Open(rect Rect, page Page) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.log = append(f.log, "open")
+	if f.Hold != nil {
+		done := f.closed()
+		f.mu.Unlock()
+		if f.Entered != nil {
+			close(f.Entered)
+		}
+		var err error
+		select {
+		case <-f.Hold:
+		case <-done:
+			err = ErrClosedWhileOpening
+		}
+		f.mu.Lock()
+		if err != nil {
+			return err
+		}
+	}
 	if f.OpenErr != nil {
 		return f.OpenErr
 	}
@@ -48,6 +89,7 @@ func (f *Fake) Close() {
 	f.log = append(f.log, "close")
 	f.closes++
 	f.open = false
+	f.doneOnce.Do(func() { close(f.closed()) })
 }
 
 // Opens is the rects Open was called with, when it succeeded.

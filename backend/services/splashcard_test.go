@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
+	"sync"
 	"testing"
+	"time"
 
 	"kapital/backend/design"
 	"kapital/backend/models"
@@ -40,6 +42,9 @@ type cardFixture struct {
 	copyN    int
 	copyErr  error
 	changed  []string
+	// hold and entered, when set, are given to each host made: its Open waits
+	// on hold and closes entered once it is waiting.
+	hold, entered chan struct{}
 }
 
 func newCardFixture(goos string) *cardFixture {
@@ -49,7 +54,7 @@ func newCardFixture(goos string) *cardFixture {
 		GOOS:     goos,
 		Launcher: f.launcher,
 		NewHost: func() splashhost.Host {
-			h := &splashhost.Fake{OpenErr: f.openErr}
+			h := &splashhost.Fake{OpenErr: f.openErr, Hold: f.hold, Entered: f.entered}
 			f.hosts = append(f.hosts, h)
 			return h
 		},
@@ -521,6 +526,84 @@ func TestShutdownClosesACardThatIsStillUp(t *testing.T) {
 	}
 	if f.unminimises() != 0 {
 		t.Fatal("the app is quitting: nothing to restore")
+	}
+}
+
+// Quitting while the card is still opening (Open waits for the page, up to
+// 15 s) must not wait for it: Shutdown runs on the main thread, after the main
+// loop has returned, where the page's own load can no longer be delivered. It
+// reaches the opening host without Begin's help, and its Close ends the wait.
+func TestShutdownWhileTheCardIsOpeningDoesNotWaitForThePage(t *testing.T) {
+	f := newCardFixture("windows")
+	f.hold, f.entered = make(chan struct{}), make(chan struct{})
+	t.Cleanup(func() { close(f.hold) })
+	opened := make(chan bool, 1)
+	go func() {
+		chapter := models.Chapter{ID: "frangfurd", Name: "Frangfurd"}
+		opened <- f.card.Begin(chapter, "dark")
+	}()
+	<-f.entered
+	host := f.hosts[0]
+
+	// A card that is still opening is not up, and a second start is refused.
+	if f.card.Showing("frangfurd") {
+		t.Fatal("the page has not loaded: there is no card to show yet")
+	}
+	if _, left := f.card.Leave(); left {
+		t.Fatal("there is nothing to leave yet")
+	}
+	if f.card.Observe(game(models.GamePhaseResources)) {
+		t.Fatal("no card to follow the game on yet")
+	}
+	if f.card.Begin(models.Chapter{ID: "luxemburg", Name: "Luxemburg"}, "dark") {
+		t.Fatal("one card at a time")
+	}
+
+	shut := make(chan struct{})
+	go func() { f.card.Shutdown(); close(shut) }()
+	select {
+	case <-shut:
+	case <-time.After(time.Second):
+		t.Fatal("Shutdown waited for the card to open")
+	}
+	select {
+	case ok := <-opened:
+		if ok {
+			t.Fatal("a card shut down while it opened is not up")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Begin did not return once the host was closed")
+	}
+	if host.Closes() == 0 || host.IsOpen() || f.card.Showing("frangfurd") {
+		t.Fatalf("the window must be gone: %v", host.Calls())
+	}
+	if len(f.launcher.calls) != 0 {
+		t.Fatalf("the launcher was not asked to step aside for a card that never was: %v", f.launcher.calls)
+	}
+}
+
+// The game ending and the player leaving at the same moment close the card
+// once, restore the launcher once and deadlock nowhere, whichever wins.
+func TestTheGameClosingRacingALeaveClosesTheCardOnce(t *testing.T) {
+	for range 50 {
+		f := newCardFixture("windows")
+		f.begin(t)
+		host := f.host()
+
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() { defer wg.Done(); f.card.Observe(game(models.GamePhaseClosed)) }()
+		go func() { defer wg.Done(); f.card.Leave() }()
+		done := make(chan struct{})
+		go func() { wg.Wait(); close(done) }()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Fatal("deadlock")
+		}
+		if host.Closes() != 1 || f.unminimises() != 1 || f.card.Showing("frangfurd") {
+			t.Fatalf("%v %v", host.Calls(), f.launcher.calls)
+		}
 	}
 }
 
