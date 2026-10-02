@@ -268,7 +268,11 @@ func TestGetSettingsReportsWhatTheSplashComesToOnThisOS(t *testing.T) {
 }
 
 // windowLog records the launcher window calls a test's stand-in receives.
-type windowLog struct{ calls []string }
+type windowLog struct {
+	calls []string
+	// fullscreen is what the window answers to isFullscreen.
+	fullscreen bool
+}
 
 func (l *windowLog) record(name string) func(context.Context) {
 	return func(context.Context) { l.calls = append(l.calls, name) }
@@ -282,6 +286,7 @@ func stubWindow(app *App, showAfterUnminimise bool) *windowLog {
 		minimise:            log.record("minimise"),
 		unminimise:          log.record("unminimise"),
 		show:                log.record("show"),
+		isFullscreen:        func(context.Context) bool { return log.fullscreen },
 		showAfterUnminimise: showAfterUnminimise,
 	}
 	return log
@@ -312,5 +317,26 @@ func TestTheLauncherIsShownAfterItIsUnminimisedWhereTheSystemNeedsIt(t *testing.
 func TestTheRealWindowNeedsShowOnlyOnMacOS(t *testing.T) {
 	if got := wailsWindowCalls().showAfterUnminimise; got != (runtime.GOOS == "darwin") {
 		t.Fatalf("showAfterUnminimise is %v on %s", got, runtime.GOOS)
+	}
+}
+
+// A full screen launcher is left where it is: miniaturize: does nothing to one
+// on macOS, and the card is the thing in front. It holds on every OS.
+func TestAFullScreenLauncherIsNeitherMinimisedNorUnminimised(t *testing.T) {
+	app := newTestApp(t)
+	log := stubWindow(app, true)
+	log.fullscreen = true
+	w := launcherWindow{app}
+	w.Minimise()
+	w.Unminimise()
+	if len(log.calls) != 0 {
+		t.Fatalf("a full screen window was touched: %v", log.calls)
+	}
+
+	log.fullscreen = false
+	w.Minimise()
+	w.Unminimise()
+	if want := []string{"minimise", "unminimise", "show"}; !reflect.DeepEqual(log.calls, want) {
+		t.Fatalf("got %v, want %v", log.calls, want)
 	}
 }

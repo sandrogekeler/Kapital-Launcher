@@ -278,6 +278,14 @@ static KSplash *makeSplash(uintptr_t handle, NSRect frame, NSColor *colour, NSSt
     [window setOpaque:YES];
     [window setHasShadow:YES];
     [window setBackgroundColor:colour];
+    // A launcher in native full screen has a Space of its own, and a plain
+    // window would open on another one. FullScreenAuxiliary lets the card
+    // display on the same Space as a full screen window; MoveToActiveSpace
+    // brings it to the Space that is active instead of switching away. The two
+    // are in different groups of the options, so they combine.
+    // https://developer.apple.com/documentation/appkit/nswindow/collectionbehavior-swift.struct
+    [window setCollectionBehavior:NSWindowCollectionBehaviorFullScreenAuxiliary |
+                                  NSWindowCollectionBehaviorMoveToActiveSpace];
 
     WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
     // The default data store is the persistent one the launcher's own webview

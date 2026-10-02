@@ -77,6 +77,8 @@ type windowCalls struct {
 	minimise   func(context.Context)
 	unminimise func(context.Context)
 	show       func(context.Context)
+	// isFullscreen is whether the window is in full screen.
+	isFullscreen func(context.Context) bool
 	// showAfterUnminimise is whether bringing the window back also needs show.
 	showAfterUnminimise bool
 }
@@ -92,6 +94,7 @@ func wailsWindowCalls() windowCalls {
 		minimise:            wailsrt.WindowMinimise,
 		unminimise:          wailsrt.WindowUnminimise,
 		show:                wailsrt.WindowShow,
+		isFullscreen:        wailsrt.WindowIsFullscreen,
 		showAfterUnminimise: runtime.GOOS == "darwin",
 	}
 }
@@ -110,14 +113,20 @@ func (w launcherWindow) Frame() (x, y, width, height int) {
 	return x, y, width, height
 }
 
+// Minimise and Unminimise leave a full screen launcher alone, on every OS. On
+// macOS miniaturize: does nothing to a full screen window, and the card, which
+// opens over the launcher's Space (host_darwin.m), is what the player sees; a
+// full screen launcher simply stays under it and is still there when the game
+// ends.
 func (w launcherWindow) Minimise() {
-	if w.a.ctx != nil {
-		w.a.window.minimise(w.a.ctx)
+	if w.a.ctx == nil || w.a.window.isFullscreen(w.a.ctx) {
+		return
 	}
+	w.a.window.minimise(w.a.ctx)
 }
 
 func (w launcherWindow) Unminimise() {
-	if w.a.ctx == nil {
+	if w.a.ctx == nil || w.a.window.isFullscreen(w.a.ctx) {
 		return
 	}
 	w.a.window.unminimise(w.a.ctx)
