@@ -10,7 +10,7 @@ The decision record is `docs/adr/0009-download-site.md`.
 Nothing visual is defined here. `src/style.css` imports the app's generated
 `frontend/src/styles/tokens.css` and its shared `frontend/src/styles/base.css`
 (fonts, base rules, scrims), and `index.html` uses the
-Kapital Launcher logo (the author's two-line artwork, scaled to 800px wide)
+Kapital Launcher logo (the author's one-line artwork, the file the app's header bar draws, 560px wide)
 and a screenshot from `frontend/src/assets/`. The logo is the page's `h1`,
 its alt text the heading. The buttons carry the
 classes of the app's `Button` variants: `play` for Download, `ghost` for the
