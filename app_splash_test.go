@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"sync"
 	"testing"
@@ -263,5 +264,53 @@ func TestGetSettingsReportsWhatTheSplashComesToOnThisOS(t *testing.T) {
 	got, err = app.GetSettings()
 	if err != nil || got.LoadingSplashOn || got.LoadingSplashAvailable != available {
 		t.Fatalf("explicitly off: %v %+v", err, got)
+	}
+}
+
+// windowLog records the launcher window calls a test's stand-in receives.
+type windowLog struct{ calls []string }
+
+func (l *windowLog) record(name string) func(context.Context) {
+	return func(context.Context) { l.calls = append(l.calls, name) }
+}
+
+// stubWindow gives an app with a context a window that only records.
+func stubWindow(app *App, showAfterUnminimise bool) *windowLog {
+	log := &windowLog{}
+	app.ctx = context.Background()
+	app.window = windowCalls{
+		minimise:            log.record("minimise"),
+		unminimise:          log.record("unminimise"),
+		show:                log.record("show"),
+		showAfterUnminimise: showAfterUnminimise,
+	}
+	return log
+}
+
+// On macOS deminiaturize: alone leaves the launcher behind the other windows
+// of an app that is no longer active, so it is shown too, after it.
+func TestTheLauncherIsShownAfterItIsUnminimisedWhereTheSystemNeedsIt(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		show bool
+		want []string
+	}{
+		{"needs show", true, []string{"unminimise", "show"}},
+		{"does not", false, []string{"unminimise"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			app := newTestApp(t)
+			log := stubWindow(app, tc.show)
+			launcherWindow{app}.Unminimise()
+			if !reflect.DeepEqual(log.calls, tc.want) {
+				t.Fatalf("got %v, want %v", log.calls, tc.want)
+			}
+		})
+	}
+}
+
+func TestTheRealWindowNeedsShowOnlyOnMacOS(t *testing.T) {
+	if got := wailsWindowCalls().showAfterUnminimise; got != (runtime.GOOS == "darwin") {
+		t.Fatalf("showAfterUnminimise is %v on %s", got, runtime.GOOS)
 	}
 }
