@@ -41,6 +41,28 @@ Scorecard, aislop, Build); #110 followed after a base merge over #106 and
 pack's open item; the pack version stays 1.0.0 and a 1.0.1 is the author's
 call.
 
+### The second round, the same day
+
+After #106 merged the author tried a start with `packwiz serve` down and the
+card still waited: Prism's own `qtlogging.ini` silences the `launcher.task`
+category, Critical included, so the line #106 waits for is never written by a
+stock Prism. The same session then built, from the author's three asks and
+two aesthetic fixes, five more pull requests, all merged the same afternoon,
+and a sixth for the test that turned main red after the last of them:
+
+| PR | What | Verified | Still to see on the PC |
+|---|---|---|---|
+| #114 | The managed root gets a copy of Prism's `qtlogging.ini` plus `launcher.task.critical=true`, so #106's line is written | The author: a failed sync now ends the start at once | The first Play of a Prism updated past 11.1.1 (the copy is of the installed version's file) |
+| #113 | Server status back on the right of the action bar, the game's status beside Play | The author, on the real bar | |
+| #115 | Play becomes Stop during a run (one click while starting, "Stop the game?" once a world may be up); `GameTracker.Stop` ends only the game's Java or the launcher's Prism, by pid | Rig tests with fake processes | `TerminateProcess`, `WM_CLOSE`, Prism exiting 0 on it; `SIGTERM` on the iMac |
+| #116 | The run report: reason, timeline, redacted end of the game log and crash report name, on the card and behind Details beside Play; Copy log reports on the button; failure lines are one sentence (ADR-2 sixth amendment) | Tests on a redaction fixture; the bundle is at 89.6 of 90 KB gzip | The card's layout at 405 px with a real crash; a real NeoForge crash log through the redactor |
+| #117 | Prism's console hidden on a failure (Windows, splash on), kept, shown from the report on request; its appearance is a second failure signal; the Prism is closed at the next Play, Stop or quit | Rig tests with a fake holder; `GOOS=windows go vet` | The title prefix `Console window for`, the show and foreground, `WM_CLOSE` to a hidden window; the real-window test in `gamewindow_console_windows_test.go` |
+| #119 | The console hold's sweep test waits on the hold's own count: it read the count a moment early under coverage instrumentation on the Windows runner, which left main red after #117 (`go test` green, `coverage-floor` red, the same test) | `GOOS=windows go vet`; the Windows `backend` job on the pull request is the proof | |
+
+Known limit from #117 (in ADR-12): a player's own Prism with `ShowConsole=true`
+and the splash on reads as a failed start, because its console appears during
+`starting`. The managed root seeds it off.
+
 ## Done on 2026-10-01 and 2026-10-02
 
 - **#97, merged (#102).** The loading card is a borderless window of its own
@@ -64,7 +86,7 @@ call.
 
 ## Work items, in the order agreed
 
-1. **Merge #111**, then run the first prerelease from the
+1. **Run the first prerelease** from the
    Actions tab (Build, "Run workflow", `v0.1.0-alpha.1`). That is the test of
    the release half of #107, and it gives the iMac a universal bundle for #30
    without building there. Then set `site/links.json`'s `download`.
