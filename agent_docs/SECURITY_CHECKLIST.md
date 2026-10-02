@@ -370,6 +370,31 @@ name and every manifest server address, and writes only to the clipboard
 (through Wails' `ClipboardSetText`, which on macOS pipes it to `pbcopy`).
 It takes no argument from the frontend.
 Verify: `TestRedactedLogTailRedacts`, `TestCopyRedactedLogPutsTheMaskedTailOnTheClipboard`.
+**S7.4 The run report shows the game's log redacted, and keeps none of it.**
+`GameTracker.Report` (`GetRunReport`, the card's push; ADR-2, sixth amendment)
+is the one place a line of the game's `latest.log` leaves the file: the last
+16 KiB, from a whole line, of the run's own log, read when the player opens the
+report or when a run ends `crashed` or `failed` with the card up, never while
+it runs. Holds when: (a) the tail goes through `NewRedactor` with the home
+path, OS user, profile name and every manifest server address, and the report
+is refused when no redactor can be built; (b) the player's in-game name,
+learned from the log's own `Setting user:` line or `--username` argument (the
+tail, else the head up to 8 MiB), is masked as a whole word, even with an empty
+profile name; (c) IPv4 addresses, UUIDs and the values after `--accessToken`,
+`--uuid`, `--username` and the like are masked; (d) the crash report is its
+file name, never a path, and the file is not opened; (e) a run with no game log
+of its own, or one the player stopped, shows none of a log; (f) nothing read is
+stored on the tracker, written to disk or passed to `slog` (the log lines
+record counts and phases only); (g) the view renders it as text, never as
+HTML (S5.2), and the card's state is a JSON literal (`json.Marshal` escapes
+`<`, `>`, `&`, U+2028 and U+2029), so a mod's log line cannot become script.
+Verify: `TestReportMasksWhatIdentifiesThePlayerAndLearnsTheirInGameName`,
+`TestReportBoundsTheLogToItsTailAndStillMasksANameOnlyTheHeadGives`,
+`TestReportOfAStartThatFailedBeforeTheGameHasNoLogOrCrashReport`,
+`TestReportRefusesWhatItCannotRedactOrNeverRan`,
+`TestRedactMasksALaunchArgumentListsIdentityAndCredential`.
+Probe: a log whose first line is a loader's argument list, and a chat line with
+the player's name, in a log over 16 KiB.
 
 ## S8. CI and supply chain
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type {
   Chapter,
   EngineInfo,
+  GamePhase,
   GameState,
   PackState,
   PrismInstallProgress,
@@ -54,9 +55,14 @@ interface Props {
   onOpenPrismSite: () => void
   onOpenReleasePage: () => void
   onCheckServer: () => void
+  /** Opens the run report; Details, beside a game that crashed or never started. */
+  onOpenReport: () => void
 }
 
 const WORKING = ['downloading', 'unpacking', 'verifying']
+
+/** A game that crashed or never started: the phases that have a run report to read. */
+const isEndedBadly = (phase: GamePhase | undefined) => phase === 'crashed' || phase === 'failed'
 
 /**
  * The phases in which a stop asks twice: the game has a window or is past it, so a stray click
@@ -127,6 +133,7 @@ export function ActionBar({
   onOpenPrismSite,
   onOpenReleasePage,
   onCheckServer,
+  onOpenReport,
 }: Props) {
   const [offering, setOffering] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -165,6 +172,13 @@ export function ActionBar({
   } else if (gameRows && (playing || !(installing || installShown))) {
     beside = gameRows
   }
+  // A run that ended badly has a report to read, with its own rows beside Play.
+  // One the player stopped did not go wrong, and has nothing to explain.
+  const ended =
+    beside !== null &&
+    beside === gameRows &&
+    isEndedBadly(game?.phase) &&
+    game?.reason !== 'stopped'
   let state: string
   let meta: string
   let tone = 'text-accent'
@@ -251,12 +265,15 @@ export function ActionBar({
           </Button>
         )}
         {beside && (
-          <div className="flex max-w-sm min-w-0 flex-col gap-0.5">
-            <span className={`font-mono text-xs ${beside[2]}`}>{beside[0]}</span>
-            {/* Truncated to keep the bar one row; the title carries the full detail. */}
-            <span className="text-fg-faint truncate text-xs" title={beside[1]}>
-              {beside[1]}
-            </span>
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex max-w-sm min-w-0 flex-col gap-0.5">
+              <span className={`font-mono text-xs ${beside[2]}`}>{beside[0]}</span>
+              {/* Truncated to keep the bar one row; the title carries the full detail. */}
+              <span className="text-fg-faint truncate text-xs" title={beside[1]}>
+                {beside[1]}
+              </span>
+            </div>
+            {ended && <Button onClick={onOpenReport}>Details</Button>}
           </div>
         )}
         <div className="grow" />

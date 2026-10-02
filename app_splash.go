@@ -33,6 +33,8 @@ func (a *App) newSplashCard(dist fs.FS, newHost func() splashhost.Host) *service
 			Background: design.WindowBackground,
 		},
 		Actions: services.CardActions{OpenFolder: a.OpenInstanceFolder, CopyLog: a.CopyRedactedLog},
+		// The tracker is made after the card, so it is looked up when needed.
+		Report:  func(id string) (models.RunReport, error) { return a.games.Report(id) },
 		Changed: a.splashChanged,
 	})
 }

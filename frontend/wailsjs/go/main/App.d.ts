@@ -24,6 +24,8 @@ export function GetPackStates():Promise<Array<models.PackState>>;
 
 export function GetPrismRelease():Promise<models.PrismRelease>;
 
+export function GetRunReport(arg1:string):Promise<models.RunReport>;
+
 export function GetServerStatus(arg1:string):Promise<models.ServerStatus>;
 
 export function GetSettings():Promise<models.AppSettings>;

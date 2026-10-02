@@ -43,6 +43,10 @@ type CardConfig struct {
 	// Page is what each window shows; its OnMessage is the card's own.
 	Page    splashhost.Page
 	Actions CardActions
+	// Report builds the run report the card shows when a run ends crashed or
+	// failed (ADR-2, sixth amendment); the tracker's Report in the app. Nil
+	// shows the card without one.
+	Report func(chapterID string) (models.RunReport, error)
 	// Changed is called, with no lock held, when the card goes away without a
 	// game event to say so (the handover, the player leaving), so the view can
 	// be told the splash flag is false.
@@ -76,6 +80,8 @@ type cardRun struct {
 	host    splashhost.Host
 	latest  models.GameState
 	copyLog *splashhost.StateCopyLog
+	// report is the run's report, filled once when it ends badly.
+	report  *models.RunReport
 	errText string
 	// closed is the card's window being gone because the game has the screen:
 	// the launcher stays minimised until the game ends.
@@ -213,8 +219,8 @@ func (c *SplashCard) Observe(s models.GameState) bool {
 	case models.GamePhaseClosed, models.GamePhaseCrashed, models.GamePhaseFailed:
 		if !run.closed && s.Phase != models.GamePhaseClosed {
 			run.ended = true
-			c.push(run)
 			c.mu.Unlock()
+			c.showEnd(run, s)
 			return true
 		}
 		after = c.finish(run)
@@ -235,6 +241,31 @@ func (c *SplashCard) Observe(s models.GameState) bool {
 		after()
 	}
 	return shows
+}
+
+// showEnd pushes the card's state for a run that ended before the handover,
+// with the run's report. The report reads the disk, so it is built with mu
+// released, as the host's own calls are, and the card is pushed once, with it,
+// rather than twice. A card the player left meanwhile is not pushed to.
+func (c *SplashCard) showEnd(run *cardRun, s models.GameState) {
+	var report *models.RunReport
+	// A run the player stopped from the launcher is not one that went wrong: it
+	// has nothing to explain.
+	if c.cfg.Report != nil && s.Reason != models.GameFailStopped {
+		r, err := c.cfg.Report(run.chapter.ID)
+		if err != nil {
+			slog.Warn("run report for the card", "chapter", run.chapter.ID, "error", err)
+		} else {
+			report = &r
+		}
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.live(run) {
+		return
+	}
+	run.report = report
+	c.push(run)
 }
 
 // Handover is the game having the foreground, on Windows: the card closes and
@@ -340,6 +371,7 @@ func (c *SplashCard) push(run *cardRun) {
 		Chapter: run.chapter,
 		Game:    game,
 		CopyLog: run.copyLog,
+		Report:  run.report,
 		Error:   run.errText,
 		Theme:   run.theme,
 	}

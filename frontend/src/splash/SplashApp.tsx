@@ -23,6 +23,7 @@ export function SplashApp() {
       state={state.game}
       copyLog={state.copyLog}
       error={state.error}
+      report={state.report}
       onLeave={() => send('leave')}
       onOpenFolder={() => send('openFolder')}
       onCopyLog={() => send('copyLog')}

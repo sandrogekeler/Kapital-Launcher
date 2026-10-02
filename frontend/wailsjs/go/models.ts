@@ -358,6 +358,20 @@ export namespace models {
 	        this.version = source["version"];
 	    }
 	}
+	export class PhaseTime {
+	    phase: string;
+	    ms: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PhaseTime(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.phase = source["phase"];
+	        this.ms = source["ms"];
+	    }
+	}
 	export class PrismRelease {
 	    version: string;
 	    asset: string;
@@ -383,6 +397,48 @@ export namespace models {
 	        this.installed = source["installed"];
 	        this.updateAvailable = source["updateAvailable"];
 	    }
+	}
+	export class RunReport {
+	    game: GameState;
+	    phases: PhaseTime[];
+	    logTail: string;
+	    logLines: number;
+	    logTruncated: boolean;
+	    crashReport: string;
+	    consoleAvailable: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new RunReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.game = this.convertValues(source["game"], GameState);
+	        this.phases = this.convertValues(source["phases"], PhaseTime);
+	        this.logTail = source["logTail"];
+	        this.logLines = source["logLines"];
+	        this.logTruncated = source["logTruncated"];
+	        this.crashReport = source["crashReport"];
+	        this.consoleAvailable = source["consoleAvailable"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	
 	export class ServerStatus {

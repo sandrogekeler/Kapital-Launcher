@@ -451,6 +451,73 @@ describe('App', () => {
     expect(screen.getByText('Version').nextElementSibling).toHaveTextContent('4.2')
   })
 
+  it('opens the run report from Details beside a game that crashed, and closes it', async () => {
+    vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
+    const crashed = {
+      chapterId: 'frangfurd',
+      phase: 'crashed' as const,
+      since: '2026-10-02T10:00:31Z',
+      startedAt: '2026-10-02T10:00:00Z',
+    }
+    const read = vi.fn().mockResolvedValue({
+      game: crashed,
+      phases: [{ phase: 'starting', ms: 0 }],
+      logTail: '[Render thread/ERROR]: Reported exception thrown!\n',
+      logLines: 1,
+      logTruncated: false,
+      crashReport: 'crash-1.txt',
+      consoleAvailable: false,
+    })
+    const original = useGameStore.getState().report
+    useGameStore.setState({ report: read })
+    try {
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      switchTo(/03.*Frangfurd/)
+      act(() => useGameStore.getState().receive(crashed))
+      expect(screen.queryByRole('button', { name: 'Details' })).toBeInTheDocument()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Details' }))
+      const panel = await screen.findByRole('region', { name: 'Frangfurd run report' })
+      expect(await within(panel).findByText('crash-1.txt')).toBeInTheDocument()
+      expect(within(panel).getByLabelText("The end of the game's log")).toHaveTextContent(
+        'Reported exception thrown!',
+      )
+      expect(read).toHaveBeenCalledExactlyOnceWith('frangfurd')
+      expect(screen.queryByRole('button', { name: 'Details' })).toBeNull()
+
+      fireEvent.click(within(panel).getByRole('button', { name: 'Back' }))
+      expect(screen.queryByRole('region', { name: 'Frangfurd run report' })).toBeNull()
+      expect(screen.getByRole('button', { name: 'Details' })).toBeInTheDocument()
+    } finally {
+      useGameStore.setState({ report: original })
+    }
+  })
+
+  it('closes the run report when another chapter is picked', async () => {
+    vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
+    const crashed = {
+      chapterId: 'frangfurd',
+      phase: 'failed' as const,
+      since: '2026-10-02T10:00:12Z',
+      startedAt: '2026-10-02T10:00:00Z',
+    }
+    const original = useGameStore.getState().report
+    useGameStore.setState({ report: vi.fn().mockResolvedValue(null) })
+    try {
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      switchTo(/03.*Frangfurd/)
+      act(() => useGameStore.getState().receive(crashed))
+      fireEvent.click(screen.getByRole('button', { name: 'Details' }))
+      await screen.findByRole('region', { name: 'Frangfurd run report' })
+      fireEvent.click(screen.getByRole('button', { name: /01.*Luxemburg/ }))
+      expect(screen.queryByRole('region', { name: 'Frangfurd run report' })).toBeNull()
+    } finally {
+      useGameStore.setState({ report: original })
+    }
+  })
+
   it('keeps the launcher as it is while a loading card is up: the card has a window of its own', async () => {
     vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
     render(<App />)

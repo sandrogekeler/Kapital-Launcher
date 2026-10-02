@@ -309,21 +309,32 @@ func TestOpenExternalRefusesNonWebURLsBeforeTheWindowExists(t *testing.T) {
 // the source rather than by reflection, so a method with no error return is
 // named in the failure.
 func TestBoundMethodsReturnAnError(t *testing.T) {
-	src, err := os.ReadFile("app.go")
+	// Wails binds every exported method of App wherever it is declared, so the
+	// check reads each app*.go and not app.go alone.
+	files, err := filepath.Glob("app*.go")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, line := range strings.Split(string(src), "\n") {
-		if !strings.HasPrefix(line, "func (a *App) ") {
+	for _, file := range files {
+		if strings.HasSuffix(file, "_test.go") {
 			continue
 		}
-		name := strings.TrimPrefix(line, "func (a *App) ")
-		name = name[:strings.Index(name, "(")]
-		if name == "" || name[0] < 'A' || name[0] > 'Z' {
-			continue
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
 		}
-		if !strings.HasSuffix(strings.TrimSpace(line), "error {") && !strings.HasSuffix(strings.TrimSpace(line), "error) {") {
-			t.Errorf("%s does not return an error as its last value", name)
+		for _, line := range strings.Split(string(src), "\n") {
+			if !strings.HasPrefix(line, "func (a *App) ") {
+				continue
+			}
+			name := strings.TrimPrefix(line, "func (a *App) ")
+			name = name[:strings.Index(name, "(")]
+			if name == "" || name[0] < 'A' || name[0] > 'Z' {
+				continue
+			}
+			if !strings.HasSuffix(strings.TrimSpace(line), "error {") && !strings.HasSuffix(strings.TrimSpace(line), "error) {") {
+				t.Errorf("%s (%s) does not return an error as its last value", name, file)
+			}
 		}
 	}
 }

@@ -82,9 +82,3 @@ export function withPackOverride(
   else next[chapterId] = address.trim()
   return Object.keys(next).length === 0 ? undefined : next
 }
-
-/** The line under Copy log once it worked: how much went and that it was masked (#84). */
-export function copyLogDone(lines: number): string {
-  const noun = lines === 1 ? 'line' : 'lines'
-  return `Copied ${lines} ${noun} to the clipboard, with your name, folders and server addresses masked.`
-}

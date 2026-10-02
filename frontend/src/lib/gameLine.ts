@@ -1,15 +1,16 @@
 import type { GameFailReason, GameState } from '../types'
 
 /**
- * What a failed start says. Prism's window is left open on its error, so that
- * is where the details are.
+ * What a failed start says, in one sentence: the row sits beside Play and
+ * must leave room for the server's status. The details are the run report's
+ * (Details beside Play, the log on the card), so no sentence points at them.
  */
 function failedDetail(reason: GameFailReason | undefined): string {
   switch (reason) {
     case 'packsync':
-      return "The pack could not be synced. Prism's window has the details"
+      return 'The pack could not be synced'
     case 'launch':
-      return 'Prism stopped before the game. Its window has the details'
+      return 'Prism stopped before the game'
     default:
       return 'Prism gave up or never started it'
   }

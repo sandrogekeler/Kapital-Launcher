@@ -1,0 +1,10 @@
+[02Oct2026 10:00:01.100] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher running: args [--username, Notch_Fan, --version, 1.21.1, --gameDir, C:/Users/sandro/AppData/Roaming/PrismLauncher/instances/kapital-frangfurd/minecraft, --uuid, 1b4e6c9a-2f3d-4a7e-8c15-9d0e7f6a5b43, --accessToken, eyJhbGciOiJIUzI1NiJ9.secret, --launchTarget, forgeclient]
+[02Oct2026 10:00:03.400] [main/WARN] [mixin/]: Mixin config create.mixins.json does not specify "minVersion" property
+[02Oct2026 10:00:20.118] [Render thread/INFO] [com.mojang.blaze3d.systems.RenderSystem/]: Backend library: LWJGL version 3.3.3-snapshot
+[02Oct2026 10:00:21.877] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Setting user: Notch_Fan
+[02Oct2026 10:00:21.900] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Fetched the profile 7c2d1e90-aa11-4b22-9f33-00c4d5e6f7a8
+[02Oct2026 10:00:22.000] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Loading resource pack from C:\Users\sandro\AppData\Roaming\PrismLauncher\resourcepacks\Faithful.zip
+[02Oct2026 10:00:22.500] [Render thread/INFO] [net.minecraft.client.multiplayer.ClientHandshakePacketListenerImpl/]: Connecting to play.kapitel.example, 25565 via 203.0.113.42:25565
+[02Oct2026 10:00:22.900] [Render thread/INFO] [net.minecraft.client.gui.components.ChatComponent/]: [CHAT] <Notch_Fan> anyone there? the account owner sandro says hi
+[02Oct2026 10:00:30.551] [Render thread/INFO] [net.minecraft.server.packs.resources.ReloadableResourceManager/]: Reloading ResourceManager: vanilla, mod_resources
+[02Oct2026 10:00:41.009] [Render thread/ERROR] [net.minecraft.client.Minecraft/]: Reported exception thrown!

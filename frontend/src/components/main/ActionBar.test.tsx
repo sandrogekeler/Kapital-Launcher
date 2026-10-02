@@ -62,6 +62,7 @@ function bar(over: Partial<ComponentProps<typeof ActionBar>> = {}) {
       onOpenPrismSite={noop}
       onOpenReleasePage={noop}
       onCheckServer={noop}
+      onOpenReport={noop}
       {...over}
     />,
   )
@@ -75,6 +76,39 @@ const beside = () => screen.getAllByRole('button')[0]!.nextElementSibling as HTM
 
 describe('ActionBar game line', () => {
   afterEach(cleanup)
+
+  it.each<GamePhase>(['crashed', 'failed'])(
+    'offers Details beside the rows of a game that is %s, and opens the report',
+    (phase) => {
+      const onOpenReport = vi.fn()
+      bar({ game: game(phase), onOpenReport })
+      const details = within(beside()).getByRole('button', { name: 'Details' })
+      fireEvent.click(details)
+      expect(onOpenReport).toHaveBeenCalledOnce()
+    },
+  )
+
+  it.each<GamePhase>(['starting', 'running', 'stopping', 'closed', 'idle'])(
+    'offers no Details for a game that is %s',
+    (phase) => {
+      bar({ game: game(phase) })
+      expect(screen.queryByRole('button', { name: 'Details' })).toBeNull()
+    },
+  )
+
+  it('offers no Details for a run the player stopped', () => {
+    bar({ game: { ...game('crashed'), reason: 'stopped' } })
+    expect(screen.getByText('○ The game was stopped')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Details' })).toBeNull()
+  })
+
+  it('offers no Details while the rows beside Play are the hand-over or an install', () => {
+    const { unmount } = bar({ game: game('failed'), launching: true })
+    expect(screen.queryByRole('button', { name: 'Details' })).toBeNull()
+    unmount()
+    bar({ game: game('failed'), install: installProgress })
+    expect(screen.queryByRole('button', { name: 'Details' })).toBeNull()
+  })
 
   it("shows the game line and Stop in Play's place while the game is active", () => {
     bar({ game: game('resources') })

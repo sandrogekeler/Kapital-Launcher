@@ -13,8 +13,9 @@ any file is opened and live in `agent_docs/CLAUDE.md`. The rest is here.
 
 ## Shape
 
-- Bound methods live on `App` in `app.go`, `PascalCase`, and return `(T, error)`.
-  `app_test.go`'s `TestBoundMethodsReturnAnError` reads the file and fails on one
+- Bound methods live on `App` in `app.go` or an `app_*.go` beside it,
+  `PascalCase`, and return `(T, error)`. `app_test.go`'s
+  `TestBoundMethodsReturnAnError` reads each of those files and fails on one
   that does not.
 - Re-run `wails generate module` after adding or changing one; `frontend/wailsjs/`
   is generated and never edited.

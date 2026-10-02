@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { HeaderBar } from './components/shell/HeaderBar'
 import { Sidebar } from './components/sidebar/Sidebar'
 import { ChapterStage } from './components/main/ChapterStage'
@@ -13,6 +13,13 @@ import { useGameStore } from './stores/useGameStore'
 import { Environment } from '../wailsjs/runtime/runtime'
 import { DISCLAIMER } from './lib/disclaimer'
 import { errMsg, readOr } from './lib/ipc'
+
+// The run report is opened rarely, from Details beside a game that went wrong,
+// so it loads when asked for and stays out of the launcher's first paint and
+// its bundle budget (scripts/check-bundle-size.mjs).
+const RunReportPanel = lazy(() =>
+  import('./components/main/RunReportPanel').then((m) => ({ default: m.RunReportPanel })),
+)
 
 export default function App() {
   const chapter = useChapterStore(selectChapter)
@@ -55,6 +62,10 @@ export default function App() {
   const [chapterSettingsFor, setChapterSettingsFor] = useState<string | null>(null)
   const closeChapterSettings = useCallback(() => setChapterSettingsFor(null), [])
   useEffect(() => setChapterSettingsFor(null), [selectedId])
+  // A run's report (Details, beside a game that ended badly) takes it likewise.
+  const [reportFor, setReportFor] = useState<string | null>(null)
+  const closeReport = useCallback(() => setReportFor(null), [])
+  useEffect(() => setReportFor(null), [selectedId])
 
   // One read per store on mount. These are reads of state Go holds, not
   // events, so an effect is the right tool.
@@ -132,11 +143,16 @@ export default function App() {
             <SettingsPanel onClose={closeSettings} />
           ) : chapterSettingsFor === chapter.id ? (
             <ChapterSettingsPanel chapter={chapter} onClose={closeChapterSettings} />
+          ) : reportFor === chapter.id ? (
+            <Suspense fallback={null}>
+              <RunReportPanel chapter={chapter} onClose={closeReport} />
+            </Suspense>
           ) : (
             <ChapterStage
               chapter={chapter}
               chapters={chapters}
               onOpenSettings={setChapterSettingsFor}
+              onOpenReport={setReportFor}
             />
           )}
         </Scrollable>

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { ComponentProps } from 'react'
-import type { GamePhase, GameState } from '../../types'
+import type { GamePhase, GameState, RunReport } from '../../types'
 import { SplashCard } from './SplashCard'
 
 const chapter = { id: 'luxemburg', name: 'Luxemburg', packVersion: '4.2' }
@@ -23,6 +23,21 @@ const actions = () => ({ onLeave: vi.fn(), onOpenFolder: vi.fn(), onCopyLog: vi.
 function card(state: GameState, props: Partial<ComponentProps<typeof SplashCard>> = {}) {
   return <SplashCard chapter={chapter} state={state} {...actions()} {...props} />
 }
+
+const runReport = (over: Partial<RunReport> = {}): RunReport => ({
+  game: at('crashed', { since: '2026-10-01T09:59:31Z' }),
+  phases: [
+    { phase: 'starting', ms: 0 },
+    { phase: 'mods', ms: 4200 },
+    { phase: 'window', ms: 9800 },
+  ],
+  logTail: '[Render thread/ERROR]: Reported exception thrown!\n',
+  logLines: 1,
+  logTruncated: false,
+  crashReport: 'crash-2026-10-02_10.00.00-client.txt',
+  consoleAvailable: false,
+  ...over,
+})
 
 describe('SplashCard', () => {
   afterEach(cleanup)
@@ -122,8 +137,8 @@ describe('SplashCard', () => {
     })
 
     it.each<[GameState['reason'], string]>([
-      ['packsync', "The pack could not be synced. Prism's window has the details"],
-      ['launch', 'Prism stopped before the game. Its window has the details'],
+      ['packsync', 'The pack could not be synced'],
+      ['launch', 'Prism stopped before the game'],
     ])('says why a start failed (%s) and keeps the three buttons', (reason, detail) => {
       render(card(at('failed', { reason, estimate })))
       expect(screen.getByText('○ The game did not start')).toHaveClass('text-danger')
@@ -150,19 +165,113 @@ describe('SplashCard', () => {
       expect(screen.getByText(/exit code 1/)).toBeInTheDocument()
     })
 
-    it('says how much of the log was copied', () => {
-      render(card(at('crashed'), { copyLog: { lines: 12 } }))
-      expect(screen.getByText(/Copied 12 lines to the clipboard/)).toHaveClass('text-fg-muted')
+    it('says a copy worked on the button itself, for a second, with no line under it', () => {
+      vi.useFakeTimers()
+      try {
+        const { rerender } = render(card(at('crashed')))
+        expect(screen.getByRole('button', { name: 'Copy log' })).toHaveAttribute(
+          'aria-live',
+          'polite',
+        )
+        rerender(card(at('crashed'), { copyLog: { lines: 12 } }))
+        expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument()
+        expect(screen.queryByRole('status')).toBeNull()
+        expect(screen.queryByText(/to the clipboard/)).toBeNull()
+        act(() => void vi.advanceTimersByTime(999))
+        expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument()
+        act(() => void vi.advanceTimersByTime(1))
+        expect(screen.getByRole('button', { name: 'Copy log' })).toBeInTheDocument()
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
-    it('says why the log was not copied', () => {
-      render(card(at('failed'), { copyLog: { error: 'empty log' } }))
-      expect(screen.getByText('empty log')).toHaveClass('text-danger')
+    it('says a copy failed on the button, for two seconds, and shows no reason under it', () => {
+      vi.useFakeTimers()
+      try {
+        const { rerender } = render(card(at('failed')))
+        rerender(card(at('failed'), { copyLog: { error: 'empty log' } }))
+        expect(screen.getByRole('button', { name: 'Copy failed' })).toBeInTheDocument()
+        expect(screen.queryByText('empty log')).toBeNull()
+        act(() => void vi.advanceTimersByTime(1999))
+        expect(screen.getByRole('button', { name: 'Copy failed' })).toBeInTheDocument()
+        act(() => void vi.advanceTimersByTime(1))
+        expect(screen.getByRole('button', { name: 'Copy log' })).toBeInTheDocument()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('flashes again for a second copy, and clears its timer when the card goes', () => {
+      vi.useFakeTimers()
+      try {
+        const { rerender, unmount } = render(card(at('crashed')))
+        rerender(card(at('crashed'), { copyLog: { lines: 1 } }))
+        act(() => void vi.advanceTimersByTime(600))
+        rerender(card(at('crashed'), { copyLog: { lines: 1 } }))
+        act(() => void vi.advanceTimersByTime(600))
+        expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument()
+        unmount()
+        expect(vi.getTimerCount()).toBe(0)
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
     it('says nothing about the log before one was copied', () => {
       render(card(at('failed')))
-      expect(screen.getByRole('status')).toBeEmptyDOMElement()
+      expect(screen.getByRole('button', { name: 'Copy log' })).toBeInTheDocument()
+      expect(screen.queryByRole('status')).toBeNull()
+    })
+  })
+
+  describe('with a run report', () => {
+    it('shows the timeline, the end of the log and the crash report beside the reason', () => {
+      render(card(at('crashed', { since: '2026-10-01T09:59:31Z' }), { report: runReport() }))
+      expect(screen.getByText('○ The game stopped')).toHaveClass('text-danger')
+      expect(screen.getByLabelText('Timeline')).toHaveTextContent(
+        'mods 4.2 s, window 9.8 s, crashed 31 s',
+      )
+      const log = screen.getByLabelText("The end of the game's log")
+      expect(log).toHaveTextContent('Reported exception thrown!')
+      expect(log).toHaveClass('select-text')
+      expect(screen.getByText('crash-2026-10-02_10.00.00-client.txt')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Open folder' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Copy log' })).toBeInTheDocument()
+      expect(screen.getAllByRole('button', { name: 'Back to launcher' })).toHaveLength(1)
+    })
+
+    it("offers Prism's console only when the report says it can be shown", () => {
+      const { unmount } = render(card(at('failed'), { report: runReport() }))
+      expect(screen.queryByRole('button', { name: "Show Prism's console" })).toBeNull()
+      unmount()
+      const onShowConsole = vi.fn()
+      render(card(at('failed'), { report: runReport({ consoleAvailable: true }), onShowConsole }))
+      fireEvent.click(screen.getByRole('button', { name: "Show Prism's console" }))
+      expect(onShowConsole).toHaveBeenCalledOnce()
+    })
+
+    it('says so when the start stopped before any game log, and names no crash report', () => {
+      render(
+        card(at('failed'), {
+          report: runReport({ logTail: '', logLines: 0, crashReport: '', phases: [] }),
+        }),
+      )
+      expect(screen.getByText(/wrote no log for this run/)).toBeInTheDocument()
+      expect(screen.queryByText(/Crash report/)).toBeNull()
+      expect(screen.queryByLabelText("The end of the game's log")).toBeNull()
+    })
+
+    it('shows no report while the game is starting, even if one were sent', () => {
+      render(card(at('mods'), { report: runReport() }))
+      expect(screen.queryByLabelText('Timeline')).toBeNull()
+      expect(screen.queryByLabelText("The end of the game's log")).toBeNull()
+    })
+
+    it('has the failed card as before without one', () => {
+      render(card(at('crashed')))
+      expect(screen.queryByLabelText('Timeline')).toBeNull()
+      expect(screen.getByRole('button', { name: 'Open folder' })).toBeInTheDocument()
     })
   })
 })

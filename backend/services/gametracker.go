@@ -129,7 +129,9 @@ type TrackRequest struct {
 // GameTracker follows each launched chapter from Play to the game's end: the
 // game log says how far the start has got, and the game's process says when it
 // ends. It reads neither Prism's account data nor any line of the log beyond
-// matching it (docs/adr/0002-prism-data-root.md, third amendment).
+// matching it (docs/adr/0002-prism-data-root.md, third amendment), except when
+// asked for a Report, which reads the log's tail once, redacted, and keeps none
+// of it (sixth amendment).
 type GameTracker struct {
 	dataDir string
 	emit    func(models.GameState)
@@ -162,6 +164,10 @@ type GameTracker struct {
 
 	mu     sync.Mutex
 	states map[string]models.GameState
+	// records is what a chapter's latest run's report needs beyond its state
+	// (gametracker_report.go); redactor makes the report's redactor.
+	records  map[string]runRecord
+	redactor func() (*Redactor, error)
 	// live is each chapter's run that has a goroutine, which Stop talks to.
 	live map[string]*gameRun
 
@@ -191,6 +197,7 @@ func NewGameTracker(dataDir string, emit func(models.GameState)) *GameTracker {
 		prismGrace:       gamePrismGrace,
 		quietTimeout:     gameLogQuiet,
 		states:           map[string]models.GameState{},
+		records:          map[string]runRecord{},
 	}
 }
 
@@ -262,6 +269,7 @@ func (t *GameTracker) begin(ctx context.Context, req TrackRequest) (*gameRun, er
 		return nil, fmt.Errorf("%s is already starting or running", req.ChapterID)
 	}
 	t.states[req.ChapterID] = state
+	t.records[req.ChapterID] = runRecord{startedAt: req.StartedAt}
 	t.mu.Unlock()
 	t.publish(state)
 
@@ -479,6 +487,7 @@ func (r *gameRun) set(phase string, now time.Time, code *int) {
 	r.state.ExitCode = code
 	r.t.mu.Lock()
 	r.t.states[r.req.ChapterID] = r.state
+	r.t.records[r.req.ChapterID] = r.record()
 	r.t.mu.Unlock()
 	r.t.publish(r.state)
 }

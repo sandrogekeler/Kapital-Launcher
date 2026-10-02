@@ -1,0 +1,146 @@
+import { useEffect, useState } from 'react'
+import type { Chapter, RunReport } from '../../types'
+import { useEngineStore } from '../../stores/useEngineStore'
+import { selectGame, useGameStore } from '../../stores/useGameStore'
+import { useSettingsStore } from '../../stores/useSettingsStore'
+import { errMsg } from '../../lib/ipc'
+import { gameLine } from '../../lib/gameLine'
+import { ArrowLeft, FolderOpen } from '../../lib/icons'
+import { Button } from '../ui/Button'
+import { CopyLogButton } from '../ui/CopyLogButton'
+import type { CopyResult } from '../ui/CopyLogButton'
+import { Icon } from '../ui/Icon'
+import { IconButton } from '../ui/IconButton'
+import { RunReportParts } from '../run/RunReportParts'
+
+interface Props {
+  chapter: Chapter
+  onClose: () => void
+}
+
+/**
+ * What the launcher knows of a chapter's latest run (ADR-2, sixth amendment),
+ * in the column the chapter's settings take: how it ended, when each phase was
+ * reached, the crash report's name and the end of the game's log, redacted by
+ * Go. It is the card's content in the launcher's own window, for a player who
+ * left the card or whose game crashed after it closed.
+ *
+ * The report is read when the panel opens and again on the next `game:state` of
+ * the chapter while it is open, never on a timer, and is held in this panel
+ * alone: it carries a stretch of the game's log, so closing the panel drops it.
+ */
+export function RunReportPanel({ chapter, onClose }: Props) {
+  const game = useGameStore(selectGame(chapter.id))
+  const read = useGameStore((s) => s.report)
+  const openFolder = useEngineStore((s) => s.openInstanceFolder)
+  const copyLog = useSettingsStore((s) => s.copyLog)
+  const [report, setReport] = useState<RunReport | null>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [folderError, setFolderError] = useState<string | null>(null)
+  const [copied, setCopied] = useState<CopyResult | null>(null)
+
+  // `game` is a dependency for the re-read: the store files a new object per
+  // event, so a run's next phase reads again and nothing else does.
+  useEffect(() => {
+    let current = true
+    read(chapter.id)
+      .then((r) => {
+        if (!current) return
+        setReport(r)
+        setError(null)
+        setLoaded(true)
+      })
+      .catch((e) => {
+        if (!current) return
+        setError(errMsg(e))
+        setLoaded(true)
+      })
+    return () => {
+      current = false
+    }
+  }, [chapter.id, game, read])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const onOpenFolder = async () => {
+    setFolderError(null)
+    try {
+      await openFolder(chapter.id)
+    } catch (e) {
+      setFolderError(errMsg(e))
+    }
+  }
+
+  // The button says how it went; each attempt is a new result object.
+  const onCopyLog = async () => {
+    try {
+      await copyLog()
+      setCopied({})
+    } catch (e) {
+      setCopied({ error: errMsg(e) })
+    }
+  }
+
+  const rows = gameLine(report?.game ?? game, chapter.name)
+  let body
+  if (error) {
+    body = (
+      <p role="alert" className="text-danger m-0 text-sm select-text">
+        {error}
+      </p>
+    )
+  } else if (!loaded) {
+    body = <p className="text-fg-muted m-0 text-sm">Reading the run.</p>
+  } else if (!report) {
+    // No bridge at all: the browser-only preview has no run to read.
+    body = (
+      <p className="text-fg-muted m-0 text-sm">
+        The run report can only be read in the app window.
+      </p>
+    )
+  } else {
+    body = (
+      <>
+        {rows && (
+          <div className="flex flex-col gap-0.5">
+            <span className={`font-mono text-sm ${rows[2]}`}>{rows[0]}</span>
+            <span className="text-fg-muted text-xs select-text">{rows[1]}</span>
+          </div>
+        )}
+        <RunReportParts report={report} logHeight="h-72" />
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={() => void onOpenFolder()}>
+            <Icon icon={FolderOpen} size="sm" />
+            <span>Open folder</span>
+          </Button>
+          <CopyLogButton onClick={() => void onCopyLog()} result={copied} />
+          {report.consoleAvailable && (
+            // The action arrives with the change that hides the console; until
+            // then the report never says it is available.
+            <Button onClick={() => undefined}>
+              <span>Show Prism's console</span>
+            </Button>
+          )}
+          {folderError && <span className="text-danger text-xs select-text">{folderError}</span>}
+        </div>
+      </>
+    )
+  }
+
+  return (
+    <section aria-label={`${chapter.name} run report`} className="flex flex-col">
+      <div className="border-line flex items-center gap-3 border-b px-14 py-5">
+        <IconButton icon={ArrowLeft} title="Back" onClick={onClose} />
+        <h1 className="font-display m-0 text-2xl font-semibold">{chapter.name} run report</h1>
+      </div>
+      <div className="flex max-w-200 flex-col gap-6 px-14 pt-8 pb-16">{body}</div>
+    </section>
+  )
+}

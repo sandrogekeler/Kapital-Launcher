@@ -45,18 +45,52 @@ describe('the card page', () => {
   it('follows each state pushed', () => {
     render(<SplashApp />)
     push()
-    push({
-      game: {
-        chapterId: 'frangfurd',
-        phase: 'crashed',
-        since: '2026-10-01T10:01:00Z',
-        startedAt: '2026-10-01T09:59:00Z',
-        splash: true,
-      },
-      copyLog: { lines: 3 },
-    })
+    const crashed = {
+      chapterId: 'frangfurd',
+      phase: 'crashed',
+      since: '2026-10-01T10:01:00Z',
+      startedAt: '2026-10-01T09:59:00Z',
+      splash: true,
+    }
+    push({ game: crashed })
     expect(screen.getByText('○ The game stopped')).toBeInTheDocument()
-    expect(screen.getByText(/Copied 3 lines/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy log' })).toBeInTheDocument()
+    // The outcome of a copy arrives as the next state, and the button says it.
+    push({ game: crashed, copyLog: { lines: 3 } })
+    expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument()
+  })
+
+  it('shows the run report Go pushed with the state, and none before it', () => {
+    render(<SplashApp />)
+    const game = {
+      chapterId: 'frangfurd',
+      phase: 'crashed' as const,
+      since: '2026-10-01T09:59:31Z',
+      startedAt: '2026-10-01T09:59:00Z',
+      splash: true,
+    }
+    push({ game })
+    expect(screen.queryByLabelText("The end of the game's log")).toBeNull()
+    push({
+      game,
+      report: {
+        game,
+        phases: [
+          { phase: 'starting', ms: 0 },
+          { phase: 'mods', ms: 4200 },
+        ],
+        logTail: '[Render thread/ERROR]: Reported exception thrown!\n',
+        logLines: 1,
+        logTruncated: false,
+        crashReport: 'crash-1.txt',
+        consoleAvailable: false,
+      },
+    })
+    expect(screen.getByLabelText('Timeline')).toHaveTextContent('mods 4.2 s, crashed 31 s')
+    expect(screen.getByLabelText("The end of the game's log")).toHaveTextContent(
+      'Reported exception thrown!',
+    )
+    expect(screen.getByText('crash-1.txt')).toBeInTheDocument()
   })
 
   it("posts the page's three actions to Go", () => {

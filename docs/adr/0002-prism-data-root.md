@@ -130,3 +130,41 @@ writes nothing: Prism's own `logs/PrismLauncher-0.log` under the data root.
   local paths and may carry names. What is logged is the chapter and the class.
 - Judged against a snapshot taken before Play, as the game log is, and read
   only until the game's own log begins.
+
+## Sixth amendment, 2026-10-02
+
+Prism's console is where a failed start or a crash is explained today, and the
+launcher means to hide it, so a player is left with nothing to read. The author
+chose to have the launcher show its own account of the run, in the loading card
+and in the launcher's window (the run report), over keeping Prism's console as
+the only place. That needs the one thing the third amendment ruled out: a line
+of the game's log leaves the file. It does so only here, and keeps nothing.
+
+- **When.** On the player's request, by opening the report (Details beside Play,
+  `GetRunReport`), and when a run ends `crashed` or `failed` while the card is
+  up, which has the report pushed to it with the state. A run the player
+  stopped from the launcher is not one that went wrong and has none. Never
+  while the game runs, and never on a timer.
+- **What is read.** The last 16 KiB of the run's own `latest.log`, from a whole
+  line, and only when the run had a fresh game log (the JVM ran): the log an
+  earlier run left is never shown as this one's. The listing of the game's
+  `crash-reports` folder, for the name of the newest file written since Play;
+  the file is not opened. And, when the tail does not hold it, the head of the
+  log up to 8 MiB, for the one line that gives the player's in-game name.
+- **What is shown.** The tail, redacted, in the launcher's own window and card:
+  the home path, the OS user name, the profile name, every manifest server
+  address, IPv4 addresses, UUIDs, the values after `--accessToken`, `--uuid`,
+  `--username` and similar launch arguments, and the player's in-game name as
+  the log gives it (`Setting user:` or the `--username` argument), as a whole
+  word wherever it appears. The crash report is a file name, never a path.
+- **What is kept.** Nothing. The report is built for the call, returned, and
+  held by the view that shows it alone, and gone with it. The tracker holds
+  where the run's log is and when each phase was reached, which is not the log.
+  No line, and no part of one, is logged, written to disk or sent anywhere: what
+  is logged is the chapter, the phase, the number of lines and whether a crash
+  report was named. The card's copy is the clipboard, as ever, and holds the
+  launcher's own log (S7.3), not this.
+
+The report is refused when the redactor cannot be built, rather than made
+without one, and carries `consoleAvailable`, always false until the console is
+hidden and can be shown back on request.

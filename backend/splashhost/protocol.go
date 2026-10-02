@@ -86,6 +86,10 @@ type State struct {
 	// CopyLog is the outcome of the last copyLog action; absent until one ran
 	// and again after an openFolder succeeds.
 	CopyLog *StateCopyLog `json:"copyLog,omitempty"`
+	// Report is what the launcher knows of a run that crashed or failed, filled
+	// once when the run ends (ADR-2, sixth amendment), already redacted. Absent
+	// while the game starts and when it could not be read.
+	Report *models.RunReport `json:"report,omitempty"`
 	// Error is what an action that failed says, shown on the card.
 	Error string `json:"error,omitempty"`
 	// Theme is the player's theme setting, "dark" or "light", and absent for
