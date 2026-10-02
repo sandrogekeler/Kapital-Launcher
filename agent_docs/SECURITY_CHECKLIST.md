@@ -276,7 +276,10 @@ escapes (S4.2) and bounds entries and bytes, and makes every folder, file and
 link through an `os.Root`, so a chain of links cannot lead a write out; the
 Windows executable passes `WinVerifyTrust` and the macOS bundle
 `codesign --verify` (fixed arguments); and nothing is placed until all of that passed. `InstallPrism` re-reads the
-release itself rather than taking one from the frontend (ADR-11). The approval
+release itself rather than taking one from the frontend (ADR-11). The one other
+read of the installed program is its `qtlogging.ini`, bounded and refused unless
+it is a `[Rules]` file, copied into the managed root only when absent
+(`TestSeedLogRules*`). The approval
 is the approval card's: `InstallPrism` takes no argument and holds no token,
 so what Go guarantees to any caller is only that the build is Prism's own and
 verified.

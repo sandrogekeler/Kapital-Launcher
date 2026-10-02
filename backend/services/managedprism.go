@@ -288,7 +288,7 @@ func (m *ManagedPrism) Install(ctx context.Context, rel models.PrismRelease, pro
 	if err := os.Rename(partial, final); err != nil {
 		return fmt.Errorf("place Prism: %w", err)
 	}
-	if err := m.seedSettings(); err != nil {
+	if err := m.seedSettings(final); err != nil {
 		return err
 	}
 	previous, _ := m.record() //nolint:errcheck // no record on a first install; nothing to clean up then
@@ -385,8 +385,10 @@ func (m *ManagedPrism) checkHost(u *url.URL) error {
 }
 
 // seedSettings writes Prism's settings for a managed root, each file once:
-// a player's later changes in Prism are theirs.
-func (m *ManagedPrism) seedSettings() error {
+// a player's later changes in Prism are theirs. The logging rules are the third
+// file, copied from the program folder appDir by seedLogRules, which never
+// fails an install.
+func (m *ManagedPrism) seedSettings(appDir string) error {
 	for name, body := range map[string]string{
 		"prismlauncher.cfg":        prismSettingsSeed,
 		"prismlauncher_update.cfg": prismUpdaterSeed,
@@ -401,6 +403,7 @@ func (m *ManagedPrism) seedSettings() error {
 			return err
 		}
 	}
+	m.seedLogRules(appDir)
 	return nil
 }
 

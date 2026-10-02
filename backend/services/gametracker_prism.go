@@ -22,6 +22,12 @@ import (
 // in. Other task classes (a news or metadata download) fail without stopping a
 // launch and are not matched.
 //
+// Prism does not write that line by default: its own qtlogging.ini sets
+// launcher.task=false, which silences the category at every level. The
+// managed root's copy of those rules turns the Critical level back on
+// (managedprism.go, ADR-11); a Prism the player installed keeps Prism's rules,
+// so there this follower sees nothing until its owner enables the level.
+//
 // Like the game's log, this one carries local paths and may carry names, so
 // it is read for its markers only: no line, and no part of one, is logged,
 // stored or emitted (docs/adr/0002-prism-data-root.md, third amendment).

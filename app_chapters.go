@@ -47,6 +47,15 @@ func (a *App) updatePreLaunch(chapterID, instanceDir string) {
 	}
 }
 
+// seedLogRules gives a managed Prism that was installed before its log rules
+// were seeded those rules now, before it starts and reads them (#103, #106).
+// A Prism the player installed is never written to.
+func (a *App) seedLogRules(engine models.EngineInfo) {
+	if engine.Source == "managed" {
+		a.managed.SeedLogRules()
+	}
+}
+
 // chapterRunning is whether the chapter's game is running: the tracker says so
 // for a start this app made, and the game log's recent activity covers a game
 // started from Prism itself.
