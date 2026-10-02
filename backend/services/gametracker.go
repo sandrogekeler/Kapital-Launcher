@@ -133,6 +133,11 @@ type GameTracker struct {
 	// holdDialogs starts keeping the launcher's own Prism's progress dialogs
 	// hidden (#95); injected likewise.
 	holdDialogs func(pid int) (DialogHolder, error)
+	// activity tells the OS the tracker is doing work the player asked for, so
+	// a launcher that is minimised and has no window up is not napped, and
+	// returns the call that says it is done. A no-op off macOS; injected so a
+	// test counts the pairs (activity_darwin.go).
+	activity func(reason string) (end func())
 	// holdWarned and dialogsWarned are whether a failure to hold has been
 	// logged: once is enough.
 	holdWarned, dialogsWarned atomic.Bool
@@ -163,6 +168,7 @@ func NewGameTracker(dataDir string, emit func(models.GameState)) *GameTracker {
 		os:               systemGameOS(),
 		hold:             HoldGameWindow,
 		holdDialogs:      HoldPrismDialogs,
+		activity:         beginActivity,
 		tick:             logPollInterval,
 		procInterval:     gameProcInterval,
 		procSlowInterval: gameProcSlowInterval,
@@ -254,6 +260,8 @@ func (t *GameTracker) begin(ctx context.Context, req TrackRequest) (*gameRun, er
 		reached:  map[string]time.Time{},
 		ignored:  map[int]bool{},
 		exitCh:   make(chan procExit, 1),
+		// Held from here to the run's end (loop's defer), once per run.
+		endActivity: t.activity("following a game"),
 	}, nil
 }
 
@@ -304,6 +312,12 @@ type gameRun struct {
 	ignored    map[int]bool
 	exitCh     chan procExit
 	cancelWait context.CancelFunc
+	// endActivity releases the OS activity taken in begin; loop calls it as the
+	// run ends. While the game runs the launcher is minimised and the card is
+	// closed, so without it App Nap may coalesce the one second wait on the
+	// game's process and the log follower's ticks by seconds, and the end of the
+	// game, and the launcher's return, with them.
+	endActivity func()
 }
 
 func (r *gameRun) loop() {
@@ -315,6 +329,7 @@ func (r *gameRun) loop() {
 		// hidden.
 		r.releaseWindow(false)
 		r.releaseDialogs(true)
+		r.endActivity()
 	}()
 	// On the run's own goroutine, so a slow hook never holds Play up; Prism's
 	// first dialog comes about a second after it starts.

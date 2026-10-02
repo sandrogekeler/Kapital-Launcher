@@ -56,6 +56,9 @@ type App struct {
 	home, osUser string
 	setClipboard func(ctx context.Context, text string) error
 
+	// window is the launcher's window calls; a test swaps them.
+	window windowCalls
+
 	mu     sync.Mutex
 	engine models.EngineInfo
 }
@@ -83,6 +86,7 @@ func NewApp(dataDir string, manifest []byte, dist fs.FS) (*App, error) {
 		home:           home,
 		osUser:         services.OSUserName(),
 		setClipboard:   wailsrt.ClipboardSetText,
+		window:         wailsWindowCalls(),
 		manifest:       m,
 		settings:       services.NewSettingsService(dataDir),
 		prism:          prism,

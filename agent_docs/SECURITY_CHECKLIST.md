@@ -105,7 +105,9 @@ Holds when: the `exec.Command`s in the tree are Prism's (launch, `--version`,
 `flatpak info`), all with argument arrays built from validated values, plus
 `/usr/bin/codesign --verify` on macOS with a fixed argument list (S4.5) and
 `/usr/bin/open` on macOS with one argument, the absolute path of a chapter's
-instance folder (S3.6); nothing invokes `sh`, `cmd` or `powershell`.
+instance folder (S3.6); nothing invokes `sh`, `cmd` or `powershell`. One
+process is not ours: on macOS Wails' `ClipboardSetText` runs `pbcopy`, no
+argument and the redacted log tail on its stdin, when the log is copied (S7.3).
 Verify: the `shell never sees a command string` invariant in `.claude/suite.json`.
 
 **S3.2 Every argument is validated.**
@@ -330,7 +332,8 @@ IPv4 addresses. Verify: `TestRedactRemovesWhatIdentifiesTheUser`.
 **S7.3 The copy is the redacted tail and nothing else.** `CopyRedactedLog`
 (#84) reads the current log read-only, the last 256 KiB from a whole line,
 drops a line still being written, masks the home path, OS user name, profile
-name and every manifest server address, and writes only to the clipboard.
+name and every manifest server address, and writes only to the clipboard
+(through Wails' `ClipboardSetText`, which on macOS pipes it to `pbcopy`).
 It takes no argument from the frontend.
 Verify: `TestRedactedLogTailRedacts`, `TestCopyRedactedLogPutsTheMaskedTailOnTheClipboard`.
 

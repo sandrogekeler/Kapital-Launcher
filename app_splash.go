@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"io/fs"
 	"path/filepath"
 	"runtime"
@@ -69,6 +70,35 @@ func (a *App) splashChanged(chapterID string) {
 	a.emitGameState(s)
 }
 
+// windowCalls are the Wails runtime's window calls launcherWindow makes. They
+// are a field of App so a test can stand in for the window, which it cannot
+// have: the runtime stops the process on a context that is not Wails'.
+type windowCalls struct {
+	minimise   func(context.Context)
+	unminimise func(context.Context)
+	show       func(context.Context)
+	// isFullscreen is whether the window is in full screen.
+	isFullscreen func(context.Context) bool
+	// showAfterUnminimise is whether bringing the window back also needs show.
+	showAfterUnminimise bool
+}
+
+// wailsWindowCalls is the real window. macOS needs show after unminimise:
+// Wails' WindowUnminimise is deminiaturize: alone, which only de-minimises, and
+// the app is inactive by then because the game was frontmost, so the launcher
+// would come back behind other windows. WindowShow is makeKeyAndOrderFront
+// plus activateIgnoringOtherApps. Windows does not need it: PR #102 saw the
+// launcher come back in front there.
+func wailsWindowCalls() windowCalls {
+	return windowCalls{
+		minimise:            wailsrt.WindowMinimise,
+		unminimise:          wailsrt.WindowUnminimise,
+		show:                wailsrt.WindowShow,
+		isFullscreen:        wailsrt.WindowIsFullscreen,
+		showAfterUnminimise: runtime.GOOS == "darwin",
+	}
+}
+
 // launcherWindow is the launcher's own window for the card: the Wails
 // runtime's calls on the app's context, and no window at all before startup,
 // where each is a no-op that says nothing.
@@ -83,14 +113,24 @@ func (w launcherWindow) Frame() (x, y, width, height int) {
 	return x, y, width, height
 }
 
+// Minimise and Unminimise leave a full screen launcher alone, on every OS. On
+// macOS miniaturize: does nothing to a full screen window, and the card, which
+// opens over the launcher's Space (host_darwin.m), is what the player sees; a
+// full screen launcher simply stays under it and is still there when the game
+// ends.
 func (w launcherWindow) Minimise() {
-	if w.a.ctx != nil {
-		wailsrt.WindowMinimise(w.a.ctx)
+	if w.a.ctx == nil || w.a.window.isFullscreen(w.a.ctx) {
+		return
 	}
+	w.a.window.minimise(w.a.ctx)
 }
 
 func (w launcherWindow) Unminimise() {
-	if w.a.ctx != nil {
-		wailsrt.WindowUnminimise(w.a.ctx)
+	if w.a.ctx == nil || w.a.window.isFullscreen(w.a.ctx) {
+		return
+	}
+	w.a.window.unminimise(w.a.ctx)
+	if w.a.window.showAfterUnminimise {
+		w.a.window.show(w.a.ctx)
 	}
 }

@@ -26,8 +26,12 @@ function that builds the argument array, and `Launch` starts Prism and returns
 its process. The only other processes are macOS's `codesign`, with fixed
 arguments, in `verify_darwin.go`, and macOS's `open`, with the absolute path of
 a folder that exists as its only argument, in `openfolder_darwin.go`. Windows
-opens a folder with `ShellExecute`, an API call and not a process. There is no
-shell anywhere, and the `shell never sees a command string` invariant holds it.
+opens a folder with `ShellExecute`, an API call and not a process. Copying the
+log (`CopyRedactedLog`) goes through Wails' `ClipboardSetText`, which on macOS
+runs `pbcopy` with no argument and the redacted text on its stdin
+(`internal/frontend/desktop/darwin/clipboard.go` in Wails): a process of
+Wails' and not one this app starts. There is no shell anywhere, and the `shell
+never sees a command string` invariant holds it.
 
 The game tracker (`gametracker.go`, `gameproc_*.go`) follows a launched game:
 it looks up Prism's child processes (pid, parent pid and name, nothing else)
@@ -36,7 +40,10 @@ lines only, never keeping or logging one (ADR-2, third amendment). While the
 start waits for the game it also follows Prism's own `logs/PrismLauncher-0.log`
 (`gametracker_prism.go`, #103) for one marker, a `LaunchTask` that failed,
 which ends the run as `failed` with a `Reason` (ADR-2, fifth amendment). It
-starts no process.
+starts no process. On macOS it holds one OS activity per run
+(`activity_darwin.go`: `NSProcessInfo`'s `beginActivity`, from `begin` to the
+end of `loop`) so App Nap does not coalesce its waits while the launcher is
+minimised; it reads nothing.
 
 The window holder (`gamewindow*.go`, #45, Windows only; the loading splash,
 #43, is what turns it on for a run) hooks the show events of the game's own

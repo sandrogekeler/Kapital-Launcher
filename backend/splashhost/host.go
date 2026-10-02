@@ -66,7 +66,8 @@ type Page struct {
 	OnMessage func(msg string)
 	// DataDir is a folder the host may create and keep its webview's data in
 	// (the WebView2 user data folder on Windows). The card has a folder of its
-	// own so it never shares one with the launcher's webview.
+	// own so it never shares one with the launcher's webview. macOS keeps the
+	// card's data in memory (a non-persistent data store) and ignores the folder.
 	DataDir string
 	// Background is the colour the window shows before the page paints, so the
 	// card never flashes white.

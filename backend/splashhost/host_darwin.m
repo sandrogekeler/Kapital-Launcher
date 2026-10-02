@@ -51,6 +51,11 @@ static const int kMaxEvalRetries = 50;
 @property (nonatomic, strong) WKWebView *webView;
 // The newest state not yet delivered, and whether the page has loaded to take it.
 @property (nonatomic, copy) NSString *pending;
+// The newest state Go has pushed, kept after it is delivered, for a page that
+// has to be loaded again and starts from nothing.
+@property (nonatomic, copy) NSString *latest;
+// The page's address, to load it again when there is nothing to reload.
+@property (nonatomic, strong) NSURL *pageURL;
 @property (nonatomic) BOOL loaded;
 @property (nonatomic) BOOL reported;
 @property (nonatomic) BOOL closed;
@@ -94,6 +99,7 @@ static const int kMaxEvalRetries = 50;
 - (void)teardown {
     self.closed = YES;
     self.pending = nil;
+    self.latest = nil;
     [self.webView stopLoading];
     self.webView.navigationDelegate = nil;
     [self.webView.configuration.userContentController removeScriptMessageHandlerForName:kMessageHandlerName];
@@ -186,9 +192,23 @@ static const int kMaxEvalRetries = 50;
 }
 
 // The page's process dying before the first load ends it would otherwise leave
-// Open waiting out its timeout.
+// Open waiting out its timeout. After it, the card would stay blank for the rest
+// of the run, so the page is loaded again and the newest state goes back in once
+// it has: didFinishNavigation flushes pending, as it does for the first load.
+// https://developer.apple.com/documentation/webkit/wknavigationdelegate/webviewwebcontentprocessdidterminate(_:)
 - (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView {
-    [self report:NO message:@"the page's process ended"];
+    if (self.closed) return;
+    if (!self.loaded) {
+        [self report:NO message:@"the page's process ended"];
+        return;
+    }
+    self.loaded = NO;
+    self.pending = self.latest;
+    self.retries = 0;
+    // reload answers nil when there is no page to reload, which a terminated
+    // process can leave; the page is then requested again.
+    // https://developer.apple.com/documentation/webkit/wkwebview/reload()
+    if ([webView reload] == nil) [webView loadRequest:[NSURLRequest requestWithURL:self.pageURL]];
 }
 
 @end
@@ -226,11 +246,22 @@ static BOOL runOnMain(double timeout, void (^block)(void)) {
     return YES;
 }
 
+// The calls below that Go makes from its own threads (splashHasWindowServer,
+// splashCreate, splashEval) have no autorelease pool there, so each wraps its
+// body in one: what Foundation autoreleases while it runs is freed when it
+// returns and not left to build up.
+
 int splashHasWindowServer(void) {
-    CFDictionaryRef session = CGSessionCopyCurrentDictionary();
-    if (session == NULL) return 0;
-    CFRelease(session);
-    return 1;
+    @autoreleasepool {
+        CFDictionaryRef session = CGSessionCopyCurrentDictionary();
+        if (session == NULL) return 0;
+        CFRelease(session);
+        return 1;
+    }
+}
+
+int splashIsMainThread(void) {
+    return [NSThread isMainThread] ? 1 : 0;
 }
 
 // launcherScreen is the screen the launcher's window is on: the app's main or
@@ -243,6 +274,9 @@ static NSScreen *launcherScreen(void) {
     [candidates addObjectsFromArray:NSApp.windows];
     for (NSWindow *window in candidates) {
         if ([window isKindOfClass:[KSplashWindow class]]) continue;
+        // A window that is not on screen (hidden, or minimised) is not where the
+        // player is looking, and its screen is its last one.
+        if (!window.isVisible) continue;
         if (window.screen) return window.screen;
     }
     return NSScreen.mainScreen ?: NSScreen.screens.firstObject;
@@ -268,6 +302,7 @@ static KSplash *makeSplash(uintptr_t handle, NSRect frame, NSColor *colour, NSSt
     KSplash *splash = [[KSplash alloc] init];
     splash.handle = handle;
     splash.scheme = scheme;
+    splash.pageURL = url;
 
     KSplashWindow *window = [[KSplashWindow alloc] initWithContentRect:frame
                                                              styleMask:NSWindowStyleMaskBorderless
@@ -278,8 +313,22 @@ static KSplash *makeSplash(uintptr_t handle, NSRect frame, NSColor *colour, NSSt
     [window setOpaque:YES];
     [window setHasShadow:YES];
     [window setBackgroundColor:colour];
+    // A launcher in native full screen has a Space of its own, and a plain
+    // window would open on another one. FullScreenAuxiliary lets the card
+    // display on the same Space as a full screen window; MoveToActiveSpace
+    // brings it to the Space that is active instead of switching away. The two
+    // are in different groups of the options, so they combine.
+    // https://developer.apple.com/documentation/appkit/nswindow/collectionbehavior-swift.struct
+    [window setCollectionBehavior:NSWindowCollectionBehaviorFullScreenAuxiliary |
+                                  NSWindowCollectionBehaviorMoveToActiveSpace];
 
     WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
+    // The default data store is the persistent one the launcher's own webview
+    // uses. The card keeps nothing worth persisting, so it gets one that lives
+    // in memory and writes nothing to disk. Apple: WKWebsiteDataStore
+    // nonPersistent() (+nonPersistentDataStore in Objective-C).
+    // https://developer.apple.com/documentation/webkit/wkwebsitedatastore/nonpersistent()
+    config.websiteDataStore = [WKWebsiteDataStore nonPersistentDataStore];
     [config setURLSchemeHandler:splash forURLScheme:scheme];
     [config.userContentController addScriptMessageHandler:splash name:kMessageHandlerName];
 
@@ -301,23 +350,25 @@ static KSplash *makeSplash(uintptr_t handle, NSRect frame, NSColor *colour, NSSt
 }
 
 void *splashCreate(uintptr_t handle, const double *frame, const int *rgb, const char *scheme, const char *url) {
-    NSString *schemeName = scheme ? [NSString stringWithUTF8String:scheme] : nil;
-    NSURL *pageURL = url ? [NSURL URLWithString:[NSString stringWithUTF8String:url]] : nil;
-    if (schemeName == nil || pageURL == nil) return NULL;
-    NSRect rect = NSMakeRect(frame[0], frame[1], frame[2], frame[3]);
-    NSColor *colour = [NSColor colorWithSRGBRed:rgb[0] / 255.0 green:rgb[1] / 255.0 blue:rgb[2] / 255.0 alpha:1.0];
+    @autoreleasepool {
+        NSString *schemeName = scheme ? [NSString stringWithUTF8String:scheme] : nil;
+        NSURL *pageURL = url ? [NSURL URLWithString:[NSString stringWithUTF8String:url]] : nil;
+        if (schemeName == nil || pageURL == nil) return NULL;
+        NSRect rect = NSMakeRect(frame[0], frame[1], frame[2], frame[3]);
+        NSColor *colour = [NSColor colorWithSRGBRed:rgb[0] / 255.0 green:rgb[1] / 255.0 blue:rgb[2] / 255.0 alpha:1.0];
 
-    __block void *ref = NULL;
-    BOOL ran = runOnMain(10.0, ^{
-        KSplash *splash = nil;
-        @try {
-            splash = makeSplash(handle, rect, colour, schemeName, pageURL);
-        } @catch (NSException *exception) {
-            splash = nil;
-        }
-        if (splash != nil) ref = (__bridge_retained void *)splash;
-    });
-    return ran ? ref : NULL;
+        __block void *ref = NULL;
+        BOOL ran = runOnMain(10.0, ^{
+            KSplash *splash = nil;
+            @try {
+                splash = makeSplash(handle, rect, colour, schemeName, pageURL);
+            } @catch (NSException *exception) {
+                splash = nil;
+            }
+            if (splash != nil) ref = (__bridge_retained void *)splash;
+        });
+        return ran ? ref : NULL;
+    }
 }
 
 void splashShow(void *ref) {
@@ -337,15 +388,18 @@ void splashShow(void *ref) {
 
 void splashEval(void *ref, const char *stateJSON) {
     if (ref == NULL || stateJSON == NULL) return;
-    KSplash *splash = (__bridge KSplash *)ref;
-    NSString *state = [NSString stringWithUTF8String:stateJSON];
-    if (state == nil) return;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (splash.closed) return;
-        splash.pending = state;
-        splash.retries = 0;
-        [splash flush];
-    });
+    @autoreleasepool {
+        KSplash *splash = (__bridge KSplash *)ref;
+        NSString *state = [NSString stringWithUTF8String:stateJSON];
+        if (state == nil) return;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (splash.closed) return;
+            splash.pending = state;
+            splash.latest = state;
+            splash.retries = 0;
+            [splash flush];
+        });
+    }
 }
 
 int splashClose(void *ref) {

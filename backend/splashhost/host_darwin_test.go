@@ -56,6 +56,15 @@ func TestCloseAndUpdateBeforeOpenAndCloseTwiceAreSafe(t *testing.T) {
 	}
 }
 
+// Open's refusal on the main thread needs a goroutine locked to it, which Wails
+// has and a test has not (the tests run on goroutines of their own), so this
+// holds the other half: a goroutine that is not on it is let through.
+func TestAGoroutineOffTheMainThreadIsNotRefusedAsOnIt(t *testing.T) {
+	if onMainThread() {
+		t.Fatal("a test goroutine is on the main thread, where Open would be refused")
+	}
+}
+
 func TestOpenRefusesWhatCannotBeShownBeforeTouchingAppKit(t *testing.T) {
 	assets := func(string) ([]byte, string, bool) { return nil, "", false }
 	cases := []struct {
