@@ -128,6 +128,22 @@ func newGameRig(t *testing.T) *gameRig {
 		defer r.mu.Unlock()
 		r.events = append(r.events, s)
 	})
+	// Registered after the TempDir and before any start's cancel, so it runs
+	// between them: every run has been cancelled, and none is still writing
+	// its launch times when the directory is removed. Bounded, so a run that
+	// ignores its cancel fails the test instead of hanging the package.
+	t.Cleanup(func() {
+		done := make(chan struct{})
+		go func() {
+			r.tracker.runs.Wait()
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-time.After(10 * time.Second):
+			t.Error("a run did not end after its cancel")
+		}
+	})
 	r.tracker.now = r.clock.Now
 	r.tracker.os = r.procs.os()
 	r.tracker.tick = time.Millisecond
@@ -197,9 +213,21 @@ func until(t *testing.T, what string, cond func() bool) {
 	}
 }
 
+// untilPhase waits for the phase's event to have reached the rig. Latest
+// shows a phase a moment before its event is emitted, so a test that waited
+// on Latest and then read the events could miss the last one.
 func (r *gameRig) untilPhase(phase string) {
 	r.t.Helper()
-	until(r.t, "phase "+phase, func() bool { return r.tracker.Latest("frangfurd").Phase == phase })
+	until(r.t, "phase "+phase, func() bool { return r.lastPhase() == phase })
+}
+
+func (r *gameRig) lastPhase() string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.events) == 0 {
+		return ""
+	}
+	return r.events[len(r.events)-1].Phase
 }
 
 // drive runs steps by hand until the condition holds, moving the clock by
