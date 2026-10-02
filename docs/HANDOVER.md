@@ -25,8 +25,8 @@ request stacked on it.
 The six below were opened from one cloud session; each is one concern, built
 by a Sonnet agent from a written brief and reviewed by the session before it
 was opened. #105 to #109 merged the same day and `main` is green (CI, CodeQL,
-Scorecard, aislop, Build); #110 took a base merge after #106 and #109 and was
-still open with this handover. None has been run on real hardware.
+Scorecard, aislop, Build); #110 followed after a base merge over #106 and
+#109. None has been run on real hardware.
 
 | PR | What | Verified | Still to see |
 |---|---|---|---|
@@ -64,7 +64,7 @@ call.
 
 ## Work items, in the order agreed
 
-1. **Merge #110 and #111**, then run the first prerelease from the
+1. **Merge #111**, then run the first prerelease from the
    Actions tab (Build, "Run workflow", `v0.1.0-alpha.1`). That is the test of
    the release half of #107, and it gives the iMac a universal bundle for #30
    without building there. Then set `site/links.json`'s `download`.
