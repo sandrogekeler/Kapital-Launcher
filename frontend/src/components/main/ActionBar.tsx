@@ -75,9 +75,11 @@ const WORKING = ['downloading', 'unpacking', 'verifying']
  * update.
  *
  * While the chapter's game is starting, running or closing (#44) its own line
- * takes the bar, right after the hand-over to Prism, and Play and Install wait.
- * A game that crashed or never started keeps its line until the next Play, but
- * below an install in progress. A game that closed normally says nothing.
+ * sits beside Play, right after the hand-over to Prism, and Play and Install
+ * wait. The server's status stays on the right throughout, so it is still
+ * there when the player is launching. A game that crashed or never started
+ * keeps its line until the next Play, but yields to an install in progress,
+ * whose line is on the right. A game that closed normally says nothing.
  *
  * Without Prism, the bar offers to get it (ADR-11): the approval card opens
  * below, and once confirmed the state line follows the install step by step.
@@ -115,23 +117,26 @@ export function ActionBar({
   const source = installed ? packSourceLine(instancePack, chapter.pack.packwiz) : null
   const playing = isActive(game?.phase)
   const gameRows = gameLine(game, chapter.name)
+  const installShown =
+    install !== null &&
+    (working || install.phase === 'done' || (missing && install.phase === 'failed'))
+  // The rows beside Play: the hand-over to Prism, then the game. A dead run's
+  // rows give way to an install in progress; a live run's do not, as Play and
+  // Install are held for it.
+  let beside: [string, string, string] | null = null
+  if (launching) {
+    beside = ['◐ Launching', 'Handing over to Prism', 'text-accent']
+  } else if (gameRows && (playing || !(installing || installShown))) {
+    beside = gameRows
+  }
   let state: string
   let meta: string
   let tone = 'text-accent'
-  if (launching) {
-    ;[state, meta] = ['◐ Launching', 'Handing over to Prism']
-  } else if (playing && gameRows) {
-    ;[state, meta, tone] = gameRows
-  } else if (installing) {
+  if (installing) {
     ;[state, meta] = ['◐ Installing', `Adding ${chapter.instance.id} to Prism`]
-  } else if (
-    install &&
-    (working || install.phase === 'done' || (missing && install.phase === 'failed'))
-  ) {
+  } else if (install && installShown) {
     ;[state, meta] = installLine(install, engine?.found ? 'Updating' : 'Getting')
     if (install.phase === 'failed') tone = 'text-danger'
-  } else if (gameRows) {
-    ;[state, meta, tone] = gameRows
   } else if (missing) {
     ;[state, meta, tone] = [
       '○ Prism not found',
@@ -207,6 +212,15 @@ export function ActionBar({
           >
             {install?.phase === 'failed' ? 'Try again' : 'Get Prism Launcher'}
           </Button>
+        )}
+        {beside && (
+          <div className="flex max-w-sm min-w-0 flex-col gap-0.5">
+            <span className={`font-mono text-xs ${beside[2]}`}>{beside[0]}</span>
+            {/* Truncated to keep the bar one row; the title carries the full detail. */}
+            <span className="text-fg-faint truncate text-xs" title={beside[1]}>
+              {beside[1]}
+            </span>
+          </div>
         )}
         <div className="grow" />
         <div className="flex items-center gap-2">
