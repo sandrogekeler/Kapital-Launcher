@@ -172,7 +172,7 @@ func TestSetPackSourceIsRefusedWhileTheGameIsActive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := app.SetPackSource("frangfurd", "dev"); err == nil || !strings.Contains(err.Error(), "starting or running") {
+	if _, err := app.SetPackSource("frangfurd", "dev"); err == nil || err.Error() != "Frangfurd is starting or running; close the game first" {
 		t.Fatalf("got %v", err)
 	}
 	if readFile(t, cfg) != before {
@@ -190,7 +190,7 @@ func TestSetPackSourceIsRefusedWhileAGameStartedFromPrismLooksToBeRunning(t *tes
 	if err := os.WriteFile(filepath.Join(logs, "latest.log"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := app.SetPackSource("frangfurd", "dev"); err == nil || !strings.Contains(err.Error(), "looks to be running") {
+	if _, err := app.SetPackSource("frangfurd", "dev"); err == nil || !strings.Contains(err.Error(), "game log changed less than a minute ago") {
 		t.Fatalf("got %v", err)
 	}
 	if readFile(t, cfg) != before {

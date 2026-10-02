@@ -1,6 +1,7 @@
-import { Suspense, lazy, useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import type { Chapter, ChapterSettings } from '../../types'
 import { selectInstalled, useEngineStore } from '../../stores/useEngineStore'
+import { isActive, selectGame, useGameStore } from '../../stores/useGameStore'
 import { errMsg } from '../../lib/ipc'
 import {
   MEMORY_STEP_MB,
@@ -13,6 +14,7 @@ import { ArrowLeft, FolderOpen } from '../../lib/icons'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
+import { RunningHint } from './RunningHint'
 
 // Only a chapter with a local pack has anything to switch, so the section loads
 // when the panel asks for it and stays out of the launcher's bundle budget
@@ -30,7 +32,10 @@ interface Props {
  * A chapter's own settings (#36): how much memory its game may take and
  * which JVM preset it runs with. Both live in the instance's instance.cfg,
  * so the panel needs the chapter installed, and Go refuses a save while the
- * game looks to be running. Save writes both at once; the value shown after
+ * game is running. Only the tracker's answer (the game store) disables Save;
+ * `info.running` also holds a guess from the game log, which is a hint here and
+ * is read again when the chapter's run ends and when the window regains focus
+ * (issue 126). Save writes both at once; the value shown after
  * is what Go read back from the file. Open folder (#85) shows the instance in
  * the file manager; it is there to reach a crash report or a screenshot.
  * A chapter with a local pack also gets the pack source section, which switches
@@ -46,9 +51,25 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [folderError, setFolderError] = useState<string | null>(null)
+  const playing = useGameStore((s) => isActive(selectGame(chapter.id)(s)?.phase))
+  const wasPlaying = useRef(playing)
 
   useEffect(() => {
     if (installed) void load(chapter.id)
+  }, [installed, chapter.id, load])
+  // The log's guess goes stale the moment the game closes, and on Windows the
+  // minute starts at the close. Read again when the run ends and when the
+  // window comes back to the front, never on a timer.
+  useEffect(() => {
+    const ended = wasPlaying.current && !playing
+    wasPlaying.current = playing
+    if (ended && installed) void load(chapter.id)
+  }, [playing, installed, chapter.id, load])
+  useEffect(() => {
+    if (!installed) return
+    const onFocus = () => void load(chapter.id)
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
   }, [installed, chapter.id, load])
   // The draft follows what Go holds: on first read and after every save.
   useEffect(() => {
@@ -161,14 +182,15 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button onClick={() => void onSave()} disabled={!dirty || saving || info.running}>
+          <Button onClick={() => void onSave()} disabled={!dirty || saving || playing}>
             {saving ? 'Saving' : 'Save'}
           </Button>
-          {info.running && (
+          {playing && (
             <span className="text-warning text-xs">
               {chapter.name} looks to be running. Close the game to change these.
             </span>
           )}
+          {!playing && info.running && <RunningHint chapterName={chapter.name} />}
           {error && <span className="text-danger text-xs select-text">{error}</span>}
         </div>
       </>

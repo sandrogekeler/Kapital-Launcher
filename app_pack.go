@@ -40,7 +40,7 @@ func (a *App) SetPackSource(chapterID, source string) (models.InstanceReport, er
 		return models.InstanceReport{}, err
 	}
 	if a.games.Active(chapterID) {
-		return models.InstanceReport{}, fmt.Errorf("%s is starting or running; close the game first", chapter.Name)
+		return models.InstanceReport{}, errGameActive(chapter)
 	}
 	if !engine.Found {
 		return models.InstanceReport{}, services.ErrPrismNotFound
@@ -55,8 +55,8 @@ func (a *App) SetPackSource(chapterID, source string) (models.InstanceReport, er
 	}
 	// A game started from Prism itself is not the tracker's; Prism could be
 	// writing the file (ADR-2, second amendment).
-	if a.chapterRunning(chapter, filepath.Dir(cfg)) {
-		return models.InstanceReport{}, fmt.Errorf("%s looks to be running; close the game first", chapter.Name)
+	if err := a.refuseIfRunning(chapter, filepath.Dir(cfg)); err != nil {
+		return models.InstanceReport{}, err
 	}
 	result, err := services.SwitchPackSource(cfg, to)
 	if err != nil {

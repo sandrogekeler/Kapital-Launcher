@@ -81,6 +81,20 @@ sending players into Prism's instance settings:
   changed within the last minute), so Prism and the launcher never write the
   file at once.
 
+**Note, 2026-10-02 (#126).** The "looks to be running" test is a guess, and the
+window showed it. On Windows the minute runs from the game's close, not from its
+last write. Microsoft, "File Times": "When writing to a file, the last write
+time is not fully updated until all handles that are used for writing are
+closed." The game holds `latest.log` open for the whole run, so the stat can look
+old while it runs and fresh the moment it quits. The guess stays, because it is
+the last line of defence for a game started from Prism itself, and
+`runningWindow` is unchanged. It is checked fresh at every write
+(`SaveChapterSettings`, `SetPackSource`, the pre-launch rewrite), never read once
+and trusted. The tracker is the exact answer for the launcher's own runs and is
+asked first; a refusal says which of the two spoke. The guess never disables
+anything in the launcher's window: the panel shows it as a hint, and a write the
+guess wrongly refuses is tried again a moment later.
+
 Optional mods, the other half of #36, wait for `kapital-packs` to mark them
 and will write `packwiz.json` under the same rules.
 

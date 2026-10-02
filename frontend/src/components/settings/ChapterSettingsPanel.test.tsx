@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import { models } from '../../../wailsjs/go/models'
 import { useEngineStore } from '../../stores/useEngineStore'
 import { useGameStore } from '../../stores/useGameStore'
 import { DEFAULT_SETTINGS, useSettingsStore } from '../../stores/useSettingsStore'
 import { BUNDLED_MANIFEST } from '../../lib/manifest'
-import type { ChapterSettingsInfo } from '../../types'
+import type { ChapterSettingsInfo, GamePhase } from '../../types'
 import { ChapterSettingsPanel } from './ChapterSettingsPanel'
 
 vi.mock('../../../wailsjs/go/main/App')
@@ -31,6 +31,14 @@ const report = (present: boolean, packUrl: Record<string, string> = {}) =>
     packUrl,
     sizeBytes: {},
   })
+const phaseOf = (phase: GamePhase) => ({
+  frangfurd: {
+    chapterId: 'frangfurd',
+    phase,
+    since: '2026-10-02T10:00:00Z',
+    startedAt: '2026-10-02T09:59:00Z',
+  },
+})
 const published = frangfurd.pack.packwiz!
 const local = 'http://localhost:8080/pack.toml'
 const withOverride = (url: string | undefined) =>
@@ -89,21 +97,70 @@ describe('ChapterSettingsPanel', () => {
 
   it('shows a rejection and keeps the draft', async () => {
     vi.mocked(App.SaveChapterSettings).mockRejectedValue(
-      'Frangfurd looks to be running; close the game first',
+      "Frangfurd's game log changed less than a minute ago: if the game is closed, try again in a moment",
     )
     render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
     fireEvent.change(await screen.findByLabelText('Memory'), { target: { value: '4096' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await screen.findByText(/looks to be running/)
+    await screen.findByText(/game log changed less than a minute ago/)
     expect(screen.getByLabelText('Memory')).toHaveValue('4096')
   })
 
-  it('refuses to save while the instance runs, and says so', async () => {
+  it('only hints when the log says running and the tracker is idle, and Save stays enabled', async () => {
+    vi.mocked(App.GetChapterSettings).mockResolvedValue(info({ running: true }))
+    render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+    fireEvent.change(await screen.findByLabelText('Memory'), { target: { value: '4096' } })
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+    expect(
+      screen.getByText('Frangfurd may be running: its game log changed in the last minute.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Close the game/)).toBeNull()
+  })
+
+  it('disables Save and warns while the tracker says the game is active', async () => {
+    useGameStore.setState({ states: phaseOf('running') })
     vi.mocked(App.GetChapterSettings).mockResolvedValue(info({ running: true }))
     render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
     fireEvent.change(await screen.findByLabelText('Memory'), { target: { value: '4096' } })
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
     expect(screen.getByText(/Close the game/)).toBeInTheDocument()
+    expect(screen.queryByText(/may be running/)).toBeNull()
+  })
+
+  it('says nothing about running when neither answer does', async () => {
+    render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+    await screen.findByLabelText('Memory')
+    expect(screen.queryByText(/running/)).toBeNull()
+  })
+
+  it('reads the info again once when the chapter run ends, not before and not for others', async () => {
+    useGameStore.setState({ states: phaseOf('running') })
+    render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+    await screen.findByLabelText('Memory')
+    expect(App.GetChapterSettings).toHaveBeenCalledTimes(1)
+
+    act(() => useGameStore.setState({ states: phaseOf('stopping') }))
+    expect(App.GetChapterSettings).toHaveBeenCalledTimes(1)
+
+    act(() => useGameStore.setState({ states: phaseOf('closed') }))
+    await waitFor(() => expect(App.GetChapterSettings).toHaveBeenCalledTimes(2))
+    act(() => useGameStore.setState({ states: phaseOf('idle') }))
+    expect(App.GetChapterSettings).toHaveBeenCalledTimes(2)
+  })
+
+  it('reads the info again when the window regains focus, and stops listening on close', async () => {
+    const { unmount } = render(
+      <ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />,
+    )
+    await screen.findByLabelText('Memory')
+    expect(App.GetChapterSettings).toHaveBeenCalledTimes(1)
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'))
+    })
+    expect(App.GetChapterSettings).toHaveBeenCalledTimes(2)
+    unmount()
+    window.dispatchEvent(new Event('focus'))
+    expect(App.GetChapterSettings).toHaveBeenCalledTimes(2)
   })
 
   it('explains when the chapter is not installed', () => {
@@ -233,20 +290,28 @@ describe('ChapterSettingsPanel', () => {
       unmount()
 
       useEngineStore.setState({ installing: null })
-      useGameStore.setState({
-        states: {
-          frangfurd: {
-            chapterId: 'frangfurd',
-            phase: 'running',
-            since: '2026-10-02T10:00:00Z',
-            startedAt: '2026-10-02T09:59:00Z',
-          },
-        },
-      })
+      useGameStore.setState({ states: phaseOf('running') })
+      vi.mocked(App.GetChapterSettings).mockResolvedValue(info({ running: true }))
       render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
       await shown()
       expect(screen.getByRole('button', { name: 'Switch to dev pack' })).toBeDisabled()
       expect(screen.getByText('Close the game to switch.')).toBeInTheDocument()
+      expect(screen.queryByText(/may be running/)).toBeNull()
+    })
+
+    it('only hints, and keeps the switch enabled, when just the log says running', async () => {
+      withOverride(local)
+      useEngineStore.setState({ instances: report(true, { frangfurd: published }) })
+      vi.mocked(App.GetChapterSettings).mockResolvedValue(info({ running: true }))
+      render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+      await shown()
+      await waitFor(() =>
+        expect(useEngineStore.getState().chapterSettings.frangfurd?.running).toBe(true),
+      )
+      expect(screen.getByRole('button', { name: 'Switch to dev pack' })).toBeEnabled()
+      const region = within(screen.getByRole('region', { name: 'Pack source' }))
+      expect(region.getByText(/Frangfurd may be running/)).toBeInTheDocument()
+      expect(screen.queryByText('Close the game to switch.')).toBeNull()
     })
 
     it('disables a pack that is not there, with the reason', async () => {
