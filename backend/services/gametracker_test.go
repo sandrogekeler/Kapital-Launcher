@@ -94,6 +94,31 @@ func (f *fakeProcs) os() gameOS {
 	}
 }
 
+// activityCount counts the OS activities a tracker takes and ends.
+type activityCount struct {
+	mu           sync.Mutex
+	begun, ended int
+	lastReason   string
+}
+
+func (a *activityCount) begin(reason string) func() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.begun++
+	a.lastReason = reason
+	return func() {
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		a.ended++
+	}
+}
+
+func (a *activityCount) counts() (begun, ended int) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.begun, a.ended
+}
+
 // gameRig is a tracker over a fake clock, fake processes and a temp folder.
 type gameRig struct {
 	t       *testing.T
@@ -107,6 +132,8 @@ type gameRig struct {
 	hold bool
 	// onHandover is TrackRequest.OnHandover for the requests the rig makes.
 	onHandover func()
+	// activity counts the OS activities the tracker takes and ends.
+	activity *activityCount
 
 	mu     sync.Mutex
 	events []models.GameState
@@ -116,12 +143,13 @@ func newGameRig(t *testing.T) *gameRig {
 	t.Helper()
 	play := time.Now().Add(-time.Second)
 	r := &gameRig{
-		t:     t,
-		clock: &fakeClock{now: play},
-		procs: newFakeProcs(),
-		log:   newGameLog(t),
-		play:  play,
-		prism: make(chan struct{}),
+		t:        t,
+		clock:    &fakeClock{now: play},
+		procs:    newFakeProcs(),
+		log:      newGameLog(t),
+		play:     play,
+		prism:    make(chan struct{}),
+		activity: &activityCount{},
 	}
 	r.tracker = NewGameTracker(t.TempDir(), func(s models.GameState) {
 		r.mu.Lock()
@@ -145,6 +173,7 @@ func newGameRig(t *testing.T) *gameRig {
 		}
 	})
 	r.tracker.now = r.clock.Now
+	r.tracker.activity = r.activity.begin
 	r.tracker.os = r.procs.os()
 	r.tracker.tick = time.Millisecond
 	r.tracker.procInterval = 0
@@ -286,6 +315,77 @@ func TestTrackerFollowsANormalRunToClosed(t *testing.T) {
 	times := r.tracker.Durations("frangfurd")
 	if len(times) != 1 || times[0].PhaseMs["window"] != 24000 || times[0].PhaseMs["resources"] != 40000 || times[0].PhaseMs["running"] != 51000 {
 		t.Fatalf("the start's timings are kept from Play: %+v", times)
+	}
+}
+
+// The run holds one OS activity from Play to its end, so App Nap does not
+// coalesce its waits while the launcher is minimised, and lets it go however
+// the run ends: the game closing, crashing, the start failing, or the context
+// being cancelled.
+func TestTrackerHoldsOneActivityPerRunAndReleasesItOnEveryEnding(t *testing.T) {
+	endings := []struct {
+		name string
+		end  func(r *gameRig, cancel context.CancelFunc)
+	}{
+		{"closed", func(r *gameRig, _ context.CancelFunc) {
+			r.log.append(render + "Stopping!\n")
+			r.procs.end(200, 0)
+			r.untilPhase("closed")
+		}},
+		{"crashed", func(r *gameRig, _ context.CancelFunc) {
+			r.procs.end(200, 1)
+			r.untilPhase("crashed")
+		}},
+		{"failed", func(r *gameRig, _ context.CancelFunc) {
+			// No game found, and Prism gone: the start fails.
+			close(r.prism)
+			r.clock.Advance(time.Hour)
+			r.untilPhase("failed")
+		}},
+		{"cancelled", func(r *gameRig, cancel context.CancelFunc) { cancel() }},
+	}
+	for _, tc := range endings {
+		t.Run(tc.name, func(t *testing.T) {
+			r := newGameRig(t)
+			r.tracker.startTimeout = 10 * time.Minute
+			r.tracker.prismGrace = 30 * time.Second
+			if tc.name != "failed" {
+				r.procs.add(200, 100, "javaw.exe", r.play.Add(7*time.Second))
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			t.Cleanup(cancel)
+			if err := r.tracker.Track(ctx, r.request()); err != nil {
+				t.Fatal(err)
+			}
+			if begun, ended := r.activity.counts(); begun != 1 || ended != 0 || r.activity.lastReason == "" {
+				t.Fatalf("one activity while the run is going: begun %d, ended %d", begun, ended)
+			}
+			if tc.name != "failed" {
+				r.log.write("[01:10:02] [main/INFO]: ModLauncher running\n" + render + "Backend library: LWJGL\n")
+				r.untilPhase("window")
+			}
+			tc.end(r, cancel)
+			until(t, "the activity to end", func() bool {
+				_, ended := r.activity.counts()
+				return ended == 1
+			})
+			if begun, ended := r.activity.counts(); begun != 1 || ended != 1 {
+				t.Fatalf("taken once and released once: begun %d, ended %d", begun, ended)
+			}
+		})
+	}
+}
+
+// A launch that is refused (the chapter is already running) takes nothing.
+func TestTrackerTakesNoActivityForARefusedLaunch(t *testing.T) {
+	r := newGameRig(t)
+	r.tracker.startTimeout = time.Minute
+	r.begin()
+	if _, err := r.tracker.begin(context.Background(), r.request()); err == nil {
+		t.Fatal("a second launch of the chapter is refused")
+	}
+	if begun, _ := r.activity.counts(); begun != 1 {
+		t.Fatalf("only the first launch took one: %d", begun)
 	}
 }
 
