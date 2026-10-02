@@ -407,6 +407,132 @@ func TestUnzipBoundedKeepsAnAppBundlesInnerLinks(t *testing.T) {
 	if err != nil || link != "A" {
 		t.Fatalf("%q %v", link, err)
 	}
+	info, err := os.Stat(filepath.Join(dst, "Prism Launcher.app/Contents/Frameworks/Qt.framework/Versions/A/Qt"))
+	if err != nil || info.Mode()&0o100 == 0 {
+		t.Fatalf("the executable bit was lost: %v %v", info, err)
+	}
+}
+
+// A link followed by the next entry is how a chain is built, so each case here
+// puts a regular file behind the links and checks that nothing was written
+// above the install folder, and that the folder above it is as it was.
+func TestUnzipBoundedRefusesAChainOfLinksThatLeavesTheInstallFolder(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("creating symlinks needs a privilege Windows test runners lack; macOS CI runs this")
+	}
+	link := os.ModeSymlink | 0o777
+	cases := map[string][]zipEntry{
+		"dot then dotdot": {
+			{name: "a", body: ".", mode: link},
+			{name: "b", body: "a/..", mode: link},
+			{name: "b/x", body: "escaped"},
+		},
+		"a link whose text only looks inside": {
+			{name: "d/", mode: os.ModeDir | 0o755},
+			{name: "d/up", body: "..", mode: link},
+			{name: "d/up/l", body: "../..", mode: link},
+			{name: "d/up/l/x", body: "escaped"},
+		},
+		"link through a link": {
+			{name: "a", body: ".", mode: link},
+			{name: "b", body: "a/..", mode: link},
+			{name: "c", body: "b", mode: link},
+			{name: "c/x", body: "escaped"},
+		},
+		"link then a folder through it": {
+			{name: "a", body: ".", mode: link},
+			{name: "b", body: "a/..", mode: link},
+			{name: "b/sub/", mode: os.ModeDir | 0o755},
+		},
+		"link then a link through it": {
+			{name: "a", body: ".", mode: link},
+			{name: "b", body: "a/..", mode: link},
+			{name: "b/l", body: "x", mode: link},
+		},
+	}
+	for name, entries := range cases {
+		t.Run(name, func(t *testing.T) {
+			parent := t.TempDir()
+			src := filepath.Join(parent, "a.zip")
+			if err := os.WriteFile(src, buildZip(t, entries), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			dst := filepath.Join(parent, "out")
+			if err := unzipBounded(src, dst); err == nil {
+				t.Fatal("must be refused")
+			}
+			names := map[string]bool{}
+			dirEntries, err := os.ReadDir(parent)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, e := range dirEntries {
+				names[e.Name()] = true
+			}
+			if len(names) != 2 || !names["a.zip"] || !names["out"] {
+				t.Errorf("the folder above the install folder changed: %v", names)
+			}
+		})
+	}
+}
+
+func TestUnzipBoundedRefusesALinkOutOnItsOwn(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("creating symlinks needs a privilege Windows test runners lack; macOS CI runs this")
+	}
+	link := os.ModeSymlink | 0o777
+	cases := map[string]string{
+		"absolute":    "/etc",
+		"dotdot":      "..",
+		"dotdot path": "../outside",
+		"nested out":  "sub/../../outside",
+		"empty":       "",
+	}
+	for name, target := range cases {
+		t.Run(name, func(t *testing.T) {
+			parent := t.TempDir()
+			src := filepath.Join(parent, "a.zip")
+			if err := os.WriteFile(src, buildZip(t, []zipEntry{{name: "l", body: target, mode: link}}), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			dst := filepath.Join(parent, "out")
+			if err := unzipBounded(src, dst); err == nil {
+				t.Fatal("must be refused")
+			}
+			if _, err := os.Lstat(filepath.Join(dst, "l")); err == nil {
+				t.Error("the link was created")
+			}
+		})
+	}
+}
+
+func TestUnzipBoundedFollowsALinkToASiblingInsideTheFolder(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("creating symlinks needs a privilege Windows test runners lack; macOS CI runs this")
+	}
+	link := os.ModeSymlink | 0o777
+	dir := t.TempDir()
+	src := filepath.Join(dir, "a.zip")
+	entries := []zipEntry{
+		{name: "real/", mode: os.ModeDir | 0o755},
+		{name: "alias", body: "real", mode: link},
+		{name: "deep/in/up", body: "../../real", mode: link},
+		{name: "alias/x.txt", body: "inside"},
+		{name: "deep/in/up/y.txt", body: "also inside"},
+	}
+	if err := os.WriteFile(src, buildZip(t, entries), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dst := filepath.Join(dir, "out")
+	if err := unzipBounded(src, dst); err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]string{"real/x.txt": "inside", "real/y.txt": "also inside"} {
+		got, err := os.ReadFile(filepath.Join(dst, name))
+		if err != nil || string(got) != want {
+			t.Errorf("%s: %q %v", name, got, err)
+		}
+	}
 }
 
 func TestNewerVersion(t *testing.T) {
