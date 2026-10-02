@@ -280,6 +280,12 @@ static KSplash *makeSplash(uintptr_t handle, NSRect frame, NSColor *colour, NSSt
     [window setBackgroundColor:colour];
 
     WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
+    // The default data store is the persistent one the launcher's own webview
+    // uses. The card keeps nothing worth persisting, so it gets one that lives
+    // in memory and writes nothing to disk. Apple: WKWebsiteDataStore
+    // nonPersistent() (+nonPersistentDataStore in Objective-C).
+    // https://developer.apple.com/documentation/webkit/wkwebsitedatastore/nonpersistent()
+    config.websiteDataStore = [WKWebsiteDataStore nonPersistentDataStore];
     [config setURLSchemeHandler:splash forURLScheme:scheme];
     [config.userContentController addScriptMessageHandler:splash name:kMessageHandlerName];
 
