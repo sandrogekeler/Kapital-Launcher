@@ -59,6 +59,50 @@ func TestLaunchChapterDoesNotStartPrismOnceTheAppIsClosing(t *testing.T) {
 	}
 }
 
+// A managed Prism installed before its log rules were seeded gets them on the
+// next Play, before Prism starts (#103, #106); a Prism the player installed is
+// never written to. Prism is made to fail on start, so the file existing after
+// the failed launch shows the seed came first.
+func TestLaunchChapterSeedsTheManagedPrismsLogRulesBeforePrismStarts(t *testing.T) {
+	run := func(t *testing.T, source string) (rulesInRoot bool) {
+		t.Helper()
+		dataDir := t.TempDir()
+		app, err := NewApp(dataDir, bundledManifest, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		managed := services.NewManagedPrism(dataDir, "windows", "amd64")
+		app.managed = managed
+		appDir := filepath.Join(dataDir, "prism", "app-11.1.1")
+		if err := os.MkdirAll(appDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dataDir, "prism", "managed.json"), []byte(`{"version":"11.1.1"}`), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(appDir, "qtlogging.ini"), []byte("[Rules]\n*.debug=true\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := app.SaveSettings(models.AppSettings{Theme: "dark"}); err != nil {
+			t.Fatal(err)
+		}
+		app.engine = models.EngineInfo{Found: true, Source: source, Executable: filepath.Join(appDir, "no-such-prism"), Root: managed.Root()}
+
+		err = app.LaunchChapter("frangfurd")
+		if err == nil || !strings.Contains(err.Error(), "start prism") {
+			t.Fatalf("Prism is started and fails here: %v", err)
+		}
+		_, statErr := os.Stat(filepath.Join(managed.Root(), "qtlogging.ini"))
+		return statErr == nil
+	}
+	if !run(t, "managed") {
+		t.Error("a managed Prism's root has the rules by the time Prism starts")
+	}
+	if run(t, "standard-location") {
+		t.Error("nothing is written for a Prism that is not the launcher's")
+	}
+}
+
 func TestGetServerStatusRefusesAnUnknownChapterAndAnswersForOne(t *testing.T) {
 	app := newTestApp(t)
 	if _, err := app.GetServerStatus("atlantis"); err == nil {
