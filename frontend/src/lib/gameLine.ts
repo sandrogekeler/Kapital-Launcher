@@ -1,4 +1,19 @@
-import type { GameState } from '../types'
+import type { GameFailReason, GameState } from '../types'
+
+/**
+ * What a failed start says. Prism's window is left open on its error, so that
+ * is where the details are.
+ */
+function failedDetail(reason: GameFailReason | undefined): string {
+  switch (reason) {
+    case 'packsync':
+      return "The pack could not be synced. Prism's window has the details"
+    case 'launch':
+      return 'Prism stopped before the game. Its window has the details'
+    default:
+      return 'Prism gave up or never started it'
+  }
+}
 
 /**
  * The state line's rows for a game in progress or just ended: the state, the
@@ -32,7 +47,7 @@ export function gameLine(
         'text-danger',
       ]
     case 'failed':
-      return ['○ The game did not start', 'Prism gave up or never started it', 'text-danger']
+      return ['○ The game did not start', failedDetail(state.reason), 'text-danger']
     default:
       return null
   }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { gameLine } from './gameLine'
-import type { GamePhase, GameState } from '../types'
+import type { GameFailReason, GamePhase, GameState } from '../types'
 
 const at = (phase: GamePhase, exitCode?: number): GameState => ({
   chapterId: 'frangfurd',
@@ -69,6 +69,20 @@ describe('gameLine', () => {
     ])
   })
 
+  it('says why a start failed when Prism said so', () => {
+    const failed = (reason: GameFailReason): GameState => ({ ...at('failed'), reason })
+    expect(gameLine(failed('packsync'), 'Frangfurd')).toEqual([
+      '○ The game did not start',
+      "The pack could not be synced. Prism's window has the details",
+      'text-danger',
+    ])
+    expect(gameLine(failed('launch'), 'Frangfurd')).toEqual([
+      '○ The game did not start',
+      'Prism stopped before the game. Its window has the details',
+      'text-danger',
+    ])
+  })
+
   it('has nothing to say for idle, closed or an unknown state', () => {
     expect(gameLine(at('idle'), 'Frangfurd')).toBeNull()
     expect(gameLine(at('closed'), 'Frangfurd')).toBeNull()
@@ -88,6 +102,9 @@ describe('gameLine', () => {
     ]
     for (const p of phases) {
       expect(gameLine(at(p, 2), 'Frangfurd')?.join(' ')).not.toContain('—')
+    }
+    for (const reason of ['packsync', 'launch'] as const) {
+      expect(gameLine({ ...at('failed'), reason }, 'Frangfurd')?.join(' ')).not.toContain('—')
     }
   })
 })
