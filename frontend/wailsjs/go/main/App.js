@@ -110,6 +110,10 @@ export function SaveSettings(arg1) {
   return window['go']['main']['App']['SaveSettings'](arg1);
 }
 
+export function ShowPrismConsole(arg1) {
+  return window['go']['main']['App']['ShowPrismConsole'](arg1);
+}
+
 export function StopGame(arg1) {
   return window['go']['main']['App']['StopGame'](arg1);
 }

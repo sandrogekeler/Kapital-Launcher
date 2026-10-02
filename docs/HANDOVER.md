@@ -234,7 +234,14 @@ one, the icon check on the PC is what is left), #35 (decided on 2026-10-01).
   `ShowConsoleOnError` on, a failed launch keeps Prism open on its console,
   and closing that window exits 0. A `--launch` handed to a Prism already
   running exits 0 at once, writing no log; the running one logs the failure
-  in the same root's `logs/PrismLauncher-0.log`, which #106 follows.
+  in the same root's `logs/PrismLauncher-0.log`, which #106 follows. On
+  Windows with the splash on, the launcher now hides that console and shows its
+  own failure view with a "Show Prism's console" button (ADR-0012 amendment);
+  the Prism stays alive behind it until the next Play, Stop or quit. The title
+  prefix `Console window for`, the show and foreground and Prism exiting on
+  `WM_CLOSE` are unverified on real hardware, and a player's own Prism with
+  `ShowConsole=true` would read as a failed start (the managed root seeds it
+  off).
 - **Following a real start from outside**: `Get-CimInstance Win32_Process`
   gives parent ids (launcher, then `prismlauncher.exe`, then `javaw.exe`); a
   PowerShell `EnumWindows` probe every 100 ms shows every window of those

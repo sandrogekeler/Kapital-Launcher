@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { GamePhase, GameState, RunReport } from '../types'
 import { errMsg, hasWailsBridge, readOr } from '../lib/ipc'
-import { GetGameStates, GetRunReport, StopGame } from '../../wailsjs/go/main/App'
+import { GetGameStates, GetRunReport, ShowPrismConsole, StopGame } from '../../wailsjs/go/main/App'
 import { EventsOff, EventsOn } from '../../wailsjs/runtime/runtime'
 
 /** The event Go emits on every phase change. Same string as services.EventGameState. */
@@ -41,6 +41,8 @@ interface GameStore {
   report: (chapterId: string) => Promise<RunReport | null>
   /** Ends the chapter's run at once. A write: a refusal is recorded and rethrown. */
   stop: (chapterId: string) => Promise<void>
+  /** Shows the Prism console Go hid; false when none is left to show. A refusal is rethrown. */
+  showConsole: (chapterId: string) => Promise<boolean>
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -98,6 +100,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!hasWailsBridge()) return null
     return (await GetRunReport(chapterId)) as RunReport
   },
+
+  // Only a report that says the console is there offers this, and a report
+  // needs the bridge, so without one there is nothing to show.
+  showConsole: async (chapterId) => (hasWailsBridge() ? ShowPrismConsole(chapterId) : false),
 }))
 
 /** The game state for one chapter, or undefined before anything is known. */

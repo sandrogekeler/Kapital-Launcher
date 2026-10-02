@@ -62,10 +62,12 @@ describe('the card bridge', () => {
       send('leave')
       send('openFolder')
       send('copyLog')
+      send('showConsole')
       expect(postMessage.mock.calls).toEqual([
         ['{"action":"leave"}'],
         ['{"action":"openFolder"}'],
         ['{"action":"copyLog"}'],
+        ['{"action":"showConsole"}'],
       ])
     })
 

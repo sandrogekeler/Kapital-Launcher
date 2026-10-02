@@ -13,3 +13,9 @@ func HoldGameWindow(pid int) (WindowHolder, error) {
 func HoldPrismDialogs(pid int) (DialogHolder, error) {
 	return nil, errWindowHoldUnsupported
 }
+
+// HoldPrismConsole is Windows only (ADR-0012): elsewhere Prism's console
+// appears as Prism makes it, and the launcher's view has no button for it.
+func HoldPrismConsole(pid int) (ConsoleHolder, error) {
+	return nil, errWindowHoldUnsupported
+}

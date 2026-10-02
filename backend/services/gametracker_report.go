@@ -81,7 +81,10 @@ func (t *GameTracker) Report(chapterID string) (models.RunReport, error) {
 	if !ok {
 		return models.RunReport{}, ErrNoRun
 	}
-	report := models.RunReport{Game: state, Phases: phaseTimes(rec.reachedMs)}
+	report := models.RunReport{
+		Game: state, Phases: phaseTimes(rec.reachedMs),
+		ConsoleAvailable: t.consoleAvailable(chapterID),
+	}
 	if rec.logPath == "" {
 		return report, nil
 	}

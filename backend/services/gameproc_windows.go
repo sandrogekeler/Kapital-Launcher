@@ -51,8 +51,10 @@ func terminateProcess(pid int, _ bool) error {
 // closeWindows posts WM_CLOSE to each visible top-level window of the pid, and
 // to no other window: a Prism that is only showing its console on an error
 // exits when it is closed. Hidden windows are Qt's own helpers and the
-// progress dialogs the holder hid, and are left alone. It reads each window's
-// owner and visibility, never its title. An error means no window took it.
+// progress dialogs the holder hid, and are left alone; the console the holder
+// hid is the one hidden window that is closed, by the console holder's own
+// handles (askPrismClose). It reads each window's owner and visibility, never
+// its title. An error means no window took it.
 func closeWindows(pid int) error {
 	var posted int
 	enumWindows(func(hwnd windows.HWND) {

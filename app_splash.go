@@ -32,7 +32,9 @@ func (a *App) newSplashCard(dist fs.FS, newHost func() splashhost.Host) *service
 			// The dark ground: the card is mostly artwork, drawn over it.
 			Background: design.WindowBackground,
 		},
-		Actions: services.CardActions{OpenFolder: a.OpenInstanceFolder, CopyLog: a.CopyRedactedLog},
+		Actions: services.CardActions{
+			OpenFolder: a.OpenInstanceFolder, CopyLog: a.CopyRedactedLog, ShowConsole: a.ShowPrismConsole,
+		},
 		// The tracker is made after the card, so it is looked up when needed.
 		Report:  func(id string) (models.RunReport, error) { return a.games.Report(id) },
 		Changed: a.splashChanged,

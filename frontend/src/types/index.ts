@@ -116,7 +116,7 @@ export interface RunReport {
   logTruncated: boolean
   /** The file name, never the path, of the newest crash report since Play; empty for none. */
   crashReport: string
-  /** Whether Prism's console can be shown from the view; false until it is hidden. */
+  /** Whether Prism's console, hidden by Go (Windows), can be shown from the view. */
   consoleAvailable: boolean
 }
 

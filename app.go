@@ -265,6 +265,9 @@ func (a *App) LaunchChapter(chapterID string) error {
 	if a.games.Active(chapterID) {
 		return fmt.Errorf("%s is already starting or running", chapter.Name)
 	}
+	// A Prism still up on the last start's hidden console is closed first, or
+	// the new Prism would hand this launch to it (ADR-0012, amendment).
+	a.games.CloseConsole(chapter.ID)
 	settings, err := a.settings.Load()
 	if err != nil {
 		return err

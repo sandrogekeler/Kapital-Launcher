@@ -93,7 +93,32 @@ describe('the card page', () => {
     expect(screen.getByText('crash-1.txt')).toBeInTheDocument()
   })
 
-  it("posts the page's three actions to Go", () => {
+  it("offers Prism's console only with the report saying so, and posts the action", () => {
+    render(<SplashApp />)
+    const game = {
+      chapterId: 'frangfurd',
+      phase: 'failed' as const,
+      since: '2026-10-01T10:01:00Z',
+      startedAt: '2026-10-01T09:59:00Z',
+      splash: true,
+    }
+    const report = (consoleAvailable: boolean) => ({
+      game,
+      phases: [{ phase: 'starting', ms: 0 }],
+      logTail: '',
+      logLines: 0,
+      logTruncated: false,
+      crashReport: '',
+      consoleAvailable,
+    })
+    push({ game, report: report(false) })
+    expect(screen.queryByRole('button', { name: "Show Prism's console" })).toBeNull()
+    push({ game, report: report(true) })
+    fireEvent.click(screen.getByRole('button', { name: "Show Prism's console" }))
+    expect(postMessage.mock.calls.map((c) => c[0])).toEqual(['{"action":"showConsole"}'])
+  })
+
+  it("posts the page's other three actions to Go", () => {
     render(<SplashApp />)
     push({
       game: {

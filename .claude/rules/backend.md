@@ -83,6 +83,22 @@ Prism's dialog matches nothing and stays in view. Each release logs one
 `prism dialogs` line with the chapter, the hides and whether any were shown back,
 never a title.
 
+Prism's console window is held the same way (`gamewindow_console_windows.go`,
+ADR-0012 amendment), started with the dialogs' hold and on the same condition,
+and matched by a title that begins `Console window for`. It is not released at
+the handover or when the run ends: the console appears at about the moment a
+failed start ends, and its output exists nowhere else. The hold lives on a
+per-chapter record in the tracker (`gametracker_console.go`), where it also is
+the second failure signal (a console seen while the start waits, with no game
+log of its own, ends the run `failed` with the reason `launch`, after a second
+for Prism's own log to give a better one), and `consoleAvailable` in the run
+report. `ShowPrismConsole` and the card's `showConsole` action end the hook and
+show the windows. A Prism left alive on a console is the launcher's to close,
+with Stop's routine plus `WM_CLOSE` to the hold's own (hidden) windows: when the
+next Play of the chapter begins, on Stop and when the launcher quits
+(`GameTracker.Shutdown`, bounded). A Prism with no console left is not touched.
+Windows only; the title is read through `GetWindowTextW`, never kept or logged.
+
 The loading card (#43, #97) is a window of its own: `backend/splashhost` is one
 borderless window with a webview of its own per OS (`host_windows.go`,
 `host_darwin.go`, `host_other.go`, which has none), behind `Host` (`Open`,
@@ -92,7 +108,7 @@ which the host serves through its in-memory resource handler at
 `Page.Assets` (`AssetsFrom`, which refuses `..`, anything that is not a file and
 any type it does not list); there is no local server and no network. Go pushes
 the card's state (`splashhost.State`) with `window.kapitalSplash.update`, and the
-page posts back one of three actions, `leave`, `openFolder` and `copyLog`, as a
+page posts back one of four actions, `leave`, `openFolder`, `copyLog` and `showConsole`, as a
 string of JSON: `ParseMessage` drops anything else, and a message carries no
 argument. `protocol.go` is the whole contract.
 

@@ -24,8 +24,8 @@ export interface CardState {
   theme?: 'dark' | 'light'
 }
 
-/** The three things the page may ask Go to do. */
-export type CardAction = 'leave' | 'openFolder' | 'copyLog'
+/** The four things the page may ask Go to do. */
+export type CardAction = 'leave' | 'openFolder' | 'copyLog' | 'showConsole'
 
 interface CardStore {
   state: CardState | null

@@ -27,6 +27,7 @@ export function SplashApp() {
       onLeave={() => send('leave')}
       onOpenFolder={() => send('openFolder')}
       onCopyLog={() => send('copyLog')}
+      onShowConsole={() => send('showConsole')}
     />
   )
 }

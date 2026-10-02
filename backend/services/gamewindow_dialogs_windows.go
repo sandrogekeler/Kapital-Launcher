@@ -60,6 +60,13 @@ func (d *dialogHolder) Release(show bool) DialogReport {
 // title begins "Please wait". The title is the whole of what is read of it, and
 // nothing of it is kept or logged.
 func isPrismDialog(hwnd windows.HWND, pid uint32) bool {
+	return topLevelTitleMatches(hwnd, pid, isPrismDialogTitle)
+}
+
+// topLevelTitleMatches is whether a window is a top-level window of the pid
+// whose title the match accepts: the owner, the root and the first
+// titleCapacity characters of the title are all that is read.
+func topLevelTitleMatches(hwnd windows.HWND, pid uint32, match func(string) bool) bool {
 	var owner uint32
 	if _, err := windows.GetWindowThreadProcessId(hwnd, &owner); err != nil || owner != pid {
 		return false
@@ -72,5 +79,5 @@ func isPrismDialog(hwnd windows.HWND, pid uint32) bool {
 	if n == 0 {
 		return false
 	}
-	return isPrismDialogTitle(windows.UTF16ToString(title[:]))
+	return match(windows.UTF16ToString(title[:]))
 }

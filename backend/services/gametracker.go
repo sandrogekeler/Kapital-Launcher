@@ -143,14 +143,17 @@ type GameTracker struct {
 	// holdDialogs starts keeping the launcher's own Prism's progress dialogs
 	// hidden (#95); injected likewise.
 	holdDialogs func(pid int) (DialogHolder, error)
+	// holdConsole starts keeping that Prism's console window hidden, past the
+	// run's end (gametracker_console.go); injected likewise.
+	holdConsole func(pid int) (ConsoleHolder, error)
 	// activity tells the OS the tracker is doing work the player asked for, so
 	// a launcher that is minimised and has no window up is not napped, and
 	// returns the call that says it is done. A no-op off macOS; injected so a
 	// test counts the pairs (activity_darwin.go).
 	activity func(reason string) (end func())
-	// holdWarned and dialogsWarned are whether a failure to hold has been
-	// logged: once is enough.
-	holdWarned, dialogsWarned atomic.Bool
+	// holdWarned, dialogsWarned and consoleWarned are whether a failure to hold
+	// has been logged: once is enough.
+	holdWarned, dialogsWarned, consoleWarned atomic.Bool
 
 	// tick is how often a run looks at the log; procInterval how often it
 	// looks for the game's process. The timeouts are fields so tests run in
@@ -161,9 +164,17 @@ type GameTracker struct {
 	// stopForce is how long a process asked to end by Stop has before it is
 	// made to (gametracker_stop.go).
 	stopForce time.Duration
+	// consoleGrace is how long a console that appeared during the start waits
+	// for Prism's own log before the run ends failed (gametracker_console.go).
+	consoleGrace time.Duration
+	// endWait is how long a Prism the launcher ended on a console is waited
+	// for.
+	endWait time.Duration
 
 	mu     sync.Mutex
 	states map[string]models.GameState
+	// consoles is each chapter's Prism console holder, which outlives its run.
+	consoles map[string]*prismConsole
 	// records is what a chapter's latest run's report needs beyond its state
 	// (gametracker_report.go); redactor makes the report's redactor.
 	records  map[string]runRecord
@@ -187,6 +198,10 @@ func NewGameTracker(dataDir string, emit func(models.GameState)) *GameTracker {
 		os:               systemGameOS(),
 		hold:             HoldGameWindow,
 		holdDialogs:      HoldPrismDialogs,
+		holdConsole:      HoldPrismConsole,
+		consoleGrace:     prismConsoleGrace,
+		endWait:          prismEndWait,
+		consoles:         map[string]*prismConsole{},
 		activity:         beginActivity,
 		tick:             logPollInterval,
 		procInterval:     gameProcInterval,
@@ -331,6 +346,11 @@ type gameRun struct {
 	// dialogs keeps the launcher's Prism's "Please wait" dialogs hidden from
 	// Play to the handover, nil when none is held (#95).
 	dialogs DialogHolder
+	// console is Prism's console hold, kept by the tracker past the run's end;
+	// the run reads it for the second failure signal. consoleSeenAt is when a
+	// console was first seen during the start.
+	console       *prismConsole
+	consoleSeenAt time.Time
 	// handedOver is whether the handover has begun, so it happens once.
 	handedOver bool
 	ignored    map[int]bool
@@ -362,6 +382,7 @@ func (r *gameRun) loop() {
 	// On the run's own goroutine, so a slow hook never holds Play up; Prism's
 	// first dialog comes about a second after it starts.
 	r.holdPrismDialogs()
+	r.holdPrismConsole()
 	ticker := time.NewTicker(r.t.tick)
 	defer ticker.Stop()
 	for {
@@ -399,7 +420,9 @@ func (r *gameRun) step(now time.Time) bool {
 		}
 	}
 	r.readLog(now)
-	if r.prismFailed(now) {
+	// Prism's own log first: its line says why, and a console that is only
+	// seen is a launch step that failed, reason unknown.
+	if r.prismFailed(now) || r.consoleFailed(now) {
 		return true
 	}
 	select {

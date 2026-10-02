@@ -38,8 +38,8 @@ type RunReport struct {
 	// CrashReport is the file name, never the path, of the newest report in the
 	// game's crash-reports folder written since Play. Empty when there is none.
 	CrashReport string `json:"crashReport"`
-	// ConsoleAvailable is whether Prism's console can be shown from the view.
-	// Always false for now: the console is not hidden yet, so there is nothing
-	// to show back.
+	// ConsoleAvailable is whether Prism's console can be shown from the view:
+	// the launcher hid it (Windows only, with the loading splash on) and its
+	// Prism, which the console keeps alive, still runs. False everywhere else.
 	ConsoleAvailable bool `json:"consoleAvailable"`
 }
