@@ -1,0 +1,298 @@
+name: Build
+
+# Every push and pull request packages both targets (ADR-7) with `wails build`,
+# which nothing else does: CI compiles the Go, this links the macOS card host
+# with Wails' cgo flags, renders the plist and wraps the bundle. A dispatch from
+# the Actions tab does the same with a version stamped, then attests the files
+# and publishes the GitHub Release (ADR-6).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag, vX.Y.Z or vX.Y.Z-alpha.N or vX.Y.Z-beta.N'
+        required: true
+        type: string
+
+# A superseded push build is dead weight; a release in flight is not to be cut
+# short.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # Fail before any runner time is spent on a tag that is wrong or taken. The
+  # input reaches the script through env, never through `${{ }}` in `run:`.
+  version:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      numeric: ${{ steps.v.outputs.numeric }}
+    steps:
+      - id: v
+        env:
+          VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # The tag shape from .claude/rules/builds-and-releases.md.
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta)\.[0-9]+)?$ ]]; then
+            echo "::error::The version must look like v1.2.3, v1.2.3-alpha.1 or v1.2.3-beta.1."
+            exit 1
+          fi
+          # `gh release create` would reuse an existing tag and silently release
+          # whatever it points at, so a taken tag stops here.
+          if gh api "repos/$GH_REPO/git/ref/tags/$VERSION" >/dev/null 2>&1; then
+            echo "::error::That tag already exists."
+            exit 1
+          fi
+          # CFBundleVersion and the Windows version info want a dotted numeric
+          # string, so v0.1.0-alpha.1 becomes 0.1.0 there and stays whole in
+          # main.Version.
+          numeric="${VERSION#v}"
+          numeric="${numeric%%-*}"
+          echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "numeric=$numeric" >> "$GITHUB_OUTPUT"
+
+  windows:
+    needs: version
+    # `version` is skipped outside a dispatch; only its failure stops the build.
+    if: ${{ !cancelled() && needs.version.result != 'failure' }}
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      TAG: ${{ needs.version.outputs.tag }}
+      NUMERIC: ${{ needs.version.outputs.numeric }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 12
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      # Built here, frozen, so `wails build -s` below does not run its own
+      # unfrozen `pnpm install` from wails.json.
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - run: pnpm build
+        working-directory: frontend
+
+      # The CLI at the module's own version: an older CLI rewrites go.mod down
+      # (.claude/rules/builds-and-releases.md). Read from go.mod so a Dependabot
+      # bump of the module cannot leave the two apart.
+      - name: Install the Wails CLI
+        run: |
+          go install "github.com/wailsapp/wails/v2/cmd/wails@$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      # Nothing else stamps wails.json, and the Windows version info reads it.
+      - name: Stamp the product version
+        if: env.NUMERIC != ''
+        run: |
+          jq --arg v "$NUMERIC" '.info.productVersion = $v' wails.json > wails.json.tmp
+          mv wails.json.tmp wails.json
+
+      # -s and -skipbindings: the frontend is built above and the bindings are
+      # committed. Without a tag the -dev in version.go stays.
+      - name: Build
+        run: |
+          args=(-platform windows/amd64 -trimpath -s -skipbindings)
+          if [ -n "$TAG" ]; then
+            args+=(-ldflags "-X main.Version=$TAG")
+          fi
+          wails build "${args[@]}"
+
+      - name: go.mod and go.sum are unchanged
+        run: git diff --exit-code go.mod go.sum
+
+      # No installer yet (no NSIS here), so the bare exe is the artefact.
+      - name: Name the artefact
+        run: |
+          mkdir out
+          cp build/bin/kapital-launcher.exe "out/Kapital-Launcher-${TAG:-dev}-windows-amd64.exe"
+          sha="${{ github.event.pull_request.head.sha || github.sha }}"
+          echo "SHORT=${sha::7}" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kapital-launcher-${{ env.SHORT }}-windows-amd64
+          path: out/*.exe
+          retention-days: 14
+          if-no-files-found: error
+
+  macos:
+    needs: version
+    if: ${{ !cancelled() && needs.version.result != 'failure' }}
+    runs-on: macos-latest
+    env:
+      TAG: ${{ needs.version.outputs.tag }}
+      NUMERIC: ${{ needs.version.outputs.numeric }}
+      # Wails hardcodes -mmacosx-version-min=10.13 in its cgo flags and lets
+      # these override it. Go 1.26 and Prism 11 both need macOS 12, which is
+      # also LSMinimumSystemVersion in build/darwin/*.plist.
+      CGO_CFLAGS: -mmacosx-version-min=12.0
+      CGO_LDFLAGS: -mmacosx-version-min=12.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 12
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - run: pnpm build
+        working-directory: frontend
+
+      - name: Install the Wails CLI
+        run: |
+          go install "github.com/wailsapp/wails/v2/cmd/wails@$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      # Feeds CFBundleVersion and CFBundleShortVersionString in the plist.
+      - name: Stamp the product version
+        if: env.NUMERIC != ''
+        run: |
+          jq --arg v "$NUMERIC" '.info.productVersion = $v' wails.json > wails.json.tmp
+          mv wails.json.tmp wails.json
+
+      # One bundle for Apple Silicon and Intel: the author's Mac is an Intel
+      # iMac. Wails builds both halves and lipos them, ad-hoc signs the result
+      # (`codesign --sign -`) and clears the quarantine attribute; there is no
+      # Developer ID (ADR-6).
+      - name: Build
+        run: |
+          args=(-platform darwin/universal -trimpath -s -skipbindings)
+          if [ -n "$TAG" ]; then
+            args+=(-ldflags "-X main.Version=$TAG")
+          fi
+          wails build "${args[@]}"
+
+      - name: go.mod and go.sum are unchanged
+        run: git diff --exit-code go.mod go.sum
+
+      # The amd64 half is compiled with cgo on an arm64 runner, so check that
+      # both halves made it in rather than trust the exit code.
+      - name: The executable holds both architectures
+        run: |
+          archs="$(lipo -archs "build/bin/Kapital Launcher.app/Contents/MacOS/kapital-launcher")"
+          echo "$archs"
+          case "$archs" in
+            *x86_64*arm64* | *arm64*x86_64*) ;;
+            *) echo "::error::Expected x86_64 and arm64, got: $archs"; exit 1 ;;
+          esac
+
+      # upload-artifact normalises file modes, which breaks a bundle, so the
+      # .app goes up zipped. ditto is Apple's documented way to zip one: it
+      # keeps symlinks, modes and resource forks. The bundle is named from
+      # wails.json's `name`, hence the space.
+      - name: Zip the bundle
+        run: |
+          mkdir out
+          ditto -c -k --keepParent "build/bin/Kapital Launcher.app" "out/Kapital-Launcher-${TAG:-dev}-macos-universal.zip"
+          sha="${{ github.event.pull_request.head.sha || github.sha }}"
+          echo "SHORT=${sha::7}" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kapital-launcher-${{ env.SHORT }}-macos-universal
+          path: out/*.zip
+          retention-days: 14
+          if-no-files-found: error
+
+  # The only job that can write, and the only one that runs the attestation:
+  # the files are attested exactly as they are published.
+  release:
+    if: github.event_name == 'workflow_dispatch'
+    needs: [version, windows, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      TAG: ${{ needs.version.outputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: kapital-launcher-*
+          merge-multiple: true
+          path: release
+
+      # sha256sum's format, which `shasum -a 256 -c` reads too.
+      - name: Write checksums.txt
+        working-directory: release
+        run: |
+          sha256sum *.zip *.exe > checksums.txt
+          cat checksums.txt
+
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            release/*.zip
+            release/*.exe
+
+      # The generator names what changed in the binary since the latest
+      # published release. It exits non-zero when there is none to measure from,
+      # which the first release is, and GitHub's own notes (laid out by
+      # .github/release.yml) take over. Either way the fixed header leads.
+      - name: Publish the release
+        env:
+          REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.sha }}
+        run: |
+          args=("$TAG" release/*.zip release/*.exe release/checksums.txt
+            --title "Kapital Launcher $TAG" --target "$GITHUB_SHA")
+          case "$TAG" in
+            *-*) args+=(--prerelease) ;;
+          esac
+
+          if python3 .github/scripts/release-notes.py > changelog.md; then
+            cat .github/release-body.md changelog.md > notes.md
+            args+=(--notes-file notes.md)
+          else
+            echo "::warning::release-notes.py produced no body; using GitHub's generated notes."
+            args+=(--notes-file .github/release-body.md --generate-notes)
+          fi
+
+          gh release create "${args[@]}"

@@ -12,10 +12,24 @@ paths:
 `wails.json`'s `info.productVersion`. The `-dev` suffix marks a build that is
 not a release. A release stamps it with `-ldflags "-X main.Version=<tag>"`.
 
-There is no release workflow yet (Roadmap, milestone 7). When one arrives it
-follows Konnekt's: cut from the Actions tab, tag `vX.Y.Z[-alpha.N|-beta.N]`,
-artefacts attested with `actions/attest` and a `checksums.txt`, no code-signing
-certificate (ADR-6), and the release body carries the Minecraft disclaimer.
+`.github/workflows/build.yml` packages both targets with `wails build`. On every
+push to `main` and every pull request it uploads `windows-amd64` (the bare
+`.exe`) and `macos-universal` (the `.app`, zipped with `ditto`, which keeps the
+modes `upload-artifact` would flatten) as workflow artefacts for 14 days, named
+`kapital-launcher-<short sha>-<target>`. A release is cut from the Actions tab:
+run it with a `version` input, `vX.Y.Z[-alpha.N|-beta.N]`. The tag is
+validated, the build stamps `main.Version` with it and `wails.json`'s
+`productVersion` with its numeric part, and the `release` job attests the zip
+and exe with `actions/attest`, writes `checksums.txt` and publishes a GitHub
+Release at that commit, a prerelease when the tag has a suffix. No
+code-signing certificate (ADR-6). The body is `.github/release-body.md` (the
+Minecraft disclaimer, the SmartScreen and Gatekeeper steps, how to verify)
+followed by `release-notes.py`'s notes, or GitHub's generated ones when it has
+no baseline. The Wails CLI is installed at `go.mod`'s version and the build
+fails if it changed `go.mod`. The macOS build sets `CGO_CFLAGS` and
+`CGO_LDFLAGS` to `-mmacosx-version-min=12.0` (Wails hardcodes 10.13) to match
+`LSMinimumSystemVersion` in `build/darwin/*.plist`: Go 1.26 and Prism 11 both
+need macOS 12.
 
 ## The toolchain directive is what CI runs
 
