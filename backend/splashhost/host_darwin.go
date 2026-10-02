@@ -117,6 +117,7 @@ var (
 	errAlreadyOpened = errors.New("the loading card window was opened already")
 	errClosedEarly   = errors.New("the loading card window was closed while it opened")
 	errNoWindows     = errors.New("there is no desktop session to show the loading card in")
+	errMainThread    = errors.New("the loading card window cannot be opened from the main thread")
 )
 
 // Open makes the window, waits for the page to load, and shows it.
@@ -126,6 +127,13 @@ func (h *darwinHost) Open(rect Rect, page Page) error {
 	}
 	if page.Entry == "" || page.Assets == nil {
 		return errors.New("the loading card has no page to show")
+	}
+	// Open waits for the page's first load, which is reported from the main
+	// thread. Called on it, nothing would serve that report: the UI would freeze
+	// for openTimeout and Open would then fail. It is the caller's mistake, so
+	// it is refused at once.
+	if onMainThread() {
+		return errMainThread
 	}
 	h.mu.Lock()
 	if h.opened || h.closed {
@@ -341,6 +349,10 @@ func splashMessage(handle C.uintptr_t, msg *C.char) {
 		h.deliver(C.GoString(msg))
 	}
 }
+
+// onMainThread is whether the calling goroutine is on the process's main
+// thread: Wails' own run, which is locked to it, and nothing else.
+func onMainThread() bool { return C.splashIsMainThread() != 0 }
 
 // hasWindowServer is whether this process has a desktop session.
 func hasWindowServer() bool { return C.splashHasWindowServer() != 0 }

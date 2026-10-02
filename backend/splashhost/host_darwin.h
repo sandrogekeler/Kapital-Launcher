@@ -14,6 +14,10 @@
 // window in. Without one AppKit aborts rather than failing, so Open asks first.
 int splashHasWindowServer(void);
 
+// splashIsMainThread is whether the calling thread is the process's main thread,
+// which the card's calls wait on and so must not be made from.
+int splashIsMainThread(void);
+
 // splashScreenFrame writes the visible frame (x, y, width, height, in points,
 // AppKit's bottom-left origin, the menu bar and Dock left out) of the screen the
 // launcher is on to out[0..3], or zeros when there is no screen or the main

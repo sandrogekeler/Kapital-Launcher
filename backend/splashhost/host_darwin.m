@@ -246,11 +246,22 @@ static BOOL runOnMain(double timeout, void (^block)(void)) {
     return YES;
 }
 
+// The calls below that Go makes from its own threads (splashHasWindowServer,
+// splashCreate, splashEval) have no autorelease pool there, so each wraps its
+// body in one: what Foundation autoreleases while it runs is freed when it
+// returns and not left to build up.
+
 int splashHasWindowServer(void) {
-    CFDictionaryRef session = CGSessionCopyCurrentDictionary();
-    if (session == NULL) return 0;
-    CFRelease(session);
-    return 1;
+    @autoreleasepool {
+        CFDictionaryRef session = CGSessionCopyCurrentDictionary();
+        if (session == NULL) return 0;
+        CFRelease(session);
+        return 1;
+    }
+}
+
+int splashIsMainThread(void) {
+    return [NSThread isMainThread] ? 1 : 0;
 }
 
 // launcherScreen is the screen the launcher's window is on: the app's main or
@@ -263,6 +274,9 @@ static NSScreen *launcherScreen(void) {
     [candidates addObjectsFromArray:NSApp.windows];
     for (NSWindow *window in candidates) {
         if ([window isKindOfClass:[KSplashWindow class]]) continue;
+        // A window that is not on screen (hidden, or minimised) is not where the
+        // player is looking, and its screen is its last one.
+        if (!window.isVisible) continue;
         if (window.screen) return window.screen;
     }
     return NSScreen.mainScreen ?: NSScreen.screens.firstObject;
@@ -336,23 +350,25 @@ static KSplash *makeSplash(uintptr_t handle, NSRect frame, NSColor *colour, NSSt
 }
 
 void *splashCreate(uintptr_t handle, const double *frame, const int *rgb, const char *scheme, const char *url) {
-    NSString *schemeName = scheme ? [NSString stringWithUTF8String:scheme] : nil;
-    NSURL *pageURL = url ? [NSURL URLWithString:[NSString stringWithUTF8String:url]] : nil;
-    if (schemeName == nil || pageURL == nil) return NULL;
-    NSRect rect = NSMakeRect(frame[0], frame[1], frame[2], frame[3]);
-    NSColor *colour = [NSColor colorWithSRGBRed:rgb[0] / 255.0 green:rgb[1] / 255.0 blue:rgb[2] / 255.0 alpha:1.0];
+    @autoreleasepool {
+        NSString *schemeName = scheme ? [NSString stringWithUTF8String:scheme] : nil;
+        NSURL *pageURL = url ? [NSURL URLWithString:[NSString stringWithUTF8String:url]] : nil;
+        if (schemeName == nil || pageURL == nil) return NULL;
+        NSRect rect = NSMakeRect(frame[0], frame[1], frame[2], frame[3]);
+        NSColor *colour = [NSColor colorWithSRGBRed:rgb[0] / 255.0 green:rgb[1] / 255.0 blue:rgb[2] / 255.0 alpha:1.0];
 
-    __block void *ref = NULL;
-    BOOL ran = runOnMain(10.0, ^{
-        KSplash *splash = nil;
-        @try {
-            splash = makeSplash(handle, rect, colour, schemeName, pageURL);
-        } @catch (NSException *exception) {
-            splash = nil;
-        }
-        if (splash != nil) ref = (__bridge_retained void *)splash;
-    });
-    return ran ? ref : NULL;
+        __block void *ref = NULL;
+        BOOL ran = runOnMain(10.0, ^{
+            KSplash *splash = nil;
+            @try {
+                splash = makeSplash(handle, rect, colour, schemeName, pageURL);
+            } @catch (NSException *exception) {
+                splash = nil;
+            }
+            if (splash != nil) ref = (__bridge_retained void *)splash;
+        });
+        return ran ? ref : NULL;
+    }
 }
 
 void splashShow(void *ref) {
@@ -372,16 +388,18 @@ void splashShow(void *ref) {
 
 void splashEval(void *ref, const char *stateJSON) {
     if (ref == NULL || stateJSON == NULL) return;
-    KSplash *splash = (__bridge KSplash *)ref;
-    NSString *state = [NSString stringWithUTF8String:stateJSON];
-    if (state == nil) return;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (splash.closed) return;
-        splash.pending = state;
-        splash.latest = state;
-        splash.retries = 0;
-        [splash flush];
-    });
+    @autoreleasepool {
+        KSplash *splash = (__bridge KSplash *)ref;
+        NSString *state = [NSString stringWithUTF8String:stateJSON];
+        if (state == nil) return;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (splash.closed) return;
+            splash.pending = state;
+            splash.latest = state;
+            splash.retries = 0;
+            [splash flush];
+        });
+    }
 }
 
 int splashClose(void *ref) {
