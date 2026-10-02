@@ -37,6 +37,28 @@ func TestLaunchChapterRefusesAnUnknownChapter(t *testing.T) {
 	}
 }
 
+// A start that was waiting on the loading card when the player quit must not
+// go on to run Prism: the process is exiting, and a Prism started now would
+// outlive the launcher that is meant to follow it.
+func TestLaunchChapterDoesNotStartPrismOnceTheAppIsClosing(t *testing.T) {
+	app := newTestApp(t)
+	root := t.TempDir()
+	if err := app.SaveSettings(models.AppSettings{Theme: "dark", PrismRoot: root}); err != nil {
+		t.Fatal(err)
+	}
+	// An engine whose executable does not exist: were Prism run, Launch would
+	// fail with "start prism", and that is what this test must never see.
+	app.engine = models.EngineInfo{Found: true, Executable: filepath.Join(root, "no-such-prism"), Root: root}
+	ctx, cancel := context.WithCancel(context.Background())
+	app.runCtx = ctx
+	cancel()
+
+	err := app.LaunchChapter("frangfurd")
+	if err == nil || !strings.Contains(err.Error(), "closing") {
+		t.Fatalf("got %v", err)
+	}
+}
+
 func TestGetServerStatusRefusesAnUnknownChapterAndAnswersForOne(t *testing.T) {
 	app := newTestApp(t)
 	if _, err := app.GetServerStatus("atlantis"); err == nil {

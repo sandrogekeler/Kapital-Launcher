@@ -61,8 +61,10 @@ type SplashCard struct {
 	// is never held by it. A test runs it inline.
 	spawn func(func())
 
-	// mu guards run and the host calls made for it. Nothing that can call
-	// back into the card is called with it held.
+	// mu guards run. It is never held across a call that waits on the host's
+	// UI thread (Open, Close): at quit Shutdown takes it on the main thread
+	// after the main loop has returned, where nothing answers such a wait.
+	// Nothing that can call back into the card is called with it held.
 	mu  sync.Mutex
 	run *cardRun
 }
@@ -83,6 +85,10 @@ type cardRun struct {
 	ended bool
 	// minimised is whether the launcher was minimised for this card.
 	minimised bool
+	// opening is Begin being inside host.Open, with mu released. The run is
+	// in c.run so a second Begin is refused and Shutdown can find the host,
+	// but it is no card yet: everything but those two leaves it alone.
+	opening bool
 }
 
 // NewSplashCard makes the card for cfg.
@@ -99,7 +105,12 @@ func (c *SplashCard) HoldsGameWindow() bool { return c.cfg.GOOS == "windows" }
 func (c *SplashCard) Showing(chapterID string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.run != nil && c.run.chapter.ID == chapterID && !c.run.closed
+	return c.run != nil && c.run.chapter.ID == chapterID && c.live(c.run)
+}
+
+// live is whether run is the card up now, opened and not closed. mu is held.
+func (c *SplashCard) live(run *cardRun) bool {
+	return c.run == run && !run.opening && !run.closed
 }
 
 // Begin opens the card for the chapter's start, centred on the launcher's
@@ -107,15 +118,9 @@ func (c *SplashCard) Showing(chapterID string) bool {
 // run. It returns whether the card is up: when the window cannot be opened it
 // logs why and returns false, the launcher is left alone, and the caller must
 // not hold the game's window for this run, because a hidden game with no card
-// would show nothing.
+// would show nothing. It waits for the page without holding the card's lock,
+// so a quit meanwhile (Shutdown) ends the wait, and Begin then returns false.
 func (c *SplashCard) Begin(chapter models.Chapter, theme string) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if old := c.run; old != nil {
-		// A card still up from a run that ended before its handover.
-		c.run = nil
-		old.host.Close()
-	}
 	x, y, w, h := c.cfg.Launcher.Frame()
 	host := c.cfg.NewHost()
 	run := &cardRun{
@@ -123,21 +128,58 @@ func (c *SplashCard) Begin(chapter models.Chapter, theme string) bool {
 		theme:   theme,
 		host:    host,
 		latest:  models.GameState{ChapterID: chapter.ID, Phase: models.GamePhaseStarting},
+		opening: true,
 	}
 	if chapter.Pack.Version != nil {
 		run.chapter.PackVersion = *chapter.Pack.Version
 	}
 	page := c.cfg.Page
 	page.OnMessage = func(msg string) { c.spawn(func() { c.handle(run, msg) }) }
-	if err := host.Open(cardRect(x, y, w, h), page); err != nil {
-		host.Close()
-		slog.Warn("loading card cannot be shown", "chapter", chapter.ID, "error", err)
+
+	c.mu.Lock()
+	old := c.run
+	if old != nil && old.opening {
+		c.mu.Unlock()
+		slog.Warn("loading card is already opening", "chapter", chapter.ID)
 		return false
 	}
 	c.run = run
+	var stale splashhost.Host
+	if old != nil && !old.closed {
+		// A card still up from a run that ended before its handover.
+		old.closed = true
+		stale = old.host
+	}
+	c.mu.Unlock()
+	if stale != nil {
+		stale.Close()
+	}
+
+	// Open waits for the page, up to 15 s, so mu is not held: Shutdown must be
+	// able to reach this host meanwhile, and its Close ends the wait.
+	err := host.Open(cardRect(x, y, w, h), page)
+
+	c.mu.Lock()
+	if err != nil || c.run != run {
+		if c.run == run {
+			c.run = nil
+		}
+		c.mu.Unlock()
+		// A card shut down while it opened is closed again here: the window
+		// may have come up after Shutdown's Close. Close is safe twice.
+		host.Close()
+		if err != nil {
+			slog.Warn("loading card cannot be shown", "chapter", chapter.ID, "error", err)
+		} else {
+			slog.Info("loading card closed while opening", "chapter", chapter.ID)
+		}
+		return false
+	}
+	run.opening = false
 	c.push(run)
 	c.cfg.Launcher.Minimise()
 	run.minimised = true
+	c.mu.Unlock()
 	slog.Info("loading card opened", "chapter", chapter.ID)
 	return true
 }
@@ -160,31 +202,39 @@ func cardRect(x, y, w, h int) splashhost.Rect {
 // and the player leaves it.
 func (c *SplashCard) Observe(s models.GameState) bool {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	run := c.run
-	if run == nil || run.chapter.ID != s.ChapterID {
+	if run == nil || run.opening || run.chapter.ID != s.ChapterID {
+		c.mu.Unlock()
 		return false
 	}
 	run.latest = s
+	var after func()
 	switch s.Phase {
 	case models.GamePhaseClosed, models.GamePhaseCrashed, models.GamePhaseFailed:
 		if !run.closed && s.Phase != models.GamePhaseClosed {
 			run.ended = true
 			c.push(run)
+			c.mu.Unlock()
 			return true
 		}
-		c.finish(run)
+		after = c.finish(run)
+		c.mu.Unlock()
+		after()
 		return false
 	case models.GamePhaseWindow, models.GamePhaseResources, models.GamePhaseRunning, models.GamePhaseStopping:
 		if c.cfg.GOOS == "darwin" && !run.closed {
-			c.closeCard(run)
+			after = c.closeCard(run)
 		}
 	}
-	if run.closed {
-		return false
+	shows := !run.closed
+	if shows {
+		c.push(run)
 	}
-	c.push(run)
-	return true
+	c.mu.Unlock()
+	if after != nil {
+		after()
+	}
+	return shows
 }
 
 // Handover is the game having the foreground, on Windows: the card closes and
@@ -195,12 +245,13 @@ func (c *SplashCard) Observe(s models.GameState) bool {
 func (c *SplashCard) Handover(chapterID string) {
 	c.mu.Lock()
 	run := c.run
-	if c.cfg.GOOS != "windows" || run == nil || run.chapter.ID != chapterID || run.closed || run.ended {
+	if c.cfg.GOOS != "windows" || run == nil || run.opening || run.chapter.ID != chapterID || run.closed || run.ended {
 		c.mu.Unlock()
 		return
 	}
-	c.closeCard(run)
+	after := c.closeCard(run)
 	c.mu.Unlock()
+	after()
 	c.changed(chapterID)
 }
 
@@ -215,43 +266,63 @@ func (c *SplashCard) Leave() (string, bool) { return c.leave(nil) }
 func (c *SplashCard) leave(only *cardRun) (string, bool) {
 	c.mu.Lock()
 	run := c.run
-	if run == nil || run.closed || (only != nil && run != only) {
+	if run == nil || run.opening || run.closed || (only != nil && run != only) {
 		c.mu.Unlock()
 		return "", false
 	}
-	c.finish(run)
+	after := c.finish(run)
 	c.mu.Unlock()
+	after()
 	slog.Info("loading card left", "chapter", run.chapter.ID)
 	c.changed(run.chapter.ID)
 	return run.chapter.ID, true
 }
 
-// Shutdown closes a card that is still up when the app quits.
+// Shutdown closes a card that is still up when the app quits, or one that is
+// still opening: Begin is then inside host.Open, and the host's Close is what
+// ends that wait, so it is called here and not left to Begin.
 func (c *SplashCard) Shutdown() {
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.run != nil {
-		c.run.host.Close()
-		c.run = nil
-	}
-}
-
-// closeCard closes the window because the game has the screen. mu is held.
-func (c *SplashCard) closeCard(run *cardRun) {
-	run.closed = true
-	run.host.Close()
-	slog.Info("loading card handed over", "chapter", run.chapter.ID)
-}
-
-// finish ends the run: the window closes if it is still up and the launcher is
-// restored. mu is held.
-func (c *SplashCard) finish(run *cardRun) {
+	run := c.run
 	c.run = nil
-	if !run.closed {
-		run.host.Close()
+	var host splashhost.Host
+	if run != nil && !run.closed {
+		run.closed = true
+		host = run.host
 	}
-	if run.minimised {
-		c.cfg.Launcher.Unminimise()
+	c.mu.Unlock()
+	if host != nil {
+		host.Close()
+	}
+}
+
+// closeCard marks the window as closing because the game has the screen, and
+// returns the closing itself for the caller to run once mu is released. mu is
+// held.
+func (c *SplashCard) closeCard(run *cardRun) func() {
+	run.closed = true
+	slog.Info("loading card handed over", "chapter", run.chapter.ID)
+	return run.host.Close
+}
+
+// finish ends the run: it is taken out at once, and the returned call, to be
+// made once mu is released, closes the window if it is still up and restores
+// the launcher. mu is held.
+func (c *SplashCard) finish(run *cardRun) func() {
+	c.run = nil
+	host := run.host
+	if run.closed {
+		host = nil
+	}
+	run.closed = true
+	minimised := run.minimised
+	return func() {
+		if host != nil {
+			host.Close()
+		}
+		if minimised {
+			c.cfg.Launcher.Unminimise()
+		}
 	}
 }
 
@@ -285,7 +356,7 @@ func (c *SplashCard) push(run *cardRun) {
 func (c *SplashCard) up(run *cardRun) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.run == run && !run.closed
+	return c.live(run)
 }
 
 // handle is a message from the page: leave, or one of the two actions, whose
@@ -324,7 +395,7 @@ func (c *SplashCard) handle(run *cardRun, msg string) {
 func (c *SplashCard) report(run *cardRun, change func()) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.run != run || run.closed {
+	if !c.live(run) {
 		return
 	}
 	change()
