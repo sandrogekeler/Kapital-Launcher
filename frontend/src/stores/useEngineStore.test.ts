@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as App from '../../wailsjs/go/main/App'
 import { models } from '../../wailsjs/go/models'
-import { selectInstalled, useEngineStore } from './useEngineStore'
+import { selectInstalled, selectInstancePack, useEngineStore } from './useEngineStore'
 import type { EngineInfo } from '../types'
 
 vi.mock('../../wailsjs/go/main/App')
@@ -33,6 +33,8 @@ describe('useEngineStore', () => {
     vi.mocked(App.RefreshEngine).mockReset()
     vi.mocked(App.LaunchChapter).mockReset()
     vi.mocked(App.InstallChapter).mockReset()
+    vi.mocked(App.SetPackSource).mockReset()
+    vi.mocked(App.GetPackStates).mockReset()
   })
 
   it('installs a chapter and takes the instances Go read back', async () => {
@@ -61,6 +63,59 @@ describe('useEngineStore', () => {
     expect(s.installing).toBeNull()
     expect(s.installedNow).toBeNull()
     expect(s.instances).toBe(before)
+  })
+
+  it('switches the pack source, takes the report Go returns and checks the pack again', async () => {
+    const local = 'http://localhost:8080/pack.toml'
+    const report = {
+      root: 'C:/Prism',
+      dir: 'C:/Prism/instances',
+      present: { frangfurd: true },
+      packUrl: { frangfurd: local },
+    }
+    useEngineStore.setState({
+      packStates: {
+        frangfurd: {
+          chapterId: 'frangfurd',
+          installed: true,
+          checked: true,
+          upToDate: true,
+          version: '1',
+        },
+      },
+    })
+    vi.mocked(App.SetPackSource).mockResolvedValue(models.InstanceReport.createFrom(report))
+    vi.mocked(App.GetPackStates).mockResolvedValue([
+      models.PackState.createFrom({
+        chapterId: 'frangfurd',
+        installed: true,
+        checked: true,
+        upToDate: false,
+        version: '2',
+      }),
+    ])
+    await useEngineStore.getState().setPackSource('frangfurd', 'dev')
+    expect(App.SetPackSource).toHaveBeenCalledWith('frangfurd', 'dev')
+    const s = useEngineStore.getState()
+    expect(selectInstancePack('frangfurd')(s)).toBe(local)
+    expect(s.packStates.frangfurd?.upToDate).toBe(false)
+  })
+
+  it('rethrows a refused switch and leaves the instances and pack states as they were', async () => {
+    const before = models.InstanceReport.createFrom({
+      root: 'C:/Prism',
+      dir: 'C:/Prism/instances',
+      present: { frangfurd: true },
+    })
+    useEngineStore.setState({ instances: before })
+    vi.mocked(App.SetPackSource).mockRejectedValue(
+      'Frangfurd is starting or running; close the game first',
+    )
+    await expect(useEngineStore.getState().setPackSource('frangfurd', 'published')).rejects.toBe(
+      'Frangfurd is starting or running; close the game first',
+    )
+    expect(useEngineStore.getState().instances).toBe(before)
+    expect(App.GetPackStates).not.toHaveBeenCalled()
   })
 
   it('reads the engine and degrades to unknown without a bridge', async () => {

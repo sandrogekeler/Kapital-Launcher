@@ -168,3 +168,39 @@ of the game's log leaves the file. It does so only here, and keeps nothing.
 The report is refused when the redactor cannot be built, rather than made
 without one, and carries `consoleAvailable`, which is true when the console the
 launcher hid (Windows, ADR-12 amendment) can be shown back on request.
+
+## Seventh amendment, 2026-10-02
+
+An instance installed from a dev pack (#41) kept `http://localhost:8080/pack.toml`
+in its pre-launch command for good: the fourth amendment never rewrites a URL,
+so clearing `packOverrides` changed nothing and the only way back to the
+published pack was deleting the instance in Prism and installing again. The
+author chose to let the player switch one instance between the two packs over
+making them reinstall. So the launcher may rewrite `PreLaunchCommand` once more,
+on the player's request:
+
+- **When.** From the chapter's own settings (the pen in the hero, "Pack source",
+  `SetPackSource`), for an installed chapter, in either direction. Never on its
+  own, and never before a launch.
+- **Between two values it knows.** The manifest's `pack.toml` for the chapter
+  (`published`) and the loopback address from `packOverrides` (`dev`), the
+  caller naming a chapter and one of those two words and never a URL. The
+  override is held to `CheckLocalPackURL` again at the call, and the new URL to
+  the command-line character rule.
+- **The template check of the fourth amendment applies.** The key must be
+  exactly the launcher's current template or its earlier one for the URL it ends
+  in (`SwitchPackSource`, `packswitch.go`). Anything else, hand-edited or another
+  tool's, is refused with an error that says the launcher did not write it, not
+  rewritten, and nothing of the command is in the error or the log. A command
+  that already names the chosen pack is not written.
+- **How it is written.** The one key, in the current template, atomically, every
+  other line and its line ending kept, as a settings save does (second
+  amendment). It is refused while the game is active, and while the instance
+  looks to be running.
+
+What packwiz-installer does on the next Play (read in its `ManifestFile.kt` and
+`UpdateManager.kt`): its `packwiz.json` in the game folder holds file hashes and
+no URL, so it syncs by the new pack's index. It removes the files only the other
+pack had, adds the ones only the new pack has and updates the rest. Saves,
+options and the optional-mod choices are left alone. Nothing else in the instance refers to the pack URL, so one instance and
+the one key are enough.

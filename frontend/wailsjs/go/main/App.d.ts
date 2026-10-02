@@ -56,6 +56,8 @@ export function SaveChapterSettings(arg1:string,arg2:models.ChapterSettings):Pro
 
 export function SaveSettings(arg1:models.AppSettings):Promise<void>;
 
+export function SetPackSource(arg1:string,arg2:string):Promise<models.InstanceReport>;
+
 export function ShowPrismConsole(arg1:string):Promise<boolean>;
 
 export function StopGame(arg1:string):Promise<models.GameState>;

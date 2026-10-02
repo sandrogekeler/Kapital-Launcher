@@ -24,7 +24,7 @@ import (
 // (#22, docs/adr/0002-prism-data-root.md). Prism's own import cannot promise
 // the folder name `--launch` needs (ADR-3), so the launcher writes
 // <instances>/<instance id>/ itself: once, only when the folder does not
-// exist, and never touches it again. What goes in is Prism's own format, as
+// exist, and touches it again only in the keys ADR-2's amendments name. What goes in is Prism's own format, as
 // read in Prism 11.1.1's source:
 //
 //	instance.cfg                 Qt INI, written last so Prism's folder watcher

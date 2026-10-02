@@ -1,9 +1,10 @@
 /**
  * Where a chapter's pack comes from, for the state line (#41). A developer can
  * point a chapter at a local `packwiz serve` in settings.json; an instance
- * installed that way keeps syncing from it, since the launcher never touches
- * an instance again. Go validates the addresses; these helpers only describe
- * them.
+ * installed that way keeps syncing from it until the player switches it back in
+ * the chapter's settings: the launcher touches an instance in one key only, the
+ * pack address in its pre-launch command (ADR-2, seventh amendment). Go
+ * validates the addresses; these helpers only describe them.
  */
 
 const LOOPBACK = ['localhost', '127.0.0.1', '[::1]']

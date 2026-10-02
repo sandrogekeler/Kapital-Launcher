@@ -23,6 +23,7 @@ A different count is new surface to classify: add the method to this table.
 | `InstallPrism` | nothing | download, verify and unpack Prism's official build | S4.5 |
 | `InstallChapter` | a chapter id | the manifest's instance and pack URL: one instance folder written into the Prism root | S3.3, S4.6 |
 | `LaunchChapter`, `OpenChapterWiki`, `GetServerStatus` | a chapter id | the manifest's instance, URL or address for it; before a launch, the one `PreLaunchCommand` key of the chapter's own `instance.cfg`, only from the launcher's earlier template | S3.3, S3.7, S4.6, S6.1 |
+| `SetPackSource` | a chapter id and `published` or `dev` | the one `PreLaunchCommand` key of the chapter's own `instance.cfg`, between the manifest's pack URL and the loopback override from settings, only from the launcher's own template; refused while the game is active | S3.3, S4.6 |
 | `StopGame` | a chapter id | the pid of the Prism the launcher started, or of the game's Java found as its child, for a run the tracker follows: asked to close, then ended | S3.3, S3.9 |
 | `ShowPrismConsole` | a chapter id | the console window of the Prism the launcher started for that chapter, which the launcher's own hold hid: shown and given the foreground | S3.3, S3.7 |
 | `SaveSettings` | a whole `AppSettings` | the settings file, and the executable detection then runs | S3.5 |
@@ -334,14 +335,29 @@ instance looks to be running. Before a launch, `RewritePreLaunchCommand`
 current template with the same URL, atomically, every other line and its line
 ending kept; anything else in the key is left alone, nothing of it is logged,
 and a failed rewrite never stops the launch. It is skipped while the instance
-looks to be running.
+looks to be running. On the player's request, `SwitchPackSource`
+(`packswitch.go`, `SetPackSource`, ADR-2's seventh amendment) rewrites that same
+key between exactly two values, the manifest's `pack.toml` and the loopback
+address from `packOverrides` (`CheckLocalPackURL` again at the call), under the
+same template check: the command must be exactly the launcher's current or
+earlier template for the URL it ends in, else it is refused with an error that
+names no part of it, and nothing is logged beyond the chapter and the word
+`published` or `dev`. The caller supplies a chapter id and one of those two
+words, never a URL. The write is atomic with every other line and its line
+ending kept, and is refused while the game is active or the instance looks to be
+running.
 Verify: `packinstance_test.go`; `TestWriteChapterSettingsTouchesOnlyItsKeys`,
 `TestRewriteINIKeysAddsMissingKeysToGeneralOnly`,
 `TestValidateChapterSettingsHoldsToThePresetsAndTheMachine`,
 `TestChapterSettingsRoundTripThroughTheInstance`;
 `TestRewritePreLaunchCommandMovesTheEarlierTemplateToTheCurrentOne`,
 `TestRewritePreLaunchCommandLeavesWhatIsNotItsOwnAlone`,
-`TestPreLaunchCommandRunsThePackSyncHeadless`.
+`TestPreLaunchCommandRunsThePackSyncHeadless`;
+`TestSwitchPackSourceMovesTheURLAndNothingElse`,
+`TestSwitchPackSourceRefusesWhatIsNotTheLaunchersOwnCommand`,
+`TestSwitchPackSourceRefusesAURLNeitherSourceCouldHave`,
+`TestSetPackSourceRefusesBeforeWritingAnything`,
+`TestSetPackSourceIsRefusedWhileTheGameIsActive`.
 Probe: an instance folder the player made by hand with the same name; a jar
 that redirects off GitHub; a pack.toml naming two loaders; an instance whose
 pre-launch command was edited by hand (an extra flag, another jar, `echo`).

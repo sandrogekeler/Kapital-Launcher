@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import type { Chapter, ChapterSettings } from '../../types'
 import { selectInstalled, useEngineStore } from '../../stores/useEngineStore'
 import { errMsg } from '../../lib/ipc'
@@ -14,6 +14,13 @@ import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 
+// Only a chapter with a local pack has anything to switch, so the section loads
+// when the panel asks for it and stays out of the launcher's bundle budget
+// (scripts/check-bundle-size.mjs), as the run report does.
+const PackSourceSection = lazy(() =>
+  import('./PackSourceSection').then((m) => ({ default: m.PackSourceSection })),
+)
+
 interface Props {
   chapter: Chapter
   onClose: () => void
@@ -26,6 +33,8 @@ interface Props {
  * game looks to be running. Save writes both at once; the value shown after
  * is what Go read back from the file. Open folder (#85) shows the instance in
  * the file manager; it is there to reach a crash report or a screenshot.
+ * A chapter with a local pack also gets the pack source section, which switches
+ * its instance between the published pack and that one.
  */
 export function ChapterSettingsPanel({ chapter, onClose }: Props) {
   const installed = useEngineStore(selectInstalled(chapter.id))
@@ -181,6 +190,11 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
           {folderError && <span className="text-danger text-xs select-text">{folderError}</span>}
         </div>
         {body}
+        {installed === true && (
+          <Suspense fallback={null}>
+            <PackSourceSection chapter={chapter} />
+          </Suspense>
+        )}
       </div>
     </section>
   )
