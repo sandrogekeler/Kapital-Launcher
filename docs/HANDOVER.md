@@ -61,6 +61,12 @@ seventh, in the evening, for the way back from a dev pack:
 | #119 | The console hold's sweep test waits on the hold's own count: it read the count a moment early under coverage instrumentation on the Windows runner, which left main red after #117 (`go test` green, `coverage-floor` red, the same test) | `GOOS=windows go vet`; the Windows `backend` job on the pull request is the proof | |
 | #120 | An installed chapter switches between its published pack and the dev pack from its own settings (the pen in the hero, "Pack source"): Go rewrites the URL in its own pre-launch command only, between the manifest's pack and the loopback override (ADR-2 seventh amendment). The way back from a dev pack without deleting the instance in Prism | Fixture tests on `instance.cfg`; packwiz-installer's source read (`packwiz.json` holds hashes, no URL) | The next Play's re-sync on a real instance: switch Frangfurd to the published pack, Play, the start syncs from the Workers URL and "Dev pack" leaves the bar; the section lazy-loads to hold the bundle budget (89.8 of 90 KB) |
 
+The evening added #120 (an installed chapter switches between its published
+pack and the dev pack from its settings, ADR-2's seventh amendment), #122
+(`docs/PACKS.md`, the plain account of how a pack is authored, published,
+installed, synced and updated: read it before touching anything under
+"The packs"), and three decisions filed as #50's comment, #123 and #124.
+
 Known limit from #117 (in ADR-12): a player's own Prism with `ShowConsole=true`
 and the splash on reads as a failed start, because its console appears during
 `starting`. The managed root seeds it off.
@@ -96,7 +102,13 @@ and the splash on reads as a failed start, because its console appears during
    the card on macOS (opt-in under settings until then), #109's quit during a
    start, #110's four behaviours, and Gatekeeper's prompt on the unsigned
    bundle (System Settings, Privacy & Security, Open Anyway).
-3. **#50** Install prepares the chapter with one progress view. The
+3. **#50** Install prepares the chapter with one progress view. Restated by
+   the author on the evening of 2026-10-02 (the comment on #50): Install
+   downloads everything the first Play does today, without starting the game;
+   Play starts the game and still syncs first. The route that gets everything
+   is a normal run that the tracker ends itself at the game's first marker
+   with Stop's routine (#115), reported as `prepared`, under the card, with
+   Prism's windows held (#45, #95, #117). The
    pre-launch route cannot work: Prism runs the pre-launch command before it
    downloads libraries and assets (`MinecraftInstance.cpp`,
    `createLaunchTask`, 11.1.1, confirmed again 2026-10-02: the order is
@@ -117,6 +129,15 @@ and the splash on reads as a failed start, because its console appears during
    run in Prism, so its log markers and #45's early-window behaviour are
    unmeasured.
 5. **#36**, second half: mod toggles, once `kapital-packs` marks mods optional.
+6. **#124** Developer previews: a Preview section under Developer in
+   Settings that pushes synthetic state through the real paths (card, bar,
+   report, pack line, Prism install and update), so the author can judge the
+   screens a run only shows when something goes wrong. Build it before #123,
+   since it is how #123's copy gets looked at.
+7. **#123** Play always reads Play, and the pack line becomes a two-line
+   status ("● Updated / Version 1.0.0"; the source-ahead wording is the
+   author's to pick, a proposal is on the issue). No "update" button of any
+   kind: every Play syncs.
 
 Plan each with the author before building; they choose between the options.
 Building is done by Sonnet agents from a written brief, one issue per pull
