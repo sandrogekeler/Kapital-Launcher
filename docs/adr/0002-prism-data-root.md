@@ -113,3 +113,20 @@ reinstalled. So, before a launch, the launcher may rewrite one more key,
   the file is replaced atomically, as a settings save does (second amendment).
   It is skipped while the instance looks to be running.
 - It refuses nothing: a failed rewrite is logged and the launch goes on.
+
+## Fifth amendment, 2026-10-02
+
+Prism does not exit when it stops a start before the game: its console window
+opens with the error and Prism lives until it is closed, so a failed pack sync
+left the loading card at "Starting" until the start timeout (#103). While a
+start waits for the game, the launcher now also reads one more file, and
+writes nothing: Prism's own `logs/PrismLauncher-0.log` under the data root.
+
+- It is read for one marker only, a line that names the `launcher.task`
+  category, a `LaunchTask(` and `failed:`, which ends the start as failed. The
+  line's reason is classed as the pack sync (it says the pre-launch command
+  failed) or as another launch step, and nothing of the line is kept.
+- No line, and no part of one, is logged, stored or emitted: the log carries
+  local paths and may carry names. What is logged is the chapter and the class.
+- Judged against a snapshot taken before Play, as the game log is, and read
+  only until the game's own log begins.

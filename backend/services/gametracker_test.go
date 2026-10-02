@@ -105,6 +105,9 @@ type gameRig struct {
 	prism   chan struct{}
 	// hold is TrackRequest.HoldWindow for the requests the rig makes.
 	hold bool
+	// prismRoot is TrackRequest.PrismRoot for the requests the rig makes, ""
+	// follows no Prism log.
+	prismRoot string
 	// onHandover is TrackRequest.OnHandover for the requests the rig makes.
 	onHandover func()
 
@@ -160,6 +163,8 @@ func (r *gameRig) request() TrackRequest {
 		PrismExe:    "/Prism/prismlauncher.exe",
 		StartedAt:   r.play,
 		Before:      SnapshotGameLog(r.log.dir),
+		PrismRoot:   r.prismRoot,
+		PrismLog:    SnapshotPrismLog(r.prismRoot),
 		HoldWindow:  r.hold,
 		OnHandover:  r.onHandover,
 	}

@@ -200,35 +200,48 @@ func (f *logFollower) reset(head logHead) {
 // readMore reads up to readChunkMax bytes from the offset and feeds every
 // finished line to the parser. It returns how many bytes it read.
 func (f *logFollower) readMore(remaining int64) (int, error) {
-	file, err := os.Open(f.path)
+	n, rest, err := readLines(f.path, f.offset, remaining, f.partial, f.line)
 	if err != nil {
 		return 0, err
 	}
+	f.offset += int64(n)
+	f.partial = rest
+	return n, nil
+}
+
+// readLines reads up to readChunkMax bytes of a file from an offset and hands
+// every finished line, with the unfinished one kept from the last read
+// prepended, to line. It returns how many bytes it read and the unfinished
+// last line to carry into the next call. The bytes passed to line are not
+// kept. The Prism log follower (gametracker_prism.go) reads the same way.
+func readLines(path string, offset, remaining int64, partial []byte, line func([]byte)) (int, []byte, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return 0, nil, err
+	}
 	defer file.Close() //nolint:errcheck // read-only file, nothing to flush
-	if _, err := file.Seek(f.offset, io.SeekStart); err != nil {
-		return 0, err
+	if _, err := file.Seek(offset, io.SeekStart); err != nil {
+		return 0, nil, err
 	}
 	buf := make([]byte, min(remaining, readChunkMax))
 	n, err := io.ReadFull(file, buf)
 	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
-		return 0, err
+		return 0, nil, err
 	}
-	f.offset += int64(n)
-	data := append(f.partial, buf[:n]...)
+	data := append(partial, buf[:n]...)
 	for {
 		i := bytes.IndexByte(data, '\n')
 		if i < 0 {
 			break
 		}
-		f.line(data[:i])
+		line(data[:i])
 		data = data[i+1:]
 	}
 	if len(data) > partialMax {
-		f.line(data)
+		line(data)
 		data = nil
 	}
-	f.partial = append([]byte(nil), data...)
-	return n, nil
+	return n, append([]byte(nil), data...), nil
 }
 
 // line feeds one line to the parser and notes the phase it reached. The

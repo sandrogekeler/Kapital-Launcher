@@ -248,6 +248,7 @@ export namespace models {
 	    since: string;
 	    startedAt: string;
 	    exitCode?: number;
+	    reason?: string;
 	    splash?: boolean;
 	    estimate?: Record<string, number>;
 	
@@ -262,6 +263,7 @@ export namespace models {
 	        this.since = source["since"];
 	        this.startedAt = source["startedAt"];
 	        this.exitCode = source["exitCode"];
+	        this.reason = source["reason"];
 	        this.splash = source["splash"];
 	        this.estimate = source["estimate"];
 	    }

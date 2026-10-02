@@ -26,6 +26,17 @@ const (
 	GamePhaseFailed = "failed"
 )
 
+// Why a start failed, in GameState.Reason. A failure that is neither carries
+// no reason: the start timeout, and a Prism that went with no game.
+const (
+	// GameFailPackSync is Prism's pre-launch command failing, which is the
+	// pack sync (packwiz-installer): the pack server was down or unreachable.
+	GameFailPackSync = "packsync"
+	// GameFailLaunch is any other launch step Prism stopped at: Java, the
+	// libraries, the assets.
+	GameFailLaunch = "launch"
+)
+
 // GameState is where a launched chapter's game is, from Play to its end.
 // Keyed by the chapter, so a listener filters on ChapterID.
 type GameState struct {
@@ -38,6 +49,10 @@ type GameState struct {
 	StartedAt string `json:"startedAt"`
 	// ExitCode is the game's own exit code, when the platform reports it.
 	ExitCode *int `json:"exitCode,omitempty"`
+	// Reason is why a failed start failed, one of the GameFail constants, read
+	// from Prism's launcher log (#103). Empty for every other phase and for a
+	// failure whose cause is not known.
+	Reason string `json:"reason,omitempty"`
 	// Splash is whether this run shows the loading card and the player has not
 	// left it (#43). Set by the App on the way out, never by the tracker.
 	Splash bool `json:"splash,omitempty"`
