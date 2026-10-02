@@ -121,6 +121,19 @@ describe('SplashCard', () => {
       expect(screen.getAllByRole('button', { name: 'Back to launcher' })).toHaveLength(1)
     })
 
+    it.each<[GameState['reason'], string]>([
+      ['packsync', "The pack could not be synced. Prism's window has the details"],
+      ['launch', 'Prism stopped before the game. Its window has the details'],
+    ])('says why a start failed (%s) and keeps the three buttons', (reason, detail) => {
+      render(card(at('failed', { reason, estimate })))
+      expect(screen.getByText('○ The game did not start')).toHaveClass('text-danger')
+      expect(screen.getByText(detail)).toBeInTheDocument()
+      expect(bar()).toBeNull()
+      expect(screen.getByRole('button', { name: 'Open folder' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Copy log' })).toBeInTheDocument()
+      expect(screen.getAllByRole('button', { name: 'Back to launcher' })).toHaveLength(1)
+    })
+
     it('asks for the three actions', () => {
       const a = actions()
       render(card(at('crashed'), a))

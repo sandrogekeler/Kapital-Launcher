@@ -461,6 +461,16 @@ func newerVersion(a, b string) bool {
 // unzipBounded unpacks src into dst, refusing any entry that would land
 // outside dst, a symlink pointing outside it, and archives beyond the entry
 // and size bounds (agent_docs/SECURITY_CHECKLIST.md, S4.2).
+//
+// Every folder, file and link is made through an *os.Root on dst. The Root
+// resolves each path component by component and refuses any that leaves it,
+// links included, so a chain such as "a" to ".", "b" to "a/..", then a file
+// "b/x" cannot write above dst, which a check on the link's text alone let
+// through. That is why there is no check here that a joined path stays inside
+// dst: the Root is that check, and it holds when a link is followed, which a
+// lexical one cannot. What stays is what the Root does not do: it creates a
+// link to any text, so a target that is absolute or climbs out is refused
+// before the link exists.
 func unzipBounded(src, dst string) error {
 	r, err := zip.OpenReader(src)
 	if err != nil {
@@ -470,31 +480,30 @@ func unzipBounded(src, dst string) error {
 	if len(r.File) > maxPrismEntries {
 		return fmt.Errorf("%d entries, more than %d", len(r.File), maxPrismEntries)
 	}
-	root, err := filepath.Abs(dst)
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		return err
+	}
+	root, err := os.OpenRoot(dst)
 	if err != nil {
 		return err
 	}
-	inside := func(p string) bool {
-		rel, err := filepath.Rel(root, p)
-		return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel)
-	}
+	defer root.Close() //nolint:errcheck // holds no data to flush
 	var written int64
 	for _, f := range r.File {
-		name := filepath.FromSlash(f.Name)
+		native := filepath.FromSlash(f.Name)
 		// A rooted name is refused on every OS: Windows would not call "/x"
 		// absolute, but an archive that names one is malformed.
-		if strings.HasPrefix(f.Name, "/") || filepath.IsAbs(name) || strings.Contains(f.Name, `\`) || filepath.VolumeName(name) != "" {
+		if strings.HasPrefix(f.Name, "/") || filepath.IsAbs(native) || strings.Contains(f.Name, `\`) || filepath.VolumeName(native) != "" {
 			return fmt.Errorf("entry %q has an absolute or odd path", f.Name)
 		}
-		target := filepath.Join(root, name)
-		if !inside(target) && target != root {
-			return fmt.Errorf("entry %q would land outside the install folder", f.Name)
-		}
+		// Cleaned so a name like "a/../../x" reaches the Root as "../x", which
+		// it refuses, rather than being resolved through whatever "a" is.
+		name := filepath.Clean(native)
 		mode := f.Mode()
 		switch {
 		case mode.IsDir():
-			if err := os.MkdirAll(target, 0o755); err != nil {
-				return err
+			if err := root.MkdirAll(name, 0o755); err != nil {
+				return fmt.Errorf("entry %q: %w", f.Name, err)
 			}
 		case mode&os.ModeSymlink != 0:
 			// macOS app bundles link their frameworks' current versions.
@@ -508,18 +517,17 @@ func unzipBounded(src, dst string) error {
 			if err != nil {
 				return err
 			}
-			if strings.HasPrefix(link, "/") || strings.Contains(link, `\`) || filepath.IsAbs(link) ||
-				filepath.VolumeName(link) != "" || !inside(filepath.Join(filepath.Dir(target), link)) {
+			if !relativeLinkInside(name, link) {
 				return fmt.Errorf("link %q points outside the install folder", f.Name)
 			}
-			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-				return err
+			if err := root.MkdirAll(filepath.Dir(name), 0o755); err != nil {
+				return fmt.Errorf("entry %q: %w", f.Name, err)
 			}
-			if err := os.Symlink(link, target); err != nil {
-				return err
+			if err := root.Symlink(link, name); err != nil {
+				return fmt.Errorf("entry %q: %w", f.Name, err)
 			}
 		case mode.IsRegular():
-			n, err := extractFile(f, target, maxPrismUnpacked-written)
+			n, err := extractFile(root, f, name, maxPrismUnpacked-written)
 			if err != nil {
 				return err
 			}
@@ -531,9 +539,22 @@ func unzipBounded(src, dst string) error {
 	return nil
 }
 
-func extractFile(f *zip.File, target string, budget int64) (int64, error) {
-	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-		return 0, err
+// relativeLinkInside reports whether a link at name (relative to the install
+// folder) with the given target is relative and, read as text, stays inside
+// that folder. It is the early refusal for an obvious escape; the Root is what
+// holds when links are chained.
+func relativeLinkInside(name, link string) bool {
+	if link == "" || strings.HasPrefix(link, "/") || strings.Contains(link, `\`) ||
+		filepath.IsAbs(link) || filepath.VolumeName(link) != "" {
+		return false
+	}
+	joined := filepath.Join(filepath.Dir(name), link)
+	return joined != ".." && !strings.HasPrefix(joined, ".."+string(filepath.Separator))
+}
+
+func extractFile(root *os.Root, f *zip.File, name string, budget int64) (int64, error) {
+	if err := root.MkdirAll(filepath.Dir(name), 0o755); err != nil {
+		return 0, fmt.Errorf("entry %q: %w", f.Name, err)
 	}
 	in, err := f.Open()
 	if err != nil {
@@ -544,9 +565,9 @@ func extractFile(f *zip.File, target string, budget int64) (int64, error) {
 	if f.Mode()&0o111 != 0 {
 		perm = 0o755
 	}
-	out, err := os.OpenFile(target, os.O_CREATE|os.O_EXCL|os.O_WRONLY, perm)
+	out, err := root.OpenFile(name, os.O_CREATE|os.O_EXCL|os.O_WRONLY, perm)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("entry %q: %w", f.Name, err)
 	}
 	n, err := io.Copy(out, io.LimitReader(in, budget+1))
 	if cerr := out.Close(); err == nil {

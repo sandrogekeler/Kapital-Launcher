@@ -241,16 +241,19 @@ Holds when: `ManagedPrism` reads the release from Prism's fixed repository URL;
 the asset is this platform's portable build at its expected download URL with a
 GitHub SHA-256 digest and a bounded size; redirects stay on GitHub's download
 hosts; the digest and size are checked while streaming; unpacking refuses
-escapes (S4.2) and bounds entries and bytes; the Windows executable passes
-`WinVerifyTrust` and the macOS bundle `codesign --verify` (fixed arguments);
-and nothing is placed until all of that passed. `InstallPrism` re-reads the
+escapes (S4.2) and bounds entries and bytes, and makes every folder, file and
+link through an `os.Root`, so a chain of links cannot lead a write out; the
+Windows executable passes `WinVerifyTrust` and the macOS bundle
+`codesign --verify` (fixed arguments); and nothing is placed until all of that passed. `InstallPrism` re-reads the
 release itself rather than taking one from the frontend (ADR-11). The approval
 is the approval card's: `InstallPrism` takes no argument and holds no token,
 so what Go guarantees to any caller is only that the build is Prism's own and
 verified.
 Verify: `managedprism_test.go` (bad digest, redirect off the allowlist, a
-release URL off Prism's, failed signature, no executable, zip escapes).
-Probe: a release whose asset URL points elsewhere; a zip naming `../x`.
+release URL off Prism's, failed signature, no executable, zip escapes and link
+chains).
+Probe: a release whose asset URL points elsewhere; a zip naming `../x`; a zip with
+`a` to `.`, `b` to `a/..` and a file `b/x`.
 
 **S4.6 A chapter's instance is created once, and only its own settings keys and its pre-launch command are ever rewritten.**
 Holds when: `InstanceCreator.Create` makes the folder with a plain `mkdir` and

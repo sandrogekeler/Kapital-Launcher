@@ -294,6 +294,23 @@ func TestOnWindowsAHandoverAfterTheLogSkippedAhead(t *testing.T) {
 	}
 }
 
+func TestAFailureWithAReasonKeepsTheCardAndShowsTheReason(t *testing.T) {
+	for _, reason := range []string{models.GameFailPackSync, models.GameFailLaunch} {
+		t.Run(reason, func(t *testing.T) {
+			f := newCardFixture("windows")
+			f.begin(t)
+			s := game(models.GamePhaseFailed)
+			s.Reason = reason
+			if !f.card.Observe(s) || f.host().Closes() != 0 || !f.card.Showing("frangfurd") {
+				t.Fatalf("the card stays: %v", f.host().Calls())
+			}
+			if got := f.last(t); got.Game.Phase != models.GamePhaseFailed || got.Game.Reason != reason {
+				t.Fatalf("the card is told why: %+v", got)
+			}
+		})
+	}
+}
+
 func TestACrashOrFailureBeforeTheHandoverKeepsTheCardForTheError(t *testing.T) {
 	for _, phase := range []string{models.GamePhaseCrashed, models.GamePhaseFailed} {
 		t.Run(phase, func(t *testing.T) {

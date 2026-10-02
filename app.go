@@ -289,6 +289,11 @@ func (a *App) LaunchChapter(chapterID string) error {
 	// before Prism reads it (#95).
 	a.updatePreLaunch(chapterID, instanceDir)
 	before := services.SnapshotGameLog(instanceDir)
+	// Prism's own log likewise, for a launch step that fails before the game
+	// (#103). The instance folder is <root>/instances/<id>, so the engine's
+	// data root is what the log is under.
+	prismRoot := a.prism.DataRoot(settings, engine)
+	prismLog := services.SnapshotPrismLog(prismRoot)
 	// The splash: a card in a window of its own opens before Prism starts and
 	// the launcher steps aside (#97). Where the game's window can be held, it
 	// is held until the handover (#43); a card that could not open holds
@@ -313,6 +318,8 @@ func (a *App) LaunchChapter(chapterID string) error {
 		PrismExe:    filepath.Base(engine.Executable),
 		StartedAt:   startedAt,
 		Before:      before,
+		PrismRoot:   prismRoot,
+		PrismLog:    prismLog,
 		HoldWindow:  splash && a.splash.HoldsGameWindow(),
 	}
 	if splash {

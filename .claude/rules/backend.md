@@ -36,10 +36,14 @@ never sees a command string` invariant holds it.
 The game tracker (`gametracker.go`, `gameproc_*.go`) follows a launched game:
 it looks up Prism's child processes (pid, parent pid and name, nothing else)
 and waits on the game's Java, and reads the instance's `latest.log` for marker
-lines only, never keeping or logging one (ADR-2, third amendment). It starts
-no process. On macOS it holds one OS activity per run (`activity_darwin.go`:
-`NSProcessInfo`'s `beginActivity`, from `begin` to the end of `loop`) so App Nap
-does not coalesce its waits while the launcher is minimised; it reads nothing.
+lines only, never keeping or logging one (ADR-2, third amendment). While the
+start waits for the game it also follows Prism's own `logs/PrismLauncher-0.log`
+(`gametracker_prism.go`, #103) for one marker, a `LaunchTask` that failed,
+which ends the run as `failed` with a `Reason` (ADR-2, fifth amendment). It
+starts no process. On macOS it holds one OS activity per run
+(`activity_darwin.go`: `NSProcessInfo`'s `beginActivity`, from `begin` to the
+end of `loop`) so App Nap does not coalesce its waits while the launcher is
+minimised; it reads nothing.
 
 The window holder (`gamewindow*.go`, #45, Windows only; the loading splash,
 #43, is what turns it on for a run) hooks the show events of the game's own

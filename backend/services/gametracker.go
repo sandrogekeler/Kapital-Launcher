@@ -99,6 +99,11 @@ type TrackRequest struct {
 	StartedAt time.Time
 	// Before is the game log as it was before Prism was started.
 	Before GameLogSnapshot
+	// PrismRoot is Prism's data root, where its launcher log is followed for a
+	// launch step failing (#103). Empty follows nothing.
+	PrismRoot string
+	// PrismLog is that log as it was before Prism was started.
+	PrismLog PrismLogSnapshot
 	// HoldWindow keeps the game's window hidden from its creation until the
 	// resource reload begins, when it is shown and given the foreground
 	// (#45), so the loading splash (#43) is what the player sees meanwhile.
@@ -251,6 +256,7 @@ func (t *GameTracker) begin(ctx context.Context, req TrackRequest) (*gameRun, er
 		req:      req,
 		state:    state,
 		follower: newLogFollower(req.InstanceDir, req.Before, req.StartedAt),
+		prism:    newPrismLogFollower(req.PrismRoot, req.PrismLog),
 		reached:  map[string]time.Time{},
 		ignored:  map[int]bool{},
 		exitCh:   make(chan procExit, 1),
@@ -281,6 +287,9 @@ type gameRun struct {
 	req      TrackRequest
 	state    models.GameState
 	follower *logFollower
+	// prism follows Prism's own log while the start waits, nil when there is
+	// no root to find it under (#103).
+	prism *prismLogFollower
 	// reached is when each of the timed phases was first seen.
 	reached map[string]time.Time
 	// stopped is whether the log has shown "Stopping!".
@@ -358,6 +367,9 @@ func (r *gameRun) step(now time.Time) bool {
 		}
 	}
 	r.readLog(now)
+	if r.prismFailed(now) {
+		return true
+	}
 	select {
 	case ex := <-r.exitCh:
 		if r.gameExited(ex, now) {
