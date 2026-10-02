@@ -64,6 +64,14 @@ type gameOS struct {
 	// wait blocks until the process exits or ctx is done. The exit code is
 	// known only where the platform reports it.
 	wait func(ctx context.Context, pid int) (code int, known bool, err error)
+	// terminate ends a process by pid: asks it to (macOS SIGTERM) or, with
+	// force, makes it (SIGKILL). Windows has no gentler process-level ask, so
+	// both are TerminateProcess. Only for the two processes the tracker found
+	// itself, the launcher's Prism and the game's Java (S3.9).
+	terminate func(pid int, force bool) error
+	// askClose asks a Prism to close: WM_CLOSE to its visible top-level
+	// windows on Windows, SIGTERM on macOS. An error means nothing took it.
+	askClose func(pid int) error
 }
 
 // PrismProcess is the Prism the launcher started: its pid, and a channel that
@@ -148,9 +156,14 @@ type GameTracker struct {
 	tick, procInterval, procSlowInterval   time.Duration
 	startTimeout, prismGrace, quietTimeout time.Duration
 	prismGone                              time.Duration
+	// stopForce is how long a process asked to end by Stop has before it is
+	// made to (gametracker_stop.go).
+	stopForce time.Duration
 
 	mu     sync.Mutex
 	states map[string]models.GameState
+	// live is each chapter's run that has a goroutine, which Stop talks to.
+	live map[string]*gameRun
 
 	timesMu sync.Mutex
 	// runs counts the loops Track started that have not ended, so a caller
@@ -173,6 +186,7 @@ func NewGameTracker(dataDir string, emit func(models.GameState)) *GameTracker {
 		procInterval:     gameProcInterval,
 		procSlowInterval: gameProcSlowInterval,
 		prismGone:        gamePrismGone,
+		stopForce:        gameStopForce,
 		startTimeout:     gameStartTimeout,
 		prismGrace:       gamePrismGrace,
 		quietTimeout:     gameLogQuiet,
@@ -220,6 +234,7 @@ func (t *GameTracker) Track(ctx context.Context, req TrackRequest) error {
 	if err != nil {
 		return err
 	}
+	t.register(r)
 	t.runs.Add(1)
 	go func() {
 		defer t.runs.Done()
@@ -262,6 +277,7 @@ func (t *GameTracker) begin(ctx context.Context, req TrackRequest) (*gameRun, er
 		exitCh:   make(chan procExit, 1),
 		// Held from here to the run's end (loop's defer), once per run.
 		endActivity: t.activity("following a game"),
+		stop:        newRunStop(),
 	}, nil
 }
 
@@ -318,10 +334,14 @@ type gameRun struct {
 	// game's process and the log follower's ticks by seconds, and the end of the
 	// game, and the launcher's return, with them.
 	endActivity func()
+	// stop is what Stop asks of the run and how far it has got
+	// (gametracker_stop.go).
+	stop runStop
 }
 
 func (r *gameRun) loop() {
 	defer func() {
+		r.finish()
 		if r.cancelWait != nil {
 			r.cancelWait()
 		}
@@ -344,6 +364,10 @@ func (r *gameRun) loop() {
 		case <-r.ctx.Done():
 			return
 		case <-ticker.C:
+		case req := <-r.stop.requests:
+			if r.serveStop(req) {
+				return
+			}
 		}
 	}
 }
@@ -377,6 +401,7 @@ func (r *gameRun) step(now time.Time) bool {
 		}
 	default:
 	}
+	r.escalateStop(now)
 	if r.bound == 0 && !r.procUnavailable && now.Sub(r.lastProcPoll) >= r.procInterval() {
 		r.lastProcPoll = now
 		r.findGame()
@@ -502,7 +527,7 @@ func (r *gameRun) timedOut(now time.Time) bool {
 	waiting := r.state.Phase == models.GamePhaseStarting && !r.follower.Fresh()
 	switch {
 	case waiting && now.Sub(r.req.StartedAt) >= r.t.startTimeout,
-		waiting && r.bound == 0 && !r.prismExitedAt.IsZero() && now.Sub(r.prismExitedAt) >= r.t.prismGrace:
+		waiting && r.bound == 0 && !r.prismExitedAt.IsZero() && now.Sub(r.prismExitedAt) >= r.prismWait():
 		r.set(models.GamePhaseFailed, now, nil)
 		return true
 	case r.bound == 0 && r.prismExitedFresh && now.Sub(r.prismExitedAt) >= r.t.prismGone:

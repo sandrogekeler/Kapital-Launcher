@@ -4,7 +4,9 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 	"unsafe"
 
@@ -13,10 +15,63 @@ import (
 
 // systemGameOS finds and waits on processes through the Win32 process APIs:
 // a Toolhelp snapshot for who is running and whose child it is, a handle with
-// SYNCHRONIZE to wait on one, and its times and exit code. No process is
-// started and no command line or memory of another process is read.
+// SYNCHRONIZE to wait on one, and its times and exit code. Stop ends the
+// two processes the tracker found, with PROCESS_TERMINATE and WM_CLOSE. No
+// process is started and no command line or memory of another process is read.
 func systemGameOS() gameOS {
-	return gameOS{list: listProcesses, started: processStart, wait: waitProcess}
+	return gameOS{
+		list: listProcesses, started: processStart, wait: waitProcess,
+		terminate: terminateProcess, askClose: closeWindows,
+	}
+}
+
+// wmClose asks a window to close, as its close button does.
+const wmClose = 0x0010
+
+var procPostMessageW = user32.NewProc("PostMessageW")
+
+// terminateProcess ends a process. Windows has no gentler way to end one from
+// outside, so force makes no difference. A process that has already gone is
+// not an error: the run is ending by it.
+func terminateProcess(pid int, _ bool) error {
+	h, err := windows.OpenProcess(windows.PROCESS_TERMINATE, false, uint32(pid))
+	if err != nil {
+		if errors.Is(err, windows.ERROR_INVALID_PARAMETER) {
+			return nil // no such process
+		}
+		return fmt.Errorf("open process: %w", err)
+	}
+	defer windows.CloseHandle(h) //nolint:errcheck // a process handle, nothing to flush
+	if err := windows.TerminateProcess(h, 1); err != nil {
+		return fmt.Errorf("terminate process: %w", err)
+	}
+	return nil
+}
+
+// closeWindows posts WM_CLOSE to each visible top-level window of the pid, and
+// to no other window: a Prism that is only showing its console on an error
+// exits when it is closed. Hidden windows are Qt's own helpers and the
+// progress dialogs the holder hid, and are left alone. It reads each window's
+// owner and visibility, never its title. An error means no window took it.
+func closeWindows(pid int) error {
+	var posted int
+	enumWindows(func(hwnd windows.HWND) {
+		var owner uint32
+		if _, err := windows.GetWindowThreadProcessId(hwnd, &owner); err != nil || owner != uint32(pid) {
+			return
+		}
+		if !windows.IsWindowVisible(hwnd) {
+			return
+		}
+		if call(procPostMessageW, uintptr(hwnd), wmClose, 0, 0) != 0 {
+			posted++
+		}
+	})
+	if posted == 0 {
+		return fmt.Errorf("no window of process %d took a close request", pid)
+	}
+	slog.Info("stop: close requested", "pid", pid, "windows", posted)
+	return nil
 }
 
 func listProcesses() ([]procInfo, error) {

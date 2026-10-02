@@ -64,8 +64,11 @@ export type GamePhase =
   | 'crashed'
   | 'failed'
 
-/** Why a start failed, from Prism's launcher log (#103). Same strings as the Go GameFail constants. */
-export type GameFailReason = 'packsync' | 'launch'
+/**
+ * Why a run failed or ended: from Prism's launcher log for a start (#103), or `stopped` when the
+ * player ended it from the launcher. Same strings as the Go GameFail constants.
+ */
+export type GameFailReason = 'packsync' | 'launch' | 'stopped'
 
 /** A launched chapter's game, keyed by chapter. Times are RFC 3339 in UTC. */
 export interface GameState {
@@ -77,7 +80,7 @@ export interface GameState {
   startedAt: string
   /** The game's own exit code, when the platform reports it. */
   exitCode?: number
-  /** Why a failed start failed; absent when the cause is not known. */
+  /** Why a start failed or a run was ended; absent when the cause is not known. */
   reason?: GameFailReason
   /** This run shows the loading card and the player has not left it (#43). */
   splash?: boolean

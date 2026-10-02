@@ -37,6 +37,40 @@ func TestLaunchChapterRefusesAnUnknownChapter(t *testing.T) {
 	}
 }
 
+func TestStopGameRefusesAnUnknownChapterAndOneWithNoRun(t *testing.T) {
+	app := newTestApp(t)
+	if _, err := app.StopGame("atlantis"); err == nil || !strings.Contains(err.Error(), "no chapter") {
+		t.Fatalf("got %v", err)
+	}
+	if _, err := app.StopGame("frangfurd"); err == nil || !strings.Contains(err.Error(), "has no game to stop") {
+		t.Fatalf("got %v", err)
+	}
+}
+
+// Stop answers with the chapter's state after the request, and a run that has
+// nothing of the launcher's alive ends at once.
+func TestStopGameEndsAFollowedRunAndReturnsItsState(t *testing.T) {
+	app := newTestApp(t)
+	exited := make(chan struct{})
+	close(exited)
+	err := app.games.Track(t.Context(), services.TrackRequest{
+		ChapterID:   "frangfurd",
+		InstanceDir: t.TempDir(),
+		Prism:       services.PrismProcess{PID: 0, Exited: exited},
+		StartedAt:   time.Now(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := app.StopGame("frangfurd")
+	if err != nil || got.ChapterID != "frangfurd" || got.Phase != models.GamePhaseFailed || got.Reason != models.GameFailStopped {
+		t.Fatalf("%v %+v", err, got)
+	}
+	if app.games.Active("frangfurd") {
+		t.Fatal("Play is offered again")
+	}
+}
+
 // A start that was waiting on the loading card when the player quit must not
 // go on to run Prism: the process is exiting, and a Prism started now would
 // outlive the launcher that is meant to follow it.

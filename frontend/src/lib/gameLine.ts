@@ -15,6 +15,18 @@ function failedDetail(reason: GameFailReason | undefined): string {
   }
 }
 
+// A stop the player asked for is not an error, so it is not in the error tone.
+const STOPPED_START: [string, string, string] = [
+  '○ The game did not start',
+  'Stopped from the launcher',
+  'text-fg-muted',
+]
+const STOPPED_GAME: [string, string, string] = [
+  '○ The game was stopped',
+  'Stopped from the launcher',
+  'text-fg-muted',
+]
+
 /**
  * The state line's rows for a game in progress or just ended: the state, the
  * detail that goes with it and its tone. Null when there is nothing to say,
@@ -39,6 +51,7 @@ export function gameLine(
     case 'stopping':
       return ['◐ Closing', 'Saving and shutting down', 'text-accent']
     case 'crashed':
+      if (state.reason === 'stopped') return STOPPED_GAME
       return [
         '○ The game stopped',
         state.exitCode == null
@@ -47,6 +60,7 @@ export function gameLine(
         'text-danger',
       ]
     case 'failed':
+      if (state.reason === 'stopped') return STOPPED_START
       return ['○ The game did not start', failedDetail(state.reason), 'text-danger']
     default:
       return null

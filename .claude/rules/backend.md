@@ -40,7 +40,12 @@ lines only, never keeping or logging one (ADR-2, third amendment). While the
 start waits for the game it also follows Prism's own `logs/PrismLauncher-0.log`
 (`gametracker_prism.go`, #103) for one marker, a `LaunchTask` that failed,
 which ends the run as `failed` with a `Reason` (ADR-2, fifth amendment). It
-starts no process. On macOS it holds one OS activity per run
+starts no process. Stop (`gametracker_stop.go`) is a request to a run's own
+goroutine that ends only the two processes the run found itself, the launcher's
+Prism and the game's Java, by pid and never by name: the Java is ended, else
+Prism is asked to close (`WM_CLOSE` to its own windows on Windows, `SIGTERM` on
+macOS) and ended if it is still there five run-steps later, and the run ends
+`crashed` or `failed` with the reason `stopped` (S3.9). On macOS it holds one OS activity per run
 (`activity_darwin.go`: `NSProcessInfo`'s `beginActivity`, from `begin` to the
 end of `loop`) so App Nap does not coalesce its waits while the launcher is
 minimised; it reads nothing.

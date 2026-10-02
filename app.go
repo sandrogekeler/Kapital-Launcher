@@ -341,6 +341,30 @@ func (a *App) LaunchChapter(chapterID string) error {
 	return nil
 }
 
+// StopGame ends the chapter's run at once: its game, or the Prism the launcher
+// started when there is no game yet, by the tracker and only for a run
+// the launcher itself followed. The chapter id is looked up in the validated
+// manifest like a launch's. The run finishes through its usual path, so the
+// loading card, if it is up, hears of it as it does of a crash and stays with
+// the reason. Returns the chapter's state as it is after the request. A
+// chapter with no run in progress is an error.
+func (a *App) StopGame(chapterID string) (models.GameState, error) {
+	chapter, ok := a.chapter(chapterID)
+	if !ok {
+		return models.GameState{}, fmt.Errorf("no chapter %q", chapterID)
+	}
+	if err := a.games.Stop(chapter.ID); err != nil {
+		slog.Info("stop game", "chapter", chapter.ID, "error", err)
+		if errors.Is(err, services.ErrNoGameToStop) {
+			return models.GameState{}, fmt.Errorf("%s has no game to stop", chapter.Name)
+		}
+		return models.GameState{}, err
+	}
+	s := a.games.Latest(chapter.ID)
+	s.Splash = a.splash.Showing(chapter.ID)
+	return s, nil
+}
+
 // GetGameStates returns where every chapter's game is: each chapter's latest
 // state, idle for one this run has not launched. The same states arrive as
 // game:state events while a start is followed (#44), and carry the same
