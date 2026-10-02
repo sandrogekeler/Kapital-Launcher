@@ -140,9 +140,12 @@ func TestPrismConsoleHoldSweepsAConsoleThatWasAlreadyVisible(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(holder.Release)
-	until(t, "the sweep", func() bool { return !windows.IsWindowVisible(hwnd) })
-	if holder.Hides() < 1 || holder.Held() != 1 {
-		t.Fatalf("hides %d, held %d", holder.Hides(), holder.Held())
+	// The sweep runs on the hook thread right after the hook is in, and counts
+	// its hide after the window is gone from view: waiting on the window alone
+	// can read the count a moment too early.
+	until(t, "the sweep", func() bool { return holder.Hides() >= 1 })
+	if windows.IsWindowVisible(hwnd) || holder.Held() != 1 {
+		t.Fatalf("visible %v, held %d", windows.IsWindowVisible(hwnd), holder.Held())
 	}
 }
 
