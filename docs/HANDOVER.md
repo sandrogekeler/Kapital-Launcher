@@ -48,7 +48,8 @@ card still waited: Prism's own `qtlogging.ini` silences the `launcher.task`
 category, Critical included, so the line #106 waits for is never written by a
 stock Prism. The same session then built, from the author's three asks and
 two aesthetic fixes, five more pull requests, all merged the same afternoon,
-and a sixth for the test that turned main red after the last of them:
+a sixth for the test that turned main red after the last of them, and a
+seventh, in the evening, for the way back from a dev pack:
 
 | PR | What | Verified | Still to see on the PC |
 |---|---|---|---|
@@ -58,6 +59,7 @@ and a sixth for the test that turned main red after the last of them:
 | #116 | The run report: reason, timeline, redacted end of the game log and crash report name, on the card and behind Details beside Play; Copy log reports on the button; failure lines are one sentence (ADR-2 sixth amendment) | Tests on a redaction fixture; the bundle is at 89.6 of 90 KB gzip | The card's layout at 405 px with a real crash; a real NeoForge crash log through the redactor |
 | #117 | Prism's console hidden on a failure (Windows, splash on), kept, shown from the report on request; its appearance is a second failure signal; the Prism is closed at the next Play, Stop or quit | Rig tests with a fake holder; `GOOS=windows go vet` | The title prefix `Console window for`, the show and foreground, `WM_CLOSE` to a hidden window; the real-window test in `gamewindow_console_windows_test.go` |
 | #119 | The console hold's sweep test waits on the hold's own count: it read the count a moment early under coverage instrumentation on the Windows runner, which left main red after #117 (`go test` green, `coverage-floor` red, the same test) | `GOOS=windows go vet`; the Windows `backend` job on the pull request is the proof | |
+| #120 | An installed chapter switches between its published pack and the dev pack from its own settings (the pen in the hero, "Pack source"): Go rewrites the URL in its own pre-launch command only, between the manifest's pack and the loopback override (ADR-2 seventh amendment). The way back from a dev pack without deleting the instance in Prism | Fixture tests on `instance.cfg`; packwiz-installer's source read (`packwiz.json` holds hashes, no URL) | The next Play's re-sync on a real instance: switch Frangfurd to the published pack, Play, the start syncs from the Workers URL and "Dev pack" leaves the bar; the section lazy-loads to hold the bundle budget (89.8 of 90 KB) |
 
 Known limit from #117 (in ADR-12): a player's own Prism with `ShowConsole=true`
 and the splash on reads as a failed start, because its console appears during
