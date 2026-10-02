@@ -6,6 +6,7 @@ import { selectInstancePack, useEngineStore } from '../../stores/useEngineStore'
 import { isActive, selectGame, useGameStore } from '../../stores/useGameStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { Button } from '../ui/Button'
+import { RunningHint } from './RunningHint'
 
 interface Choice {
   source: PackSource
@@ -27,7 +28,9 @@ interface Props {
  * rewrites the pack address in the instance's own pre-launch command and the
  * next Play syncs from it. Shown only for a chapter that has a local pack, in
  * settings or already in its instance, since a chapter that never left its
- * published pack has nothing to switch between.
+ * published pack has nothing to switch between. Only the tracker's answer
+ * (`playing`) disables a button; `running` is the log's guess, shown as a hint,
+ * and Go refuses the write if it was right (issue 126).
  */
 export function PackSourceSection({ chapter }: Props) {
   const installed = useEngineStore((s) => s.instances?.present[chapter.id])
@@ -63,7 +66,7 @@ export function PackSourceSection({ chapter }: Props) {
       reason: override ? unreadable : 'No local pack in settings.',
     },
   ]
-  const busy = playing || running || installing || switching !== null
+  const busy = playing || installing || switching !== null
 
   const onSwitch = async (source: PackSource) => {
     setSwitching(source)
@@ -101,9 +104,8 @@ export function PackSourceSection({ chapter }: Props) {
       <span className="text-fg-faint text-xs leading-normal">
         The next Play syncs from the chosen pack. Saves and settings stay.
       </span>
-      {(playing || running) && (
-        <span className="text-warning text-xs">Close the game to switch.</span>
-      )}
+      {playing && <span className="text-warning text-xs">Close the game to switch.</span>}
+      {!playing && running && <RunningHint chapterName={chapter.name} />}
       {error && <span className="text-danger text-xs select-text">{error}</span>}
     </section>
   )

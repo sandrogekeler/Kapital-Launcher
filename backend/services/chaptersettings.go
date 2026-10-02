@@ -263,7 +263,11 @@ func scanINIKeys(r io.Reader, want ...string) (map[string]string, error) {
 
 // InstanceRunning says whether the instance looks to be running: its game
 // log changed within the last minute. It is a guess, for a game started from
-// Prism directly; the App asks the GameTracker first (#44). Prism keeps the
+// Prism directly, and can be wrong both ways: on Windows a file's last write
+// time is not fully updated until the writer's handles close, so a game that
+// holds the log open can look idle and one that just quit can look fresh
+// (ADR-2, second amendment). The App asks the GameTracker first (#44) and
+// checks this only at a write. Prism keeps the
 // game folder as "minecraft" or, in older instances, ".minecraft". A missing
 // log is not running.
 func InstanceRunning(instanceDir string, now time.Time) bool {

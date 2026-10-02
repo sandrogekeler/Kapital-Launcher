@@ -16,7 +16,7 @@ type ChapterSettings struct {
 // ChapterSettingsInfo is a chapter's settings with what the panel needs to
 // show them: the machine's memory for the slider's end, Prism's own default
 // and the pack's recommendation as marks, the presets to choose from, and
-// whether the instance is running, which blocks a save.
+// whether the instance may be running.
 type ChapterSettingsInfo struct {
 	ChapterID string          `json:"chapterId"`
 	Settings  ChapterSettings `json:"settings"`
@@ -29,7 +29,10 @@ type ChapterSettingsInfo struct {
 	PackMemoryMB int `json:"packMemoryMb"`
 	// Presets lists the JVM preset names a chapter may use, "" excluded.
 	Presets []string `json:"presets"`
-	// Running is whether the instance looks to be running, in which case a
-	// save is refused rather than raced with the game.
+	// Running is whether the game's tracker or its log says the instance is
+	// running. It is a snapshot, taken when the info was read: the log half is
+	// a guess (the log changed within the last minute) and goes stale with
+	// the game's close. Show it as a hint and never disable a button on it;
+	// Go checks again at every write and refuses there.
 	Running bool `json:"running"`
 }

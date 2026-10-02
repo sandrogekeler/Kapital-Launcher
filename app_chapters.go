@@ -56,11 +56,32 @@ func (a *App) seedLogRules(engine models.EngineInfo) {
 	}
 }
 
-// chapterRunning is whether the chapter's game is running: the tracker says so
-// for a start this app made, and the game log's recent activity covers a game
-// started from Prism itself.
-func (a *App) chapterRunning(chapter models.Chapter, instanceDir string) bool {
-	return a.games.Active(chapter.ID) || services.InstanceRunning(instanceDir, time.Now())
+// chapterRunning says whether the chapter's game is running and which of two
+// answers said so. The tracker is exact for a start this app made. The guess
+// (InstanceRunning) is the game log's recent activity, the last line of
+// defence for a game started from Prism itself; it can be wrong either way
+// and is only ever checked fresh, at a write.
+func (a *App) chapterRunning(chapter models.Chapter, instanceDir string) (tracker, guess bool) {
+	return a.games.Active(chapter.ID), services.InstanceRunning(instanceDir, time.Now())
+}
+
+// refuseIfRunning is the guard of every write to an instance: nil when the
+// game is closed, otherwise an error that says which answer refused. The
+// tracker's is certain; the guess says what it saw and that a closed game
+// only needs a moment, since the launcher's window never disables anything on it.
+func (a *App) refuseIfRunning(chapter models.Chapter, instanceDir string) error {
+	tracker, guess := a.chapterRunning(chapter, instanceDir)
+	switch {
+	case tracker:
+		return errGameActive(chapter)
+	case guess:
+		return fmt.Errorf("%s's game log changed less than a minute ago: if the game is closed, try again in a moment", chapter.Name)
+	}
+	return nil
+}
+
+func errGameActive(chapter models.Chapter) error {
+	return fmt.Errorf("%s is starting or running; close the game first", chapter.Name)
 }
 
 // chapterInstance resolves a chapter id to its instance.cfg under the
@@ -82,13 +103,14 @@ func (a *App) chapterInstance(chapterID string) (models.Chapter, string, error) 
 }
 
 func (a *App) chapterSettingsInfo(chapter models.Chapter, cfg string, settings models.ChapterSettings, machine int) models.ChapterSettingsInfo {
+	tracker, guess := a.chapterRunning(chapter, filepath.Dir(cfg))
 	info := models.ChapterSettingsInfo{
 		ChapterID:       chapter.ID,
 		Settings:        settings,
 		MachineMemoryMB: machine,
 		PrismDefaultMB:  services.PrismDefaultMaxMB(machine),
 		Presets:         services.PresetNames(),
-		Running:         a.chapterRunning(chapter, filepath.Dir(cfg)),
+		Running:         tracker || guess,
 	}
 	if chapter.Pack.MemoryGB != nil {
 		info.PackMemoryMB = *chapter.Pack.MemoryGB * 1024

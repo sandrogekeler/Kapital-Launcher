@@ -532,7 +532,8 @@ func (a *App) GetChapterSettings(chapterID string) (models.ChapterSettingsInfo, 
 // SaveChapterSettings writes a chapter's memory and JVM preset into its
 // instance.cfg, those keys and nothing else, and reads the result back. The
 // value is held to the fixed preset list and the machine's memory, and a
-// running instance is refused rather than raced with the game.
+// running instance is refused rather than raced with the game, on the
+// tracker's word or on the game log's (refuseIfRunning).
 func (a *App) SaveChapterSettings(chapterID string, settings models.ChapterSettings) (models.ChapterSettingsInfo, error) {
 	chapter, cfg, err := a.chapterInstance(chapterID)
 	if err != nil {
@@ -542,8 +543,8 @@ func (a *App) SaveChapterSettings(chapterID string, settings models.ChapterSetti
 	if err := services.ValidateChapterSettings(settings, machine); err != nil {
 		return models.ChapterSettingsInfo{}, fmt.Errorf("chapter settings: %w", err)
 	}
-	if a.chapterRunning(chapter, filepath.Dir(cfg)) {
-		return models.ChapterSettingsInfo{}, fmt.Errorf("%s looks to be running; close the game first", chapter.Name)
+	if err := a.refuseIfRunning(chapter, filepath.Dir(cfg)); err != nil {
+		return models.ChapterSettingsInfo{}, err
 	}
 	if err := services.WriteChapterSettings(cfg, settings); err != nil {
 		slog.Error("save chapter settings", "chapter", chapterID, "error", err)
