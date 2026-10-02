@@ -92,6 +92,34 @@ export interface GameState {
   estimate?: Partial<Record<'mods' | 'window' | 'resources' | 'running', number>>
 }
 
+/** When a run reached one of starting, mods, window, resources and running. */
+export interface PhaseTime {
+  phase: GamePhase
+  /** Milliseconds from Play; 0 for starting. */
+  ms: number
+}
+
+/**
+ * What the launcher knows of a chapter's latest run, now or ended: the view that
+ * stands in for Prism's console (ADR-2, sixth amendment). Read when asked for and
+ * kept nowhere.
+ */
+export interface RunReport {
+  /** The run's latest state: its phase, why a start failed, the times of Play and of the phase. */
+  game: GameState
+  /** When each phase was reached, in order. How the run ended is `game`'s phase and `since`. */
+  phases: PhaseTime[]
+  /** The end of the game's log, redacted; empty when the start failed before any game log. */
+  logTail: string
+  logLines: number
+  /** Whether the log is longer than `logTail`, which then opens partway through it. */
+  logTruncated: boolean
+  /** The file name, never the path, of the newest crash report since Play; empty for none. */
+  crashReport: string
+  /** Whether Prism's console can be shown from the view; false until it is hidden. */
+  consoleAvailable: boolean
+}
+
 // Go pointer fields arrive optional from the bindings, so they are optional here too.
 export interface Pack {
   type: 'modpack' | 'client-visuals' | string

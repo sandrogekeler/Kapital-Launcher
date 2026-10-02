@@ -4,6 +4,7 @@ import (
 	"net"
 	"path"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -17,6 +18,16 @@ import (
 
 var ipv4 = regexp.MustCompile(`\b(?:\d{1,3}\.){3}\d{1,3}(?::\d{1,5})?\b`)
 
+// uuid is a player or account id. A game log prints the player's one in its
+// launch arguments, and it identifies them as surely as their name does.
+var uuid = regexp.MustCompile(`(?i)\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b`)
+
+// launchSecret is the value after one of the launch arguments that carry a
+// credential or an identity, as a loader prints its argument list: either
+// "--accessToken, value" in a list or "--accessToken value" on a line. Loaders
+// mask the token themselves; this is for one that does not.
+var launchSecret = regexp.MustCompile(`(--(?:accessToken|uuid|username|xuid|clientId|userProperties)(?:,\s*|\s+|=))[^\s,\]]+`)
+
 // Redactor holds the values that identify a user and replaces each with a
 // fixed marker.
 type Redactor struct {
@@ -24,6 +35,9 @@ type Redactor struct {
 	// names are OS user names, matched as whole words after the home path has
 	// gone, so a name that is also a common word only costs that word.
 	names []*regexp.Regexp
+	// players are in-game names learned from a log (WithPlayer), matched as
+	// whole words like names and masked as "[player]".
+	players []*regexp.Regexp
 }
 
 type replacement struct {
@@ -71,13 +85,35 @@ func homeUser(home string) string {
 	return path.Base(strings.ReplaceAll(strings.TrimRight(home, `/\`), `\`, "/"))
 }
 
+// WithPlayer returns a redactor that also masks the player's in-game name, as
+// a game log gives it (a "Setting user:" line). The launcher is never told it:
+// the profile name Prism is given is the account's, and an offline name is
+// whatever the player typed. A blank name changes nothing, and r is not
+// changed either way.
+func (r *Redactor) WithPlayer(name string) *Redactor {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return r
+	}
+	out := *r
+	out.players = append(slices.Clone(r.players), regexp.MustCompile(`\b`+regexp.QuoteMeta(name)+`\b`))
+	return &out
+}
+
 // Redact returns the text with every identifying value replaced.
 func (r *Redactor) Redact(text string) string {
+	// First, while a value is still its own: after a replacement it would be a
+	// bracketed marker, which the pattern's value stops short of.
+	text = launchSecret.ReplaceAllString(text, "${1}[hidden]")
 	for _, rep := range r.replacements {
 		text = strings.ReplaceAll(text, rep.from, rep.to)
 	}
 	for _, name := range r.names {
 		text = name.ReplaceAllString(text, "[user]")
 	}
+	for _, name := range r.players {
+		text = name.ReplaceAllString(text, "[player]")
+	}
+	text = uuid.ReplaceAllString(text, "[uuid]")
 	return ipv4.ReplaceAllString(text, "[ip]")
 }

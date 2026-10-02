@@ -110,8 +110,15 @@ func TestStateIsTheJSONTheProtocolDocuments(t *testing.T) {
 		Chapter: StateChapter{ID: "frangfurd", Name: "Frangfurd", PackVersion: "1.0.0"},
 		Game:    models.GameState{ChapterID: "frangfurd", Phase: "mods", Splash: true, Estimate: map[string]int64{"mods": 1}},
 		CopyLog: &StateCopyLog{Lines: &lines},
-		Error:   "no folder",
-		Theme:   "light",
+		Report: &models.RunReport{
+			Game:        models.GameState{ChapterID: "frangfurd", Phase: "crashed"},
+			Phases:      []models.PhaseTime{{Phase: "starting"}, {Phase: "mods", Ms: 4200}},
+			LogTail:     "Reported exception thrown!\n",
+			LogLines:    1,
+			CrashReport: "crash-1.txt",
+		},
+		Error: "no folder",
+		Theme: "light",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -128,6 +135,16 @@ func TestStateIsTheJSONTheProtocolDocuments(t *testing.T) {
 		copyLog["lines"] != float64(12) || got["error"] != "no folder" || got["theme"] != "light" {
 		t.Fatalf("%s", body)
 	}
+	// The report is camelCase like every model, with its phases as a list.
+	report := got["report"].(map[string]any)
+	phases := report["phases"].([]any)
+	if report["logTail"] != "Reported exception thrown!\n" || report["logLines"] != float64(1) ||
+		report["crashReport"] != "crash-1.txt" || report["consoleAvailable"] != false ||
+		report["logTruncated"] != false || len(phases) != 2 ||
+		phases[1].(map[string]any)["phase"] != "mods" || phases[1].(map[string]any)["ms"] != float64(4200) ||
+		report["game"].(map[string]any)["phase"] != "crashed" {
+		t.Fatalf("%s", body)
+	}
 
 	// What is absent is absent, not null or empty: the page tests for it.
 	body, err = StateJSON(State{Chapter: StateChapter{ID: "a", Name: "A"}, Game: models.GameState{ChapterID: "a", Phase: "starting"}})
@@ -138,7 +155,7 @@ func TestStateIsTheJSONTheProtocolDocuments(t *testing.T) {
 	if err := json.Unmarshal(body, &got); err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range []string{"copyLog", "error", "theme"} {
+	for _, key := range []string{"copyLog", "report", "error", "theme"} {
 		if _, there := got[key]; there {
 			t.Errorf("%s is present: %s", key, body)
 		}

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { GameState } from '../types'
+import type { GameState, RunReport } from '../types'
 
 /**
  * The loading card's side of its two-way bridge (#97). The card is a window of
@@ -18,6 +18,8 @@ export interface CardState {
   copyLog?: { lines?: number; error?: string }
   /** What a failed action says. */
   error?: string
+  /** What the launcher knows of a run that crashed or failed; absent until it ends so. */
+  report?: RunReport
   /** The player's theme when it is not the system's. */
   theme?: 'dark' | 'light'
 }

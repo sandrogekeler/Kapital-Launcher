@@ -42,6 +42,11 @@ type cardFixture struct {
 	copyN    int
 	copyErr  error
 	changed  []string
+	// reports are the chapters the card asked a run report of, and report and
+	// reportErr what it is given.
+	reports   []string
+	report    models.RunReport
+	reportErr error
 	// hold and entered, when set, are given to each host made: its Open waits
 	// on hold and closes entered once it is waiting.
 	hold, entered chan struct{}
@@ -62,6 +67,10 @@ func newCardFixture(goos string) *cardFixture {
 		Actions: CardActions{
 			OpenFolder: func(id string) error { f.folders = append(f.folders, id); return f.folderEr },
 			CopyLog:    func() (int, error) { return f.copyN, f.copyErr },
+		},
+		Report: func(id string) (models.RunReport, error) {
+			f.reports = append(f.reports, id)
+			return f.report, f.reportErr
 		},
 		Changed: func(id string) { f.changed = append(f.changed, id) },
 	})

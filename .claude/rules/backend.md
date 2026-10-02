@@ -53,6 +53,15 @@ macOS) and ended if it is still there five run-steps later, and the run ends
 end of `loop`) so App Nap does not coalesce its waits while the launcher is
 minimised; it reads nothing.
 
+The one time the launcher reads a line of the game's log is `GameTracker.Report`
+(`gametracker_report.go`, `GetRunReport`, ADR-2 sixth amendment): on the
+player's request, or when the card is up and a run ends `crashed` or `failed`,
+it reads the last 16 KiB of that run's `latest.log` and the name of the newest
+crash report written since Play, runs the tail through the redactor with the
+player's in-game name learned from the log added, and returns it. It is built
+for the call and kept nowhere, and no line of it goes to `slog`; a run with no
+game log of its own has none to show, and without a redactor there is no report.
+
 The window holder (`gamewindow*.go`, #45, Windows only; the loading splash,
 #43, is what turns it on for a run) hooks the show events of the game's own
 process and hides and shows its `GLFW30` window through user32. The handover is

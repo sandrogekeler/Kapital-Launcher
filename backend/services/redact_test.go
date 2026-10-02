@@ -53,6 +53,38 @@ func TestRedactMasksAServersHostWithoutItsPort(t *testing.T) {
 	}
 }
 
+func TestRedactMasksALaunchArgumentListsIdentityAndCredential(t *testing.T) {
+	r := NewRedactor("", "", nil)
+	out := r.Redact("args [--username, Alex_9, --version, 1.21.1, --uuid, 1b4e6c9a-2f3d-4a7e-8c15-9d0e7f6a5b43, --accessToken, abc.def.ghi, --gameDir, x]\n" +
+		"--accessToken tok123 --xuid=99887766")
+	for _, leaked := range []string{"Alex_9", "1b4e6c9a", "abc.def.ghi", "tok123", "99887766"} {
+		if strings.Contains(out, leaked) {
+			t.Errorf("%q survived: %s", leaked, out)
+		}
+	}
+	if !strings.Contains(out, "--version, 1.21.1") || !strings.Contains(out, "--gameDir, x]") {
+		t.Errorf("the arguments that name nobody stay: %s", out)
+	}
+}
+
+func TestRedactorWithPlayerMasksTheNameAsAWholeWordAndLeavesTheOriginalAlone(t *testing.T) {
+	base := NewRedactor("", "", nil)
+	r := base.WithPlayer("Notch_Fan")
+	out := r.Redact("Setting user: Notch_Fan, <Notch_Fan> hi, Notch_Fanatic stays")
+	if strings.Contains(out, "<Notch_Fan>") || strings.Contains(out, "user: Notch_Fan") || !strings.Contains(out, "Notch_Fanatic stays") {
+		t.Fatalf("got %s", out)
+	}
+	if !strings.Contains(out, "[player]") {
+		t.Fatalf("got %s", out)
+	}
+	if got := base.Redact("Notch_Fan"); got != "Notch_Fan" {
+		t.Fatalf("the redactor it came from learned nothing: %q", got)
+	}
+	if base.WithPlayer("  ") != base {
+		t.Fatal("a blank name changes nothing")
+	}
+}
+
 func TestRedactSkipsBlankValues(t *testing.T) {
 	r := NewRedactor("", "", []string{""})
 	in := "nothing to see here"

@@ -27,9 +27,10 @@ const PRISM_SITE = 'https://prismlauncher.org'
 interface Props {
   chapter: Chapter
   onOpenSettings: (chapterId: string) => void
+  onOpenReport: (chapterId: string) => void
 }
 
-export function ChapterView({ chapter, onOpenSettings }: Props) {
+export function ChapterView({ chapter, onOpenSettings, onOpenReport }: Props) {
   const wikiPick = useChapterStore((s) => s.wikiPick[chapter.id])
 
   const engine = useEngineStore((s) => s.engine)
@@ -100,6 +101,7 @@ export function ChapterView({ chapter, onOpenSettings }: Props) {
         onOpenPrismSite={openPrismSite}
         onOpenReleasePage={openReleasePage}
         onCheckServer={() => void checkServer(chapter.id)}
+        onOpenReport={() => onOpenReport(chapter.id)}
       />
       <Panels
         chapter={chapter}

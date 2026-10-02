@@ -1,7 +1,7 @@
 import { create } from 'zustand'
-import type { GamePhase, GameState } from '../types'
+import type { GamePhase, GameState, RunReport } from '../types'
 import { errMsg, hasWailsBridge, readOr } from '../lib/ipc'
-import { GetGameStates, StopGame } from '../../wailsjs/go/main/App'
+import { GetGameStates, GetRunReport, StopGame } from '../../wailsjs/go/main/App'
 import { EventsOff, EventsOn } from '../../wailsjs/runtime/runtime'
 
 /** The event Go emits on every phase change. Same string as services.EventGameState. */
@@ -37,6 +37,8 @@ interface GameStore {
   listen: () => () => void
   load: () => Promise<void>
   receive: (state: GameState) => void
+  /** The chapter's run report, read from Go; null without a bridge. A refusal is rethrown. */
+  report: (chapterId: string) => Promise<RunReport | null>
   /** Ends the chapter's run at once. A write: a refusal is recorded and rethrown. */
   stop: (chapterId: string) => Promise<void>
 }
@@ -86,6 +88,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       set((s) => ({ stopErrors: { ...s.stopErrors, [chapterId]: errMsg(e) } }))
       throw e
     }
+  },
+
+  // The run's report, read from Go when the panel opens and kept nowhere: it
+  // holds a stretch of the game's log, so it lives in the panel that shows it
+  // and goes with it. Without a bridge there is no run to report on, and null
+  // says so; a real backend's refusal rethrows for the panel to show.
+  report: async (chapterId) => {
+    if (!hasWailsBridge()) return null
+    return (await GetRunReport(chapterId)) as RunReport
   },
 }))
 

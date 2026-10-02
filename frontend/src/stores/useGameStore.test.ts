@@ -107,6 +107,36 @@ describe('useGameStore', () => {
     expect(useGameStore.getState().stopErrors).toEqual({})
   })
 
+  it('reads a run report through the binding once per call, and keeps none', async () => {
+    attachBridge()
+    const report = {
+      game: { ...running, phase: 'crashed' },
+      phases: [{ phase: 'starting', ms: 0 }],
+      logTail: 'line\n',
+      logLines: 1,
+      logTruncated: false,
+      crashReport: '',
+      consoleAvailable: false,
+    }
+    vi.mocked(App.GetRunReport).mockResolvedValue(report as never)
+    const before = useGameStore.getState().states
+    await expect(useGameStore.getState().report('frangfurd')).resolves.toEqual(report)
+    expect(App.GetRunReport).toHaveBeenCalledExactlyOnceWith('frangfurd')
+    // Nothing of the log is held by the store.
+    expect(useGameStore.getState().states).toBe(before)
+    expect(JSON.stringify(useGameStore.getState())).not.toContain('line')
+  })
+
+  it('degrades a run report to null without a bridge, and rethrows a real refusal', async () => {
+    vi.mocked(App.GetRunReport).mockImplementation(() => {
+      throw new TypeError('no bridge')
+    })
+    await expect(useGameStore.getState().report('frangfurd')).resolves.toBeNull()
+    attachBridge()
+    vi.mocked(App.GetRunReport).mockRejectedValue(new Error('there is no run to report on'))
+    await expect(useGameStore.getState().report('frangfurd')).rejects.toThrow('no run to report')
+  })
+
   it('forgets an earlier refusal when the player tries again', async () => {
     attachBridge()
     vi.mocked(App.StopGame)

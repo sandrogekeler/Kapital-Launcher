@@ -1,13 +1,14 @@
 import { useLayoutEffect, useRef } from 'react'
-import type { GameState } from '../../types'
+import type { GameState, RunReport } from '../../types'
 import { chapterArt, chapterTitleArt } from '../../lib/art'
 import { gameLine } from '../../lib/gameLine'
 import { isPlaceholder } from '../../lib/manifest'
-import { copyLogDone } from '../../lib/settingsView'
 import { barPlan } from '../../lib/splashBar'
-import { Copy, FolderOpen } from '../../lib/icons'
+import { FolderOpen } from '../../lib/icons'
 import { Button } from '../ui/Button'
+import { CopyLogButton } from '../ui/CopyLogButton'
 import { Icon } from '../ui/Icon'
+import { RunReportParts } from '../run/RunReportParts'
 
 interface Props {
   chapter: { id: string; name: string; packVersion?: string }
@@ -16,10 +17,17 @@ interface Props {
   onLeave: () => void
   onOpenFolder: () => void
   onCopyLog: () => void
-  /** The last copy of the log: how many lines went, or why none did. */
+  /** The last copy of the log: how many lines went, or why none did. The Copy log button says it. */
   copyLog?: { lines?: number; error?: string }
   /** What a failed action says. */
   error?: string
+  /** What the launcher knows of a run that ended badly, from Go (ADR-2, sixth amendment). */
+  report?: RunReport
+  /**
+   * Shows Prism's console. Offered only when the report says it can be, which
+   * nothing does yet: hiding the console is a later change, and it adds the action.
+   */
+  onShowConsole?: () => void
 }
 
 /**
@@ -32,8 +40,10 @@ interface Props {
  * launcher.
  *
  * A game that stopped or never started (`crashed`, `failed`) keeps the card as
- * its error state: the bar goes, and Open folder, Copy log and Back to
- * launcher stay until the player leaves.
+ * its error state: the bar goes, and the launcher's own account of the run
+ * takes its place when Go sent one (the timeline, the end of the game's log
+ * and the crash report's name, in place of Prism's console), with Open folder,
+ * Copy log and Back to launcher, until the player leaves.
  */
 export function SplashCard({
   chapter,
@@ -43,6 +53,8 @@ export function SplashCard({
   onCopyLog,
   copyLog,
   error,
+  report,
+  onShowConsole,
 }: Props) {
   const art = chapterArt(chapter.id)
   const title = chapterTitleArt(chapter.id)
@@ -54,11 +66,6 @@ export function SplashCard({
   const caption = [title ? chapter.name : null, version ? `Pack ${version}` : null]
     .filter(Boolean)
     .join(' · ')
-  const result = copyLog?.error
-    ? { ok: false, text: copyLog.error }
-    : copyLog?.lines !== undefined
-      ? { ok: true, text: copyLogDone(copyLog.lines) }
-      : null
 
   return (
     <section
@@ -117,31 +124,31 @@ export function SplashCard({
             </button>
           )}
         </div>
+        {failed && report && (
+          <div className="px-8">
+            <RunReportParts report={report} logHeight="h-24" note={false} />
+          </div>
+        )}
         {error && (
           <p role="alert" className="text-danger m-0 px-8 text-xs select-text">
             {error}
           </p>
         )}
         {failed ? (
-          <div className="flex flex-col gap-3 px-8 pb-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <Button onClick={onOpenFolder}>
-                <Icon icon={FolderOpen} size="sm" />
-                <span>Open folder</span>
+          <div className="flex flex-wrap items-center gap-3 px-8 pb-6">
+            <Button onClick={onOpenFolder}>
+              <Icon icon={FolderOpen} size="sm" />
+              <span>Open folder</span>
+            </Button>
+            <CopyLogButton onClick={onCopyLog} result={copyLog} />
+            {report?.consoleAvailable && (
+              <Button onClick={() => onShowConsole?.()}>
+                <span>Show Prism's console</span>
               </Button>
-              <Button onClick={onCopyLog}>
-                <Icon icon={Copy} size="sm" />
-                <span>Copy log</span>
-              </Button>
-              <Button onClick={onLeave}>
-                <span>Back to launcher</span>
-              </Button>
-            </div>
-            <span role="status" className="text-xs select-text">
-              {result && (
-                <span className={result.ok ? 'text-fg-muted' : 'text-danger'}>{result.text}</span>
-              )}
-            </span>
+            )}
+            <Button onClick={onLeave}>
+              <span>Back to launcher</span>
+            </Button>
           </div>
         ) : (
           <Bar phase={state.phase} estimate={state.estimate} />

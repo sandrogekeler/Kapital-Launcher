@@ -46,6 +46,10 @@ export function GetPrismRelease() {
   return window['go']['main']['App']['GetPrismRelease']();
 }
 
+export function GetRunReport(arg1) {
+  return window['go']['main']['App']['GetRunReport'](arg1);
+}
+
 export function GetServerStatus(arg1) {
   return window['go']['main']['App']['GetServerStatus'](arg1);
 }

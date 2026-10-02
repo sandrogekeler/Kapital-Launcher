@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import { SupportSection } from './SupportSection'
 
@@ -12,41 +12,51 @@ describe('SupportSection', () => {
   })
   afterEach(() => {
     cleanup()
+    vi.useRealTimers()
     Reflect.deleteProperty(window, 'go')
   })
 
-  it('says how many lines went and that the identifying parts are masked', async () => {
+  it('says the copy worked on the button for a second, and then goes back', async () => {
     vi.mocked(App.CopyRedactedLog).mockResolvedValueOnce(214)
     render(<SupportSection />)
-    fireEvent.click(screen.getByRole('button', { name: 'Copy log' }))
-    expect(await screen.findByText(/Copied 214 lines to the clipboard/)).toBeInTheDocument()
-    expect(screen.getByText(/name, folders and server addresses masked/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/name,\s+folders and server addresses are masked first/),
+    ).toBeInTheDocument()
+    vi.useFakeTimers()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy log' }))
+    })
+    expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument()
+    expect(screen.queryByText(/to the clipboard/)).toBeNull()
+    act(() => void vi.advanceTimersByTime(1000))
+    expect(screen.getByRole('button', { name: 'Copy log' })).toBeInTheDocument()
   })
 
-  it('says "line" for one', async () => {
-    vi.mocked(App.CopyRedactedLog).mockResolvedValueOnce(1)
-    render(<SupportSection />)
-    fireEvent.click(screen.getByRole('button', { name: 'Copy log' }))
-    expect(await screen.findByText(/Copied 1 line to the clipboard/)).toBeInTheDocument()
-  })
-
-  it('shows a failure in the section and lets the player try again', async () => {
+  it('says a failure on the button for two seconds and lets the player try again', async () => {
     vi.mocked(App.CopyRedactedLog)
       .mockRejectedValueOnce('the log has nothing in it yet')
       .mockResolvedValueOnce(3)
     render(<SupportSection />)
-    fireEvent.click(screen.getByRole('button', { name: 'Copy log' }))
-    expect(await screen.findByText('the log has nothing in it yet')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Copy log' }))
-    expect(await screen.findByText(/Copied 3 lines/)).toBeInTheDocument()
-    expect(screen.queryByText('the log has nothing in it yet')).not.toBeInTheDocument()
+    vi.useFakeTimers()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy log' }))
+    })
+    expect(screen.getByRole('button', { name: 'Copy failed' })).toBeInTheDocument()
+    expect(screen.queryByText('the log has nothing in it yet')).toBeNull()
+    act(() => void vi.advanceTimersByTime(1999))
+    expect(screen.getByRole('button', { name: 'Copy failed' })).toBeInTheDocument()
+    act(() => void vi.advanceTimersByTime(1))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy log' }))
+    })
+    expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument()
   })
 
-  it('explains itself without a bridge instead of throwing', async () => {
+  it('fails on the button without a bridge instead of throwing', async () => {
     Reflect.deleteProperty(window, 'go')
     render(<SupportSection />)
     fireEvent.click(screen.getByRole('button', { name: 'Copy log' }))
-    expect(await screen.findByText(/only be copied from the app window/)).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Copy failed' })).toBeInTheDocument()
     expect(App.CopyRedactedLog).not.toHaveBeenCalled()
   })
 })

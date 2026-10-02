@@ -73,12 +73,12 @@ describe('gameLine', () => {
     const failed = (reason: GameFailReason): GameState => ({ ...at('failed'), reason })
     expect(gameLine(failed('packsync'), 'Frangfurd')).toEqual([
       '○ The game did not start',
-      "The pack could not be synced. Prism's window has the details",
+      'The pack could not be synced',
       'text-danger',
     ])
     expect(gameLine(failed('launch'), 'Frangfurd')).toEqual([
       '○ The game did not start',
-      'Prism stopped before the game. Its window has the details',
+      'Prism stopped before the game',
       'text-danger',
     ])
   })

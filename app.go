@@ -103,6 +103,7 @@ func NewApp(dataDir string, manifest []byte, dist fs.FS) (*App, error) {
 	// phase first: a run that ends brings the launcher back before its event
 	// says the card is gone.
 	a.games = services.NewGameTracker(dataDir, a.onGameState)
+	a.games.UseRedactor(a.redactor)
 	return a, nil
 }
 
@@ -478,17 +479,10 @@ func (a *App) ChoosePrismRoot() (string, error) {
 // manifest. Nothing is written to disk, and a path or value is never taken
 // from the frontend.
 func (a *App) CopyRedactedLog() (int, error) {
-	settings, err := a.settings.Load()
+	redactor, err := a.redactor()
 	if err != nil {
 		return 0, err
 	}
-	servers := make([]string, 0, len(a.manifest.Chapters))
-	for _, c := range a.manifest.Chapters {
-		if c.Server != nil {
-			servers = append(servers, c.Server.Address)
-		}
-	}
-	redactor := services.NewRedactor(a.home, settings.ProfileName, servers, a.osUser)
 	text, lines, err := services.RedactedLogTail(services.LogPath(a.dataDir), redactor, services.LogCopyBytes)
 	if err != nil {
 		return 0, err
