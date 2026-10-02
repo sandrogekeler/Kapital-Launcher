@@ -67,6 +67,21 @@ Read on 2026-09-30 from Prism 11.1.1's source and release:
   `prismlauncher_update.cfg` (`auto_check=false`), each only if absent, so a
   player's later changes stay theirs. What remains of the wizard is the
   Microsoft sign-in, which is Prism's and stays Prism's.
+- **A third seeded file: the log rules.** The launcher ends a start that fails
+  before the game by following Prism's log for the failed `LaunchTask` line
+  (#103, #106). Prism's own `qtlogging.ini` (beside the program on Windows, in
+  the bundle's resources on macOS) says `launcher.task=false`, which silences
+  that category at every level, Critical included, so on a stock Prism the line
+  is never written. Prism loads the first `qtlogging.ini` it finds, data root
+  first, and only that one, so the managed root gets a copy of Prism's file,
+  verbatim, with `launcher.task.critical=true` added last (later rules win in
+  Qt). It is a copy and never a subset, so rules such as
+  `launcher.auth.credentials.debug=false` stay in force. It is written at
+  install and, when absent, before each launch of the managed Prism, so an
+  earlier install gets it on its next Play; an existing file is the player's.
+  A source that is missing, over a size bound or not a `[Rules]` file writes
+  nothing and is logged once, and the launch goes on. `[verify]` on a real Mac:
+  that the file is at `Prism Launcher.app/Contents/Resources/qtlogging.ini`.
 - **Updates on a click.** On start the launcher reads Prism's latest release;
   when it is newer than the managed copy, and the managed copy is the Prism
   in use, it offers the update, through the same verification. Never silent.

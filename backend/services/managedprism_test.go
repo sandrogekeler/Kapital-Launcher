@@ -131,8 +131,30 @@ func windowsPrism(t *testing.T, version string) []byte {
 		{name: "prismlauncher.exe", body: "prism " + version},
 		{name: "portable.txt", body: ""},
 		{name: "jars/NewLaunch.jar", body: "jar"},
+		{name: "qtlogging.ini", body: stockRules},
 	})
 }
+
+// stockRules is Prism 11.1.1's launcher/qtlogging.ini, verbatim.
+const stockRules = `[Rules]
+*.debug=true
+# prevent log spam and strange bugs
+# qt.qpa.drawing in particular causes theme artifacts on MacOS
+qt.*.debug=false
+# supress image format noise
+kf.imageformats.plugins.hdr=false
+kf.imageformats.plugins.xcf=false
+# don't log credentials by default
+launcher.auth.credentials.debug=false
+# remove the debug lines, other log levels still get through
+launcher.task.net.download.debug=false
+# enable or disable whole catageries
+launcher.task.net=true
+launcher.task=false
+launcher.task.net.upload=true
+launcher.task.net.metacache=false
+launcher.task.net.metacache.http=true
+`
 
 type progressLog []models.PrismInstallProgress
 
@@ -240,6 +262,11 @@ func TestInstallDownloadsVerifiesAndPlacesPrism(t *testing.T) {
 	}
 	if upd, err := os.ReadFile(filepath.Join(m.Root(), "prismlauncher_update.cfg")); err != nil || !strings.Contains(string(upd), "auto_check=false") {
 		t.Fatalf("Prism's own updater is off in a managed root: %q %v", upd, err)
+	}
+
+	rules, err := os.ReadFile(filepath.Join(m.Root(), "qtlogging.ini"))
+	if err != nil || !strings.HasPrefix(string(rules), stockRules) {
+		t.Fatalf("Prism's own rules are seeded at install: %q %v", rules, err)
 	}
 
 	// The player changes a setting in Prism; an update must keep it and
@@ -686,5 +713,150 @@ func TestDownloadEndsOnAStallNotOnSlowness(t *testing.T) {
 	}
 	if _, _, ok := m.Installed(); ok {
 		t.Error("nothing is installed from a stalled download")
+	}
+}
+
+// managedWithRules is a managed Prism whose installed program folder holds the
+// given qtlogging.ini, found the way a real one is: through managed.json. An
+// empty rules means the folder has no such file.
+func managedWithRules(t *testing.T, goos, rules string) *ManagedPrism {
+	t.Helper()
+	m := NewManagedPrism(t.TempDir(), goos, "amd64")
+	if err := os.MkdirAll(m.dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(m.dir, "managed.json"), []byte(`{"version":"11.1.1"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if rules != "" {
+		src := m.logRulesSource(m.appDir("11.1.1"))
+		if err := os.MkdirAll(filepath.Dir(src), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(src, []byte(rules), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return m
+}
+
+func TestSeedLogRulesCopiesPrismsRulesAndReEnablesTaskFailuresLast(t *testing.T) {
+	m := managedWithRules(t, "windows", stockRules)
+	m.SeedLogRules()
+	dest := filepath.Join(m.Root(), "qtlogging.ini")
+	got, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(got)
+	if !strings.HasPrefix(text, stockRules+"\n# Added by Kapital Launcher") {
+		t.Fatalf("Prism's file verbatim, a blank line, then ours:\n%s", text)
+	}
+	if !strings.HasSuffix(text, "\nlauncher.task.critical=true\n") {
+		t.Fatalf("the launcher's rule is last:\n%s", text)
+	}
+	// Prism's rules keep their order and ours comes after them, so the later
+	// rule wins and the credentials rule stays in force.
+	var rules []string
+	for _, l := range strings.Split(text, "\n") {
+		if l != "" && !strings.HasPrefix(l, "#") && l != "[Rules]" {
+			rules = append(rules, l)
+		}
+	}
+	if len(rules) != 12 || rules[0] != "*.debug=true" || rules[len(rules)-1] != "launcher.task.critical=true" {
+		t.Errorf("rules %q", rules)
+	}
+	if strings.Index(text, "launcher.task=false") > strings.Index(text, "launcher.task.critical=true") ||
+		!strings.Contains(text, "launcher.auth.credentials.debug=false") {
+		t.Errorf("order or credentials rule:\n%s", text)
+	}
+	if info, err := os.Stat(dest); err != nil || (runtime.GOOS != "windows" && info.Mode().Perm() != 0o644) {
+		t.Errorf("mode %v %v", info, err)
+	}
+}
+
+func TestSeedLogRulesKeepsPrismsLineEndingsAndAddsAMissingFinalOne(t *testing.T) {
+	crlf := strings.ReplaceAll(stockRules, "\n", "\r\n")
+	m := managedWithRules(t, "windows", strings.TrimSuffix(crlf, "\r\n"))
+	m.SeedLogRules()
+	got, err := os.ReadFile(filepath.Join(m.Root(), "qtlogging.ini"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(string(got), crlf+"\r\n# Added") || !strings.HasSuffix(string(got), "critical=true\r\n") ||
+		strings.Contains(strings.ReplaceAll(string(got), "\r\n", ""), "\n") {
+		t.Errorf("one line ending throughout: %q", got)
+	}
+}
+
+func TestSeedLogRulesLooksInTheBundleOnMacOS(t *testing.T) {
+	m := managedWithRules(t, "darwin", stockRules)
+	want := filepath.Join(m.dir, "app-11.1.1", "Prism Launcher.app", "Contents", "Resources", "qtlogging.ini")
+	if _, err := os.Stat(want); err != nil {
+		t.Fatalf("the fixture is where Prism installs it: %v", err)
+	}
+	m.SeedLogRules()
+	if _, err := os.Stat(filepath.Join(m.Root(), "qtlogging.ini")); err != nil {
+		t.Errorf("seeded from the bundle: %v", err)
+	}
+}
+
+func TestSeedLogRulesWritesNothingFromAMissingOrStrangeSource(t *testing.T) {
+	for name, src := range map[string]string{
+		"missing":     "",
+		"not rules":   "[General]\nLanguage=en_US\n",
+		"no header":   "*.debug=true\n",
+		"blank":       "\n\n",
+		"over bound":  "[Rules]\n" + strings.Repeat("#", maxPrismConfigLen),
+		"header late": "# comment\n*.debug=true\n[Rules]\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			logs := captureLog(t)
+			m := managedWithRules(t, "windows", src)
+			m.SeedLogRules()
+			if _, err := os.Stat(filepath.Join(m.Root(), "qtlogging.ini")); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("nothing is written: %v", err)
+			}
+			out := logs.String()
+			if n := strings.Count(out, "log rules not seeded"); n != 1 || !strings.Contains(out, "level=WARN") {
+				t.Errorf("one warning, got %d:\n%s", n, out)
+			}
+			if strings.Contains(out, "Language=en_US") {
+				t.Errorf("the file's content is never logged:\n%s", out)
+			}
+		})
+	}
+}
+
+func TestSeedLogRulesAcceptsBlankLinesAndABOMBeforeTheHeader(t *testing.T) {
+	m := managedWithRules(t, "windows", "\n\ufeff[Rules]\n*.debug=true\n")
+	m.SeedLogRules()
+	if _, err := os.Stat(filepath.Join(m.Root(), "qtlogging.ini")); err != nil {
+		t.Errorf("seeded: %v", err)
+	}
+}
+
+func TestSeedLogRulesLeavesAnExistingFileAlone(t *testing.T) {
+	m := managedWithRules(t, "windows", stockRules)
+	mine := []byte("[Rules]\r\nlauncher.task.debug=true")
+	dest := filepath.Join(m.Root(), "qtlogging.ini")
+	if err := os.MkdirAll(m.Root(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(dest, mine, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m.SeedLogRules()
+	if got, err := os.ReadFile(dest); err != nil || !bytes.Equal(got, mine) {
+		t.Errorf("the player's file is theirs: %q %v", got, err)
+	}
+}
+
+func TestSeedLogRulesIsQuietWithoutAnInstall(t *testing.T) {
+	logs := captureLog(t)
+	m := NewManagedPrism(t.TempDir(), "windows", "amd64")
+	m.SeedLogRules()
+	if _, err := os.Stat(m.Root()); !errors.Is(err, os.ErrNotExist) || logs.String() != "" {
+		t.Errorf("nothing installed, nothing done: %v %q", err, logs.String())
 	}
 }

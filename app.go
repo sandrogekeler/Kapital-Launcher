@@ -288,6 +288,7 @@ func (a *App) LaunchChapter(chapterID string) error {
 	// An instance made with the pack sync's window gets the headless command
 	// before Prism reads it (#95).
 	a.updatePreLaunch(chapterID, instanceDir)
+	a.seedLogRules(engine)
 	before := services.SnapshotGameLog(instanceDir)
 	// Prism's own log likewise, for a launch step that fails before the game
 	// (#103). The instance folder is <root>/instances/<id>, so the engine's

@@ -39,7 +39,10 @@ and waits on the game's Java, and reads the instance's `latest.log` for marker
 lines only, never keeping or logging one (ADR-2, third amendment). While the
 start waits for the game it also follows Prism's own `logs/PrismLauncher-0.log`
 (`gametracker_prism.go`, #103) for one marker, a `LaunchTask` that failed,
-which ends the run as `failed` with a `Reason` (ADR-2, fifth amendment). It
+which ends the run as `failed` with a `Reason` (ADR-2, fifth amendment). Prism's
+own `qtlogging.ini` turns the `launcher.task` category off, Critical included,
+so that line is never written by default: the managed root carries a copy of
+Prism's rules plus `launcher.task.critical=true` (ADR-11, `seedLogRules`). It
 starts no process. On macOS it holds one OS activity per run
 (`activity_darwin.go`: `NSProcessInfo`'s `beginActivity`, from `begin` to the
 end of `loop`) so App Nap does not coalesce its waits while the launcher is
@@ -102,8 +105,9 @@ marked `[verify]` in a comment; clearing those is Roadmap milestone 2.
 The launcher writes one thing into a player's Prism data directory: a
 chapter's instance folder, created by `InstanceCreator` only when it does not
 exist, `instance.cfg` last, and never touched again (ADR-2, amendment). In the
-managed root it owns it also seeds `prismlauncher.cfg` and
-`prismlauncher_update.cfg` once, before Prism first starts. The pre-launch
+managed root it owns it also seeds `prismlauncher.cfg`,
+`prismlauncher_update.cfg` and `qtlogging.ini` once, before Prism first starts
+(the last also before a launch, when absent, for an earlier install). The pre-launch
 command it writes runs packwiz-installer headless (`-g`, #95); before a launch
 `RewritePreLaunchCommand` (`prelaunch.go`) brings an instance made earlier up to
 that command, only when the key is exactly the launcher's earlier template, with
