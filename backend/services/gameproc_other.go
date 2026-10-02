@@ -16,5 +16,7 @@ func systemGameOS() gameOS {
 		wait: func(context.Context, int) (int, bool, error) {
 			return 0, false, errGameProcUnsupported
 		},
+		terminate: func(int, bool) error { return errGameProcUnsupported },
+		askClose:  func(int) error { return errGameProcUnsupported },
 	}
 }

@@ -49,6 +49,8 @@ export function ChapterView({ chapter, onOpenSettings }: Props) {
 
   const status = useServerStore(selectStatus(chapter.id))
   const game = useGameStore(selectGame(chapter.id))
+  const stopError = useGameStore((s) => s.stopErrors[chapter.id])
+  const stopGame = useGameStore((s) => s.stop)
   const checking = useServerStore((s) => s.checking)
   const checkServer = useServerStore((s) => s.check)
 
@@ -87,8 +89,10 @@ export function ChapterView({ chapter, onOpenSettings }: Props) {
         installing={installing === chapter.id}
         installedNow={installedNow === chapter.id}
         checking={checking === chapter.id}
-        error={launchError}
+        error={stopError ?? launchError}
         onPlay={() => void launch(chapter.id)}
+        // The store has recorded a refusal for the bar's error line.
+        onStop={() => void stopGame(chapter.id).catch((e) => console.warn('stop game', errMsg(e)))}
         onInstall={() => void installChapter(chapter.id)}
         release={release}
         install={install}

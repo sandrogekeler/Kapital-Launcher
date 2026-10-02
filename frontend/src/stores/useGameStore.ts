@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { GamePhase, GameState } from '../types'
-import { hasWailsBridge, readOr } from '../lib/ipc'
-import { GetGameStates } from '../../wailsjs/go/main/App'
+import { errMsg, hasWailsBridge, readOr } from '../lib/ipc'
+import { GetGameStates, StopGame } from '../../wailsjs/go/main/App'
 import { EventsOff, EventsOn } from '../../wailsjs/runtime/runtime'
 
 /** The event Go emits on every phase change. Same string as services.EventGameState. */
@@ -21,6 +21,9 @@ const ACTIVE: readonly GamePhase[] = [
 export const isActive = (phase: GamePhase | undefined): boolean =>
   phase !== undefined && ACTIVE.includes(phase)
 
+const without = (errors: Record<string, string>, chapterId: string) =>
+  Object.fromEntries(Object.entries(errors).filter(([id]) => id !== chapterId))
+
 /**
  * Where each chapter's game is, from Play to its end. Go follows the game's
  * process and log and emits a `game:state` per phase; this store listens and
@@ -29,13 +32,18 @@ export const isActive = (phase: GamePhase | undefined): boolean =>
  */
 interface GameStore {
   states: Record<string, GameState>
+  /** Why the last Stop of each chapter was refused, until the game next changes. */
+  stopErrors: Record<string, string>
   listen: () => () => void
   load: () => Promise<void>
   receive: (state: GameState) => void
+  /** Ends the chapter's run at once. A write: a refusal is recorded and rethrown. */
+  stop: (chapterId: string) => Promise<void>
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
   states: {},
+  stopErrors: {},
 
   // Subscribes for the app's lifetime; returns the unsubscribe for tests and
   // for a StrictMode double mount. Without a bridge there is no runtime to
@@ -59,7 +67,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
   // is dropped: nothing can be said about a game that is not named.
   receive: (state) => {
     if (!state?.chapterId) return
-    set((s) => ({ states: { ...s.states, [state.chapterId]: state } }))
+    // The game has moved on, so a refusal to stop it is stale.
+    set((s) => ({
+      states: { ...s.states, [state.chapterId]: state },
+      stopErrors: without(s.stopErrors, state.chapterId),
+    }))
+  },
+
+  // A write like a launch: with no bridge nothing was going to stop, so the
+  // rejection is shown as what it is. The answer is not filed: the run's end
+  // arrives as a game:state event, and an answer that crossed a newer event
+  // would overwrite it.
+  stop: async (chapterId) => {
+    set((s) => ({ stopErrors: without(s.stopErrors, chapterId) }))
+    try {
+      await StopGame(chapterId)
+    } catch (e) {
+      set((s) => ({ stopErrors: { ...s.stopErrors, [chapterId]: errMsg(e) } }))
+      throw e
+    }
   },
 }))
 

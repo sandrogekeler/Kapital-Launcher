@@ -105,3 +105,7 @@ export function SaveChapterSettings(arg1, arg2) {
 export function SaveSettings(arg1) {
   return window['go']['main']['App']['SaveSettings'](arg1);
 }
+
+export function StopGame(arg1) {
+  return window['go']['main']['App']['StopGame'](arg1);
+}

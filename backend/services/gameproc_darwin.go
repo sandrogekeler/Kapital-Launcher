@@ -16,9 +16,33 @@ import (
 // table (kern.proc.all): pid, parent pid, name and start time, and nothing
 // else. The game's Java is not this app's child, so its exit is seen by
 // asking once a second whether the pid still exists, and its exit code is
-// not known. [verify] on a real Mac (#30): none of this has run on one.
+// not known. Stop ends the two processes the tracker found with SIGTERM
+// and then SIGKILL, by pid. [verify] on a real Mac (#30): none of this has run
+// on one.
 func systemGameOS() gameOS {
-	return gameOS{list: listProcesses, started: processStart, wait: waitProcess}
+	return gameOS{
+		list: listProcesses, started: processStart, wait: waitProcess,
+		terminate: terminateProcess, askClose: closeProcess,
+	}
+}
+
+// terminateProcess signals one process: SIGTERM, or SIGKILL when force. A
+// process that has already gone is not an error: the run is ending by it.
+func terminateProcess(pid int, force bool) error {
+	sig := unix.SIGTERM
+	if force {
+		sig = unix.SIGKILL
+	}
+	if err := unix.Kill(pid, sig); err != nil && !errors.Is(err, unix.ESRCH) {
+		return fmt.Errorf("signal process: %w", err)
+	}
+	return nil
+}
+
+// closeProcess asks a Prism to quit. It has no window to ask, as the one on
+// Windows has: a SIGTERM is Qt's quit.
+func closeProcess(pid int) error {
+	return terminateProcess(pid, false)
 }
 
 func listProcesses() ([]procInfo, error) {

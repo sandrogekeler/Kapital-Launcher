@@ -21,7 +21,8 @@ const running: GameState = {
 
 describe('useGameStore', () => {
   beforeEach(() => {
-    useGameStore.setState({ states: {} })
+    useGameStore.setState({ states: {}, stopErrors: {} })
+    vi.mocked(App.StopGame).mockReset()
     vi.mocked(App.GetGameStates).mockReset()
     vi.mocked(Runtime.EventsOn).mockReset()
     vi.mocked(Runtime.EventsOff).mockReset()
@@ -83,5 +84,36 @@ describe('useGameStore', () => {
     expect(active.every(isActive)).toBe(true)
     expect(over.some(isActive)).toBe(false)
     expect(isActive(undefined)).toBe(false)
+  })
+
+  it('stops a chapter through the binding, and says nothing when it works', async () => {
+    attachBridge()
+    vi.mocked(App.StopGame).mockResolvedValue(running as never)
+    await useGameStore.getState().stop('frangfurd')
+    expect(App.StopGame).toHaveBeenCalledWith('frangfurd')
+    expect(useGameStore.getState().stopErrors).toEqual({})
+  })
+
+  it('records a refused stop under its chapter and rethrows it, until the game moves', async () => {
+    attachBridge()
+    vi.mocked(App.StopGame).mockRejectedValue(new Error('Frangfurd has no game to stop'))
+    await expect(useGameStore.getState().stop('frangfurd')).rejects.toThrow('no game to stop')
+    expect(useGameStore.getState().stopErrors).toEqual({
+      frangfurd: 'Frangfurd has no game to stop',
+    })
+    useGameStore.getState().receive({ ...running, chapterId: 'lichdenstein' })
+    expect(useGameStore.getState().stopErrors.frangfurd).toBeDefined()
+    useGameStore.getState().receive({ ...running, phase: 'crashed', reason: 'stopped' })
+    expect(useGameStore.getState().stopErrors).toEqual({})
+  })
+
+  it('forgets an earlier refusal when the player tries again', async () => {
+    attachBridge()
+    vi.mocked(App.StopGame)
+      .mockRejectedValueOnce(new Error('first'))
+      .mockResolvedValue(running as never)
+    await expect(useGameStore.getState().stop('frangfurd')).rejects.toThrow('first')
+    await useGameStore.getState().stop('frangfurd')
+    expect(useGameStore.getState().stopErrors).toEqual({})
   })
 })

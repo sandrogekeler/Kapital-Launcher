@@ -43,7 +43,12 @@ which ends the run as `failed` with a `Reason` (ADR-2, fifth amendment). Prism's
 own `qtlogging.ini` turns the `launcher.task` category off, Critical included,
 so that line is never written by default: the managed root carries a copy of
 Prism's rules plus `launcher.task.critical=true` (ADR-11, `seedLogRules`). It
-starts no process. On macOS it holds one OS activity per run
+starts no process. Stop (`gametracker_stop.go`) is a request to a run's own
+goroutine that ends only the two processes the run found itself, the launcher's
+Prism and the game's Java, by pid and never by name: the Java is ended, else
+Prism is asked to close (`WM_CLOSE` to its own windows on Windows, `SIGTERM` on
+macOS) and ended if it is still there five run-steps later, and the run ends
+`crashed` or `failed` with the reason `stopped` (S3.9). On macOS it holds one OS activity per run
 (`activity_darwin.go`: `NSProcessInfo`'s `beginActivity`, from `begin` to the
 end of `loop`) so App Nap does not coalesce its waits while the launcher is
 minimised; it reads nothing.

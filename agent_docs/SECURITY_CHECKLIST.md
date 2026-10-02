@@ -23,6 +23,7 @@ A different count is new surface to classify: add the method to this table.
 | `InstallPrism` | nothing | download, verify and unpack Prism's official build | S4.5 |
 | `InstallChapter` | a chapter id | the manifest's instance and pack URL: one instance folder written into the Prism root | S3.3, S4.6 |
 | `LaunchChapter`, `OpenChapterWiki`, `GetServerStatus` | a chapter id | the manifest's instance, URL or address for it; before a launch, the one `PreLaunchCommand` key of the chapter's own `instance.cfg`, only from the launcher's earlier template | S3.3, S3.7, S4.6, S6.1 |
+| `StopGame` | a chapter id | the pid of the Prism the launcher started, or of the game's Java found as its child, for a run the tracker follows: asked to close, then ended | S3.3, S3.9 |
 | `SaveSettings` | a whole `AppSettings` | the settings file, and the executable detection then runs | S3.5 |
 | `ChoosePrismExecutable`, `ChoosePrismRoot` | nothing | a native file or folder picker; the pick is returned, never saved here | S3.5 |
 | `OpenExternal` | a URL | the system browser, web URLs only | S3.4 |
@@ -223,6 +224,36 @@ Verify: `TestAssetsRefuseAnythingOutsideTheBuild`,
 Content-Security-Policy frontend/dist/splash.html` after a build is 1.
 Probe: a page request for `../..`, `%2e%2e`, a backslash path or a `.map` file;
 a posted message that names a path or another chapter.
+
+**S3.9 Stop ends only the two processes the launcher found itself, by pid, and never by name.**
+Holds when: `GameTracker.Stop` (`gametracker_stop.go`) acts on a run the
+tracker follows and on nothing else: the Prism the launcher started
+(`TrackRequest.Prism`, taken from the `exec.Command` that ran it) and the game's
+Java the tracker found as that Prism's child (`gameRun.bound`). Each is ended
+by its pid, which a run proves alive by its own exit channel and never by
+looking the pid up again, and which must be above 1 (`endable`: on macOS `kill`
+takes 0 for the caller's process group). No process is looked up by name to be
+ended, and a Java or a Prism that was not found as ours is never touched; a
+launch that went to another Prism ends the run and signals nothing. The
+chapter id resolves through the manifest first (S3.3). On Windows the game's
+Java is ended with `TerminateProcess` on a handle opened with
+`PROCESS_TERMINATE`, and Prism is asked to close with `WM_CLOSE` posted only to
+the visible top-level windows whose owner is its pid (owner and visibility are
+all that is read of a window, never its title), then ended the same way if it
+is still there five seconds later. On macOS it is `SIGTERM` and, five seconds
+on, `SIGKILL`. The five seconds are judged on the run's steps, not slept on.
+Nothing is started, read or written to do it, and the pid is logged, never a
+window title.
+Verify: `TestStopAsksTheLaunchersPrismToCloseAndEndsWhenItExits`,
+`TestStopEndsAPrismThatIgnoresTheCloseAfterFiveSeconds`,
+`TestStopEndsTheGamesJavaAndTheRunEndsCrashedAsStopped`,
+`TestStopWithNothingAliveEndsTheRunAtOnce`,
+`TestStopNeverSignalsAPidItDoesNotOwn`,
+`TestStopRefusesAChapterWithNoRunInProgress`,
+`TestStopGameRefusesAnUnknownChapterAndOneWithNoRun`.
+Probe: Stop on a chapter whose launch went to a Prism that was already open (no
+process of ours is alive, and none may be signalled); a Prism whose pid has been
+reused after it exited (its exit channel is closed, so it is not touched).
 
 ## S4. Downloads (milestone 4)
 

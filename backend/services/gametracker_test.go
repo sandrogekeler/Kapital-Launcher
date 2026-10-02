@@ -42,6 +42,30 @@ type fakeProcs struct {
 	exits   map[int]chan procExit
 	listErr error
 	lists   int
+	// closes and terms are the pids Stop asked to close and to end, in order;
+	// closeErr and termErr make those calls fail.
+	closes   []int
+	terms    []termCall
+	closeErr error
+	termErr  error
+}
+
+// termCall is one terminate the tracker made.
+type termCall struct {
+	pid   int
+	force bool
+}
+
+func (f *fakeProcs) closed() []int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]int(nil), f.closes...)
+}
+
+func (f *fakeProcs) terminated() []termCall {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]termCall(nil), f.terms...)
 }
 
 func newFakeProcs() *fakeProcs {
@@ -90,6 +114,18 @@ func (f *fakeProcs) os() gameOS {
 			case <-ctx.Done():
 				return 0, false, ctx.Err()
 			}
+		},
+		terminate: func(pid int, force bool) error {
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			f.terms = append(f.terms, termCall{pid, force})
+			return f.termErr
+		},
+		askClose: func(pid int) error {
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			f.closes = append(f.closes, pid)
+			return f.closeErr
 		},
 	}
 }

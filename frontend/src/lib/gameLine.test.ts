@@ -83,6 +83,19 @@ describe('gameLine', () => {
     ])
   })
 
+  it('says a run the player stopped without the error tone', () => {
+    expect(gameLine({ ...at('failed'), reason: 'stopped' }, 'Frangfurd')).toEqual([
+      '○ The game did not start',
+      'Stopped from the launcher',
+      'text-fg-muted',
+    ])
+    expect(gameLine({ ...at('crashed', 1), reason: 'stopped' }, 'Frangfurd')).toEqual([
+      '○ The game was stopped',
+      'Stopped from the launcher',
+      'text-fg-muted',
+    ])
+  })
+
   it('has nothing to say for idle, closed or an unknown state', () => {
     expect(gameLine(at('idle'), 'Frangfurd')).toBeNull()
     expect(gameLine(at('closed'), 'Frangfurd')).toBeNull()
@@ -103,8 +116,11 @@ describe('gameLine', () => {
     for (const p of phases) {
       expect(gameLine(at(p, 2), 'Frangfurd')?.join(' ')).not.toContain('—')
     }
-    for (const reason of ['packsync', 'launch'] as const) {
+    for (const reason of ['packsync', 'launch', 'stopped'] as const) {
       expect(gameLine({ ...at('failed'), reason }, 'Frangfurd')?.join(' ')).not.toContain('—')
     }
+    expect(gameLine({ ...at('crashed'), reason: 'stopped' }, 'Frangfurd')?.join(' ')).not.toContain(
+      '—',
+    )
   })
 })

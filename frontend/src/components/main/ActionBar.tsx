@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type {
   Chapter,
   EngineInfo,
@@ -15,7 +15,7 @@ import { packHost, packSourceLine } from '../../lib/packSource'
 import { serverLine } from '../../lib/serverLine'
 import { gameLine } from '../../lib/gameLine'
 import { isActive } from '../../stores/useGameStore'
-import { Download, Play, RefreshCw, TriangleAlert } from '../../lib/icons'
+import { Download, Play, RefreshCw, Square, TriangleAlert } from '../../lib/icons'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
@@ -47,6 +47,8 @@ interface Props {
   /** The install in progress or just finished, from prism:install. */
   install: PrismInstallProgress | null
   onPlay: () => void
+  /** Ends the chapter's run at once. */
+  onStop: () => void
   onInstall: () => void
   onGetPrism: () => void
   onOpenPrismSite: () => void
@@ -55,6 +57,20 @@ interface Props {
 }
 
 const WORKING = ['downloading', 'unpacking', 'verifying']
+
+/**
+ * The phases in which a stop asks twice: the game has a window or is past it, so a stray click
+ * would throw away a world in play. Before that nothing is lost and one click stops.
+ */
+const CONFIRM_STOP: readonly (GameState['phase'] | undefined)[] = [
+  'window',
+  'resources',
+  'running',
+  'stopping',
+]
+
+/** How long "Stop the game?" waits for its second click. */
+const CONFIRM_MS = 5000
 
 /**
  * Play, and the state line beside it. The line says what the app knows:
@@ -76,7 +92,10 @@ const WORKING = ['downloading', 'unpacking', 'verifying']
  *
  * While the chapter's game is starting, running or closing (#44) its own line
  * sits beside Play, right after the hand-over to Prism, and Play and Install
- * wait. The server's status stays on the right throughout, so it is still
+ * wait. Play becomes Stop, so a start that stalls or a game that has died
+ * can be ended at once: one click while the start is only getting ready, and
+ * once the game has a window the first click asks "Stop the game?" for five
+ * seconds. Stop waits, disabled, while the hand-over to Prism has not returned. The server's status stays on the right throughout, so it is still
  * there when the player is launching. A game that crashed or never started
  * keeps its line until the next Play, but yields to an install in progress,
  * whose line is on the right. A game that closed normally says nothing.
@@ -102,6 +121,7 @@ export function ActionBar({
   release,
   install,
   onPlay,
+  onStop,
   onInstall,
   onGetPrism,
   onOpenPrismSite,
@@ -109,6 +129,7 @@ export function ActionBar({
   onCheckServer,
 }: Props) {
   const [offering, setOffering] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const missing = engine !== null && !engine.found
   const working = install !== null && WORKING.includes(install.phase)
   const needsInstall = installed === false
@@ -116,6 +137,21 @@ export function ActionBar({
   const published = isPublished(chapter) || devPack !== undefined
   const source = installed ? packSourceLine(instancePack, chapter.pack.packwiz) : null
   const playing = isActive(game?.phase)
+  // The timer is cleared with the component, and by the click that spends it.
+  useEffect(() => {
+    if (!confirming) return
+    const timer = setTimeout(() => setConfirming(false), CONFIRM_MS)
+    return () => clearTimeout(timer)
+  }, [confirming])
+  const needsConfirm = CONFIRM_STOP.includes(game?.phase)
+  const clickStop = () => {
+    if (needsConfirm && !confirming) {
+      setConfirming(true)
+      return
+    }
+    setConfirming(false)
+    onStop()
+  }
   const gameRows = gameLine(game, chapter.name)
   const installShown =
     install !== null &&
@@ -182,21 +218,22 @@ export function ActionBar({
   return (
     <section className="border-line flex flex-col gap-3 border-b px-14 py-5">
       <div className="flex items-center gap-3">
-        {needsInstall ? (
+        {playing || launching ? (
+          <Button variant="play" onClick={clickStop} disabled={launching}>
+            <Icon icon={Square} size="sm" className="fill-current" />
+            <span>{needsConfirm && confirming ? 'Stop the game?' : 'Stop'}</span>
+          </Button>
+        ) : needsInstall ? (
           <Button
             variant="play"
             onClick={onInstall}
-            disabled={!published || installing || launching || playing || missing || working}
+            disabled={!published || installing || missing || working}
           >
             <Icon icon={Download} size="sm" />
             <span>{installLabel(chapter)}</span>
           </Button>
         ) : (
-          <Button
-            variant="play"
-            onClick={onPlay}
-            disabled={launching || installing || playing || missing || working}
-          >
+          <Button variant="play" onClick={onPlay} disabled={installing || missing || working}>
             {behind ? (
               <Icon icon={RefreshCw} size="sm" />
             ) : (

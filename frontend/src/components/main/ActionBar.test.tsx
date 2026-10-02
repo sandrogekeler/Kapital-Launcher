@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { ActionBar } from './ActionBar'
 import { BUNDLED_MANIFEST } from '../../lib/manifest'
@@ -56,6 +56,7 @@ function bar(over: Partial<ComponentProps<typeof ActionBar>> = {}) {
       release={null}
       install={null}
       onPlay={noop}
+      onStop={noop}
       onInstall={noop}
       onGetPrism={noop}
       onOpenPrismSite={noop}
@@ -67,23 +68,26 @@ function bar(over: Partial<ComponentProps<typeof ActionBar>> = {}) {
 }
 
 const play = () => screen.getByRole('button', { name: new RegExp(chapter.name) })
+const stop = () => screen.getByRole('button', { name: /^Stop/ })
 
-/** The two rows beside Play are the element right after the button, before the spacer. */
-const beside = () => play().nextElementSibling as HTMLElement
+/** The two rows beside Play (or Stop) are the element right after the button, before the spacer. */
+const beside = () => screen.getAllByRole('button')[0]!.nextElementSibling as HTMLElement
 
 describe('ActionBar game line', () => {
   afterEach(cleanup)
 
-  it('shows the game line and holds Play while the game is active', () => {
+  it("shows the game line and Stop in Play's place while the game is active", () => {
     bar({ game: game('resources') })
     expect(screen.getByText('◐ Loading resources')).toBeInTheDocument()
-    expect(play()).toBeDisabled()
+    expect(stop()).toBeEnabled()
+    expect(screen.queryByRole('button', { name: new RegExp(chapter.name) })).toBeNull()
   })
 
-  it('holds Install while the game is active', () => {
+  it("puts Stop in Install's place while the game is active", () => {
     bar({ game: game('running'), installed: false })
     expect(screen.getByText('● Playing')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /install/i })).toBeDisabled()
+    expect(stop()).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /install/i })).toBeNull()
   })
 
   it('keeps the hand-over to Prism ahead of the game line', () => {
@@ -124,6 +128,14 @@ describe('ActionBar game line', () => {
     expect(screen.getByText('● Server online')).toBeInTheDocument()
   })
 
+  it('keeps Stop disabled while the hand-over to Prism has not returned', () => {
+    const onStop = vi.fn()
+    bar({ launching: true, onStop })
+    expect(stop()).toBeDisabled()
+    fireEvent.click(stop())
+    expect(onStop).not.toHaveBeenCalled()
+  })
+
   it('shows the install on the right and nothing beside Play for a failed game', () => {
     bar({ game: game('failed'), install: installProgress, status: online })
     expect(screen.getByText('◐ Updating Prism · 40%')).toBeInTheDocument()
@@ -145,5 +157,76 @@ describe('ActionBar game line', () => {
     bar({ game: game('closed') })
     expect(screen.queryByText(/The game/)).toBeNull()
     expect(play()).toBeEnabled()
+  })
+})
+
+describe('ActionBar Stop', () => {
+  afterEach(() => {
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  it('stops with one click while the start is only getting ready', () => {
+    for (const phase of ['starting', 'mods'] as const) {
+      const onStop = vi.fn()
+      const { unmount } = bar({ game: game(phase), onStop })
+      expect(stop()).toHaveTextContent('Stop')
+      fireEvent.click(stop())
+      expect(onStop).toHaveBeenCalledTimes(1)
+      unmount()
+    }
+  })
+
+  it('asks once more before ending a game that has a window, and the second click stops', () => {
+    for (const phase of ['window', 'resources', 'running', 'stopping'] as const) {
+      const onStop = vi.fn()
+      const { unmount } = bar({ game: game(phase), onStop })
+      fireEvent.click(stop())
+      expect(onStop).not.toHaveBeenCalled()
+      expect(stop()).toHaveTextContent('Stop the game?')
+      fireEvent.click(stop())
+      expect(onStop).toHaveBeenCalledTimes(1)
+      expect(stop()).toHaveTextContent(/^Stop$/)
+      unmount()
+    }
+  })
+
+  it('takes the question back after five seconds', () => {
+    vi.useFakeTimers()
+    const onStop = vi.fn()
+    bar({ game: game('running'), onStop })
+    fireEvent.click(stop())
+    expect(stop()).toHaveTextContent('Stop the game?')
+    act(() => void vi.advanceTimersByTime(4900))
+    expect(stop()).toHaveTextContent('Stop the game?')
+    act(() => void vi.advanceTimersByTime(200))
+    expect(stop()).toHaveTextContent(/^Stop$/)
+    fireEvent.click(stop())
+    expect(onStop).not.toHaveBeenCalled()
+  })
+
+  it('clears its timer with the component', () => {
+    vi.useFakeTimers()
+    const { unmount } = bar({ game: game('running') })
+    fireEvent.click(stop())
+    expect(vi.getTimerCount()).toBe(1)
+    unmount()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('offers Play again once the run has ended, whatever the reason', () => {
+    const { unmount } = bar({ game: { ...game('failed'), reason: 'stopped' } })
+    expect(play()).toBeEnabled()
+    expect(within(beside()).getByText('Stopped from the launcher')).toBeInTheDocument()
+    expect(within(beside()).getByText('○ The game did not start')).toHaveClass('text-fg-muted')
+    unmount()
+    bar({ game: { ...game('crashed', 1), reason: 'stopped' } })
+    expect(play()).toBeEnabled()
+    expect(within(beside()).getByText('○ The game was stopped')).toBeInTheDocument()
+  })
+
+  it("shows the bar's error line for a refused stop", () => {
+    bar({ game: game('starting'), error: 'Frangfurd has no game to stop' })
+    expect(screen.getByText('Frangfurd has no game to stop')).toBeInTheDocument()
   })
 })
