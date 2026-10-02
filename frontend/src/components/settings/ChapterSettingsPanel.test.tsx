@@ -3,6 +3,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import * as App from '../../../wailsjs/go/main/App'
 import { models } from '../../../wailsjs/go/models'
 import { useEngineStore } from '../../stores/useEngineStore'
+import { useGameStore } from '../../stores/useGameStore'
+import { DEFAULT_SETTINGS, useSettingsStore } from '../../stores/useSettingsStore'
 import { BUNDLED_MANIFEST } from '../../lib/manifest'
 import type { ChapterSettingsInfo } from '../../types'
 import { ChapterSettingsPanel } from './ChapterSettingsPanel'
@@ -21,20 +23,32 @@ const info = (over: Partial<ChapterSettingsInfo> = {}) =>
     running: false,
     ...over,
   })
-const report = (present: boolean) =>
+const report = (present: boolean, packUrl: Record<string, string> = {}) =>
   models.InstanceReport.createFrom({
     root: 'C:/Prism',
     dir: 'C:/Prism/instances',
     present: { frangfurd: present },
-    packUrl: {},
+    packUrl,
     sizeBytes: {},
+  })
+const published = frangfurd.pack.packwiz!
+const local = 'http://localhost:8080/pack.toml'
+const withOverride = (url: string | undefined) =>
+  useSettingsStore.setState({
+    settings: { ...DEFAULT_SETTINGS, packOverrides: url ? { frangfurd: url } : undefined },
   })
 
 describe('ChapterSettingsPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     Object.assign(window, { go: {} })
-    useEngineStore.setState({ instances: report(true), chapterSettings: {} })
+    useEngineStore.setState({
+      instances: report(true),
+      chapterSettings: {},
+      installing: null,
+    })
+    useSettingsStore.setState({ settings: DEFAULT_SETTINGS })
+    useGameStore.setState({ states: {} })
     vi.mocked(App.GetChapterSettings).mockResolvedValue(info())
   })
   afterEach(() => {
@@ -128,5 +142,130 @@ describe('ChapterSettingsPanel', () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     })
     expect(onClose).toHaveBeenCalledTimes(2)
+  })
+
+  describe('pack source', () => {
+    const section = () => screen.queryByRole('region', { name: 'Pack source' })
+    // The section is its own chunk, loaded when the panel asks; a test that
+    // looks for its absence waits until the load would have landed.
+    const settled = () => act(async () => await import('./PackSourceSection'))
+    const shown = () => screen.findByRole('region', { name: 'Pack source' })
+
+    it('is not shown for a chapter that never left its published pack', async () => {
+      useEngineStore.setState({ instances: report(true, { frangfurd: published }) })
+      render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+      await settled()
+      expect(section()).not.toBeInTheDocument()
+    })
+
+    it('is not shown while the chapter is not installed, override or not', async () => {
+      withOverride(local)
+      useEngineStore.setState({ instances: report(false) })
+      render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+      await settled()
+      expect(section()).not.toBeInTheDocument()
+    })
+
+    it('is shown when settings hold a local pack, the published one marked current', async () => {
+      withOverride(local)
+      useEngineStore.setState({ instances: report(true, { frangfurd: published }) })
+      render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+      await shown()
+      expect(screen.getByText(new URL(published).host)).toBeInTheDocument()
+      expect(screen.getByText('localhost:8080')).toBeInTheDocument()
+      expect(screen.getAllByText('● Current')).toHaveLength(1)
+      expect(screen.getByRole('button', { name: 'Switch to dev pack' })).toBeEnabled()
+      expect(screen.queryByRole('button', { name: 'Switch to published pack' })).toBeNull()
+      expect(
+        screen.getByText('The next Play syncs from the chosen pack. Saves and settings stay.'),
+      ).toBeInTheDocument()
+    })
+
+    it('is shown for an instance that syncs from a local pack the setting no longer names', async () => {
+      useEngineStore.setState({ instances: report(true, { frangfurd: local }) })
+      render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+      await shown()
+      expect(screen.getByText('localhost:8080')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Switch to dev pack' })).toBeNull()
+      expect(screen.getByRole('button', { name: 'Switch to published pack' })).toBeEnabled()
+      expect(screen.getAllByText('● Current')).toHaveLength(1)
+    })
+
+    it('switches on click through the store and shows the other pack as current', async () => {
+      withOverride(local)
+      useEngineStore.setState({ instances: report(true, { frangfurd: published }) })
+      vi.mocked(App.SetPackSource).mockResolvedValue(report(true, { frangfurd: local }))
+      vi.mocked(App.GetPackStates).mockResolvedValue([])
+      render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+      await shown()
+      fireEvent.click(screen.getByRole('button', { name: 'Switch to dev pack' }))
+      await waitFor(() => expect(App.SetPackSource).toHaveBeenCalledWith('frangfurd', 'dev'))
+      expect(
+        await screen.findByRole('button', { name: 'Switch to published pack' }),
+      ).toBeInTheDocument()
+      expect(screen.getAllByText('● Current')).toHaveLength(1)
+    })
+
+    it('shows a refusal in the section and keeps the choice as it was', async () => {
+      withOverride(local)
+      useEngineStore.setState({ instances: report(true, { frangfurd: published }) })
+      vi.mocked(App.SetPackSource).mockRejectedValue(
+        "Frangfurd: pack source: the launcher did not write this instance's pre-launch command, so it will not change it",
+      )
+      render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+      await shown()
+      fireEvent.click(screen.getByRole('button', { name: 'Switch to dev pack' }))
+      await screen.findByText(/did not write/)
+      expect(screen.getByRole('button', { name: 'Switch to dev pack' })).toBeEnabled()
+    })
+
+    it('waits while the chapter is installing or its game is active', async () => {
+      withOverride(local)
+      useEngineStore.setState({
+        instances: report(true, { frangfurd: published }),
+        installing: 'frangfurd',
+      })
+      const { unmount } = render(
+        <ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />,
+      )
+      await shown()
+      expect(screen.getByRole('button', { name: 'Switch to dev pack' })).toBeDisabled()
+      unmount()
+
+      useEngineStore.setState({ installing: null })
+      useGameStore.setState({
+        states: {
+          frangfurd: {
+            chapterId: 'frangfurd',
+            phase: 'running',
+            since: '2026-10-02T10:00:00Z',
+            startedAt: '2026-10-02T09:59:00Z',
+          },
+        },
+      })
+      render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+      await shown()
+      expect(screen.getByRole('button', { name: 'Switch to dev pack' })).toBeDisabled()
+      expect(screen.getByText('Close the game to switch.')).toBeInTheDocument()
+    })
+
+    it('disables a pack that is not there, with the reason', async () => {
+      const unpublished = { ...frangfurd, pack: { ...frangfurd.pack, packwiz: null } }
+      withOverride(local)
+      useEngineStore.setState({ instances: report(true, { frangfurd: local }) })
+      render(<ChapterSettingsPanel chapter={unpublished} onClose={() => undefined} />)
+      await shown()
+      expect(screen.getByRole('button', { name: 'Switch to published pack' })).toBeDisabled()
+      expect(screen.getByText('No published pack yet.')).toBeInTheDocument()
+    })
+
+    it('disables both for an instance whose command the launcher did not write', async () => {
+      withOverride(local)
+      render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+      await shown()
+      expect(screen.getByRole('button', { name: 'Switch to dev pack' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Switch to published pack' })).toBeDisabled()
+      expect(screen.getAllByText('Not made by this launcher.')).toHaveLength(2)
+    })
   })
 })

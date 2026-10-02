@@ -178,7 +178,9 @@ export function SettingsPanel({ onClose }: Props) {
         <Section title="Developer">
           <p className="text-fg-faint m-0 text-xs leading-normal">
             A chapter can be installed from a packwiz serve running on this machine instead of its
-            published pack. Loopback addresses only; the field is empty for a normal install.
+            published pack. Loopback addresses only; the field is empty for a normal install. An
+            installed chapter is switched between its packs in its own settings (the pen in the
+            hero).
           </p>
           {chapters.map((c) => (
             <TextField

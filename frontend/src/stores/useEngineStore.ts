@@ -4,6 +4,7 @@ import type {
   ChapterSettingsInfo,
   EngineInfo,
   InstanceReport,
+  PackSource,
   PackState,
   PrismInstallProgress,
   PrismRelease,
@@ -21,6 +22,7 @@ import {
   OpenInstanceFolder,
   RefreshEngine,
   SaveChapterSettings,
+  SetPackSource,
 } from '../../wailsjs/go/main/App'
 import { EventsOff, EventsOn } from '../../wailsjs/runtime/runtime'
 
@@ -60,9 +62,17 @@ interface EngineStore {
   listenInstall: () => () => void
   receiveInstall: (p: PrismInstallProgress) => void
   loadInstances: () => Promise<void>
+  loadPackStates: () => Promise<void>
   refresh: () => Promise<void>
   launch: (chapterId: string) => Promise<void>
   installChapter: (chapterId: string) => Promise<void>
+  /**
+   * Points an installed chapter's instance at its published pack or the local
+   * one from settings (ADR-2, seventh amendment). A write: Go answers with the
+   * instances read again, the pack state is checked against the new source,
+   * and a refusal is rethrown for the panel to show.
+   */
+  setPackSource: (chapterId: string, source: PackSource) => Promise<void>
   clearError: () => void
 }
 
@@ -143,6 +153,10 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
   loadInstances: async () => {
     set({ instances: await readOr(GetInstances, null) })
     // The pack state follows the instances: same moments, one more read.
+    await get().loadPackStates()
+  },
+
+  loadPackStates: async () => {
     const raw: unknown = await readOr(GetPackStates, [])
     const states = Array.isArray(raw) ? (raw as PackState[]) : []
     set({ packStates: Object.fromEntries(states.map((s) => [s.chapterId, s])) })
@@ -185,6 +199,14 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
     } finally {
       set({ installing: null })
     }
+  },
+
+  // Go changes the one key and reads the instances again; what the pack state
+  // compared before was the other pack, so it is read again too.
+  setPackSource: async (chapterId, source) => {
+    const instances = await SetPackSource(chapterId, source)
+    set({ instances })
+    await get().loadPackStates()
   },
 
   clearError: () => set({ error: null }),

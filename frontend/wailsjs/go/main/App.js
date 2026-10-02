@@ -110,6 +110,10 @@ export function SaveSettings(arg1) {
   return window['go']['main']['App']['SaveSettings'](arg1);
 }
 
+export function SetPackSource(arg1, arg2) {
+  return window['go']['main']['App']['SetPackSource'](arg1, arg2);
+}
+
 export function ShowPrismConsole(arg1) {
   return window['go']['main']['App']['ShowPrismConsole'](arg1);
 }

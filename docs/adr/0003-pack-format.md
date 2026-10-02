@@ -53,8 +53,9 @@ packwiz already is:
   `http://localhost:8080/pack.toml` and launch. The launcher's developer
   setting for that is `packOverrides` in `settings.json` (#41): Install then
   writes the instance against the local address, loopback only. The instance
-  keeps syncing from it, and the state line says "Dev pack", until it is
-  deleted in Prism and installed again from the hosted pack.
+  keeps syncing from it, and the state line says "Dev pack", until the player
+  switches it back to the published pack in the chapter's settings (ADR-2,
+  seventh amendment), which rewrites that one key.
 - **Publishing is a push.** A static host serves `pack.toml` and
   `index.toml`; `packwiz modrinth export` produces the `.mrpack` a fresh
   install imports. The launcher's manifest carries the two URLs and nothing

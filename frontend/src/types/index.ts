@@ -208,6 +208,9 @@ export interface PackState {
   version: string
 }
 
+/** The two packs an installed chapter can sync from: the manifest's, or the local one from settings. */
+export type PackSource = 'published' | 'dev'
+
 /** What a player may change about a chapter's installed instance (#36). */
 export interface ChapterSettings {
   maxMemoryMb: number

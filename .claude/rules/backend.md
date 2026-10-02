@@ -134,14 +134,17 @@ marked `[verify]` in a comment; clearing those is Roadmap milestone 2.
 
 The launcher writes one thing into a player's Prism data directory: a
 chapter's instance folder, created by `InstanceCreator` only when it does not
-exist, `instance.cfg` last, and never touched again (ADR-2, amendment). In the
-managed root it owns it also seeds `prismlauncher.cfg`,
+exist, `instance.cfg` last, and touched again only in the keys the amendments
+name (ADR-2, amendment). In the managed root it owns it also seeds `prismlauncher.cfg`,
 `prismlauncher_update.cfg` and `qtlogging.ini` once, before Prism first starts
 (the last also before a launch, when absent, for an earlier install). The pre-launch
 command it writes runs packwiz-installer headless (`-g`, #95); before a launch
 `RewritePreLaunchCommand` (`prelaunch.go`) brings an instance made earlier up to
 that command, only when the key is exactly the launcher's earlier template, with
-the same URL, and leaves anything else alone (ADR-2, fourth amendment).
+the same URL, and leaves anything else alone (ADR-2, fourth amendment). On the
+player's request `SwitchPackSource` (`packswitch.go`, `SetPackSource`) rewrites
+the same key between the manifest's pack and the loopback override, under the
+same template check (ADR-2, seventh amendment).
 
 ## Data shapes
 

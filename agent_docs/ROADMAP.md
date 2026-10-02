@@ -76,6 +76,9 @@ the scaffold changed the picture.
       `packwiz serve` address, so a pack is tried from a working copy first
       (`packOverrides` in settings.json, #41; edited on the settings screen
       since #5)
+- [x] An installed chapter is switched between its published pack and the dev
+      pack from its settings, in both directions, by rewriting the pack URL in
+      its pre-launch command (`SetPackSource`; ADR-2's seventh amendment)
 
 ## Milestone 5: Manifest from the site
 
