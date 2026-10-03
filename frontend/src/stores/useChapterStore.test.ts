@@ -80,6 +80,11 @@ describe('useChapterStore', () => {
     useChapterStore.getState().select('luxemburg')
     useChapterStore.getState().select('frangfurd')
     expect(selectWikiPick(useChapterStore.getState())?.url).not.toBe(first)
+    // Clicking the open chapter again is not a switch: the page stays (#140).
+    const shown = selectWikiPick(useChapterStore.getState())?.url
+    useChapterStore.getState().select('frangfurd')
+    useChapterStore.getState().select('frangfurd')
+    expect(selectWikiPick(useChapterStore.getState())?.url).toBe(shown)
     // A chapter without pages keeps the teaser.
     useChapterStore.getState().select('lichdenstein')
     expect(selectWikiPick(useChapterStore.getState())).toBeUndefined()
