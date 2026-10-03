@@ -12,6 +12,8 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+
+	"kapital/backend/testwindows"
 )
 
 // findCardWindow is the card's top-level window, or 0 when none exists.
@@ -88,9 +90,7 @@ func waitFor(t *testing.T, what string, cond func() bool) {
 // card, gets a message from the page, pushes a state to it and closes, and
 // each close must leave no window and no browser holding the folder.
 func TestARealWindowLoadsItsPageTalksBackAndLeavesNothing(t *testing.T) {
-	if testing.Short() {
-		t.Skip("opens a real WebView2 window")
-	}
+	testwindows.Require(t, "opens a real WebView2 window")
 	dataDir := t.TempDir()
 	for cycle := 1; cycle <= 3; cycle++ {
 		got := &collector{}
@@ -155,9 +155,7 @@ func TestARealWindowLoadsItsPageTalksBackAndLeavesNothing(t *testing.T) {
 }
 
 func TestAStateThatArrivesBeforeTheWindowHasLoadedIsNotLost(t *testing.T) {
-	if testing.Short() {
-		t.Skip("opens a real WebView2 window")
-	}
+	testwindows.Require(t, "opens a real WebView2 window")
 	got := &collector{}
 	h := New()
 	defer h.Close()
