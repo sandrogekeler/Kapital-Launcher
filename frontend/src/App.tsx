@@ -12,7 +12,6 @@ import { useSettingsStore } from './stores/useSettingsStore'
 import { useServerStore } from './stores/useServerStore'
 import { useGameStore } from './stores/useGameStore'
 import { Environment } from '../wailsjs/runtime/runtime'
-import { DISCLAIMER } from './lib/disclaimer'
 import { errMsg, readOr } from './lib/ipc'
 
 // The run report is opened rarely, from Details beside a game that went wrong,
@@ -150,8 +149,7 @@ export default function App() {
       <div className="flex min-h-0 grow">
         <Sidebar />
         {/* The chapter card scrolls under the header bar and beside the
-            sidebar when the window is shorter than it (#56); the card's
-            margin keeps it clear of the fixed disclaimer. */}
+            sidebar when the window is shorter than it (#56). */}
         <Scrollable as="main" className="flex flex-col">
           {settingsOpen ? (
             <SettingsPanel onClose={closeSettings} />
@@ -171,10 +169,6 @@ export default function App() {
         </Scrollable>
       </div>
       <Toasts onOpenReport={openReport} />
-      {/* Centred on the main column, beside the sidebar, not on the window. */}
-      <footer className="text-fg-faint text-2xs pointer-events-none fixed right-0 bottom-2 left-(--layout-sidebar) text-center">
-        {DISCLAIMER}
-      </footer>
     </div>
   )
 }

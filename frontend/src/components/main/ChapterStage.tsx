@@ -45,7 +45,7 @@ export function ChapterStage({ chapter, chapters, onOpenSettings }: Props) {
   const leaving = outgoing?.direction === 'down' ? 'card-out-down' : 'card-out-up'
 
   return (
-    <div className="relative m-5 mb-8 flex min-h-0 grow flex-col">
+    <div className="relative m-5 flex min-h-0 grow flex-col">
       <div key={chapter.id} className={`${CARD} ${entering}`}>
         <ChapterView chapter={chapter} onOpenSettings={onOpenSettings} />
       </div>

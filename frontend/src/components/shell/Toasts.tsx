@@ -43,7 +43,7 @@ export function Toasts({ onOpenReport }: Props) {
     <div
       role="status"
       aria-live="polite"
-      className="pointer-events-none fixed right-10 bottom-12 z-10 flex w-88 flex-col gap-3"
+      className="pointer-events-none fixed right-10 bottom-10 z-10 flex w-88 flex-col gap-3"
     >
       {toasts.map((t) => (
         <div

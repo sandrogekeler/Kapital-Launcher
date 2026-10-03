@@ -1,6 +1,6 @@
 /**
  * The disclaimer the Minecraft Usage Guidelines require (HANDOFF §5). One
- * string, shown in the footer and again in the About section; the download
+ * string, shown in the About section of the settings screen; the download
  * page carries the same words in site/.
  */
 export const DISCLAIMER =

@@ -95,7 +95,6 @@ export function SettingsPanel({ onClose }: Props) {
         <h1 className="font-display m-0 text-2xl font-semibold">Settings</h1>
       </div>
 
-      {/* The bottom padding keeps the last field clear of the fixed disclaimer. */}
       <div className="flex max-w-200 flex-col gap-10 px-14 pt-8 pb-16">
         <Section title="Prism Launcher">
           <TextField

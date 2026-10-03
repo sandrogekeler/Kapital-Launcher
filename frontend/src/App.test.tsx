@@ -164,7 +164,7 @@ describe('App', () => {
 
     // Frangfurd has a server too, but is played as a pack.
     switchTo(/03.*Frangfurd/)
-    expect(screen.getByRole('button', { name: 'Play Frangfurd' })).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Check the server now' })).toBeInTheDocument()
   })
 
@@ -396,8 +396,11 @@ describe('App', () => {
     expect(Bindings.InstallPrism).toHaveBeenCalledOnce()
   })
 
-  it('shows the disclaimer the usage guidelines require', () => {
+  it('keeps the disclaimer the usage guidelines require to the settings screen', async () => {
     render(<App />)
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.queryByText(/NOT AN OFFICIAL MINECRAFT PRODUCT/)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
     expect(screen.getByText(/NOT AN OFFICIAL MINECRAFT PRODUCT/)).toBeInTheDocument()
   })
 
@@ -543,6 +546,6 @@ describe('App', () => {
     )
     expect(screen.queryByRole('region', { name: /^Loading / })).not.toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Chapters' })).toBeInTheDocument()
-    expect(screen.getByText(/NOT AN OFFICIAL MINECRAFT PRODUCT/)).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
   })
 })
