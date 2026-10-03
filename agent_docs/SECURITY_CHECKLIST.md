@@ -30,6 +30,7 @@ A different count is new surface to classify: add the method to this table.
 | `ChoosePrismExecutable`, `ChoosePrismRoot` | nothing | a native file or folder picker; the pick is returned, never saved here | S3.5 |
 | `OpenExternal` | a URL | the system browser, web URLs only | S3.4 |
 | `GetWikiPages` | nothing | one bounded GET of the wiki's lore export on the manifest's wiki host, cached in the app data dir | S2.3, S4.3 |
+| `GetWikiShots` | nothing | the screenshots the lore export lists: one bounded GET each on the manifest's wiki host, kept only when the bytes are WebP, PNG or JPEG, cached in the app data dir and served at `/wiki-art/` | S2.3, S4.3 |
 | `OpenWikiPage` | a URL | the system browser, only for a URL `GetWikiPages` returned | S3.3 |
 | `GetChapterSettings` | a chapter id | four keys of the chapter's own `instance.cfg` | S1.1, S3.3 |
 | `SaveChapterSettings` | a chapter id and a `ChapterSettings` | five keys rewritten in the chapter's own `instance.cfg`, held to the preset list and the machine's memory | S3.2, S3.3, S4.6 |
@@ -98,7 +99,20 @@ only, 15 s and 4 MiB, no redirects, and `parseWikiExport` keeps a page only
 when its URL is a plain `/wiki/...` path (joined onto that same base), its
 title and excerpt are non-empty text and it names an era; the cached copy is
 parsed the same way, and the manifest's teaser is the fallback.
-Verify: `TestParseWikiExportKeepsOnlyPagesThePanelMayShow`,
+The export's screenshots (#141) are the first remote pictures. `parseWikiShots`
+keeps an entry only when its URL is `/screenshots/<world>/<file>` of plain
+characters with an image extension and no dot segment, and `fetchArt` gets each
+from that same base (15 s, 4 MiB, no redirects, `If-Modified-Since` when cached)
+and keeps it only when its own bytes sniff as WebP, PNG or JPEG, whatever the
+server or the name says. The page never loads a remote image: Go serves the
+cache at `/wiki-art/<world>/<file>` through the asset server's middleware, GET
+and HEAD only, a name the same shape allows, re-sniffed, with `nosniff`, so the
+CSP's `img-src 'self'` is unchanged. A file the export no longer lists is
+removed from the cache on a start that reached the wiki.
+Verify: `TestParseWikiShotsKeepsOnlyPlainImagePathsOfAnEra`,
+`TestWikiShotsDownloadCheckCacheAndRevalidate`, `TestWikiArtMiddlewareServesOnlyCachedPictures`,
+`TestWikiShotsRefuseAnOversizedPicture`,
+`TestParseWikiExportKeepsOnlyPagesThePanelMayShow`,
 `TestWikiPagesRefuseAnOversizedOrRedirectedExport`, `TestOpenWikiPageRefusesAnUnlistedURL`.
 
 ## S3. Paths and processes

@@ -39,6 +39,9 @@ const (
 	maxWikiExport = 4 << 20
 	maxWikiTitle  = 200
 	maxWikiLine   = 600
+	// maxWikiID bounds a page id ("locations/Bellum Castle.md"); a longer one
+	// is dropped and the page goes without relations.
+	maxWikiID = 300
 )
 
 // wikiPagePath is what a page URL in the export may look like: a path under
@@ -62,6 +65,15 @@ type WikiService struct {
 
 	mu    sync.Mutex
 	pages []models.WikiPage
+	// raw is the export the pages came from, which also lists the screenshots
+	// (wikiart.go); fresh is whether it was fetched this start, not read from
+	// the cache.
+	raw   []byte
+	fresh bool
+
+	// art is the screenshots, downloaded once per start (wikiart.go).
+	artOnce sync.Once
+	art     []models.WikiShot
 }
 
 // NewWikiService reads pages from the wiki at baseURL, the manifest's
@@ -95,9 +107,13 @@ func (w *WikiService) Pages(ctx context.Context) ([]models.WikiPage, error) {
 			return nil, fmt.Errorf("wiki pages: %w (no cached copy)", err)
 		}
 		raw = cached
-	} else if err := writeFileAtomic(w.cache, raw, 0o600); err != nil {
-		slog.Warn("wiki pages: cache", "error", err)
+	} else {
+		w.fresh = true
+		if err := writeFileAtomic(w.cache, raw, 0o600); err != nil {
+			slog.Warn("wiki pages: cache", "error", err)
+		}
 	}
+	w.raw = raw
 	w.pages = parseWikiExport(raw, w.baseURL)
 	slog.Info("wiki pages", "count", len(w.pages))
 	return w.pages, nil
@@ -144,6 +160,7 @@ func (w *WikiService) fetch(ctx context.Context) ([]byte, error) {
 func parseWikiExport(raw []byte, baseURL string) []models.WikiPage {
 	var doc struct {
 		Pages []struct {
+			ID      string   `json:"id"`
 			Name    string   `json:"name"`
 			URL     string   `json:"url"`
 			Type    string   `json:"type"`
@@ -151,6 +168,10 @@ func parseWikiExport(raw []byte, baseURL string) []models.WikiPage {
 			Status  string   `json:"status"`
 			Excerpt string   `json:"excerpt"`
 		} `json:"pages"`
+		Relations []struct {
+			From string `json:"from"`
+			To   string `json:"to"`
+		} `json:"relations"`
 	}
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		slog.Warn("wiki pages: parse", "error", err)
@@ -181,7 +202,48 @@ func parseWikiExport(raw []byte, baseURL string) []models.WikiPage {
 		if len(eras) == 0 {
 			continue
 		}
-		pages = append(pages, models.WikiPage{Title: title, Line: line, URL: baseURL + p.URL, Eras: eras})
+		id := strings.TrimSpace(p.ID)
+		if len(id) > maxWikiID {
+			id = ""
+		}
+		pages = append(pages, models.WikiPage{
+			Title: title, Line: line, URL: baseURL + p.URL, Eras: eras, ID: id, Related: []string{},
+		})
 	}
+	relate(pages, doc.Relations)
 	return pages
+}
+
+// relate fills each listed page's Related with the listed pages the export's
+// relations tie it to, in either direction, once each. A relation naming a page
+// that was not kept is skipped: Related only ever names a page the panel can show.
+func relate(pages []models.WikiPage, relations []struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+},
+) {
+	at := make(map[string]int, len(pages))
+	for i, p := range pages {
+		if p.ID != "" {
+			at[p.ID] = i
+		}
+	}
+	add := func(from, to string) {
+		i, ok := at[from]
+		if !ok || from == to || slices.Contains(pages[i].Related, to) {
+			return
+		}
+		pages[i].Related = append(pages[i].Related, to)
+	}
+	for _, r := range relations {
+		from, to := strings.TrimSpace(r.From), strings.TrimSpace(r.To)
+		if _, ok := at[from]; !ok {
+			continue
+		}
+		if _, ok := at[to]; !ok {
+			continue
+		}
+		add(from, to)
+		add(to, from)
+	}
 }

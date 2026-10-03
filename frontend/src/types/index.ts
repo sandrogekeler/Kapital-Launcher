@@ -140,6 +140,18 @@ export interface WikiPage {
   line: string
   url: string
   eras: string[]
+  /** The page's id in the export, which a screenshot's subject names (#141). */
+  id: string
+  /** The ids of the listed pages the wiki relates to this one, both ways. */
+  related: string[]
+}
+
+/** One of the wiki's screenshots, cached and served by Go at `src` (#141). */
+export interface WikiShot {
+  era: string
+  src: string
+  /** The id of the page the picture shows, '' when none. */
+  subject: string
 }
 
 export interface WikiTeaser {

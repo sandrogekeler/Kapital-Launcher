@@ -88,7 +88,9 @@ the scaffold changed the picture.
 - [x] The wiki's lore export (`/data/lore.json`) fetched the same way, cached in
       the app data dir, the bundled teaser as the fallback; the "From the wiki"
       panel picks a random page of the chapter's era on every switch (#58)
-- [ ] Screenshots by URL; CSP `img-src` grows by the site's host
+- [x] Screenshots from the wiki: listed by the lore export with the page each
+      shows, downloaded and cached by Go and served from the app data dir, so
+      the CSP stays as it is (#141); the bundled art is the offline fallback
 
 ## Milestone 6: Server status, the rest
 

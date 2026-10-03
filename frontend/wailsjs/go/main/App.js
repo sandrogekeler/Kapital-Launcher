@@ -62,6 +62,10 @@ export function GetWikiPages() {
   return window['go']['main']['App']['GetWikiPages']();
 }
 
+export function GetWikiShots() {
+  return window['go']['main']['App']['GetWikiShots']();
+}
+
 export function InstallChapter(arg1) {
   return window['go']['main']['App']['InstallChapter'](arg1);
 }

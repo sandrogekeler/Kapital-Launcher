@@ -64,6 +64,8 @@ describe('useChapterStore', () => {
       line: 'l',
       url,
       eras: [era],
+      id: url,
+      related: [],
     })
     vi.mocked(App.GetWikiPages).mockResolvedValue([
       page('/a', 'Luxemburg'),

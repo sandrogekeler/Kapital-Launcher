@@ -424,6 +424,8 @@ describe('App', () => {
         line: 'A tower on the water.',
         url: 'https://kapitel-kapital.pages.dev/wiki/locations/the-obelisk',
         eras: ['Frangfurd'],
+        id: 'locations/The Obelisk.md',
+        related: [],
       },
     ])
     vi.mocked(Bindings.OpenWikiPage).mockResolvedValue()

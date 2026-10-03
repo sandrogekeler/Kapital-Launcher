@@ -475,6 +475,8 @@ export namespace models {
 	    line: string;
 	    url: string;
 	    eras: string[];
+	    id: string;
+	    related: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new WikiPage(source);
@@ -486,6 +488,24 @@ export namespace models {
 	        this.line = source["line"];
 	        this.url = source["url"];
 	        this.eras = source["eras"];
+	        this.id = source["id"];
+	        this.related = source["related"];
+	    }
+	}
+	export class WikiShot {
+	    era: string;
+	    src: string;
+	    subject: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WikiShot(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.era = source["era"];
+	        this.src = source["src"];
+	        this.subject = source["subject"];
 	    }
 	}
 
