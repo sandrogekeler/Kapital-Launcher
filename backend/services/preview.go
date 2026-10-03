@@ -129,6 +129,11 @@ func PreviewGameState(situation, chapterID string, now time.Time) (models.GameSt
 	if !ok {
 		return models.GameState{}, false
 	}
+	return r.state(chapterID, now), true
+}
+
+// state is the run's game:state at now.
+func (r previewRun) state(chapterID string, now time.Time) models.GameState {
 	stamp := func(ago time.Duration) string { return now.Add(-ago).UTC().Format(time.RFC3339) }
 	state := models.GameState{
 		ChapterID: chapterID,
@@ -142,7 +147,13 @@ func PreviewGameState(situation, chapterID string, now time.Time) (models.GameSt
 		code := *r.exitCode
 		state.ExitCode = &code
 	}
-	return state, true
+	return state
+}
+
+// PreviewHasCard is whether the situation opens the loading card.
+func PreviewHasCard(situation string) bool {
+	s, ok := PreviewSituationByID(situation)
+	return ok && s.Card
 }
 
 // PreviewRunReport is the synthetic report of a situation that has a run: its
@@ -153,9 +164,8 @@ func PreviewRunReport(situation, chapterID string, now time.Time) (models.RunRep
 	if !ok {
 		return models.RunReport{}, false
 	}
-	game, _ := PreviewGameState(situation, chapterID, now)
 	report := models.RunReport{
-		Game:             game,
+		Game:             r.state(chapterID, now),
 		Phases:           append([]models.PhaseTime(nil), r.phases...),
 		ConsoleAvailable: r.console,
 	}
@@ -294,8 +304,9 @@ func (p *PreviewSet) SetChapter(chapterID, situation string, at time.Time) {
 
 // Chapter is the chapter's situation, or "" when it has none.
 func (p *PreviewSet) Chapter(chapterID string) string {
-	situation, _ := p.ChapterAt(chapterID)
-	return situation
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.chapters[chapterID].situation
 }
 
 // ChapterAt is the chapter's situation and when it began; "" for none.

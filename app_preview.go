@@ -135,7 +135,7 @@ func (a *App) cardUp() bool {
 // clearCardPreviews ends every preview that holds the loading card.
 func (a *App) clearCardPreviews() {
 	for id, situation := range a.previews.Chapters() {
-		if sit, _ := services.PreviewSituationByID(situation); sit.Card {
+		if services.PreviewHasCard(situation) {
 			a.clearChapterPreview(id)
 		}
 	}
@@ -149,7 +149,7 @@ func (a *App) clearChapterPreview(chapterID string) {
 	if was == "" {
 		return
 	}
-	if sit, _ := services.PreviewSituationByID(was); sit.Card && a.splash.Showing(chapterID) {
+	if services.PreviewHasCard(was) && a.splash.Showing(chapterID) {
 		a.splash.Leave()
 		return
 	}
@@ -181,9 +181,8 @@ func (a *App) stopPreview(chapter models.Chapter) (models.GameState, bool) {
 	if _, hasRun := services.PreviewGameState(was, chapter.ID, at); !hasRun {
 		return models.GameState{}, false
 	}
-	sit, _ := services.PreviewSituationByID(was)
 	a.previews.SetChapter(chapter.ID, services.PreviewStopped, time.Now())
-	if sit.Card && a.splash.Showing(chapter.ID) {
+	if services.PreviewHasCard(was) && a.splash.Showing(chapter.ID) {
 		// Leave tells the view the chapter's state, which is now the stopped one.
 		a.splash.Leave()
 		return a.latestGame(chapter.ID), true

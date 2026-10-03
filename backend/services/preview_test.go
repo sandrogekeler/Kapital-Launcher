@@ -31,6 +31,9 @@ func TestPreviewSituationsAreAFixedListWithUniqueIDs(t *testing.T) {
 		if !ok || got != s {
 			t.Fatalf("%s is not found by its name", s.ID)
 		}
+		if PreviewHasCard(s.ID) != s.Card {
+			t.Fatalf("%s: the card answer differs from the list", s.ID)
+		}
 	}
 	// The returned list is a copy: a caller cannot change the fixed one.
 	list[0].ID = "tampered"
