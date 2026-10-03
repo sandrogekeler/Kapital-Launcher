@@ -3,9 +3,10 @@ import { useChapterStore } from '../../stores/useChapterStore'
 import { useEngineStore } from '../../stores/useEngineStore'
 import { useGameStore } from '../../stores/useGameStore'
 import { errorToasts, type Toast } from '../../lib/toasts'
-import { TriangleAlert, X } from '../../lib/icons'
+import { Info, TriangleAlert, X } from '../../lib/icons'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
+import { TextLink } from '../ui/TextLink'
 
 interface Props {
   /** Opens the chapter's run report; Details on a run that crashed or never started. */
@@ -15,6 +16,12 @@ interface Props {
 const TONE = {
   danger: 'text-danger',
   muted: 'text-fg-muted',
+} as const
+
+/** A refusal or a crash is a warning triangle; a notice that is only news is a neutral mark. */
+const GLYPH = {
+  danger: TriangleAlert,
+  muted: Info,
 } as const
 
 /**
@@ -51,20 +58,22 @@ export function Toasts({ onOpenReport }: Props) {
           data-toast={t.id}
           className="bg-raised-2 border-line-strong pointer-events-auto flex items-start gap-3 rounded-lg border py-4 pr-3 pl-4"
         >
-          <Icon icon={TriangleAlert} className={`mt-px ${TONE[t.tone]}`} />
+          <Icon icon={GLYPH[t.tone]} className={`mt-px ${TONE[t.tone]}`} />
           <div className="flex min-w-0 grow flex-col gap-1.5 pt-px">
-            <span className={`font-mono text-sm leading-tight ${TONE[t.tone]}`}>{t.title}</span>
+            <span className={`font-ui text-sm leading-tight font-medium ${TONE[t.tone]}`}>
+              {t.title}
+            </span>
             <span className="text-fg-soft text-sm leading-snug break-words select-text">
               {t.detail}
             </span>
             {t.reportFor && (
-              <button
-                type="button"
+              <TextLink
+                strong
+                className="mt-1 self-start"
                 onClick={() => onOpenReport(t.reportFor!)}
-                className="text-fg hover:text-accent duration-fast ease-standard mt-1 cursor-pointer self-start text-sm font-semibold transition-colors"
               >
                 Details
-              </button>
+              </TextLink>
             )}
           </div>
           <IconButton icon={X} title="Dismiss" size="sm" onClick={() => dismiss(t)} />

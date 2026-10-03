@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from 'react'
 import type { RunReport } from '../../types'
 import { timeline } from '../../lib/runReport'
+import { Hint } from '../ui/Notes'
 import { Scrollable } from '../ui/Scrollable'
 
 interface Props {
@@ -55,11 +56,7 @@ function LogTail({ report, height, note }: { report: RunReport; height: string; 
 
   if (!report.logTail) {
     if (!note) return null
-    return (
-      <p className="text-fg-faint m-0 text-xs">
-        The game wrote no log for this run, so the start stopped before the game.
-      </p>
-    )
+    return <Hint>The game wrote no log for this run, so the start stopped before the game.</Hint>
   }
   const lines = `${report.logLines} ${report.logLines === 1 ? 'line' : 'lines'}`
   return (
@@ -78,10 +75,10 @@ function LogTail({ report, height, note }: { report: RunReport; height: string; 
         </Scrollable>
       </div>
       {note && (
-        <span className="text-fg-faint text-2xs">
+        <Hint>
           {report.logTruncated ? `The last ${lines}` : `All ${lines}`} of the game's log, with your
           name, folders and server addresses masked
-        </span>
+        </Hint>
       )}
     </div>
   )
