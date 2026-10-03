@@ -1,3 +1,5 @@
+import { Hint } from '../ui/Notes'
+
 interface Props {
   chapterName: string
 }
@@ -9,9 +11,5 @@ interface Props {
  * Go checks again at the write and says why it refused.
  */
 export function RunningHint({ chapterName }: Props) {
-  return (
-    <span className="text-fg-muted text-xs">
-      {chapterName} may be running: its game log changed in the last minute.
-    </span>
-  )
+  return <Hint>{chapterName} may be running: its game log changed in the last minute.</Hint>
 }

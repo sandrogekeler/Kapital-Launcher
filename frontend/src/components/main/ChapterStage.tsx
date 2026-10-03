@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Chapter } from '../../types'
+import { CARD } from '../ui/Page'
 import { ChapterView } from './ChapterView'
 
 interface Props {
@@ -15,9 +16,6 @@ interface Outgoing {
   chapter: Chapter
   direction: Direction
 }
-
-// A column, so the hero can take the height left over (#68).
-const CARD = 'bg-raised border-line flex min-h-0 grow flex-col overflow-hidden rounded-lg border'
 
 /**
  * The chapter card and its motion (#59, #67). The open chapter's view sits

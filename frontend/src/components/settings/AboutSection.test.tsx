@@ -21,10 +21,20 @@ describe('AboutSection', () => {
     expect(screen.getByText(DISCLAIMER)).toBeInTheDocument()
   })
 
+  it('sets the disclaimer in sentence case, as muted small print', () => {
+    render(<AboutSection />)
+    const text = screen.getByText(DISCLAIMER)
+    expect(DISCLAIMER).toBe(
+      'Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.',
+    )
+    expect(text).toHaveClass('text-xs', 'text-fg-muted')
+    expect(text).not.toHaveClass('uppercase')
+  })
+
   it('says the version is unknown when Go cannot answer', async () => {
     vi.mocked(App.GetAppVersion).mockRejectedValue('no backend')
     render(<AboutSection />)
-    expect(await screen.findByText('unknown')).toBeInTheDocument()
+    expect(await screen.findByText('Unknown')).toBeInTheDocument()
   })
 
   it('credits each font and the icon set with its licence', () => {

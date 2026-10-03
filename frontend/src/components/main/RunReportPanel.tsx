@@ -5,12 +5,13 @@ import { selectGame, useGameStore } from '../../stores/useGameStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { errMsg } from '../../lib/ipc'
 import { gameLine } from '../../lib/gameLine'
-import { ArrowLeft, FolderOpen } from '../../lib/icons'
+import { FolderOpen } from '../../lib/icons'
 import { Button } from '../ui/Button'
 import { CopyLogButton } from '../ui/CopyLogButton'
 import type { CopyResult } from '../ui/CopyLogButton'
 import { Icon } from '../ui/Icon'
-import { IconButton } from '../ui/IconButton'
+import { ErrorLine } from '../ui/Notes'
+import { Page } from '../ui/Page'
 import { RunReportParts } from '../run/RunReportParts'
 
 interface Props {
@@ -63,14 +64,6 @@ export function RunReportPanel({ chapter, onClose }: Props) {
     }
   }, [chapter.id, game, read])
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   const onOpenFolder = async () => {
     setActionError(null)
     try {
@@ -102,11 +95,7 @@ export function RunReportPanel({ chapter, onClose }: Props) {
   const rows = gameLine(report?.game ?? game, chapter.name)
   let body
   if (error) {
-    body = (
-      <p role="alert" className="text-danger m-0 text-sm select-text">
-        {error}
-      </p>
-    )
+    body = <ErrorLine>{error}</ErrorLine>
   } else if (!loaded) {
     body = <p className="text-fg-muted m-0 text-sm">Reading the run.</p>
   } else if (!report) {
@@ -121,7 +110,7 @@ export function RunReportPanel({ chapter, onClose }: Props) {
       <>
         {rows && (
           <div className="flex flex-col gap-0.5">
-            <span className={`font-mono text-sm ${rows[2]}`}>{rows[0]}</span>
+            <span className={`font-ui text-sm font-medium ${rows[2]}`}>{rows[0]}</span>
             <span className="text-fg-muted text-xs select-text">{rows[1]}</span>
           </div>
         )}
@@ -137,19 +126,20 @@ export function RunReportPanel({ chapter, onClose }: Props) {
               <span>Show Prism's console</span>
             </Button>
           )}
-          {actionError && <span className="text-danger text-xs select-text">{actionError}</span>}
+          {actionError && <ErrorLine>{actionError}</ErrorLine>}
         </div>
       </>
     )
   }
 
   return (
-    <section aria-label={`${chapter.name} run report`} className="flex flex-col">
-      <div className="border-line flex items-center gap-3 border-b px-14 py-5">
-        <IconButton icon={ArrowLeft} title="Back" onClick={onClose} />
-        <h1 className="font-display m-0 text-2xl font-semibold">{chapter.name} run report</h1>
-      </div>
-      <div className="flex max-w-200 flex-col gap-6 px-14 pt-8 pb-16">{body}</div>
-    </section>
+    <Page
+      label={`${chapter.name} run report`}
+      title={`${chapter.name} run report`}
+      onBack={onClose}
+    >
+      {/* One report, not sections: its parts sit closer than a page's blocks do. */}
+      <div className="flex flex-col gap-6">{body}</div>
+    </Page>
   )
 }

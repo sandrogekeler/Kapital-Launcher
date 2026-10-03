@@ -207,6 +207,7 @@ describe('ChapterSettingsPanel', () => {
     // looks for its absence waits until the load would have landed.
     const settled = () => act(async () => await import('./PackSourceSection'))
     const shown = () => screen.findByRole('region', { name: 'Pack source' })
+    const card = (name: string) => screen.getByRole('radio', { name })
 
     it('is not shown for a chapter that never left its published pack', async () => {
       useEngineStore.setState({ instances: report(true, { frangfurd: published }) })
@@ -231,8 +232,10 @@ describe('ChapterSettingsPanel', () => {
       expect(screen.getByText(new URL(published).host)).toBeInTheDocument()
       expect(screen.getByText('localhost:8080')).toBeInTheDocument()
       expect(screen.getAllByText('● Current')).toHaveLength(1)
-      expect(screen.getByRole('button', { name: 'Switch to dev pack' })).toBeEnabled()
-      expect(screen.queryByRole('button', { name: 'Switch to published pack' })).toBeNull()
+      expect(card('Published pack')).toBeChecked()
+      expect(card('Dev pack')).not.toBeChecked()
+      expect(card('Dev pack')).toBeEnabled()
+      expect(screen.getByText('Switch')).toBeInTheDocument()
       expect(
         screen.getByText('The next Play syncs from the chosen pack. Saves and settings stay.'),
       ).toBeInTheDocument()
@@ -243,8 +246,8 @@ describe('ChapterSettingsPanel', () => {
       render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
       await shown()
       expect(screen.getByText('localhost:8080')).toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: 'Switch to dev pack' })).toBeNull()
-      expect(screen.getByRole('button', { name: 'Switch to published pack' })).toBeEnabled()
+      expect(card('Dev pack')).toBeChecked()
+      expect(card('Published pack')).toBeEnabled()
       expect(screen.getAllByText('● Current')).toHaveLength(1)
     })
 
@@ -255,11 +258,10 @@ describe('ChapterSettingsPanel', () => {
       vi.mocked(App.GetPackStates).mockResolvedValue([])
       render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
       await shown()
-      fireEvent.click(screen.getByRole('button', { name: 'Switch to dev pack' }))
+      fireEvent.click(card('Dev pack'))
       await waitFor(() => expect(App.SetPackSource).toHaveBeenCalledWith('frangfurd', 'dev'))
-      expect(
-        await screen.findByRole('button', { name: 'Switch to published pack' }),
-      ).toBeInTheDocument()
+      await waitFor(() => expect(card('Dev pack')).toBeChecked())
+      expect(card('Published pack')).toBeEnabled()
       expect(screen.getAllByText('● Current')).toHaveLength(1)
     })
 
@@ -271,9 +273,10 @@ describe('ChapterSettingsPanel', () => {
       )
       render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
       await shown()
-      fireEvent.click(screen.getByRole('button', { name: 'Switch to dev pack' }))
+      fireEvent.click(card('Dev pack'))
       await screen.findByText(/did not write/)
-      expect(screen.getByRole('button', { name: 'Switch to dev pack' })).toBeEnabled()
+      expect(card('Dev pack')).toBeEnabled()
+      expect(card('Published pack')).toBeChecked()
     })
 
     it('waits while the chapter is installing or its game is active', async () => {
@@ -286,7 +289,7 @@ describe('ChapterSettingsPanel', () => {
         <ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />,
       )
       await shown()
-      expect(screen.getByRole('button', { name: 'Switch to dev pack' })).toBeDisabled()
+      expect(card('Dev pack')).toBeDisabled()
       unmount()
 
       useEngineStore.setState({ installing: null })
@@ -294,7 +297,7 @@ describe('ChapterSettingsPanel', () => {
       vi.mocked(App.GetChapterSettings).mockResolvedValue(info({ running: true }))
       render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
       await shown()
-      expect(screen.getByRole('button', { name: 'Switch to dev pack' })).toBeDisabled()
+      expect(card('Dev pack')).toBeDisabled()
       expect(screen.getByText('Close the game to switch.')).toBeInTheDocument()
       expect(screen.queryByText(/may be running/)).toBeNull()
     })
@@ -308,7 +311,7 @@ describe('ChapterSettingsPanel', () => {
       await waitFor(() =>
         expect(useEngineStore.getState().chapterSettings.frangfurd?.running).toBe(true),
       )
-      expect(screen.getByRole('button', { name: 'Switch to dev pack' })).toBeEnabled()
+      expect(card('Dev pack')).toBeEnabled()
       const region = within(screen.getByRole('region', { name: 'Pack source' }))
       expect(region.getByText(/Frangfurd may be running/)).toBeInTheDocument()
       expect(screen.queryByText('Close the game to switch.')).toBeNull()
@@ -320,7 +323,7 @@ describe('ChapterSettingsPanel', () => {
       useEngineStore.setState({ instances: report(true, { frangfurd: local }) })
       render(<ChapterSettingsPanel chapter={unpublished} onClose={() => undefined} />)
       await shown()
-      expect(screen.getByRole('button', { name: 'Switch to published pack' })).toBeDisabled()
+      expect(card('Published pack')).toBeDisabled()
       expect(screen.getByText('No published pack yet.')).toBeInTheDocument()
     })
 
@@ -328,8 +331,8 @@ describe('ChapterSettingsPanel', () => {
       withOverride(local)
       render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
       await shown()
-      expect(screen.getByRole('button', { name: 'Switch to dev pack' })).toBeDisabled()
-      expect(screen.getByRole('button', { name: 'Switch to published pack' })).toBeDisabled()
+      expect(card('Dev pack')).toBeDisabled()
+      expect(card('Published pack')).toBeDisabled()
       expect(screen.getAllByText('Not made by this launcher.')).toHaveLength(2)
     })
   })

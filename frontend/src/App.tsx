@@ -3,8 +3,7 @@ import { HeaderBar } from './components/shell/HeaderBar'
 import { Toasts } from './components/shell/Toasts'
 import { Sidebar } from './components/sidebar/Sidebar'
 import { ChapterStage } from './components/main/ChapterStage'
-import { ChapterSettingsPanel } from './components/settings/ChapterSettingsPanel'
-import { SettingsPanel } from './components/settings/SettingsPanel'
+import { CARD } from './components/ui/Page'
 import { Scrollable } from './components/ui/Scrollable'
 import { selectCanRotate, selectChapter, useChapterStore } from './stores/useChapterStore'
 import { useEngineStore } from './stores/useEngineStore'
@@ -15,12 +14,31 @@ import { Environment } from '../wailsjs/runtime/runtime'
 import { errMsg, readOr } from './lib/ipc'
 import { SLIDE_INTERVAL_MS } from './lib/slides'
 
-// The run report is opened rarely, from Details beside a game that went wrong,
-// so it loads when asked for and stays out of the launcher's first paint and
-// its bundle budget (scripts/check-bundle-size.mjs).
+// The pages that take the chapter card's place are opened on demand, so they
+// load when asked for and stay out of the launcher's first paint and its
+// bundle budget (scripts/check-bundle-size.mjs): the settings, a chapter's own
+// settings, and the run report, opened rarely, from Details beside a game that
+// went wrong.
 const RunReportPanel = lazy(() =>
   import('./components/main/RunReportPanel').then((m) => ({ default: m.RunReportPanel })),
 )
+const SettingsPanel = lazy(() =>
+  import('./components/settings/SettingsPanel').then((m) => ({ default: m.SettingsPanel })),
+)
+const ChapterSettingsPanel = lazy(() =>
+  import('./components/settings/ChapterSettingsPanel').then((m) => ({
+    default: m.ChapterSettingsPanel,
+  })),
+)
+
+/** The card's frame, empty, for the moment a page's code is on its way. */
+function PageFallback() {
+  return (
+    <div className="m-5 flex min-h-0 grow flex-col">
+      <div aria-hidden className={CARD} />
+    </div>
+  )
+}
 
 export default function App() {
   const chapter = useChapterStore(selectChapter)
@@ -75,14 +93,25 @@ export default function App() {
   const [reportFor, setReportFor] = useState<string | null>(null)
   const closeReport = useCallback(() => setReportFor(null), [])
   useEffect(() => setReportFor((open) => (open === selectedId ? open : null)), [selectedId])
-  const openReport = useCallback(
+  // Every page over the chapter closes when one is brought up, the chapter's
+  // settings and report included: selecting the chapter that is already open
+  // changes no selection, so the effects above would leave them where they
+  // were (a preview started from Settings landed on the chapter's settings).
+  const showChapter = useCallback(
     (chapterId: string) => {
       select(chapterId)
       setSettingsOpen(false)
       setChapterSettingsFor(null)
-      setReportFor(chapterId)
+      setReportFor(null)
     },
     [select],
+  )
+  const openReport = useCallback(
+    (chapterId: string) => {
+      showChapter(chapterId)
+      setReportFor(chapterId)
+    },
+    [showChapter],
   )
 
   // One read per store on mount. These are reads of state Go holds, not
@@ -179,14 +208,19 @@ export default function App() {
       <div className="flex min-h-0 grow">
         <Sidebar />
         {/* The chapter card scrolls under the header bar and beside the
-            sidebar when the window is shorter than it (#56). */}
+            sidebar when the window is shorter than it (#56). A page takes
+            the card's place in the same frame and scrolls inside it. */}
         <Scrollable as="main" className="flex flex-col">
           {settingsOpen ? (
-            <SettingsPanel onClose={closeSettings} />
+            <Suspense fallback={<PageFallback />}>
+              <SettingsPanel onClose={closeSettings} onShowChapter={showChapter} />
+            </Suspense>
           ) : chapterSettingsFor === chapter.id ? (
-            <ChapterSettingsPanel chapter={chapter} onClose={closeChapterSettings} />
+            <Suspense fallback={<PageFallback />}>
+              <ChapterSettingsPanel chapter={chapter} onClose={closeChapterSettings} />
+            </Suspense>
           ) : reportFor === chapter.id ? (
-            <Suspense fallback={null}>
+            <Suspense fallback={<PageFallback />}>
               <RunReportPanel chapter={chapter} onClose={closeReport} />
             </Suspense>
           ) : (

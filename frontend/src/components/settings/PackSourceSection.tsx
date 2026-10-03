@@ -5,10 +5,13 @@ import { packHost, isLocalPack } from '../../lib/packSource'
 import { selectInstancePack, useEngineStore } from '../../stores/useEngineStore'
 import { isActive, selectGame, useGameStore } from '../../stores/useGameStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
-import { Button } from '../ui/Button'
+import { ChoiceCards } from '../ui/ChoiceCards'
+import type { Choice } from '../ui/ChoiceCards'
+import { ErrorLine, Hint, WarningLine } from '../ui/Notes'
+import { SubHeading } from '../ui/Section'
 import { RunningHint } from './RunningHint'
 
-interface Choice {
+interface Source {
   source: PackSource
   title: string
   /** Host and port of the pack this choice syncs from, when there is one. */
@@ -29,7 +32,7 @@ interface Props {
  * next Play syncs from it. Shown only for a chapter that has a local pack, in
  * settings or already in its instance, since a chapter that never left its
  * published pack has nothing to switch between. Only the tracker's answer
- * (`playing`) disables a button; `running` is the log's guess, shown as a hint,
+ * (`playing`) disables a card; `running` is the log's guess, shown as a hint,
  * and Go refuses the write if it was right (issue 126).
  */
 export function PackSourceSection({ chapter }: Props) {
@@ -50,7 +53,7 @@ export function PackSourceSection({ chapter }: Props) {
   // A command the launcher did not write has no pack address Go could read,
   // and Go will not rewrite it.
   const unreadable = instancePack === undefined ? 'Not made by this launcher.' : null
-  const choices: Choice[] = [
+  const choices: Source[] = [
     {
       source: 'published',
       title: 'Published pack',
@@ -80,33 +83,38 @@ export function PackSourceSection({ chapter }: Props) {
     }
   }
 
+  const current = choices.find((c) => c.current)?.source ?? null
+  const cards: Choice<PackSource>[] = choices.map((c) => {
+    const takeable = !c.current && c.reason === null
+    return {
+      value: c.source,
+      title: c.title,
+      detail: c.host ?? '',
+      note: c.current ? '' : (c.reason ?? ''),
+      disabled: !c.current && (busy || c.reason !== null),
+      slot: c.current ? (
+        <span className="text-accent">● Current</span>
+      ) : switching === c.source ? (
+        <span className="text-fg-muted">Switching</span>
+      ) : (
+        takeable && <span className="text-accent">Switch</span>
+      ),
+    }
+  })
+
   return (
     <section aria-label="Pack source" className="flex flex-col gap-3">
-      <h2 className="text-fg-muted m-0 text-sm font-normal">Pack source</h2>
-      <div className="flex flex-col gap-3">
-        {choices.map((c) => (
-          <div key={c.source} className="flex items-center justify-between gap-4">
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-sm">{c.title}</span>
-              {c.host && <span className="text-fg-muted font-mono text-xs">{c.host}</span>}
-              {!c.current && c.reason && <span className="text-fg-faint text-xs">{c.reason}</span>}
-            </div>
-            {c.current ? (
-              <span className="text-accent text-sm">● Current</span>
-            ) : (
-              <Button onClick={() => void onSwitch(c.source)} disabled={busy || c.reason !== null}>
-                Switch to {c.title.toLowerCase()}
-              </Button>
-            )}
-          </div>
-        ))}
-      </div>
-      <span className="text-fg-faint text-xs leading-normal">
-        The next Play syncs from the chosen pack. Saves and settings stay.
-      </span>
-      {playing && <span className="text-warning text-xs">Close the game to switch.</span>}
+      <SubHeading>Pack source</SubHeading>
+      <ChoiceCards
+        label="Pack source"
+        value={current}
+        choices={cards}
+        onChange={(source) => source !== current && void onSwitch(source)}
+      />
+      <Hint>The next Play syncs from the chosen pack. Saves and settings stay.</Hint>
+      {playing && <WarningLine>Close the game to switch.</WarningLine>}
       {!playing && running && <RunningHint chapterName={chapter.name} />}
-      {error && <span className="text-danger text-xs select-text">{error}</span>}
+      {error && <ErrorLine>{error}</ErrorLine>}
     </section>
   )
 }

@@ -76,10 +76,7 @@ describe('PreviewSection', () => {
   it('previews for the open chapter and reports it started', async () => {
     const onStarted = vi.fn()
     render(<PreviewSection onStarted={onStarted} />)
-    expect(screen.getByRole('button', { name: 'Frangfurd' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(screen.getByRole('radio', { name: 'Frangfurd' })).toBeChecked()
     fireEvent.click(await screen.findByRole('button', { name: 'Crashed, with a crash report' }))
     await waitFor(() => expect(onStarted).toHaveBeenCalledExactlyOnceWith('frangfurd'))
     expect(App.StartPreview).toHaveBeenCalledExactlyOnceWith('frangfurd', 'crashed')
@@ -89,8 +86,8 @@ describe('PreviewSection', () => {
     const onStarted = vi.fn()
     render(<PreviewSection onStarted={onStarted} />)
     const other = BUNDLED_MANIFEST.chapters[1]!
-    fireEvent.click(screen.getByRole('button', { name: other.name }))
-    expect(screen.getByRole('button', { name: other.name })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('radio', { name: other.name }))
+    expect(screen.getByRole('radio', { name: other.name })).toBeChecked()
     fireEvent.click(await screen.findByRole('button', { name: 'Running, to try Stop' }))
     await waitFor(() => expect(onStarted).toHaveBeenCalledWith(other.id))
     expect(App.StartPreview).toHaveBeenCalledWith(other.id, 'running')

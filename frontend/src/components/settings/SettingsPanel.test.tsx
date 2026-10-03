@@ -40,7 +40,7 @@ describe('SettingsPanel', () => {
   })
 
   it('shows what detection resolved in the empty fields', () => {
-    render(<SettingsPanel onClose={() => undefined} />)
+    render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
     expect(screen.getByLabelText('Prism program')).toHaveAttribute('placeholder', engine.executable)
     expect(screen.getByText(/standard install location/)).toBeInTheDocument()
     expect(screen.getByLabelText('Prism data folder')).toHaveAttribute(
@@ -50,7 +50,7 @@ describe('SettingsPanel', () => {
   })
 
   it('saves the profile on Enter and the root on blur, then re-reads the engine', async () => {
-    render(<SettingsPanel onClose={() => undefined} />)
+    render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
     const profile = screen.getByLabelText('Profile name')
     fireEvent.change(profile, { target: { value: ' Sandro ' } })
     fireEvent.keyDown(profile, { key: 'Enter' })
@@ -74,7 +74,7 @@ describe('SettingsPanel', () => {
   })
 
   it('does not save an unchanged field', () => {
-    render(<SettingsPanel onClose={() => undefined} />)
+    render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
     const profile = screen.getByLabelText('Profile name')
     fireEvent.change(profile, { target: { value: '  ' } })
     fireEvent.blur(profile)
@@ -86,7 +86,7 @@ describe('SettingsPanel', () => {
     vi.mocked(App.SaveSettings).mockRejectedValueOnce(
       'settings: prism executable "D:\\\\nowhere.exe": file does not exist',
     )
-    render(<SettingsPanel onClose={() => undefined} />)
+    render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
     const exe = screen.getByLabelText('Prism program')
     fireEvent.change(exe, { target: { value: 'D:\\nowhere.exe' } })
     fireEvent.keyDown(exe, { key: 'Enter' })
@@ -104,7 +104,7 @@ describe('SettingsPanel', () => {
   it('commits a Browse pick and ignores a cancelled dialog', async () => {
     vi.mocked(App.ChoosePrismExecutable).mockResolvedValueOnce('')
     vi.mocked(App.ChoosePrismRoot).mockResolvedValueOnce('E:\\PrismData')
-    render(<SettingsPanel onClose={() => undefined} />)
+    render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
     const [browseExe, browseRoot] = screen.getAllByRole('button', { name: 'Browse' })
     fireEvent.click(browseExe!)
     await waitFor(() => expect(App.ChoosePrismExecutable).toHaveBeenCalledOnce())
@@ -121,29 +121,41 @@ describe('SettingsPanel', () => {
 
   it('shows a picker failure under its field', async () => {
     vi.mocked(App.ChoosePrismRoot).mockRejectedValueOnce('choose prism root: dialog failed')
-    render(<SettingsPanel onClose={() => undefined} />)
+    render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
     fireEvent.click(screen.getAllByRole('button', { name: 'Browse' })[1]!)
     await screen.findByText(/dialog failed/)
     expect(App.SaveSettings).not.toHaveBeenCalled()
   })
 
   it('ends with the About section', () => {
-    render(<SettingsPanel onClose={() => undefined} />)
+    render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
     expect(screen.getByRole('heading', { name: 'About' })).toBeInTheDocument()
   })
 
-  it('saves the theme on click', async () => {
-    render(<SettingsPanel onClose={() => undefined} />)
-    expect(screen.getByRole('button', { name: 'Dark' })).toHaveAttribute('aria-pressed', 'true')
-    fireEvent.click(screen.getByRole('button', { name: 'Light' }))
+  it('saves the theme on click, and the arrow keys only move between the options', async () => {
+    render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
+    expect(screen.getByRole('radio', { name: 'Dark' })).toBeChecked()
+    fireEvent.click(screen.getByRole('radio', { name: 'Light' }))
     await waitFor(() =>
       expect(App.SaveSettings).toHaveBeenCalledWith(expect.objectContaining({ theme: 'light' })),
     )
-    expect(screen.getByRole('button', { name: 'Light' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('radio', { name: 'Light' })).toBeChecked()
+  })
+
+  it('moves the focus between theme options with the arrow keys and picks only on Enter or Space', () => {
+    render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
+    const dark = screen.getByRole('radio', { name: 'Dark' })
+    dark.focus()
+    fireEvent.keyDown(dark, { key: 'ArrowRight' })
+    expect(screen.getByRole('radio', { name: 'Light' })).toHaveFocus()
+    fireEvent.keyDown(screen.getByRole('radio', { name: 'Light' }), { key: 'ArrowLeft' })
+    fireEvent.keyDown(dark, { key: 'ArrowLeft' })
+    expect(screen.getByRole('radio', { name: 'System' })).toHaveFocus()
+    expect(App.SaveSettings).not.toHaveBeenCalled()
   })
 
   it('writes and clears a local pack address per chapter', async () => {
-    render(<SettingsPanel onClose={() => undefined} />)
+    render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
     const field = screen.getByLabelText('Local pack for Frangfurd')
     fireEvent.change(field, { target: { value: 'http://localhost:8080/pack.toml' } })
     fireEvent.keyDown(field, { key: 'Enter' })
@@ -162,7 +174,7 @@ describe('SettingsPanel', () => {
 
   it('closes on Back and on Escape, but Escape on a dirty field reverts it first', async () => {
     const onClose = vi.fn()
-    render(<SettingsPanel onClose={onClose} />)
+    render(<SettingsPanel onClose={onClose} onShowChapter={() => undefined} />)
     const profile = screen.getByLabelText('Profile name')
     fireEvent.change(profile, { target: { value: 'typo' } })
     fireEvent.keyDown(profile, { key: 'Escape' })
@@ -179,8 +191,8 @@ describe('SettingsPanel', () => {
 
   describe('loading splash toggle', () => {
     it('is hidden where Go says the splash is not available', () => {
-      render(<SettingsPanel onClose={() => undefined} />)
-      expect(screen.queryByLabelText('Loading splash')).not.toBeInTheDocument()
+      render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
+      expect(screen.queryByRole('switch', { name: 'Loading splash' })).not.toBeInTheDocument()
     })
 
     it('shows its state and hint, and saves the choice', async () => {
@@ -189,8 +201,8 @@ describe('SettingsPanel', () => {
         loaded: true,
         error: null,
       })
-      render(<SettingsPanel onClose={() => undefined} />)
-      const box = screen.getByLabelText('Loading splash')
+      render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
+      const box = screen.getByRole('switch', { name: 'Loading splash' })
       expect(box).toBeChecked()
       expect(
         screen.getByText(
@@ -222,10 +234,10 @@ describe('SettingsPanel', () => {
         loaded: true,
         error: null,
       })
-      render(<SettingsPanel onClose={() => undefined} />)
-      fireEvent.click(screen.getByLabelText('Loading splash'))
+      render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
+      fireEvent.click(screen.getByRole('switch', { name: 'Loading splash' }))
       expect(await screen.findByText('the settings file is read-only')).toBeInTheDocument()
-      expect(screen.getByLabelText('Loading splash')).toBeChecked()
+      expect(screen.getByRole('switch', { name: 'Loading splash' })).toBeChecked()
     })
   })
 })
@@ -262,13 +274,12 @@ describe('SettingsPanel previews', () => {
     Reflect.deleteProperty(window, 'go')
   })
 
-  it('has the previews under Developer, and a start opens the chapter and closes the settings', async () => {
-    const onClose = vi.fn()
-    render(<SettingsPanel onClose={onClose} />)
+  it('has the previews under Developer, and a start brings the chapter up on its main view', async () => {
+    const onShowChapter = vi.fn()
+    render(<SettingsPanel onClose={() => undefined} onShowChapter={onShowChapter} />)
     expect(screen.getByRole('heading', { name: 'Developer' })).toBeInTheDocument()
     fireEvent.click(await screen.findByRole('button', { name: 'Crashed, with a crash report' }))
-    await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
+    await waitFor(() => expect(onShowChapter).toHaveBeenCalledExactlyOnceWith('luxemburg'))
     expect(App.StartPreview).toHaveBeenCalledExactlyOnceWith('luxemburg', 'crashed')
-    expect(useChapterStore.getState().selectedId).toBe('luxemburg')
   })
 })
