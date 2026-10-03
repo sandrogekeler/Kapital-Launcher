@@ -10,6 +10,7 @@ export namespace models {
 	    loadingSplash?: boolean;
 	    loadingSplashAvailable?: boolean;
 	    loadingSplashOn?: boolean;
+	    staticArt?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -26,6 +27,7 @@ export namespace models {
 	        this.loadingSplash = source["loadingSplash"];
 	        this.loadingSplashAvailable = source["loadingSplashAvailable"];
 	        this.loadingSplashOn = source["loadingSplashOn"];
+	        this.staticArt = source["staticArt"];
 	    }
 	}
 	export class ChangelogEntry {

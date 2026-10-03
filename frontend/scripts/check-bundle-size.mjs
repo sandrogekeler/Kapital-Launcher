@@ -22,7 +22,10 @@ import { ensureFreshDist } from './lib/dist-freshness.mjs'
 // 91 since the corner notices (2026-10-03): the launcher's errors left the
 // action bar for a component of their own, always loaded, which is 0.4 KB
 // gzipped. Measured 90.3 KB that day, from 89.9 KB before it.
-const BUDGET_KB = 91
+// 92 since the slideshow (2026-10-03, #142): the chapter's picture and wiki post
+// cycle together, which every chapter view shows from the first paint (Drift,
+// the slide pairing, the rotation). Measured 91.2 KB.
+const BUDGET_KB = 92
 
 const DIST_ASSETS = await ensureFreshDist()
 const DIST = path.dirname(DIST_ASSETS)

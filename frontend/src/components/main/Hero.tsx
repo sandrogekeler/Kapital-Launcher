@@ -2,24 +2,28 @@ import type { Chapter } from '../../types'
 import { chapterArt, chapterTitleArt } from '../../lib/art'
 import { factValue, isPlaceholder, stateLabel } from '../../lib/manifest'
 import { BookOpen, Pencil } from '../../lib/icons'
+import { Drift } from '../ui/Drift'
 import { IconButton } from '../ui/IconButton'
 import { Pill } from '../ui/Pill'
 
 interface Props {
   chapter: Chapter
+  /** The slide's picture (issue 142); undefined shows the bundled art. */
+  art?: string
   onOpenWiki: () => void
   /** Opens the chapter's own settings: memory and JVM preset (#36). */
   onOpenSettings: () => void
 }
 
 /**
- * The chapter's picture, name and blurb. Art is a bundled screenshot or the
- * accent grid. The hero takes whatever height the card has left above the
+ * The chapter's picture, name and blurb. Art is the slide's picture from the
+ * wiki, which drifts to the next one in place (issue 142), else the bundled
+ * screenshot, else the accent grid. The hero takes whatever height the card has left above the
  * action bar and the panels, up to the layout token, so the card fits the
  * window without scrolling (#68).
  */
-export function Hero({ chapter, onOpenWiki, onOpenSettings }: Props) {
-  const art = chapterArt(chapter.id)
+export function Hero({ chapter, art: slideArt, onOpenWiki, onOpenSettings }: Props) {
+  const art = slideArt ?? chapterArt(chapter.id)
   const title = chapterTitleArt(chapter.id)
   const loader = isPlaceholder(chapter.pack.loader) ? '[Loader]' : chapter.pack.loader
   const mc = isPlaceholder(chapter.pack.minecraft) ? '[MC version]' : chapter.pack.minecraft
@@ -29,12 +33,14 @@ export function Hero({ chapter, onOpenWiki, onOpenSettings }: Props) {
     <section className="border-line relative flex max-h-(--layout-hero) min-h-0 grow flex-col justify-end overflow-hidden border-b px-14 py-11">
       {art ? (
         <>
-          <img
-            src={art}
-            alt=""
-            className="absolute inset-0 size-full object-cover object-[center_40%]"
-            draggable={false}
-          />
+          <Drift id={art} className="absolute inset-0" layer="absolute inset-0">
+            <img
+              src={art}
+              alt=""
+              className="size-full object-cover object-[center_40%]"
+              draggable={false}
+            />
+          </Drift>
           <div className="scrim-hero absolute inset-0" aria-hidden />
         </>
       ) : (

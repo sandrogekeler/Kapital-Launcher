@@ -34,6 +34,10 @@ type AppSettings struct {
 	// value rather than the file's.
 	LoadingSplashAvailable bool `json:"loadingSplashAvailable,omitempty"`
 	LoadingSplashOn        bool `json:"loadingSplashOn,omitempty"`
+	// StaticArt turns the slideshow off (#142): each chapter shows its own
+	// bundled picture, and the wiki's screenshots do not cycle. False, the
+	// default, cycles them.
+	StaticArt bool `json:"staticArt,omitempty"`
 }
 
 // DefaultSettings is a fresh install. Kept as a function so callers cannot

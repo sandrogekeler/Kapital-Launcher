@@ -1,5 +1,5 @@
 import type { Chapter } from '../../types'
-import { useChapterStore } from '../../stores/useChapterStore'
+import { selectSlide, useChapterStore } from '../../stores/useChapterStore'
 import {
   selectInstalled,
   selectInstancePack,
@@ -30,7 +30,10 @@ interface Props {
 }
 
 export function ChapterView({ chapter, onOpenSettings }: Props) {
-  const wikiPick = useChapterStore((s) => s.wikiPick[chapter.id])
+  const slide = useChapterStore(selectSlide(chapter.id))
+  const wikiPick = slide?.page
+  // The slideshow off shows the bundled art; the post still follows the slide.
+  const staticArt = useSettingsStore((s) => s.settings.staticArt ?? false)
 
   const engine = useEngineStore((s) => s.engine)
   const launching = useEngineStore((s) => s.launching)
@@ -71,6 +74,7 @@ export function ChapterView({ chapter, onOpenSettings }: Props) {
     <>
       <Hero
         chapter={chapter}
+        art={staticArt ? undefined : slide?.art}
         onOpenWiki={openWiki}
         onOpenSettings={() => onOpenSettings(chapter.id)}
       />

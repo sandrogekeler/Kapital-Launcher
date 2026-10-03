@@ -168,7 +168,7 @@
     },
     "layout": {
       "type": "object",
-      "required": ["unit", "sidebar", "hero", "titlebar", "icon", "scrollbar", "slide", "title", "window", "splash"],
+      "required": ["unit", "sidebar", "hero", "titlebar", "icon", "scrollbar", "slide", "drift", "title", "window", "splash"],
       "additionalProperties": false,
       "properties": {
         "unit": { "const": "px" },
@@ -183,6 +183,11 @@
           "type": "integer",
           "minimum": 0,
           "description": "How far the chapter card travels on a switch, in px (#59)."
+        },
+        "drift": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How far the hero's picture and the wiki post travel when the chapter's slide changes, in px (#142): out to the left, in from the right."
         },
         "title": {
           "type": "integer",
