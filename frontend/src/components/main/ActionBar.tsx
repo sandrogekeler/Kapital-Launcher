@@ -19,6 +19,7 @@ import { Download, Play, RefreshCw, Square } from '../../lib/icons'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
+import { StableLabel } from '../ui/StableLabel'
 import { GetPrism } from './GetPrism'
 
 interface Props {
@@ -56,6 +57,12 @@ interface Props {
 }
 
 const WORKING = ['downloading', 'unpacking', 'verifying']
+
+/** What the button beside a missing Prism can say, so it keeps the width of the longer. */
+const GET_PRISM_LABELS = ['Get Prism Launcher', 'Try again'] as const
+
+/** Keeps the state line's second row when it has nothing to say, so the block stays two lines. */
+const BLANK = '\u00a0'
 
 /**
  * The phases in which a stop asks twice: the game has a window or is past it, so a stray click
@@ -165,6 +172,9 @@ export function ActionBar({
   let state: string
   let meta: string
   let tone = 'text-accent'
+  // Whether the line on the right is the server's, which is the one the
+  // refresh button beside it is about.
+  let serverShown = false
   if (installing) {
     ;[state, meta] = ['◐ Installing', `Adding ${chapter.instance.id} to Prism`]
   } else if (install && installShown) {
@@ -193,6 +203,7 @@ export function ActionBar({
   } else if (source) {
     ;[state, meta, tone] = [...source, 'text-warning']
   } else if (chapter.server) {
+    serverShown = true
     ;[state, meta] = serverLine(status, chapter.server.address)
     if (isPlaceholderAddress(chapter.server.address) || (status?.checked && !status.online)) {
       tone = 'text-fg-muted'
@@ -230,12 +241,15 @@ export function ActionBar({
             onClick={() => (release ? setOffering(true) : onOpenPrismSite())}
             disabled={working || offering}
           >
-            {install?.phase === 'failed' ? 'Try again' : 'Get Prism Launcher'}
+            <StableLabel
+              current={install?.phase === 'failed' ? 'Try again' : 'Get Prism Launcher'}
+              labels={GET_PRISM_LABELS}
+            />
           </Button>
         )}
         {beside && (
           <div className="flex max-w-sm min-w-0 flex-col gap-0.5">
-            <span className={`font-mono text-xs ${beside[2]}`}>{beside[0]}</span>
+            <span className={`font-ui text-xs font-medium ${beside[2]}`}>{beside[0]}</span>
             {/* Truncated to keep the bar one row; the title carries the full detail. */}
             <span className="text-fg-faint truncate text-xs" title={beside[1]}>
               {beside[1]}
@@ -245,10 +259,10 @@ export function ActionBar({
         <div className="grow" />
         <div className="flex items-center gap-2">
           <div className="flex flex-col items-end gap-0.5">
-            <span className={`font-mono text-xs ${tone}`}>{state}</span>
-            <span className="text-fg-faint text-xs">{meta}</span>
+            <span className={`font-ui text-xs font-medium ${tone}`}>{state}</span>
+            <span className="text-fg-faint text-xs">{meta || BLANK}</span>
           </div>
-          {chapter.server && (
+          {serverShown ? (
             <IconButton
               icon={RefreshCw}
               title="Check the server now"
@@ -256,6 +270,10 @@ export function ActionBar({
               onClick={onCheckServer}
               disabled={checking}
             />
+          ) : (
+            // A chapter with a server keeps the button's place when another
+            // line is shown, so the text does not step sideways.
+            chapter.server && <span aria-hidden className="size-8 shrink-0" />
           )}
         </div>
       </div>

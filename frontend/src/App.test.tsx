@@ -235,8 +235,11 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Install Luxemburg' })).toBeDisabled()
     expect(screen.queryByRole('button', { name: 'Play Luxemburg' })).not.toBeInTheDocument()
 
-    // The size fact waits for an instance to measure (#57).
-    expect(screen.getByText('Size').nextElementSibling).toHaveTextContent('[PLACEHOLDER]')
+    // The version and the size wait for an instance to measure (#57), and say
+    // so in words, not as the manifest's marker.
+    expect(screen.getByText('Size').nextElementSibling).toHaveTextContent('Not installed')
+    expect(screen.getByText('Version').nextElementSibling).toHaveTextContent('Not installed')
+    expect(screen.queryByText(/PLACEHOLDER/)).toBeNull()
 
     // Made in Prism by hand while the launcher was in the background.
     vi.mocked(Bindings.GetInstances).mockResolvedValue(

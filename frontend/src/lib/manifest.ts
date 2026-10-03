@@ -35,6 +35,20 @@ export const factValue = (value: string | number | null | undefined): string =>
   value == null || value === PLACEHOLDER ? PLACEHOLDER : String(value)
 
 /**
+ * What a fact row says in place of a placeholder: a chapter that is not
+ * installed has no version and no size yet, so it says so, and any other
+ * fact nobody has settled is unknown.
+ */
+export const unsetLabel = (installed: boolean | undefined): string =>
+  installed === false ? 'Not installed' : 'Unknown'
+
+/** The facts that are settled, joined by a space for a chip; null when none is. */
+export function knownFacts(...values: (string | number | null | undefined)[]): string | null {
+  const known = values.filter((v) => !isPlaceholder(v == null ? null : String(v)))
+  return known.length > 0 ? known.join(' ') : null
+}
+
+/**
  * A size on disk for a fact row: gigabytes with one decimal from a gigabyte
  * up, whole megabytes below, the placeholder when nothing is installed to
  * measure (#57). Decimal units, as the OS file dialogs show them.
