@@ -265,13 +265,19 @@ Java is ended with `TerminateProcess` on a handle opened with
 the visible top-level windows whose owner is its pid (owner and visibility are
 all that is read of a window, never its title) and to the console windows the
 launcher's own hold kept hidden (S3.7), then ended the same way if it is still
-there five seconds later. A Prism left on a console is closed this way when the
+there five seconds later. When Stop ended the game's Java and the launcher's
+Prism outlives it (waiting on the console of what it saw as a crash), the run's
+end closes that Prism the same way, a second after the game, on a goroutine the
+tracker's runs count, and gives up when the launcher quits (#133). A Prism left on a console is closed this way when the
 chapter's next Play begins and when the launcher quits (bounded), and only while
 a console window of it is left; one with a game running is not touched. On macOS it is `SIGTERM` and, five seconds
 on, `SIGKILL`. The five seconds are judged on the run's steps, not slept on.
 Nothing is started, read or written to do it, and the pid is logged, never a
 window title.
 Verify: `TestStopAsksTheLaunchersPrismToCloseAndEndsWhenItExits`,
+`TestStopClosesThePrismLeftAfterTheGameAndEndsItIfItStays`,
+`TestStopLeavesAPrismThatQuitsWithItsGameAlone`,
+`TestAGameThatCrashedWithoutAStopLeavesPrismRunning`,
 `TestStopEndsAPrismThatIgnoresTheCloseAfterFiveSeconds`,
 `TestStopEndsTheGamesJavaAndTheRunEndsCrashedAsStopped`,
 `TestStopWithNothingAliveEndsTheRunAtOnce`,

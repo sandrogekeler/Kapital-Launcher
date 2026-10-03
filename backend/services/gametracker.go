@@ -377,6 +377,7 @@ func (r *gameRun) loop() {
 		// hidden.
 		r.releaseWindow(false)
 		r.releaseDialogs(true)
+		r.closePrismAfterStop()
 		r.endActivity()
 	}()
 	// On the run's own goroutine, so a slow hook never holds Play up; Prism's

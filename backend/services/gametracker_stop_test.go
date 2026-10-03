@@ -109,6 +109,88 @@ func TestStopEndsTheGamesJavaAndTheRunEndsCrashedAsStopped(t *testing.T) {
 	}
 }
 
+// stoppedRunningGame starts a run with the game up and Stops it, with the
+// waits after the game's end short enough for a test: the run has ended
+// crashed when it returns, and Prism (pid 100) is still running. setup, when
+// not nil, changes the rig before the run starts.
+func stoppedRunningGame(t *testing.T, setup func(*gameRig)) *gameRig {
+	t.Helper()
+	r := newGameRig(t)
+	r.tracker.consoleGrace = 5 * time.Millisecond
+	r.tracker.stopForce = 50 * time.Millisecond
+	if setup != nil {
+		setup(r)
+	}
+	r.procs.add(100, 1, "prismlauncher.exe", r.play)
+	r.procs.add(200, 100, "javaw.exe", r.play.Add(7*time.Second))
+	r.start()
+	r.log.write("[01:10:02] [main/INFO]: ModLauncher running\n" + render + "Backend library: LWJGL\n")
+	r.untilPhase("window")
+	if err := r.tracker.Stop("frangfurd"); err != nil {
+		t.Fatal(err)
+	}
+	r.procs.end(200, 1)
+	r.wantEnded("crashed")
+	return r
+}
+
+// Prism sees its game ended as a crash and waits on its console. After a stop
+// that console holds no error worth keeping, so the launcher's Prism is asked
+// to close, and ended when it does not (#133).
+func TestStopClosesThePrismLeftAfterTheGameAndEndsItIfItStays(t *testing.T) {
+	r := stoppedRunningGame(t, nil)
+	until(t, "Prism to be asked to close", func() bool { return len(r.procs.closed()) > 0 })
+	until(t, "Prism to be ended", func() bool { return len(r.procs.terminated()) > 1 })
+	if got := r.procs.closed(); !reflect.DeepEqual(got, []int{100}) {
+		t.Fatalf("Prism, by its pid, once: %v", got)
+	}
+	if got := r.procs.terminated(); !reflect.DeepEqual(got, []termCall{{200, false}, {100, true}}) {
+		t.Fatalf("the Java at the stop, then Prism, forcibly: %v", got)
+	}
+}
+
+func TestStopLeavesAPrismThatQuitsWithItsGameAlone(t *testing.T) {
+	r := stoppedRunningGame(t, func(r *gameRig) { r.tracker.consoleGrace = 100 * time.Millisecond })
+	close(r.prism)
+	time.Sleep(200 * time.Millisecond)
+	if got := r.procs.closed(); len(got) != 0 {
+		t.Fatalf("a Prism that went is not asked: %v", got)
+	}
+	if got := r.procs.terminated(); !reflect.DeepEqual(got, []termCall{{200, false}}) {
+		t.Fatalf("only the Java: %v", got)
+	}
+}
+
+func TestStopEndsAPrismThatTakesNoCloseAfterTheGameAtOnce(t *testing.T) {
+	r := stoppedRunningGame(t, func(r *gameRig) {
+		r.procs.closeErr = errors.New("no window")
+		r.tracker.stopForce = time.Hour // not waited on: nothing took the request
+	})
+	until(t, "Prism to be ended", func() bool { return len(r.procs.terminated()) > 1 })
+	if got := r.procs.terminated(); !reflect.DeepEqual(got, []termCall{{200, false}, {100, true}}) {
+		t.Fatalf("%v", got)
+	}
+}
+
+// A game that crashed by itself keeps its Prism and console for the report's
+// Show console: only a stop closes it.
+func TestAGameThatCrashedWithoutAStopLeavesPrismRunning(t *testing.T) {
+	r := newGameRig(t)
+	r.tracker.consoleGrace = 5 * time.Millisecond
+	r.tracker.stopForce = 50 * time.Millisecond
+	r.procs.add(100, 1, "prismlauncher.exe", r.play)
+	r.procs.add(200, 100, "javaw.exe", r.play.Add(7*time.Second))
+	r.start()
+	r.log.write("[01:10:02] [main/INFO]: ModLauncher running\n" + render + "Backend library: LWJGL\n")
+	r.untilPhase("window")
+	r.procs.end(200, 1)
+	r.untilPhase("crashed")
+	time.Sleep(200 * time.Millisecond)
+	if closes, terms := r.procs.closed(), r.procs.terminated(); len(closes) != 0 || len(terms) != 0 {
+		t.Fatalf("nothing is closed or ended: closes %v, terminates %v", closes, terms)
+	}
+}
+
 // SIGTERM first on macOS, and SIGKILL if the Java is still there five seconds
 // later.
 func TestStopForcesAGameThatIsStillThereAfterFiveSeconds(t *testing.T) {
