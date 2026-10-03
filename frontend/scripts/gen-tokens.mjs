@@ -250,13 +250,11 @@ function emitLayout(src, push) {
   push(`/* Layout geometry is not a Tailwind namespace. Read it with the var()`)
   push(`   shorthand, w-(--layout-sidebar), or from style.css. */`)
   push(`:root {`)
-  push(`  --layout-sidebar: ${src.layout.sidebar}${src.layout.unit};`)
-  push(`  --layout-hero: ${src.layout.hero}${src.layout.unit};`)
-  push(`  --layout-titlebar: ${src.layout.titlebar}${src.layout.unit};`)
-  push(`  --layout-scrollbar: ${src.layout.scrollbar}${src.layout.unit};`)
-  push(`  --layout-slide: ${src.layout.slide}${src.layout.unit};`)
-  push(`  --layout-drift: ${src.layout.drift}${src.layout.unit};`)
-  push(`  --layout-title: ${src.layout.title}${src.layout.unit};`)
+  const { unit } = src.layout
+  for (const k of ['sidebar', 'hero', 'titlebar', 'scrollbar', 'slide', 'drift', 'title']) {
+    push(`  --layout-${k}: ${src.layout[k]}${unit};`)
+  }
+  push(`  --layout-play-min: ${src.layout.playMin}${unit};`)
   push(`  --layout-icon-sm: ${src.layout.icon.sm}${src.layout.unit};`)
   push(`  --layout-icon-md: ${src.layout.icon.md}${src.layout.unit};`)
   push(`  --layout-splash-width: ${src.layout.splash.width}${src.layout.unit};`)

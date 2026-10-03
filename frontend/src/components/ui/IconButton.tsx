@@ -26,7 +26,7 @@ export function IconButton({ icon, title, onClick, size = 'md', disabled }: Prop
       disabled={disabled}
       className={`${BOX[size]} text-fg-muted hover:bg-hover hover:text-fg duration-fast ease-standard inline-flex shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent`}
     >
-      <Icon icon={icon} size={size === 'sm' ? 'md' : 'md'} />
+      <Icon icon={icon} size={size} />
     </button>
   )
 }

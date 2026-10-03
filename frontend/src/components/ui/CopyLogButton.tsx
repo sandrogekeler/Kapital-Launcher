@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Check, Copy, X } from '../../lib/icons'
 import { Button } from './Button'
 import { Icon } from './Icon'
+import { StableLabel } from './StableLabel'
 
 /** How long the button says Copied, and how long Copy failed, before it goes back. */
 export const COPIED_MS = 1000
@@ -29,7 +30,7 @@ const LABELS = ['Copy log', 'Copied', 'Copy failed'] as const
  * The Copy log button, which says how it went by changing itself and not by
  * adding a line under it: Copied with a check for a second, Copy failed with a
  * cross for two, then back to the Copy icon and label. The three labels share
- * one box, so the buttons after it never move. `aria-live` on the button is
+ * one box (StableLabel), so the buttons after it never move. `aria-live` on the button is
  * what announces the change.
  */
 export function CopyLogButton({ onClick, result, disabled }: Props) {
@@ -51,17 +52,7 @@ export function CopyLogButton({ onClick, result, disabled }: Props) {
   return (
     <Button onClick={onClick} disabled={disabled} live>
       <Icon icon={flash ? (flash.failed ? X : Check) : Copy} size="sm" />
-      <span className="inline-grid">
-        {LABELS.map((label) => (
-          <span
-            key={label}
-            aria-hidden={label !== current || undefined}
-            className={`col-start-1 row-start-1 ${label === current ? '' : 'invisible'}`}
-          >
-            {label}
-          </span>
-        ))}
-      </span>
+      <StableLabel current={current} labels={LABELS} />
     </Button>
   )
 }

@@ -21,6 +21,7 @@ export {
   ExternalLink,
   Folder,
   FolderOpen,
+  Info,
   Minus,
   Pencil,
   Play,
