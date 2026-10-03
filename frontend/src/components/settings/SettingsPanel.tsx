@@ -56,7 +56,6 @@ export function SettingsPanel({ onClose }: Props) {
   const instances = useEngineStore((s) => s.instances)
   const loadEngine = useEngineStore((s) => s.load)
   const chapters = useChapterStore((s) => s.manifest.chapters)
-  const select = useChapterStore((s) => s.select)
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({})
 
   // Escape closes the panel. A field with an unsaved draft takes the key
@@ -211,16 +210,7 @@ export function SettingsPanel({ onClose }: Props) {
               }
             />
           ))}
-          {/* A preview shows its screen, which is not this one: the chapter is
-              opened and the settings close. */}
-          <Suspense fallback={null}>
-            <PreviewSection
-              onStarted={(chapterId) => {
-                select(chapterId)
-                onClose()
-              }}
-            />
-          </Suspense>
+          <Previews onClose={onClose} />
         </Section>
         <SupportSection />
 
@@ -236,6 +226,24 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <h2 className="text-fg-faint m-0 text-xs font-medium">{title}</h2>
       {children}
     </div>
+  )
+}
+
+/**
+ * The developer previews (issue 124). A preview shows its screen, which is not this
+ * one: the chapter is opened and the settings close.
+ */
+function Previews({ onClose }: Props) {
+  const select = useChapterStore((s) => s.select)
+  return (
+    <Suspense fallback={null}>
+      <PreviewSection
+        onStarted={(chapterId) => {
+          select(chapterId)
+          onClose()
+        }}
+      />
+    </Suspense>
   )
 }
 
