@@ -28,6 +28,9 @@ const CARD = 'bg-raised border-line flex min-h-0 grow flex-col overflow-hidden r
  * animation ends. The keyframes, the blur and the reduced-motion fade live
  * in style.css; the distance and the blur are tokens.
  *
+ * The stage clips the slide at the card's gap (`.card-stage`), so a moving
+ * card never makes the main area scroll (issue 145).
+ *
  * The previous chapter is remembered in state and compared during render,
  * React's pattern for state derived from a prop change, so the first render
  * shows the card still and every later change animates.
@@ -38,14 +41,18 @@ export function ChapterStage({ chapter, chapters, onOpenSettings }: Props) {
   if (shown.id !== chapter.id) {
     const from = chapters.findIndex((c) => c.id === shown.id)
     const to = chapters.findIndex((c) => c.id === chapter.id)
-    setOutgoing({ chapter: shown, direction: to < from ? 'down' : 'up' })
+    // A switch in a hidden window (the launcher minimised while a game runs)
+    // is not seen, and its slide would wait there until the window came
+    // back: the card is simply replaced (issue 145).
+    const hidden = typeof document !== 'undefined' && document.visibilityState === 'hidden'
+    setOutgoing(hidden ? null : { chapter: shown, direction: to < from ? 'down' : 'up' })
     setShown(chapter)
   }
   const entering = outgoing ? (outgoing.direction === 'down' ? 'card-in-down' : 'card-in-up') : ''
   const leaving = outgoing?.direction === 'down' ? 'card-out-down' : 'card-out-up'
 
   return (
-    <div className="relative m-5 flex min-h-0 grow flex-col">
+    <div className="card-stage relative m-5 flex min-h-0 grow flex-col">
       <div key={chapter.id} className={`${CARD} ${entering}`}>
         <ChapterView chapter={chapter} onOpenSettings={onOpenSettings} />
       </div>
