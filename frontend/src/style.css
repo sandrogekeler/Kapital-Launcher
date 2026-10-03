@@ -151,6 +151,50 @@
   }
 }
 
+/* A slide's picture and post changing in place (issue 142, ui/Drift): the old
+   fades and blurs out to the left while the new fades and blurs in from the
+   right, at once, both on the standard curve, so the swap is even from end to
+   end. The distance, the blur and the duration are tokens. With reduced motion they only
+   cross-fade, so the leaving layer's animationend still fires. */
+@keyframes drift-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--layout-drift));
+    filter: blur(var(--effect-motion-blur));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes drift-out {
+  from {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--layout-drift)));
+    filter: blur(var(--effect-motion-blur));
+  }
+}
+.drift-in {
+  animation: drift-in var(--duration-drift) var(--ease-standard) both;
+}
+.drift-out {
+  animation: drift-out var(--duration-drift) var(--ease-standard) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .drift-in {
+    animation: card-fade-in var(--duration-drift) ease-in-out both;
+  }
+  .drift-out {
+    animation: card-fade-out var(--duration-drift) ease-in-out both;
+  }
+}
+
 /* The loading card's bar when there is no history to size it by (#43): a soft
    band of the accent sweeping across the track. Reduced motion keeps it still
    and solid. The duration is the slow token, four times over. */

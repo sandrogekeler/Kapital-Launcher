@@ -74,6 +74,8 @@
   --transition-duration-fast: 140ms;
   --duration-slow: 420ms;
   --transition-duration-slow: 420ms;
+  --duration-drift: 900ms;
+  --transition-duration-drift: 900ms;
   --duration-dwell: 3780ms;
   --transition-duration-dwell: 3780ms;
   --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -89,6 +91,7 @@
   --layout-titlebar: 40px;
   --layout-scrollbar: 6px;
   --layout-slide: 32px;
+  --layout-drift: 20px;
   --layout-title: 68px;
   --layout-icon-sm: 16px;
   --layout-icon-md: 18px;

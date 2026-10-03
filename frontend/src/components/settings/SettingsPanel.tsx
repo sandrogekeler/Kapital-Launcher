@@ -158,6 +158,13 @@ export function SettingsPanel({ onClose }: Props) {
               <span className="text-danger text-xs select-text">{errors.theme}</span>
             )}
           </div>
+          <CheckboxField
+            label="Picture slideshow"
+            checked={!(settings.staticArt ?? false)}
+            hint="Cycles each chapter's pictures from the wiki, with a post about what they show, on every switch and every minute. Off shows each chapter's own picture."
+            error={errors.staticArt}
+            onChange={(on) => void save('staticArt', { staticArt: !on })}
+          />
           {/* Go says where the splash can run at all (#43); elsewhere there is
               nothing to choose. The effective value is derived, so the save
               carries it along for the box to follow at once. */}

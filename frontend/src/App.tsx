@@ -6,13 +6,14 @@ import { ChapterStage } from './components/main/ChapterStage'
 import { ChapterSettingsPanel } from './components/settings/ChapterSettingsPanel'
 import { SettingsPanel } from './components/settings/SettingsPanel'
 import { Scrollable } from './components/ui/Scrollable'
-import { selectChapter, useChapterStore } from './stores/useChapterStore'
+import { selectCanRotate, selectChapter, useChapterStore } from './stores/useChapterStore'
 import { useEngineStore } from './stores/useEngineStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { useServerStore } from './stores/useServerStore'
 import { useGameStore } from './stores/useGameStore'
 import { Environment } from '../wailsjs/runtime/runtime'
 import { errMsg, readOr } from './lib/ipc'
+import { SLIDE_INTERVAL_MS } from './lib/slides'
 
 // The run report is opened rarely, from Details beside a game that went wrong,
 // so it loads when asked for and stays out of the launcher's first paint and
@@ -28,6 +29,10 @@ export default function App() {
   const select = useChapterStore((s) => s.select)
   const loadChapters = useChapterStore((s) => s.load)
   const loadWikiPages = useChapterStore((s) => s.loadWikiPages)
+  const loadWikiShots = useChapterStore((s) => s.loadWikiShots)
+  const advanceSlide = useChapterStore((s) => s.advance)
+  const canRotate = useChapterStore(selectCanRotate)
+  const staticArt = useSettingsStore((s) => s.settings.staticArt ?? false)
 
   const engine = useEngineStore((s) => s.engine)
   const loadEngine = useEngineStore((s) => s.load)
@@ -87,7 +92,32 @@ export default function App() {
     void loadEngine()
     void loadSettings()
     void loadWikiPages()
-  }, [loadChapters, loadEngine, loadSettings, loadWikiPages])
+    void loadWikiShots()
+  }, [loadChapters, loadEngine, loadSettings, loadWikiPages, loadWikiShots])
+
+  // The open chapter's slide moves on every minute (issue 142): a timer for
+  // what is on screen, not a poll of anything Go holds. It runs only while the
+  // window is in view, starts over on every switch, and not at all with the
+  // slideshow off or with nothing to move on to.
+  useEffect(() => {
+    if (staticArt || !canRotate) return
+    let timer: number | undefined
+    const stop = () => {
+      window.clearInterval(timer)
+      timer = undefined
+    }
+    const start = () => {
+      stop()
+      if (document.visibilityState === 'visible')
+        timer = window.setInterval(() => void advanceSlide(), SLIDE_INTERVAL_MS)
+    }
+    start()
+    document.addEventListener('visibilitychange', start)
+    return () => {
+      stop()
+      document.removeEventListener('visibilitychange', start)
+    }
+  }, [staticArt, canRotate, selectedId, advanceSlide])
 
   // An instance appears when the user imports one in Prism, which happens in
   // another window. Coming back is the moment to look again; a focus event,

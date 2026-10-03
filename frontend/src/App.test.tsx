@@ -9,6 +9,7 @@ import { DEFAULT_SETTINGS, useSettingsStore } from './stores/useSettingsStore'
 import { useServerStore } from './stores/useServerStore'
 import { useGameStore } from './stores/useGameStore'
 import { BUNDLED_MANIFEST } from './lib/manifest'
+import { SLIDE_INTERVAL_MS } from './lib/slides'
 
 vi.mock('../wailsjs/go/main/App')
 
@@ -83,7 +84,8 @@ describe('App', () => {
       selectedId: 'luxemburg',
       loaded: false,
       wikiPages: [],
-      wikiPick: {},
+      wikiShots: [],
+      slides: {},
     })
     useEngineStore.setState({
       engine: null,
@@ -562,5 +564,36 @@ describe('App', () => {
     expect(screen.queryByRole('region', { name: /^Loading / })).not.toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Chapters' })).toBeInTheDocument()
     expect(screen.getByRole('main')).toBeInTheDocument()
+  })
+
+  it('moves the slide on every minute, from the last switch, and not with the slideshow off', async () => {
+    vi.useFakeTimers()
+    try {
+      const advance = vi.fn(async () => undefined)
+      vi.mocked(Bindings.GetWikiShots).mockResolvedValue([
+        { era: 'Luxemburg', src: '/wiki-art/luxemburg/1.webp', subject: '' },
+        { era: 'Luxemburg', src: '/wiki-art/luxemburg/2.webp', subject: '' },
+        { era: 'Frangfurd', src: '/wiki-art/frangfurd/1.webp', subject: '' },
+        { era: 'Frangfurd', src: '/wiki-art/frangfurd/2.webp', subject: '' },
+      ])
+      useChapterStore.setState({ advance })
+      render(<App />)
+      await act(() => vi.advanceTimersByTimeAsync(SLIDE_INTERVAL_MS))
+      expect(advance).toHaveBeenCalledTimes(1)
+
+      // A switch starts the minute over.
+      await act(() => vi.advanceTimersByTimeAsync(SLIDE_INTERVAL_MS / 2))
+      act(() => useChapterStore.getState().select('frangfurd'))
+      await act(() => vi.advanceTimersByTimeAsync(SLIDE_INTERVAL_MS / 2))
+      expect(advance).toHaveBeenCalledTimes(1)
+      await act(() => vi.advanceTimersByTimeAsync(SLIDE_INTERVAL_MS / 2))
+      expect(advance).toHaveBeenCalledTimes(2)
+
+      act(() => useSettingsStore.setState({ settings: { ...DEFAULT_SETTINGS, staticArt: true } }))
+      await act(() => vi.advanceTimersByTimeAsync(SLIDE_INTERVAL_MS * 3))
+      expect(advance).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

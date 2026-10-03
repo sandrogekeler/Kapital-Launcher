@@ -91,6 +91,9 @@ the scaffold changed the picture.
 - [x] Screenshots from the wiki: listed by the lore export with the page each
       shows, downloaded and cached by Go and served from the app data dir, so
       the CSP stays as it is (#141); the bundled art is the offline fallback
+- [x] The hero's picture and the "From the wiki" post cycle together, on every
+      switch and every minute in view, a post linked to what the picture shows;
+      off in the settings for each chapter's own picture (#142)
 
 ## Milestone 6: Server status, the rest
 

@@ -1,6 +1,7 @@
 import type { Chapter, PackState, WikiPage } from '../../types'
 import { factValue, sizeValue } from '../../lib/manifest'
 import { versionValue } from '../../lib/packState'
+import { Drift } from '../ui/Drift'
 import { Fact } from '../ui/Fact'
 
 interface Props {
@@ -9,7 +10,7 @@ interface Props {
   sizeBytes: number | undefined
   /** Whether the installed pack is its source's current one (#71); undefined until checked. */
   packState: PackState | undefined
-  /** The wiki page picked for this chapter (#58); undefined shows the manifest's teaser. */
+  /** The slide's wiki page (#58, issue 142); undefined shows the manifest's teaser. */
   wikiPage: WikiPage | undefined
   onOpenWiki: () => void
 }
@@ -67,15 +68,18 @@ export function Panels({ chapter, sizeBytes, packState, wikiPage, onOpenWiki }: 
       </div>
       <div className="flex flex-col gap-3 py-6 pr-14 pl-7">
         <PanelTitle>From the wiki</PanelTitle>
-        <p className="font-display m-0 text-lg leading-snug">{wiki.title}</p>
-        <span className="text-fg-muted line-clamp-4 text-sm leading-normal">{wiki.line}</span>
-        <button
-          type="button"
-          onClick={onOpenWiki}
-          className="text-accent w-fit cursor-pointer text-left text-sm hover:underline"
-        >
-          Read the history →
-        </button>
+        {/* The post drifts to the next with the hero's picture (issue 142). */}
+        <Drift id={wikiPage?.url ?? 'teaser'} layer="flex flex-col gap-3">
+          <p className="font-display m-0 text-lg leading-snug">{wiki.title}</p>
+          <span className="text-fg-muted line-clamp-4 text-sm leading-normal">{wiki.line}</span>
+          <button
+            type="button"
+            onClick={onOpenWiki}
+            className="text-accent w-fit cursor-pointer text-left text-sm hover:underline"
+          >
+            Read the history →
+          </button>
+        </Drift>
       </div>
     </section>
   )

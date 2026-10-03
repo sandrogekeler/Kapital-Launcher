@@ -257,4 +257,6 @@ export interface AppSettings {
   loadingSplashAvailable?: boolean
   /** Whether the next Play shows the splash: the effective value of loadingSplash on this OS. Derived, never saved. */
   loadingSplashOn?: boolean
+  /** The slideshow off (issue 142): each chapter shows its own bundled picture, with no timer. Absent is on. */
+  staticArt?: boolean
 }
