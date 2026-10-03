@@ -220,6 +220,24 @@ export interface PackState {
   version: string
 }
 
+/** One situation the Developer section can fake (#124). The list is Go's, fixed there. */
+export interface PreviewSituation {
+  id: string
+  label: string
+  /** A chapter's own screens, or Prism's. */
+  scope: 'chapter' | 'prism'
+  /** Whether it opens the loading card, which needs the loading splash on. */
+  card: boolean
+  /** Whether the view then runs the Prism install, whose progress and failure are the situation. */
+  playsInstall: boolean
+}
+
+/** What StartPreview says happened. */
+export interface PreviewStart {
+  /** The situation wanted the loading card and it was not opened. */
+  cardSkipped: boolean
+}
+
 /** The two packs an installed chapter can sync from: the manifest's, or the local one from settings. */
 export type PackSource = 'published' | 'dev'
 

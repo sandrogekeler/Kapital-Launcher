@@ -13,7 +13,7 @@ import (
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	if _, err := a.RefreshEngine(); err != nil {
+	if _, err := a.detectEngine(); err != nil {
 		slog.Warn("engine detection", "error", err)
 	}
 	// The status ticker lives as long as the window. Each result is an event

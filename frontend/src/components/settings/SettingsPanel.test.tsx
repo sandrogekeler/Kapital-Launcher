@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import { DEFAULT_SETTINGS, useSettingsStore } from '../../stores/useSettingsStore'
+import { useChapterStore } from '../../stores/useChapterStore'
 import { useEngineStore } from '../../stores/useEngineStore'
 import type { EngineInfo } from '../../types'
 import { SettingsPanel } from './SettingsPanel'
@@ -226,5 +227,48 @@ describe('SettingsPanel', () => {
       expect(await screen.findByText('the settings file is read-only')).toBeInTheDocument()
       expect(screen.getByLabelText('Loading splash')).toBeChecked()
     })
+  })
+})
+
+describe('SettingsPanel previews', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    Object.assign(window, { go: {} })
+    vi.mocked(App.GetPreviewSituations).mockResolvedValue([
+      {
+        id: 'crashed',
+        label: 'Crashed, with a crash report',
+        scope: 'chapter',
+        card: true,
+        playsInstall: false,
+      },
+    ] as never)
+    vi.mocked(App.StartPreview).mockResolvedValue({ cardSkipped: false })
+    vi.mocked(App.GetEngine).mockResolvedValue(engine)
+    vi.mocked(App.GetInstances).mockResolvedValue({
+      root: '',
+      dir: '',
+      present: {},
+      packUrl: {},
+      sizeBytes: {},
+    })
+    vi.mocked(App.GetPackStates).mockResolvedValue([])
+    useSettingsStore.setState({ settings: DEFAULT_SETTINGS, loaded: true, error: null })
+    useEngineStore.setState({ engine, instances: null })
+    useChapterStore.setState({ selectedId: 'luxemburg' })
+  })
+  afterEach(() => {
+    cleanup()
+    Reflect.deleteProperty(window, 'go')
+  })
+
+  it('has the previews under Developer, and a start opens the chapter and closes the settings', async () => {
+    const onClose = vi.fn()
+    render(<SettingsPanel onClose={onClose} />)
+    expect(screen.getByRole('heading', { name: 'Developer' })).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'Crashed, with a crash report' }))
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
+    expect(App.StartPreview).toHaveBeenCalledExactlyOnceWith('luxemburg', 'crashed')
+    expect(useChapterStore.getState().selectedId).toBe('luxemburg')
   })
 })

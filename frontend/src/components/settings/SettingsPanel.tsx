@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { AppSettings } from '../../types'
 import { useChapterStore } from '../../stores/useChapterStore'
@@ -22,6 +22,13 @@ import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 import { TextField } from '../ui/TextField'
 import { SupportSection } from './SupportSection'
+
+// The previews are a developer's tool, so the section loads when the settings
+// screen shows it and stays out of the launcher's bundle budget
+// (scripts/check-bundle-size.mjs), as the pack source section does.
+const PreviewSection = lazy(() =>
+  import('./PreviewSection').then((m) => ({ default: m.PreviewSection })),
+)
 
 interface Props {
   onClose: () => void
@@ -203,6 +210,7 @@ export function SettingsPanel({ onClose }: Props) {
               }
             />
           ))}
+          <Previews onClose={onClose} />
         </Section>
         <SupportSection />
 
@@ -218,6 +226,24 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <h2 className="text-fg-faint m-0 text-xs font-medium">{title}</h2>
       {children}
     </div>
+  )
+}
+
+/**
+ * The developer previews (issue 124). A preview shows its screen, which is not this
+ * one: the chapter is opened and the settings close.
+ */
+function Previews({ onClose }: Props) {
+  const select = useChapterStore((s) => s.select)
+  return (
+    <Suspense fallback={null}>
+      <PreviewSection
+        onStarted={(chapterId) => {
+          select(chapterId)
+          onClose()
+        }}
+      />
+    </Suspense>
   )
 }
 

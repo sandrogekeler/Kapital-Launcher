@@ -374,6 +374,38 @@ export namespace models {
 	        this.ms = source["ms"];
 	    }
 	}
+	export class PreviewSituation {
+	    id: string;
+	    label: string;
+	    scope: string;
+	    card: boolean;
+	    playsInstall: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new PreviewSituation(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	        this.scope = source["scope"];
+	        this.card = source["card"];
+	        this.playsInstall = source["playsInstall"];
+	    }
+	}
+	export class PreviewStart {
+	    cardSkipped: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new PreviewStart(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.cardSkipped = source["cardSkipped"];
+	    }
+	}
 	export class PrismRelease {
 	    version: string;
 	    asset: string;

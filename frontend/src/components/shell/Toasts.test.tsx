@@ -83,6 +83,33 @@ describe('Toasts', () => {
     expect(within(notices()).getByText('○ The game did not start')).toBeInTheDocument()
   })
 
+  // A developer preview (issue 124) is a synthetic game:state through the same path
+  // as a run's: the notice is the real one, and a real event replaces it.
+  it('shows the notice of a previewed failure and a real event of the chapter replaces it', () => {
+    render(<Toasts onOpenReport={() => undefined} />)
+    act(() => useGameStore.getState().receive({ ...failed, reason: 'packsync' }))
+    expect(within(notices()).getByText('○ The game did not start')).toBeInTheDocument()
+    expect(within(notices()).getByText('The pack could not be synced')).toBeInTheDocument()
+
+    act(() =>
+      useGameStore
+        .getState()
+        .receive({ ...failed, phase: 'crashed', reason: undefined, exitCode: 1, since: 'later' }),
+    )
+    expect(within(notices()).getByText('○ The game stopped')).toBeInTheDocument()
+    expect(
+      within(notices()).getByText('It closed before it finished, exit code 1'),
+    ).toBeInTheDocument()
+
+    act(() =>
+      useGameStore
+        .getState()
+        .receive({ ...failed, phase: 'mods', reason: undefined, since: 'next' }),
+    )
+    expect(notices()).toBeEmptyDOMElement()
+    expect(useGameStore.getState().states.frangfurd?.phase).toBe('mods')
+  })
+
   it('confirms a stop the player asked for in the muted tone, without Details', () => {
     render(<Toasts onOpenReport={() => undefined} />)
     act(() => useGameStore.getState().receive({ ...failed, reason: 'stopped' }))

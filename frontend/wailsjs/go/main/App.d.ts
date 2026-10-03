@@ -6,6 +6,8 @@ export function ChoosePrismExecutable():Promise<string>;
 
 export function ChoosePrismRoot():Promise<string>;
 
+export function ClearPreviews():Promise<void>;
+
 export function CopyRedactedLog():Promise<number>;
 
 export function GetAppVersion():Promise<string>;
@@ -21,6 +23,8 @@ export function GetInstances():Promise<models.InstanceReport>;
 export function GetManifest():Promise<models.Manifest>;
 
 export function GetPackStates():Promise<Array<models.PackState>>;
+
+export function GetPreviewSituations():Promise<Array<models.PreviewSituation>>;
 
 export function GetPrismRelease():Promise<models.PrismRelease>;
 
@@ -61,5 +65,7 @@ export function SaveSettings(arg1:models.AppSettings):Promise<void>;
 export function SetPackSource(arg1:string,arg2:string):Promise<models.InstanceReport>;
 
 export function ShowPrismConsole(arg1:string):Promise<boolean>;
+
+export function StartPreview(arg1:string,arg2:string):Promise<models.PreviewStart>;
 
 export function StopGame(arg1:string):Promise<models.GameState>;
