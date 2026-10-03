@@ -10,7 +10,11 @@ interface Props {
    * (`h-24` is six), so the surface that shows it keeps its size.
    */
   logHeight: string
-  /** Whether a line under the log says how much of it this is. The card has no room for one. */
+  /**
+   * Whether the log is explained: a line under it saying how much of it this
+   * is, and a sentence in its place when the start wrote none. The card
+   * (#97) keeps to the state line, the timing and its buttons, so it has none.
+   */
   note?: boolean
 }
 
@@ -50,6 +54,7 @@ function LogTail({ report, height, note }: { report: RunReport; height: string; 
   }, [report.logTail])
 
   if (!report.logTail) {
+    if (!note) return null
     return (
       <p className="text-fg-faint m-0 text-xs">
         The game wrote no log for this run, so the start stopped before the game.

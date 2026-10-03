@@ -164,7 +164,7 @@ describe('App', () => {
 
     // Frangfurd has a server too, but is played as a pack.
     switchTo(/03.*Frangfurd/)
-    expect(screen.getByRole('button', { name: 'Play Frangfurd' })).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Check the server now' })).toBeInTheDocument()
   })
 
@@ -396,8 +396,11 @@ describe('App', () => {
     expect(Bindings.InstallPrism).toHaveBeenCalledOnce()
   })
 
-  it('shows the disclaimer the usage guidelines require', () => {
+  it('keeps the disclaimer the usage guidelines require to the settings screen', async () => {
     render(<App />)
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.queryByText(/NOT AN OFFICIAL MINECRAFT PRODUCT/)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
     expect(screen.getByText(/NOT AN OFFICIAL MINECRAFT PRODUCT/)).toBeInTheDocument()
   })
 
@@ -451,7 +454,7 @@ describe('App', () => {
     expect(screen.getByText('Version').nextElementSibling).toHaveTextContent('4.2')
   })
 
-  it('opens the run report from Details beside a game that crashed, and closes it', async () => {
+  it('opens the run report from Details on the notice of a game that crashed, and closes it', async () => {
     vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
     const crashed = {
       chapterId: 'frangfurd',
@@ -475,20 +478,22 @@ describe('App', () => {
       await screen.findByRole('heading', { level: 1 })
       switchTo(/03.*Frangfurd/)
       act(() => useGameStore.getState().receive(crashed))
-      expect(screen.queryByRole('button', { name: 'Details' })).toBeInTheDocument()
+      // The notice sits in the corner, outside the chapter card.
+      const notice = screen.getByRole('status')
+      expect(within(notice).getByText('○ The game stopped')).toBeInTheDocument()
+      expect(screen.getByRole('main')).not.toHaveTextContent('○ The game stopped')
 
-      fireEvent.click(screen.getByRole('button', { name: 'Details' }))
+      fireEvent.click(within(notice).getByRole('button', { name: 'Details' }))
       const panel = await screen.findByRole('region', { name: 'Frangfurd run report' })
       expect(await within(panel).findByText('crash-1.txt')).toBeInTheDocument()
       expect(within(panel).getByLabelText("The end of the game's log")).toHaveTextContent(
         'Reported exception thrown!',
       )
       expect(read).toHaveBeenCalledExactlyOnceWith('frangfurd')
-      expect(screen.queryByRole('button', { name: 'Details' })).toBeNull()
 
       fireEvent.click(within(panel).getByRole('button', { name: 'Back' }))
       expect(screen.queryByRole('region', { name: 'Frangfurd run report' })).toBeNull()
-      expect(screen.getByRole('button', { name: 'Details' })).toBeInTheDocument()
+      expect(within(notice).getByRole('button', { name: 'Details' })).toBeInTheDocument()
     } finally {
       useGameStore.setState({ report: original })
     }
@@ -513,6 +518,13 @@ describe('App', () => {
       await screen.findByRole('region', { name: 'Frangfurd run report' })
       fireEvent.click(screen.getByRole('button', { name: /01.*Luxemburg/ }))
       expect(screen.queryByRole('region', { name: 'Frangfurd run report' })).toBeNull()
+
+      // Details on another chapter's notice brings that chapter and its report up.
+      fireEvent.click(screen.getByRole('button', { name: 'Details' }))
+      expect(
+        await screen.findByRole('region', { name: 'Frangfurd run report' }),
+      ).toBeInTheDocument()
+      expect(useChapterStore.getState().selectedId).toBe('frangfurd')
     } finally {
       useGameStore.setState({ report: original })
     }
@@ -534,6 +546,6 @@ describe('App', () => {
     )
     expect(screen.queryByRole('region', { name: /^Loading / })).not.toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Chapters' })).toBeInTheDocument()
-    expect(screen.getByText(/NOT AN OFFICIAL MINECRAFT PRODUCT/)).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
   })
 })

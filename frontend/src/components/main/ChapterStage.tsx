@@ -7,8 +7,6 @@ interface Props {
   /** The nav's order, which decides which way a switch moves. */
   chapters: readonly Chapter[]
   onOpenSettings: (chapterId: string) => void
-  /** Opens the run report in the main column (Details, beside a game that ended badly). */
-  onOpenReport: (chapterId: string) => void
 }
 
 type Direction = 'down' | 'up'
@@ -34,7 +32,7 @@ const CARD = 'bg-raised border-line flex min-h-0 grow flex-col overflow-hidden r
  * React's pattern for state derived from a prop change, so the first render
  * shows the card still and every later change animates.
  */
-export function ChapterStage({ chapter, chapters, onOpenSettings, onOpenReport }: Props) {
+export function ChapterStage({ chapter, chapters, onOpenSettings }: Props) {
   const [shown, setShown] = useState(chapter)
   const [outgoing, setOutgoing] = useState<Outgoing | null>(null)
   if (shown.id !== chapter.id) {
@@ -47,13 +45,9 @@ export function ChapterStage({ chapter, chapters, onOpenSettings, onOpenReport }
   const leaving = outgoing?.direction === 'down' ? 'card-out-down' : 'card-out-up'
 
   return (
-    <div className="relative m-5 mb-8 flex min-h-0 grow flex-col">
+    <div className="relative m-5 flex min-h-0 grow flex-col">
       <div key={chapter.id} className={`${CARD} ${entering}`}>
-        <ChapterView
-          chapter={chapter}
-          onOpenSettings={onOpenSettings}
-          onOpenReport={onOpenReport}
-        />
+        <ChapterView chapter={chapter} onOpenSettings={onOpenSettings} />
       </div>
       {outgoing && (
         <div
@@ -63,11 +57,7 @@ export function ChapterStage({ chapter, chapters, onOpenSettings, onOpenReport }
           onAnimationEnd={() => setOutgoing(null)}
           className={`${CARD} ${leaving} pointer-events-none absolute inset-0`}
         >
-          <ChapterView
-            chapter={outgoing.chapter}
-            onOpenSettings={onOpenSettings}
-            onOpenReport={onOpenReport}
-          />
+          <ChapterView chapter={outgoing.chapter} onOpenSettings={onOpenSettings} />
         </div>
       )}
     </div>

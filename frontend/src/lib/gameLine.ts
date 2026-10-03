@@ -44,7 +44,7 @@ export function gameLine(
     case 'mods':
       return ['◐ Loading mods', 'The game has started', 'text-accent']
     case 'window':
-      return ['◐ Loading mods', 'The game window is up', 'text-accent']
+      return ['◐ Loading mods', 'The game window is running', 'text-accent']
     case 'resources':
       return ['◐ Loading resources', 'Almost there', 'text-accent']
     case 'running':

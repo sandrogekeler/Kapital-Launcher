@@ -19,14 +19,7 @@ describe('ChapterStage', () => {
   afterEach(cleanup)
 
   it('shows the first chapter still, with no card leaving', () => {
-    render(
-      <ChapterStage
-        chapter={luxemburg}
-        chapters={chapters}
-        onOpenSettings={noop}
-        onOpenReport={noop}
-      />,
-    )
+    render(<ChapterStage chapter={luxemburg} chapters={chapters} onOpenSettings={noop} />)
     expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Luxemburg')
     expect(leaving()).toBeNull()
     expect(document.querySelector('.card-in-down, .card-in-up')).toBeNull()
@@ -34,21 +27,9 @@ describe('ChapterStage', () => {
 
   it('slides up to a later chapter and down to an earlier one, keeping the old card until its animation ends', () => {
     const { rerender } = render(
-      <ChapterStage
-        chapter={luxemburg}
-        chapters={chapters}
-        onOpenSettings={noop}
-        onOpenReport={noop}
-      />,
+      <ChapterStage chapter={luxemburg} chapters={chapters} onOpenSettings={noop} />,
     )
-    rerender(
-      <ChapterStage
-        chapter={frangfurd}
-        chapters={chapters}
-        onOpenSettings={noop}
-        onOpenReport={noop}
-      />,
-    )
+    rerender(<ChapterStage chapter={frangfurd} chapters={chapters} onOpenSettings={noop} />)
     // A chapter further down: the content moves up, so the new card comes
     // in from below and the old one leaves upward, inert.
     expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Frangfurd')
@@ -59,43 +40,17 @@ describe('ChapterStage', () => {
     endAnimation(out)
     expect(leaving()).toBeNull()
 
-    rerender(
-      <ChapterStage
-        chapter={lichdenstein}
-        chapters={chapters}
-        onOpenSettings={noop}
-        onOpenReport={noop}
-      />,
-    )
+    rerender(<ChapterStage chapter={lichdenstein} chapters={chapters} onOpenSettings={noop} />)
     expect(leaving()).toHaveClass('card-out-down')
     expect(document.querySelector('.card-in-down')).toHaveTextContent('Join Lichdenstein')
   })
 
   it('replaces a card still leaving when the selection moves again', () => {
     const { rerender } = render(
-      <ChapterStage
-        chapter={luxemburg}
-        chapters={chapters}
-        onOpenSettings={noop}
-        onOpenReport={noop}
-      />,
+      <ChapterStage chapter={luxemburg} chapters={chapters} onOpenSettings={noop} />,
     )
-    rerender(
-      <ChapterStage
-        chapter={lichdenstein}
-        chapters={chapters}
-        onOpenSettings={noop}
-        onOpenReport={noop}
-      />,
-    )
-    rerender(
-      <ChapterStage
-        chapter={frangfurd}
-        chapters={chapters}
-        onOpenSettings={noop}
-        onOpenReport={noop}
-      />,
-    )
+    rerender(<ChapterStage chapter={lichdenstein} chapters={chapters} onOpenSettings={noop} />)
+    rerender(<ChapterStage chapter={frangfurd} chapters={chapters} onOpenSettings={noop} />)
     expect(document.querySelectorAll('[inert]').length).toBe(1)
     expect(leaving()).toHaveTextContent('Join Lichdenstein')
     expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Frangfurd')

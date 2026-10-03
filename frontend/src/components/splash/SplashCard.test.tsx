@@ -61,7 +61,7 @@ describe('SplashCard', () => {
   it.each<[GamePhase, string, string]>([
     ['starting', '◐ Starting', `Prism is getting ${chapter.name} ready`],
     ['mods', '◐ Loading mods', 'The game has started'],
-    ['window', '◐ Loading mods', 'The game window is up'],
+    ['window', '◐ Loading mods', 'The game window is running'],
     ['resources', '◐ Loading resources', 'Almost there'],
   ])('says the %s stage', (phase, line, detail) => {
     render(card(at(phase)))
@@ -251,15 +251,16 @@ describe('SplashCard', () => {
       expect(onShowConsole).toHaveBeenCalledOnce()
     })
 
-    it('says so when the start stopped before any game log, and names no crash report', () => {
+    it('shows no log, no sentence about it and no crash report when the start wrote none', () => {
       render(
         card(at('failed'), {
           report: runReport({ logTail: '', logLines: 0, crashReport: '', phases: [] }),
         }),
       )
-      expect(screen.getByText(/wrote no log for this run/)).toBeInTheDocument()
+      expect(screen.queryByText(/wrote no log for this run/)).toBeNull()
       expect(screen.queryByText(/Crash report/)).toBeNull()
       expect(screen.queryByLabelText("The end of the game's log")).toBeNull()
+      expect(screen.getByText('○ The game did not start')).toBeInTheDocument()
     })
 
     it('shows no report while the game is starting, even if one were sent', () => {
