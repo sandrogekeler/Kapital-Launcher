@@ -22,6 +22,16 @@ func newTestApp(t *testing.T) *App {
 	return app
 }
 
+// unhost takes a chapter's published pack away, for the tests of a chapter
+// that hosts none now that every chapter in the bundled manifest does.
+func unhost(app *App, id string) {
+	for i := range app.manifest.Chapters {
+		if app.manifest.Chapters[i].ID == id {
+			app.manifest.Chapters[i].Pack.Packwiz = nil
+		}
+	}
+}
+
 func TestBundledManifestBoots(t *testing.T) {
 	app := newTestApp(t)
 	m, err := app.GetManifest()
@@ -402,8 +412,10 @@ func TestInstallChapterRefusesBeforeWritingAnything(t *testing.T) {
 	if _, err := app.InstallChapter("frangfurd"); err == nil {
 		t.Error("an install without Prism was not refused")
 	}
-	// Lichdenstein hosts no pack yet (Frangfurd does since #25): Install has
-	// nothing to write, and nothing is fetched.
+	// A chapter that hosts no pack (every chapter does since kapital-packs#12,
+	// so Lichdenstein's is taken away here): Install has nothing to write, and
+	// nothing is fetched.
+	unhost(app, "lichdenstein")
 	app.engine = models.EngineInfo{Found: true, Source: "settings"}
 	if _, err := app.InstallChapter("lichdenstein"); err == nil || !strings.Contains(err.Error(), "no hosted pack") {
 		t.Errorf("expected the missing pack to be refused, got %v", err)

@@ -115,7 +115,9 @@ func TestSetPackSourceRefusesBeforeWritingAnything(t *testing.T) {
 	_, err = app.SetPackSource("lichdenstein", "published")
 	check("a chapter not installed", "not installed", err)
 
-	// Lichdenstein hosts no pack yet; installed, it has no published one.
+	// A chapter that hosts no pack (Lichdenstein's is taken away here, since
+	// every chapter hosts one), installed, has no published one.
+	unhost(app, "lichdenstein")
 	inst := filepath.Join(filepath.Dir(filepath.Dir(cfg)), "kapital-lichdenstein")
 	if err := os.MkdirAll(inst, 0o755); err != nil {
 		t.Fatal(err)
