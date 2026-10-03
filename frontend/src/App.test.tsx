@@ -448,7 +448,7 @@ describe('App', () => {
     )
   })
 
-  it('offers Update and play when the installed pack is behind its source, and names the version', async () => {
+  it('keeps Play reading Play when the installed pack is behind its source, and names the version', async () => {
     vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
     vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ luxemburg: true }))
     vi.mocked(Bindings.LaunchChapter).mockResolvedValue()
@@ -456,19 +456,25 @@ describe('App', () => {
       { chapterId: 'luxemburg', installed: true, checked: true, upToDate: false, version: '4.2' },
     ])
     render(<App />)
-    expect(await screen.findByRole('button', { name: 'Update and play' })).toBeEnabled()
-    expect(screen.getByText('● Update available')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Play Luxemburg' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Update and play' })).toBeNull()
+    expect(screen.getByText('● Updated')).toBeInTheDocument()
+    expect(screen.getByText('Version 4.2')).toBeInTheDocument()
     expect(screen.getByText('Version').nextElementSibling).toHaveTextContent('older than 4.2')
-    fireEvent.click(screen.getByRole('button', { name: 'Update and play' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Play Luxemburg' }))
     await waitFor(() => expect(Bindings.LaunchChapter).toHaveBeenCalledWith('luxemburg'))
 
-    // Synced: Play is back and the row names the version.
+    // Synced: the bar reads the same, and the settings row names the version.
     vi.mocked(Bindings.GetPackStates).mockResolvedValue([
       { chapterId: 'luxemburg', installed: true, checked: true, upToDate: true, version: '4.2' },
     ])
     fireEvent.focus(window)
-    expect(await screen.findByRole('button', { name: 'Play Luxemburg' })).toBeInTheDocument()
-    expect(screen.getByText('Version').nextElementSibling).toHaveTextContent('4.2')
+    await waitFor(() =>
+      expect(screen.getByText('Version').nextElementSibling).toHaveTextContent(/^4\.2$/),
+    )
+    expect(screen.getByRole('button', { name: 'Play Luxemburg' })).toBeInTheDocument()
+    expect(screen.getByText('● Updated')).toBeInTheDocument()
+    expect(screen.getByText('Version 4.2')).toBeInTheDocument()
   })
 
   it('opens the run report from Details on the notice of a game that crashed, and closes it', async () => {

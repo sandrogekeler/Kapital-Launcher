@@ -156,30 +156,62 @@ describe('ActionBar game line', () => {
     expect(play().nextElementSibling?.className).toContain('grow')
   })
 
-  it('leaves the right side as the ready line without a server or a game', () => {
+  it('leaves the right side as the pack line without a server or a game', () => {
     const lux = BUNDLED_MANIFEST.chapters.find((c) => !c.server)!
     bar({ chapter: lux })
-    expect(screen.getByText('● Ready')).toBeInTheDocument()
+    expect(screen.getByText('● Updated')).toBeInTheDocument()
+    expect(screen.queryByText('● Ready')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Check the server now' })).toBeNull()
     expect(
       screen.getByRole('button', { name: new RegExp(lux.name) }).nextElementSibling,
     ).toHaveClass('grow')
   })
 
-  it('names the version the pack source serves on the ready line, not the manifest one', () => {
+  it.each([
+    ['in step', true, '7.1.0'],
+    ['behind its source', false, '7.1.1'],
+  ])(
+    'reads Play and names the source version when the installed pack is %s',
+    (_, upToDate, version) => {
+      const lux = BUNDLED_MANIFEST.chapters.find((c) => !c.server)!
+      bar({
+        chapter: lux,
+        packState: { chapterId: lux.id, installed: true, checked: true, upToDate, version },
+      })
+      expect(screen.getByRole('button', { name: `Play ${lux.name}` })).toBeEnabled()
+      expect(screen.queryByRole('button', { name: /update/i })).toBeNull()
+      expect(screen.getByText('● Updated')).toBeInTheDocument()
+      expect(screen.getByText(`Version ${version}`)).toBeInTheDocument()
+      expect(screen.queryByText('● Update available')).toBeNull()
+    },
+  )
+
+  it('says the version is pending when none is known', () => {
     const lux = BUNDLED_MANIFEST.chapters.find((c) => !c.server)!
-    bar({
-      chapter: lux,
-      packState: {
-        chapterId: lux.id,
-        installed: true,
-        checked: true,
-        upToDate: true,
-        version: '7.1.0',
-      },
-    })
-    expect(screen.getByText('Pack 7.1.0')).toBeInTheDocument()
+    bar({ chapter: { ...lux, pack: { ...lux.pack, version: null } } })
+    expect(screen.getByText('● Updated')).toBeInTheDocument()
+    expect(screen.getByText('Version pending')).toBeInTheDocument()
   })
+
+  it.each([true, false])(
+    'keeps the server line for a chapter with a server whether the pack is in step (%s) or behind',
+    (upToDate) => {
+      bar({
+        status: online,
+        packState: {
+          chapterId: chapter.id,
+          installed: true,
+          checked: true,
+          upToDate,
+          version: '1.0.1',
+        },
+      })
+      expect(play()).toBeEnabled()
+      expect(screen.getByText('● Server online')).toBeInTheDocument()
+      expect(screen.queryByText('● Updated')).toBeNull()
+      expect(screen.queryByText('● Update available')).toBeNull()
+    },
+  )
 
   it('shows the usual line once the game has closed', () => {
     bar({ game: game('closed') })

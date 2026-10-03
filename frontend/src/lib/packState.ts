@@ -2,13 +2,10 @@ import type { PackState } from '../types'
 import { PLACEHOLDER } from './manifest'
 
 /**
- * What the pack state means for the screen (#71): whether Play should read
- * "Update and play", and what the Version row says.
+ * What the pack state means for the screen (#71): the version the action bar
+ * names, and what the Version row says. Every Play syncs the pack, so nothing
+ * here asks whether an update is due.
  */
-
-/** The installed pack is behind its source. */
-export const updateAvailable = (state: PackState | undefined): boolean =>
-  state !== undefined && state.installed && state.checked && !state.upToDate
 
 /**
  * The pack version to name beside Play: the one the pack source serves, which
