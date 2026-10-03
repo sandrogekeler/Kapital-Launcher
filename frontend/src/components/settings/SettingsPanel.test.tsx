@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import { DEFAULT_SETTINGS, useSettingsStore } from '../../stores/useSettingsStore'
@@ -243,6 +243,11 @@ describe('SettingsPanel', () => {
 })
 
 describe('SettingsPanel previews', () => {
+  // The section is its own chunk; loading it first keeps the test off the transform.
+  beforeAll(async () => {
+    await import('./PreviewSection')
+  }, 60_000)
+
   beforeEach(() => {
     vi.resetAllMocks()
     Object.assign(window, { go: {} })

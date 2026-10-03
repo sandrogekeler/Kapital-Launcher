@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { models } from '../wailsjs/go/models'
 import * as Bindings from '../wailsjs/go/main/App'
@@ -78,6 +78,18 @@ function switchTo(name: RegExp) {
 }
 
 describe('App', () => {
+  // The pages are their own chunks, loaded when first asked for. Loading them
+  // once up front keeps a test that opens one from racing the first transform.
+  beforeAll(async () => {
+    await Promise.all([
+      import('./components/settings/SettingsPanel'),
+      import('./components/settings/ChapterSettingsPanel'),
+      import('./components/settings/PreviewSection'),
+      import('./components/settings/PackSourceSection'),
+      import('./components/main/RunReportPanel'),
+    ])
+  }, 60_000)
+
   beforeEach(() => {
     vi.clearAllMocks()
     useChapterStore.setState({

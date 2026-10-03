@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import { models } from '../../../wailsjs/go/models'
@@ -47,6 +47,11 @@ const withOverride = (url: string | undefined) =>
   })
 
 describe('ChapterSettingsPanel', () => {
+  // The pack source section is its own chunk; loading it first keeps the tests off the transform.
+  beforeAll(async () => {
+    await import('./PackSourceSection')
+  }, 60_000)
+
   beforeEach(() => {
     vi.clearAllMocks()
     Object.assign(window, { go: {} })
