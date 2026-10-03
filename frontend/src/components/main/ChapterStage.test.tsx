@@ -45,6 +45,21 @@ describe('ChapterStage', () => {
     expect(document.querySelector('.card-in-down')).toHaveTextContent('Join Lichdenstein')
   })
 
+  it('replaces the card without a slide when the window is hidden', () => {
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    try {
+      const { rerender } = render(
+        <ChapterStage chapter={luxemburg} chapters={chapters} onOpenSettings={noop} />,
+      )
+      rerender(<ChapterStage chapter={frangfurd} chapters={chapters} onOpenSettings={noop} />)
+      expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Frangfurd')
+      expect(leaving()).toBeNull()
+      expect(document.querySelector('.card-in-down, .card-in-up')).toBeNull()
+    } finally {
+      visibility.mockRestore()
+    }
+  })
+
   it('replaces a card still leaving when the selection moves again', () => {
     const { rerender } = render(
       <ChapterStage chapter={luxemburg} chapters={chapters} onOpenSettings={noop} />,
