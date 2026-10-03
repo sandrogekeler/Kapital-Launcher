@@ -8,6 +8,8 @@ const page = (url: string, ...eras: string[]): WikiPage => ({
   line: 'A line.',
   url: `https://wiki.example${url}`,
   eras,
+  id: url,
+  related: [],
 })
 const pages = [
   page('/wiki/a', 'Frangfurd'),

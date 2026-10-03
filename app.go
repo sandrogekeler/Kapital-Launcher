@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -590,6 +591,20 @@ func (a *App) OpenInstanceFolder(chapterID string) error {
 // possible, and the panel keeps the manifest's teaser.
 func (a *App) GetWikiPages() ([]models.WikiPage, error) {
 	return a.wiki.Pages(a.context())
+}
+
+// GetWikiShots returns the wiki's screenshots for the chapter art (#141):
+// listed by the lore export, downloaded from the wiki host once per start and
+// cached, each served to the page at its Src. It waits for the downloads; an
+// error means the export itself could not be had, and the bundled art stays.
+func (a *App) GetWikiShots() ([]models.WikiShot, error) {
+	return a.wiki.Shots(a.context())
+}
+
+// assetMiddleware serves the cached wiki art ahead of the embedded build
+// (main.go's AssetServer). Unexported, so Wails does not bind it.
+func (a *App) assetMiddleware(next http.Handler) http.Handler {
+	return a.wiki.ArtMiddleware(next)
 }
 
 // OpenWikiPage opens one of the pages GetWikiPages returned in the system

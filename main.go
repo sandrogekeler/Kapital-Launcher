@@ -74,9 +74,10 @@ func main() {
 		// Windows and Linux go frameless and get the header's own window
 		// buttons; macOS keeps a hidden title bar so its native traffic
 		// lights, full-screen and zoom stay the system's.
-		Frameless:   runtime.GOOS != "darwin",
-		Mac:         &mac.Options{TitleBar: mac.TitleBarHidden()},
-		AssetServer: &assetserver.Options{Assets: assets},
+		Frameless: runtime.GOOS != "darwin",
+		Mac:       &mac.Options{TitleBar: mac.TitleBarHidden()},
+		// The wiki's screenshots are served from the app data dir (#141).
+		AssetServer: &assetserver.Options{Assets: assets, Middleware: app.assetMiddleware},
 		OnStartup:   app.startup,
 		OnShutdown:  app.shutdown,
 		Bind:        []any{app},
