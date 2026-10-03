@@ -38,7 +38,7 @@
 /* The stage the cards slide in. The slide travels further than the gap
    around the card, and a moving card is still content: unclipped, it made the
    main area scroll for the length of the slide, and for as long as a slide
-   stalled in a hidden window (#145). Clipped at the gap, it paints up to the
+   stalled in a hidden window (issue 145). Clipped at the gap, it paints up to the
    main area's edge and never past it, so it adds nothing to scroll. The gap is
    the stage's m-5. */
 .card-stage {

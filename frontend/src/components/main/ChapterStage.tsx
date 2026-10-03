@@ -29,7 +29,7 @@ const CARD = 'bg-raised border-line flex min-h-0 grow flex-col overflow-hidden r
  * in style.css; the distance and the blur are tokens.
  *
  * The stage clips the slide at the card's gap (`.card-stage`), so a moving
- * card never makes the main area scroll (#145).
+ * card never makes the main area scroll (issue 145).
  *
  * The previous chapter is remembered in state and compared during render,
  * React's pattern for state derived from a prop change, so the first render
@@ -43,7 +43,7 @@ export function ChapterStage({ chapter, chapters, onOpenSettings }: Props) {
     const to = chapters.findIndex((c) => c.id === chapter.id)
     // A switch in a hidden window (the launcher minimised while a game runs)
     // is not seen, and its slide would wait there until the window came
-    // back: the card is simply replaced (#145).
+    // back: the card is simply replaced (issue 145).
     const hidden = typeof document !== 'undefined' && document.visibilityState === 'hidden'
     setOutgoing(hidden ? null : { chapter: shown, direction: to < from ? 'down' : 'up' })
     setShown(chapter)
