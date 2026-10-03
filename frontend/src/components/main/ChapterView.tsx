@@ -27,15 +27,13 @@ const PRISM_SITE = 'https://prismlauncher.org'
 interface Props {
   chapter: Chapter
   onOpenSettings: (chapterId: string) => void
-  onOpenReport: (chapterId: string) => void
 }
 
-export function ChapterView({ chapter, onOpenSettings, onOpenReport }: Props) {
+export function ChapterView({ chapter, onOpenSettings }: Props) {
   const wikiPick = useChapterStore((s) => s.wikiPick[chapter.id])
 
   const engine = useEngineStore((s) => s.engine)
   const launching = useEngineStore((s) => s.launching)
-  const launchError = useEngineStore((s) => s.error)
   const release = useEngineStore((s) => s.release)
   const install = useEngineStore((s) => s.install)
   const installPrism = useEngineStore((s) => s.installPrism)
@@ -50,7 +48,6 @@ export function ChapterView({ chapter, onOpenSettings, onOpenReport }: Props) {
 
   const status = useServerStore(selectStatus(chapter.id))
   const game = useGameStore(selectGame(chapter.id))
-  const stopError = useGameStore((s) => s.stopErrors[chapter.id])
   const stopGame = useGameStore((s) => s.stop)
   const checking = useServerStore((s) => s.checking)
   const checkServer = useServerStore((s) => s.check)
@@ -90,9 +87,8 @@ export function ChapterView({ chapter, onOpenSettings, onOpenReport }: Props) {
         installing={installing === chapter.id}
         installedNow={installedNow === chapter.id}
         checking={checking === chapter.id}
-        error={stopError ?? launchError}
         onPlay={() => void launch(chapter.id)}
-        // The store has recorded a refusal for the bar's error line.
+        // The store has recorded a refusal for the corner's notice.
         onStop={() => void stopGame(chapter.id).catch((e) => console.warn('stop game', errMsg(e)))}
         onInstall={() => void installChapter(chapter.id)}
         release={release}
@@ -101,7 +97,6 @@ export function ChapterView({ chapter, onOpenSettings, onOpenReport }: Props) {
         onOpenPrismSite={openPrismSite}
         onOpenReleasePage={openReleasePage}
         onCheckServer={() => void checkServer(chapter.id)}
-        onOpenReport={() => onOpenReport(chapter.id)}
       />
       <Panels
         chapter={chapter}

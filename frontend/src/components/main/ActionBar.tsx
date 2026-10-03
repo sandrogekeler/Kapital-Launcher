@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import type {
   Chapter,
   EngineInfo,
-  GamePhase,
   GameState,
   PackState,
   PrismInstallProgress,
@@ -16,7 +15,7 @@ import { packHost, packSourceLine } from '../../lib/packSource'
 import { serverLine } from '../../lib/serverLine'
 import { gameLine } from '../../lib/gameLine'
 import { isActive } from '../../stores/useGameStore'
-import { Download, Play, RefreshCw, Square, TriangleAlert } from '../../lib/icons'
+import { Download, Play, RefreshCw, Square } from '../../lib/icons'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
@@ -42,7 +41,6 @@ interface Props {
   /** Whether the chapter was installed in this session and not played since. */
   installedNow: boolean
   checking: boolean
-  error: string | null
   /** What getting Prism would download; null when it cannot be offered. */
   release: PrismRelease | null
   /** The install in progress or just finished, from prism:install. */
@@ -55,14 +53,9 @@ interface Props {
   onOpenPrismSite: () => void
   onOpenReleasePage: () => void
   onCheckServer: () => void
-  /** Opens the run report; Details, beside a game that crashed or never started. */
-  onOpenReport: () => void
 }
 
 const WORKING = ['downloading', 'unpacking', 'verifying']
-
-/** A game that crashed or never started: the phases that have a run report to read. */
-const isEndedBadly = (phase: GamePhase | undefined) => phase === 'crashed' || phase === 'failed'
 
 /**
  * The phases in which a stop asks twice: the game has a window or is past it, so a stray click
@@ -102,9 +95,10 @@ const CONFIRM_MS = 5000
  * can be ended at once: one click while the start is only getting ready, and
  * once the game has a window the first click asks "Stop the game?" for five
  * seconds. Stop waits, disabled, while the hand-over to Prism has not returned. The server's status stays on the right throughout, so it is still
- * there when the player is launching. A game that crashed or never started
- * keeps its line until the next Play, but yields to an install in progress,
- * whose line is on the right. A game that closed normally says nothing.
+ * there when the player is launching. A game that has ended says nothing
+ * here: a crash, a start that failed or a refused launch is a notice in the
+ * corner (`shell/Toasts`), so the bar keeps its shape and the server's line
+ * comes back.
  *
  * Without Prism, the bar offers to get it (ADR-11): the approval card opens
  * below, and once confirmed the state line follows the install step by step.
@@ -123,7 +117,6 @@ export function ActionBar({
   installing,
   installedNow,
   checking,
-  error,
   release,
   install,
   onPlay,
@@ -133,7 +126,6 @@ export function ActionBar({
   onOpenPrismSite,
   onOpenReleasePage,
   onCheckServer,
-  onOpenReport,
 }: Props) {
   const [offering, setOffering] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -163,22 +155,14 @@ export function ActionBar({
   const installShown =
     install !== null &&
     (working || install.phase === 'done' || (missing && install.phase === 'failed'))
-  // The rows beside Play: the hand-over to Prism, then the game. A dead run's
-  // rows give way to an install in progress; a live run's do not, as Play and
-  // Install are held for it.
+  // The rows beside Play: the hand-over to Prism, then the live game, for
+  // which Play and Install are held. A run that has ended is the corner's.
   let beside: [string, string, string] | null = null
   if (launching) {
     beside = ['◐ Launching', 'Handing over to Prism', 'text-accent']
-  } else if (gameRows && (playing || !(installing || installShown))) {
+  } else if (gameRows && playing) {
     beside = gameRows
   }
-  // A run that ended badly has a report to read, with its own rows beside Play.
-  // One the player stopped did not go wrong, and has nothing to explain.
-  const ended =
-    beside !== null &&
-    beside === gameRows &&
-    isEndedBadly(game?.phase) &&
-    game?.reason !== 'stopped'
   let state: string
   let meta: string
   let tone = 'text-accent'
@@ -263,15 +247,12 @@ export function ActionBar({
           </Button>
         )}
         {beside && (
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex max-w-sm min-w-0 flex-col gap-0.5">
-              <span className={`font-mono text-xs ${beside[2]}`}>{beside[0]}</span>
-              {/* Truncated to keep the bar one row; the title carries the full detail. */}
-              <span className="text-fg-faint truncate text-xs" title={beside[1]}>
-                {beside[1]}
-              </span>
-            </div>
-            {ended && <Button onClick={onOpenReport}>Details</Button>}
+          <div className="flex max-w-sm min-w-0 flex-col gap-0.5">
+            <span className={`font-mono text-xs ${beside[2]}`}>{beside[0]}</span>
+            {/* Truncated to keep the bar one row; the title carries the full detail. */}
+            <span className="text-fg-faint truncate text-xs" title={beside[1]}>
+              {beside[1]}
+            </span>
           </div>
         )}
         <div className="grow" />
@@ -302,12 +283,6 @@ export function ActionBar({
           onOpenReleasePage={onOpenReleasePage}
           onOpenPrismSite={onOpenPrismSite}
         />
-      )}
-      {error && (
-        <div className="text-danger flex items-center gap-2 text-sm select-text">
-          <Icon icon={TriangleAlert} size="sm" />
-          <span>{error}</span>
-        </div>
       )}
     </section>
   )

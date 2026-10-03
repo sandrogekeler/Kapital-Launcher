@@ -52,7 +52,6 @@ function bar(over: Partial<ComponentProps<typeof ActionBar>> = {}) {
       installing={false}
       installedNow={false}
       checking={false}
-      error={null}
       release={null}
       install={null}
       onPlay={noop}
@@ -62,7 +61,6 @@ function bar(over: Partial<ComponentProps<typeof ActionBar>> = {}) {
       onOpenPrismSite={noop}
       onOpenReleasePage={noop}
       onCheckServer={noop}
-      onOpenReport={noop}
       {...over}
     />,
   )
@@ -77,37 +75,21 @@ const beside = () => screen.getAllByRole('button')[0]!.nextElementSibling as HTM
 describe('ActionBar game line', () => {
   afterEach(cleanup)
 
-  it.each<GamePhase>(['crashed', 'failed'])(
-    'offers Details beside the rows of a game that is %s, and opens the report',
-    (phase) => {
-      const onOpenReport = vi.fn()
-      bar({ game: game(phase), onOpenReport })
-      const details = within(beside()).getByRole('button', { name: 'Details' })
-      fireEvent.click(details)
-      expect(onOpenReport).toHaveBeenCalledOnce()
-    },
-  )
-
-  it.each<GamePhase>(['starting', 'running', 'stopping', 'closed', 'idle'])(
-    'offers no Details for a game that is %s',
+  it.each<GamePhase>(['crashed', 'failed', 'closed', 'idle'])(
+    'shows nothing beside Play for a game that is %s: a run that ended is the corner notice',
     (phase) => {
       bar({ game: game(phase) })
+      expect(screen.queryByText('○ The game did not start')).toBeNull()
+      expect(screen.queryByText('○ The game stopped')).toBeNull()
       expect(screen.queryByRole('button', { name: 'Details' })).toBeNull()
+      expect(play().nextElementSibling?.className).toContain('grow')
     },
   )
 
-  it('offers no Details for a run the player stopped', () => {
+  it('shows nothing beside Play for a run the player stopped', () => {
     bar({ game: { ...game('crashed'), reason: 'stopped' } })
-    expect(screen.getByText('○ The game was stopped')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Details' })).toBeNull()
-  })
-
-  it('offers no Details while the rows beside Play are the hand-over or an install', () => {
-    const { unmount } = bar({ game: game('failed'), launching: true })
-    expect(screen.queryByRole('button', { name: 'Details' })).toBeNull()
-    unmount()
-    bar({ game: game('failed'), install: installProgress })
-    expect(screen.queryByRole('button', { name: 'Details' })).toBeNull()
+    expect(screen.queryByText('○ The game was stopped')).toBeNull()
+    expect(play().nextElementSibling?.className).toContain('grow')
   })
 
   it("shows the game line and Stop in Play's place while the game is active", () => {
@@ -130,13 +112,10 @@ describe('ActionBar game line', () => {
     expect(screen.queryByText('● Playing')).toBeNull()
   })
 
-  it('lets an install in progress outrank a crash, and a crash outrank the usual line', () => {
-    const { unmount } = bar({ game: game('crashed', 1), install: installProgress })
+  it('shows the usual line and Play again after a crash', () => {
+    bar({ game: game('crashed', 1), status: online })
     expect(screen.queryByText('○ The game stopped')).toBeNull()
-    unmount()
-    bar({ game: game('crashed', 1) })
-    expect(screen.getByText('○ The game stopped')).toHaveClass('text-danger')
-    expect(screen.getByText('It closed before it finished, exit code 1')).toBeInTheDocument()
+    expect(screen.getByText('● Server online')).toBeInTheDocument()
     expect(play()).toBeEnabled()
   })
 
@@ -150,10 +129,10 @@ describe('ActionBar game line', () => {
     expect(within(beside()).queryByText('● Server online')).toBeNull()
   })
 
-  it('keeps the server line on the right beside a failed game', () => {
+  it('keeps the server line on the right after a failed game', () => {
     bar({ game: game('failed'), status: online })
     expect(screen.getByText('● Server online')).toBeInTheDocument()
-    expect(within(beside()).getByText('○ The game did not start')).toHaveClass('text-danger')
+    expect(screen.queryByText('○ The game did not start')).toBeNull()
   })
 
   it('puts the hand-over to Prism beside Play, with the server on the right', () => {
@@ -266,16 +245,8 @@ describe('ActionBar Stop', () => {
   it('offers Play again once the run has ended, whatever the reason', () => {
     const { unmount } = bar({ game: { ...game('failed'), reason: 'stopped' } })
     expect(play()).toBeEnabled()
-    expect(within(beside()).getByText('Stopped from the launcher')).toBeInTheDocument()
-    expect(within(beside()).getByText('○ The game did not start')).toHaveClass('text-fg-muted')
     unmount()
     bar({ game: { ...game('crashed', 1), reason: 'stopped' } })
     expect(play()).toBeEnabled()
-    expect(within(beside()).getByText('○ The game was stopped')).toBeInTheDocument()
-  })
-
-  it("shows the bar's error line for a refused stop", () => {
-    bar({ game: game('starting'), error: 'Frangfurd has no game to stop' })
-    expect(screen.getByText('Frangfurd has no game to stop')).toBeInTheDocument()
   })
 })

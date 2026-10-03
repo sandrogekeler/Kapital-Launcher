@@ -24,7 +24,7 @@ describe('gameLine', () => {
     ])
     expect(gameLine(at('window'), 'Frangfurd')).toEqual([
       '◐ Loading mods',
-      'The game window is up',
+      'The game window is running',
       'text-accent',
     ])
     expect(gameLine(at('resources'), 'Frangfurd')).toEqual([

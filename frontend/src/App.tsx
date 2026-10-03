@@ -1,5 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { HeaderBar } from './components/shell/HeaderBar'
+import { Toasts } from './components/shell/Toasts'
 import { Sidebar } from './components/sidebar/Sidebar'
 import { ChapterStage } from './components/main/ChapterStage'
 import { ChapterSettingsPanel } from './components/settings/ChapterSettingsPanel'
@@ -25,6 +26,7 @@ export default function App() {
   const chapter = useChapterStore(selectChapter)
   const chapters = useChapterStore((s) => s.manifest.chapters)
   const selectedId = useChapterStore((s) => s.selectedId)
+  const select = useChapterStore((s) => s.select)
   const loadChapters = useChapterStore((s) => s.load)
   const loadWikiPages = useChapterStore((s) => s.loadWikiPages)
 
@@ -62,10 +64,22 @@ export default function App() {
   const [chapterSettingsFor, setChapterSettingsFor] = useState<string | null>(null)
   const closeChapterSettings = useCallback(() => setChapterSettingsFor(null), [])
   useEffect(() => setChapterSettingsFor(null), [selectedId])
-  // A run's report (Details, beside a game that ended badly) takes it likewise.
+  // A run's report (Details, on the corner's notice of a game that ended
+  // badly) takes it likewise. The notice can be another chapter's, so opening
+  // it selects that chapter too, and a report stays only while its chapter
+  // is the one selected.
   const [reportFor, setReportFor] = useState<string | null>(null)
   const closeReport = useCallback(() => setReportFor(null), [])
-  useEffect(() => setReportFor(null), [selectedId])
+  useEffect(() => setReportFor((open) => (open === selectedId ? open : null)), [selectedId])
+  const openReport = useCallback(
+    (chapterId: string) => {
+      select(chapterId)
+      setSettingsOpen(false)
+      setChapterSettingsFor(null)
+      setReportFor(chapterId)
+    },
+    [select],
+  )
 
   // One read per store on mount. These are reads of state Go holds, not
   // events, so an effect is the right tool.
@@ -152,11 +166,11 @@ export default function App() {
               chapter={chapter}
               chapters={chapters}
               onOpenSettings={setChapterSettingsFor}
-              onOpenReport={setReportFor}
             />
           )}
         </Scrollable>
       </div>
+      <Toasts onOpenReport={openReport} />
       {/* Centred on the main column, beside the sidebar, not on the window. */}
       <footer className="text-fg-faint text-2xs pointer-events-none fixed right-0 bottom-2 left-(--layout-sidebar) text-center">
         {DISCLAIMER}
