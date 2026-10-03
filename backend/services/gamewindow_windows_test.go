@@ -28,11 +28,18 @@ import (
 const (
 	childModeEnv = "KAPITAL_TEST_GLFW_CHILD"
 	// The child's mode is "<when>:<size>". When: it shows its window when the
-	// parent says so (cue), or at once, before anything holds it (now). Size:
-	// the window is 400x300 (window) or covers the primary monitor (full).
-	childCueWindow = "cue:window"
-	childCueFull   = "cue:full"
-	childNowWindow = "now:window"
+	// parent says so (cue), the same and then takes no message for childBusy
+	// (busy, as Forge 1.19.2 loading mods on the window's thread, #132), or at
+	// once, before anything holds it (now). Size: the window is 400x300
+	// (window) or covers the primary monitor (full).
+	childCueWindow  = "cue:window"
+	childCueFull    = "cue:full"
+	childBusyWindow = "busy:window"
+	childNowWindow  = "now:window"
+
+	// childBusy is longer than holdStopTimeout, which a hide that waited on
+	// the busy thread used to outlast.
+	childBusy = 3 * time.Second
 
 	// The child's window is of class GLFW30 and titled with it unless these say
 	// otherwise: a title makes it a Prism dialog or another window of Prism's.
@@ -132,12 +139,16 @@ func TestGameWindowChild(t *testing.T) {
 	}
 	fmt.Println("created")
 
-	if when == "cue" {
+	if when == "cue" || when == "busy" {
 		if _, err := bufio.NewReader(os.Stdin).ReadString('\n'); err != nil {
 			t.Fatal(err)
 		}
 		showWindow(windows.HWND(hwnd), windows.SW_SHOWNORMAL)
 		fmt.Println("shown")
+	}
+	if when == "busy" {
+		time.Sleep(childBusy)
+		fmt.Println("idle")
 	}
 	if retitle := os.Getenv(childRetitleEnv); retitle != "" {
 		time.Sleep(200 * time.Millisecond)
@@ -297,10 +308,55 @@ func holdShownChild(t *testing.T, mode string) (*glfwChild, WindowHolder, window
 	}
 	child.await(t, "shown")
 	until(t, "the show to be hidden", func() bool { return holder.(*winHolder).hideCount() >= 1 })
-	if _, shown := visible(t, pid); shown {
-		t.Fatal("the window the child showed is still visible")
-	}
+	// The hide is queued; the child takes it at its next look at its messages.
+	until(t, "the hide to land", func() bool { _, shown := visible(t, pid); return !shown })
 	return child, holder, hwnd
+}
+
+// The game's thread takes no message for a while after it shows its window,
+// as Forge 1.19.2's does while it loads mods, and the handover comes in that
+// time. A hide that waited on that thread kept the hook thread past the
+// release, and the shows it caught later were hidden after the handover's
+// (2026-10-03). The hook thread must have ended when Release returns, and the
+// window ends in view (#132).
+func TestHandoverShowsAWindowWhoseThreadWasBusy(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts a child process with a real window")
+	}
+	child := startGLFWChild(t, childBusyWindow)
+	child.await(t, "created")
+	pid := child.cmd.Process.Pid
+	holder, err := HoldGameWindow(pid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := holder.(*winHolder)
+	if _, err := io.WriteString(child.stdin, "\n"); err != nil {
+		t.Fatal(err)
+	}
+	child.await(t, "shown")
+	until(t, "the hook to catch the show", func() bool {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		return h.seen
+	})
+
+	report := holder.Release(true)
+	t.Logf("report %+v", report)
+	select {
+	case <-h.done:
+	default:
+		t.Fatal("the hook thread outlived the release, waiting on the busy child")
+	}
+	if report.Hides < 1 {
+		t.Fatalf("the hide was queued while the child was busy: %+v", report)
+	}
+	child.await(t, "idle")
+	until(t, "the window to be shown", func() bool { _, shown := visible(t, pid); return shown })
+	time.Sleep(300 * time.Millisecond)
+	if _, shown := visible(t, pid); !shown {
+		t.Fatal("a hide landed after the handover's show")
+	}
 }
 
 func TestHolderHidesAndShowsAGLFWWindow(t *testing.T) {
@@ -410,9 +466,7 @@ func TestHolderSweepsAWindowThatWasAlreadyVisible(t *testing.T) {
 		defer h.mu.Unlock()
 		return h.swept == 1
 	})
-	if _, shown := visible(t, pid); shown {
-		t.Fatal("the sweep hides a window that was already visible")
-	}
+	until(t, "the sweep's hide to land", func() bool { _, shown := visible(t, pid); return !shown })
 	report := holder.Release(false)
 	if report.Swept != 1 || !report.Seen || report.Hides != 0 {
 		t.Fatalf("report %+v", report)

@@ -17,10 +17,13 @@ import (
 
 // The window holder, on Windows (#45). It asks the OS to tell it when a window
 // of the game's process is shown (an out-of-context WinEvent hook, which
-// injects nothing into the game), and hides the game's GLFW window the moment
-// that happens. At the handover it shows the window again, after resizing a
-// fullscreen one by a pixel and back (#46). It reads a window's class, owner
-// process and rectangle and nothing else, and starts no process. The same hook
+// injects nothing into the game), and queues a hide of the game's GLFW window
+// the moment that happens. At the handover it shows the window again, then
+// resizes a fullscreen one by a pixel and back (#46). Every hide, show and
+// resize is queued to the game's own thread, never waited on: one queue keeps
+// them in order however long that thread is busy (#132). It reads a window's
+// class, owner process and rectangle and nothing else, and starts no process.
+// The same hook
 // plumbing also serves Prism's "Please wait" dialogs (gamewindow_dialogs_windows.go,
 // #95), which are told apart by their title.
 
@@ -319,42 +322,90 @@ func (h *winHolder) onShow(hwnd windows.HWND, eventTime uint32) {
 	h.mu.Unlock()
 }
 
-// hide hides a window and checks it took, remembering it for Release.
+// hide queues a hide to the window's own thread, remembering the window for
+// Release. ShowWindow would wait for that thread to take it, and Forge 1.19.2
+// loads mods on the thread that owns the game's window: the hide waited half a
+// minute, landed after the handover's show and left the game running with no
+// window (2026-10-03, #132). Queued, it is ahead of any show in the same queue.
+// A hold that is being released hides nothing more: an event that reached the
+// hook thread late must not hide what the release is about to show.
 func (h *winHolder) hide(hwnd windows.HWND) bool {
 	h.mu.Lock()
+	if h.released {
+		h.mu.Unlock()
+		return false
+	}
 	h.held[hwnd] = struct{}{}
 	h.mu.Unlock()
-	showWindow(hwnd, windows.SW_HIDE)
-	if windows.IsWindowVisible(hwnd) {
-		slog.Warn("window hold: a window is still visible after a hide")
+	if call(procShowWindowAsync, uintptr(hwnd), windows.SW_HIDE) == 0 {
+		slog.Warn("window hold: the hide could not be queued")
 		return false
 	}
 	return true
 }
 
 // Release unhooks first, so no show is hidden after it, then shows what was
-// held. At the handover (foreground) a fullscreen window is nudged first and
-// given the foreground after it is shown.
+// held. At the handover (foreground) the shown window is given the foreground
+// and a fullscreen one is nudged.
 func (h *winHolder) Release(foreground bool) WindowReport {
 	return h.release(func(held []windows.HWND, r WindowReport) WindowReport {
 		for _, hwnd := range held {
-			if !showAsync(hwnd) {
-				continue // the game closed it
+			if !foreground {
+				showAsync(hwnd)
+				continue
 			}
-			if foreground {
-				if ok := call(procSetForegroundWin, uintptr(hwnd)); ok != 0 {
-					r.Foreground = true
-				}
-				// After the show: a hidden window's rectangle read at the handover
-				// came back empty on a real start (2026-10-01), so the nudge waits
-				// for the shown window's real one.
-				if nudgeWhenShown(hwnd) {
-					r.Nudged = true
-				}
-			}
+			fg, nudged := handOver(hwnd)
+			r.Foreground = r.Foreground || fg
+			r.Nudged = r.Nudged || nudged
 		}
 		return r
 	})
+}
+
+// handOver shows a held window at the handover, gives it the foreground and
+// nudges it. A held window still in view has a hide queued that its thread has
+// not taken yet: the show waits for it to land, so the window is next seen
+// shown by this show and not still in view from before. One that has not
+// landed in handoverHideWait is shown all the same, queued behind the hide,
+// and is neither given the foreground nor nudged, as it is about to go.
+func handOver(hwnd windows.HWND) (foreground, nudged bool) {
+	if call(procIsWindow, uintptr(hwnd)) == 0 {
+		return false, false // the game closed it
+	}
+	landed := waitFor(handoverHideWait, func() bool { return !windows.IsWindowVisible(hwnd) })
+	if !showAsync(hwnd) {
+		return false, false
+	}
+	if !landed {
+		slog.Info("game window: the hide had not landed at the handover")
+		return false, false
+	}
+	// After the show: a hidden window's rectangle read at the handover came
+	// back empty on a real start (2026-10-01), and SetForegroundWindow does
+	// nothing for a window that is not in view.
+	shown := waitFor(nudgeShownTimeout, func() bool {
+		rect, ok := windowRect(hwnd)
+		return ok && rect.height() > 0 && windows.IsWindowVisible(hwnd)
+	})
+	if !shown {
+		slog.Info("game window: not shown in time for the foreground")
+		return false, false
+	}
+	foreground = call(procSetForegroundWin, uintptr(hwnd)) != 0
+	return foreground, nudge(hwnd)
+}
+
+// waitFor looks at cond every 25 ms until it holds, for up to limit, and
+// reports whether it did.
+func waitFor(limit time.Duration, cond func() bool) bool {
+	deadline := time.Now().Add(limit)
+	for !cond() {
+		if time.Now().After(deadline) {
+			return false
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	return true
 }
 
 // release ends the hook, once, and hands what was held to after, which shows
@@ -425,22 +476,6 @@ func showHeld(held []windows.HWND) bool {
 		}
 	}
 	return shown
-}
-
-// nudgeWhenShown waits, up to nudgeShownTimeout, for the window to be visible
-// with a rectangle of its own, then nudges it if it is fullscreen.
-func nudgeWhenShown(hwnd windows.HWND) bool {
-	deadline := time.Now().Add(nudgeShownTimeout)
-	for {
-		if rect, ok := windowRect(hwnd); ok && rect.height() > 0 && windows.IsWindowVisible(hwnd) {
-			return nudge(hwnd)
-		}
-		if time.Now().After(deadline) {
-			slog.Info("game window nudge skipped", "reason", "not shown in time")
-			return false
-		}
-		time.Sleep(25 * time.Millisecond)
-	}
 }
 
 // nudge makes a fullscreen window one pixel shorter and back, so a game that

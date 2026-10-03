@@ -56,6 +56,12 @@ const handoverNudgeWait = 300 * time.Millisecond
 // reload: on a real start that took more than 1.5 s.
 const nudgeShownTimeout = 15 * time.Second
 
+// handoverHideWait is how long the handover waits for a hide still queued to
+// the game's thread to land before it shows the window (#132). At the handover
+// the game draws its reload screen and takes its messages between frames, so
+// the hide lands well within it; the bound is for a thread that does not.
+const handoverHideWait = 15 * time.Second
+
 var errWindowHoldUnsupported = errors.New("holding the game window is not supported on this OS")
 
 // WindowReport is what holding a window came to, for the log (#45). It holds
