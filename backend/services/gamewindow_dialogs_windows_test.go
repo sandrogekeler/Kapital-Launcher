@@ -51,9 +51,7 @@ func hidesOf(holder DialogHolder) int {
 func TestPrismDialogHoldHidesAPleaseWaitWindow(t *testing.T) {
 	_, holder, hwnd := holdDialogsOfChild(t, dialogTitle)
 	until(t, "the show to be hidden", func() bool { return hidesOf(holder) >= 1 })
-	if windows.IsWindowVisible(hwnd) {
-		t.Fatal("a Please wait dialog is still visible")
-	}
+	until(t, "the hide to land", func() bool { return !windows.IsWindowVisible(hwnd) })
 }
 
 // A dialog shown first and titled afterwards is hidden when its title comes.
@@ -75,9 +73,7 @@ func TestPrismDialogHoldHidesADialogTitledAfterItWasShown(t *testing.T) {
 	child.await(t, "shown")
 	child.await(t, "retitled")
 	until(t, "the retitled dialog to be hidden", func() bool { return hidesOf(holder) >= 1 })
-	if windows.IsWindowVisible(hwnd) {
-		t.Fatal("a dialog titled after its show is still visible")
-	}
+	until(t, "the hide to land", func() bool { return !windows.IsWindowVisible(hwnd) })
 }
 
 func TestPrismDialogHoldLeavesAnyOtherWindowOfPrismVisible(t *testing.T) {

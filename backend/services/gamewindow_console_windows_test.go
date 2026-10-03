@@ -43,9 +43,7 @@ func holdConsoleOfChild(t *testing.T, title string) (*glfwChild, ConsoleHolder, 
 func TestPrismConsoleHoldHidesTheConsoleAndKeepsItAfterRelease(t *testing.T) {
 	_, holder, hwnd := holdConsoleOfChild(t, consoleTitle)
 	until(t, "the show to be hidden", func() bool { return holder.Hides() >= 1 })
-	if windows.IsWindowVisible(hwnd) {
-		t.Fatal("the console is still visible")
-	}
+	until(t, "the hide to land", func() bool { return !windows.IsWindowVisible(hwnd) })
 	if holder.Held() != 1 {
 		t.Fatalf("held %d", holder.Held())
 	}
@@ -79,9 +77,7 @@ func TestPrismConsoleShowShowsTheWindowAndNothingHidesItAgain(t *testing.T) {
 func TestPrismConsoleCloseReachesAHiddenWindow(t *testing.T) {
 	_, holder, hwnd := holdConsoleOfChild(t, consoleTitle)
 	until(t, "the show to be hidden", func() bool { return holder.Hides() >= 1 })
-	if windows.IsWindowVisible(hwnd) {
-		t.Fatal("hidden first")
-	}
+	until(t, "the hide to land", func() bool { return !windows.IsWindowVisible(hwnd) })
 	if got := holder.Close(); got != 1 {
 		t.Fatalf("posted to %d windows", got)
 	}
@@ -140,12 +136,12 @@ func TestPrismConsoleHoldSweepsAConsoleThatWasAlreadyVisible(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(holder.Release)
-	// The sweep runs on the hook thread right after the hook is in, and counts
-	// its hide after the window is gone from view: waiting on the window alone
-	// can read the count a moment too early.
+	// The sweep runs on the hook thread right after the hook is in and counts
+	// its hide once it is queued; the child takes it a moment later.
 	until(t, "the sweep", func() bool { return holder.Hides() >= 1 })
-	if windows.IsWindowVisible(hwnd) || holder.Held() != 1 {
-		t.Fatalf("visible %v, held %d", windows.IsWindowVisible(hwnd), holder.Held())
+	until(t, "the sweep's hide to land", func() bool { return !windows.IsWindowVisible(hwnd) })
+	if holder.Held() != 1 {
+		t.Fatalf("held %d", holder.Held())
 	}
 }
 
