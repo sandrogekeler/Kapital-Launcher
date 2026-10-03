@@ -16,6 +16,8 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+
+	"kapital/backend/testwindows"
 )
 
 // The real holder, against a real window of a real child process. The test
@@ -281,9 +283,7 @@ func theWindow(t *testing.T, pid int) windows.HWND {
 // holder.
 func holdShownChild(t *testing.T, mode string) (*glfwChild, WindowHolder, windows.HWND) {
 	t.Helper()
-	if testing.Short() {
-		t.Skip("starts a child process with a real window")
-	}
+	testwindows.Require(t, "starts a child process with a real window")
 	child := startGLFWChild(t, mode)
 	child.await(t, "created")
 	pid := child.cmd.Process.Pid
@@ -320,9 +320,7 @@ func holdShownChild(t *testing.T, mode string) (*glfwChild, WindowHolder, window
 // (2026-10-03). The hook thread must have ended when Release returns, and the
 // window ends in view (#132).
 func TestHandoverShowsAWindowWhoseThreadWasBusy(t *testing.T) {
-	if testing.Short() {
-		t.Skip("starts a child process with a real window")
-	}
+	testwindows.Require(t, "starts a child process with a real window")
 	child := startGLFWChild(t, childBusyWindow)
 	child.await(t, "created")
 	pid := child.cmd.Process.Pid
@@ -447,9 +445,7 @@ func TestHandoverLeavesAWindowedWindowAlone(t *testing.T) {
 }
 
 func TestHolderSweepsAWindowThatWasAlreadyVisible(t *testing.T) {
-	if testing.Short() {
-		t.Skip("starts a child process with a real window")
-	}
+	testwindows.Require(t, "starts a child process with a real window")
 	child := startGLFWChild(t, childNowWindow)
 	child.await(t, "created")
 	pid := child.cmd.Process.Pid

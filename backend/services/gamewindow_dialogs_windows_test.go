@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"golang.org/x/sys/windows"
+
+	"kapital/backend/testwindows"
 )
 
 // Prism's dialogs, against a real window of a real child process (the same
@@ -25,9 +27,7 @@ const (
 // dialogs and cues the show.
 func holdDialogsOfChild(t *testing.T, title string) (*glfwChild, DialogHolder, windows.HWND) {
 	t.Helper()
-	if testing.Short() {
-		t.Skip("starts a child process with a real window")
-	}
+	testwindows.Require(t, "starts a child process with a real window")
 	child := startGLFWChild(t, childCueWindow, childTitleEnv+"="+title)
 	child.await(t, "created")
 	hwnd := theWindow(t, child.cmd.Process.Pid)
@@ -56,9 +56,7 @@ func TestPrismDialogHoldHidesAPleaseWaitWindow(t *testing.T) {
 
 // A dialog shown first and titled afterwards is hidden when its title comes.
 func TestPrismDialogHoldHidesADialogTitledAfterItWasShown(t *testing.T) {
-	if testing.Short() {
-		t.Skip("starts a child process with a real window")
-	}
+	testwindows.Require(t, "starts a child process with a real window")
 	child := startGLFWChild(t, childCueWindow, childTitleEnv+"=Untitled", childRetitleEnv+"="+dialogTitle)
 	child.await(t, "created")
 	hwnd := theWindow(t, child.cmd.Process.Pid)
@@ -127,9 +125,7 @@ func TestPrismDialogReleaseOfAFailedRunShowsThemBack(t *testing.T) {
 }
 
 func TestPrismDialogHoldSweepsADialogThatWasAlreadyVisible(t *testing.T) {
-	if testing.Short() {
-		t.Skip("starts a child process with a real window")
-	}
+	testwindows.Require(t, "starts a child process with a real window")
 	child := startGLFWChild(t, childNowWindow, childTitleEnv+"="+dialogTitle)
 	child.await(t, "created")
 	pid := child.cmd.Process.Pid

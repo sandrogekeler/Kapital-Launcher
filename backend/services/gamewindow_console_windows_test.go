@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"golang.org/x/sys/windows"
+
+	"kapital/backend/testwindows"
 )
 
 // Prism's console, against a real window of a real child process (the dialogs'
@@ -21,9 +23,7 @@ const consoleTitle = "Console window for Frangfurd - Prism Launcher 11.1.1"
 // console and cues the show.
 func holdConsoleOfChild(t *testing.T, title string) (*glfwChild, ConsoleHolder, windows.HWND) {
 	t.Helper()
-	if testing.Short() {
-		t.Skip("starts a child process with a real window")
-	}
+	testwindows.Require(t, "starts a child process with a real window")
 	child := startGLFWChild(t, childCueWindow, childTitleEnv+"="+title)
 	child.await(t, "created")
 	hwnd := theWindow(t, child.cmd.Process.Pid)
@@ -103,9 +103,7 @@ func TestPrismConsoleHoldLeavesEveryOtherWindowOfPrismVisible(t *testing.T) {
 }
 
 func TestPrismConsoleMatchIsOfThePidAndTheTitlePrefix(t *testing.T) {
-	if testing.Short() {
-		t.Skip("starts a child process with a real window")
-	}
+	testwindows.Require(t, "starts a child process with a real window")
 	child := startGLFWChild(t, childNowWindow, childTitleEnv+"="+consoleTitle)
 	child.await(t, "created")
 	pid := uint32(child.cmd.Process.Pid)
@@ -122,9 +120,7 @@ func TestPrismConsoleMatchIsOfThePidAndTheTitlePrefix(t *testing.T) {
 }
 
 func TestPrismConsoleHoldSweepsAConsoleThatWasAlreadyVisible(t *testing.T) {
-	if testing.Short() {
-		t.Skip("starts a child process with a real window")
-	}
+	testwindows.Require(t, "starts a child process with a real window")
 	child := startGLFWChild(t, childNowWindow, childTitleEnv+"="+consoleTitle)
 	child.await(t, "created")
 	pid := child.cmd.Process.Pid

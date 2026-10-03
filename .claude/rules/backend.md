@@ -169,3 +169,10 @@ Settings are written with `writeFileAtomic` (temp file, rename) at `0600`.
 Every service ships with tests, table-driven where it fits. The root package
 tests (`app_test.go`) run under `go test ./...` and need `frontend/dist/` to
 exist, which `.gitkeep` guarantees on a fresh clone.
+
+A test that opens a real window (the window holder's child windows, the
+loading card's WebView2 window) starts with `testwindows.Require`: it runs in
+CI, and locally only with `KAPITAL_WINDOW_TESTS=1`, because those windows take
+the foreground while they run (#138). Run them locally after touching
+`gamewindow*.go` or `backend/splashhost`, with the desktop left alone for the
+half minute they take.
