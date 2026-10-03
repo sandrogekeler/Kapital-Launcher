@@ -30,7 +30,7 @@ func (a *App) updatePreLaunch(chapterID, instanceDir string) {
 	if instanceDir == "" {
 		return
 	}
-	if services.InstanceRunning(instanceDir, time.Now()) {
+	if services.InstanceRunning(instanceDir, time.Now(), a.endedAt(chapterID)) {
 		// A game that closed less than a minute ago looks the same; the next
 		// Play catches up.
 		slog.Info("pre-launch command left as it is", "chapter", chapterID, "reason", "the game looks to be running")
@@ -60,9 +60,60 @@ func (a *App) seedLogRules(engine models.EngineInfo) {
 // answers said so. The tracker is exact for a start this app made. The guess
 // (InstanceRunning) is the game log's recent activity, the last line of
 // defence for a game started from Prism itself; it can be wrong either way
-// and is only ever checked fresh, at a write.
+// and is only ever checked fresh, at a write. A log the tracker saw its run
+// end with is not counted, so a game closed from the launcher frees the
+// instance at once rather than a minute later.
 func (a *App) chapterRunning(chapter models.Chapter, instanceDir string) (tracker, guess bool) {
-	return a.games.Active(chapter.ID), services.InstanceRunning(instanceDir, time.Now())
+	return a.games.Active(chapter.ID), services.InstanceRunning(instanceDir, time.Now(), a.endedAt(chapter.ID))
+}
+
+// noteGameEnd records when a run the tracker followed ended, for the guess.
+func (a *App) noteGameEnd(s models.GameState) {
+	switch s.Phase {
+	case models.GamePhaseClosed, models.GamePhaseCrashed, models.GamePhaseFailed:
+	default:
+		return
+	}
+	a.seenMu.Lock()
+	defer a.seenMu.Unlock()
+	if a.ended == nil {
+		a.ended = map[string]time.Time{}
+	}
+	a.ended[s.ChapterID] = time.Now()
+}
+
+// endedAt is when the chapter's last followed run ended, zero when none has
+// in this app run.
+func (a *App) endedAt(chapterID string) time.Time {
+	a.seenMu.Lock()
+	defer a.seenMu.Unlock()
+	return a.ended[chapterID]
+}
+
+// notePackVersion keeps the version a chapter's pack source served, when it
+// was read and names one.
+func (a *App) notePackVersion(state models.PackState) {
+	if !state.Checked || state.Version == "" {
+		return
+	}
+	a.seenMu.Lock()
+	defer a.seenMu.Unlock()
+	if a.packVersions == nil {
+		a.packVersions = map[string]string{}
+	}
+	a.packVersions[state.ChapterID] = state.Version
+}
+
+// withPackVersion is the chapter with the version its pack source served at
+// the last read, which is what Play syncs to, in place of the manifest's. The
+// manifest's stays when the source has not been read.
+func (a *App) withPackVersion(chapter models.Chapter) models.Chapter {
+	a.seenMu.Lock()
+	defer a.seenMu.Unlock()
+	if v, ok := a.packVersions[chapter.ID]; ok {
+		chapter.Pack.Version = &v
+	}
+	return chapter
 }
 
 // refuseIfRunning is the guard of every write to an instance: nil when the

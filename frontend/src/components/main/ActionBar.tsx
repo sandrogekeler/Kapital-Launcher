@@ -11,7 +11,7 @@ import type {
 } from '../../types'
 import { installLabel, isPlaceholderAddress, isPublished, playLabel } from '../../lib/manifest'
 import { installLine } from '../../lib/prismInstall'
-import { updateAvailable } from '../../lib/packState'
+import { packVersion, updateAvailable } from '../../lib/packState'
 import { packHost, packSourceLine } from '../../lib/packSource'
 import { serverLine } from '../../lib/serverLine'
 import { gameLine } from '../../lib/gameLine'
@@ -223,10 +223,8 @@ export function ActionBar({
       tone = 'text-fg-muted'
     }
   } else {
-    ;[state, meta] = [
-      '● Ready',
-      chapter.pack.version ? `Pack ${chapter.pack.version}` : 'Pack version pending',
-    ]
+    const version = packVersion(packState, chapter.pack.version)
+    ;[state, meta] = ['● Ready', version ? `Pack ${version}` : 'Pack version pending']
   }
 
   return (

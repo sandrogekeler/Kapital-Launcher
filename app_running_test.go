@@ -114,3 +114,24 @@ func TestTheTrackerIsNamedWhenBothAnswersSayRunning(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+// A game the tracker saw close frees the instance at once: its log, written
+// as it closed, is not the guess's. A later write still is, a start from
+// Prism itself.
+func TestALogTheTrackerSawEndWithDoesNotRefuse(t *testing.T) {
+	app, cfg := packApp(t, commandLine("https://example.com/pack.toml"), map[string]string{"frangfurd": devPackURL})
+	touchGameLog(t, cfg, 2*time.Second)
+	app.onGameState(models.GameState{ChapterID: "frangfurd", Phase: models.GamePhaseClosed})
+	if _, err := app.SetPackSource("frangfurd", "dev"); err != nil {
+		t.Fatalf("the closed run's log refused the switch: %v", err)
+	}
+	info, err := app.GetChapterSettings("frangfurd")
+	if err != nil || info.Running {
+		t.Fatalf("the panel still hints at a game: %v %+v", err, info)
+	}
+
+	touchGameLog(t, cfg, -10*time.Second)
+	if _, err := app.SetPackSource("frangfurd", "published"); err == nil || err.Error() != guessRefusal {
+		t.Fatalf("a write after the end is a game again: %v", err)
+	}
+}

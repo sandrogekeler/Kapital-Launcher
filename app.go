@@ -61,6 +61,14 @@ type App struct {
 
 	mu     sync.Mutex
 	engine models.EngineInfo
+
+	// seenMu guards what the app has seen of each chapter at run time.
+	// ended is when a run the tracker followed last ended (app_chapters.go);
+	// packVersions is the version each chapter's pack source served at the
+	// last GetPackStates, for the loading card.
+	seenMu       sync.Mutex
+	ended        map[string]time.Time
+	packVersions map[string]string
 }
 
 // NewApp wires the services. The manifest is parsed and validated here so a
@@ -172,7 +180,9 @@ func (a *App) GetPackStates() ([]models.PackState, error) {
 	report := a.prism.Instances(settings, engine, a.manifest.Chapters)
 	states := make([]models.PackState, 0, len(a.manifest.Chapters))
 	for _, chapter := range a.manifest.Chapters {
-		states = append(states, a.creator.PackState(a.context(), chapter, report, settings.PackOverrides[chapter.ID]))
+		state := a.creator.PackState(a.context(), chapter, report, settings.PackOverrides[chapter.ID])
+		a.notePackVersion(state)
+		states = append(states, state)
 	}
 	return states, nil
 }

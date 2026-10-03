@@ -148,7 +148,7 @@ func TestValidateChapterSettingsHoldsToThePresetsAndTheMachine(t *testing.T) {
 func TestInstanceRunningFollowsTheGameLog(t *testing.T) {
 	dir := t.TempDir()
 	now := time.Now()
-	if InstanceRunning(dir, now) {
+	if InstanceRunning(dir, now, time.Time{}) {
 		t.Fatal("no log, not running")
 	}
 	log := filepath.Join(dir, "minecraft", "logs", "latest.log")
@@ -158,11 +158,41 @@ func TestInstanceRunningFollowsTheGameLog(t *testing.T) {
 	if err := os.WriteFile(log, []byte("x"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if !InstanceRunning(dir, now) {
+	if !InstanceRunning(dir, now, time.Time{}) {
 		t.Fatal("a log written just now means running")
 	}
-	if InstanceRunning(dir, now.Add(2*time.Minute)) {
+	if InstanceRunning(dir, now.Add(2*time.Minute), time.Time{}) {
 		t.Fatal("a log two minutes old means stopped")
+	}
+}
+
+// A log the app saw its last run end with is that run closing, not a game;
+// a write after the end and its slack is a start from Prism itself.
+func TestInstanceRunningSetsAsideTheLogOfARunThatEnded(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "minecraft", "logs", "latest.log")
+	if err := os.MkdirAll(filepath.Dir(log), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(log, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	written := now.Add(-10 * time.Second)
+	if err := os.Chtimes(log, written, written); err != nil {
+		t.Fatal(err)
+	}
+	if !InstanceRunning(dir, now, time.Time{}) {
+		t.Fatal("with no run seen to end, a fresh log means running")
+	}
+	if InstanceRunning(dir, now, written) {
+		t.Fatal("the log of the run that ended is not running")
+	}
+	if InstanceRunning(dir, now, written.Add(-endedLogSlack+time.Second)) {
+		t.Fatal("a last write within the slack after the end is still that run's")
+	}
+	if !InstanceRunning(dir, now, written.Add(-endedLogSlack-time.Second)) {
+		t.Fatal("a write after the end and its slack is a new game")
 	}
 }
 

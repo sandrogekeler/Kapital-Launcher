@@ -187,6 +187,21 @@ describe('ActionBar game line', () => {
     ).toHaveClass('grow')
   })
 
+  it('names the version the pack source serves on the ready line, not the manifest one', () => {
+    const lux = BUNDLED_MANIFEST.chapters.find((c) => !c.server)!
+    bar({
+      chapter: lux,
+      packState: {
+        chapterId: lux.id,
+        installed: true,
+        checked: true,
+        upToDate: true,
+        version: '7.1.0',
+      },
+    })
+    expect(screen.getByText('Pack 7.1.0')).toBeInTheDocument()
+  })
+
   it('shows the usual line once the game has closed', () => {
     bar({ game: game('closed') })
     expect(screen.queryByText(/The game/)).toBeNull()
