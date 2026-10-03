@@ -19,7 +19,7 @@ const TONE = {
 
 /**
  * The launcher's notices, stacked in the bottom-right corner over the chapter
- * card, so an error never moves what is on the screen: a launch, install or
+ * card and inset from its edge, so an error never moves what is on the screen: a launch, install or
  * stop the backend refused, and a run that crashed or never started, with
  * Details to its report. The notices are derived from the stores
  * (`lib/toasts.ts`), so one leaves when its cause does, and the cross puts
@@ -43,23 +43,25 @@ export function Toasts({ onOpenReport }: Props) {
     <div
       role="status"
       aria-live="polite"
-      className="pointer-events-none fixed right-5 bottom-8 z-10 flex w-80 flex-col gap-2"
+      className="pointer-events-none fixed right-10 bottom-12 z-10 flex w-88 flex-col gap-3"
     >
       {toasts.map((t) => (
         <div
           key={t.id}
           data-toast={t.id}
-          className="bg-raised-2 border-line-strong pointer-events-auto flex items-start gap-3 rounded-md border py-3 pr-2 pl-4"
+          className="bg-raised-2 border-line-strong pointer-events-auto flex items-start gap-3 rounded-lg border py-4 pr-3 pl-4"
         >
-          <Icon icon={TriangleAlert} size="sm" className={`mt-0.5 ${TONE[t.tone]}`} />
-          <div className="flex min-w-0 grow flex-col gap-0.5">
-            <span className={`font-mono text-xs ${TONE[t.tone]}`}>{t.title}</span>
-            <span className="text-fg-muted text-xs break-words select-text">{t.detail}</span>
+          <Icon icon={TriangleAlert} className={`mt-px ${TONE[t.tone]}`} />
+          <div className="flex min-w-0 grow flex-col gap-1.5 pt-px">
+            <span className={`font-mono text-sm leading-tight ${TONE[t.tone]}`}>{t.title}</span>
+            <span className="text-fg-soft text-sm leading-snug break-words select-text">
+              {t.detail}
+            </span>
             {t.reportFor && (
               <button
                 type="button"
                 onClick={() => onOpenReport(t.reportFor!)}
-                className="text-fg hover:text-accent duration-fast ease-standard mt-1 cursor-pointer self-start text-xs font-semibold transition-colors"
+                className="text-fg hover:text-accent duration-fast ease-standard mt-1 cursor-pointer self-start text-sm font-semibold transition-colors"
               >
                 Details
               </button>
