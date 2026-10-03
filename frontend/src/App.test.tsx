@@ -27,6 +27,16 @@ function withFrangfurdHosted() {
   }
 }
 
+/** The bundled manifest with Luxemburg's pack not hosted, as before 1.5.0. */
+function withLuxemburgUnhosted() {
+  return {
+    ...BUNDLED_MANIFEST,
+    chapters: BUNDLED_MANIFEST.chapters.map((c) =>
+      c.id === 'luxemburg' ? { ...c, pack: { ...c.pack, packwiz: null } } : c,
+    ),
+  }
+}
+
 const prismFound = {
   found: true,
   executable: 'C:/Prism/prismlauncher.exe',
@@ -211,6 +221,9 @@ describe('App', () => {
   })
 
   it('shows Install, disabled, for a chapter whose pack is not hosted, and looks again on focus', async () => {
+    const manifest = withLuxemburgUnhosted()
+    useChapterStore.setState({ manifest, selectedId: 'luxemburg' })
+    vi.mocked(Bindings.GetManifest).mockResolvedValue(models.Manifest.createFrom(manifest))
     vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
     vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ luxemburg: false }))
     render(<App />)
