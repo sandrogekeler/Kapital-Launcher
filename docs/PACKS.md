@@ -116,13 +116,14 @@ There is no mechanism that pushes an update to a player's machine. The author
 pushes to the repository, the host republishes, and each player's next Play
 picks the difference up. A player who does not press Play does not update.
 
-The launcher's "Update available" line is a preview of that: when the app
-starts and whenever it regains focus, it downloads the published `pack.toml`
-and compares its checksum with the one packwiz-installer recorded at the last
-sync. A difference means the next Play will sync something, and the line
-shows the published pack version. There is nothing to click; the line says
-"it syncs before the game starts". The same check feeds the Version row in the
-chapter's settings.
+The launcher does not offer an update. Every Play syncs the pack before the
+game, so Play always reads Play, and the bar's pack line (for a chapter
+without a server) reads "● Updated" over "Version X", where X is the
+published pack version, the one the next Play syncs to. When the app starts
+and whenever it regains focus, it downloads the published `pack.toml` and
+compares its checksum with the one packwiz-installer recorded at the last
+sync; the Version row in the chapter's settings uses that check to say
+"older than X" when the installed pack is behind. There is nothing to click.
 
 ## The dev pack
 

@@ -10,7 +10,7 @@ import type {
 } from '../../types'
 import { installLabel, isPlaceholderAddress, isPublished, playLabel } from '../../lib/manifest'
 import { installLine } from '../../lib/prismInstall'
-import { packVersion, updateAvailable } from '../../lib/packState'
+import { packVersion } from '../../lib/packState'
 import { packHost, packSourceLine } from '../../lib/packSource'
 import { serverLine } from '../../lib/serverLine'
 import { gameLine } from '../../lib/gameLine'
@@ -84,10 +84,10 @@ const CONFIRM_MS = 5000
  * A developer's local pack (#41) makes Install available without a hosted
  * one, and an instance syncing from anything but the manifest's pack says so.
  *
- * When the installed pack is behind its source (#71), Play reads "Update and
- * play": Prism has no command that syncs without launching, and packwiz
- * syncs in the pre-launch step before the game starts, so the launch is the
- * update.
+ * Every Play syncs the pack before the game starts (packwiz does it in Prism's
+ * pre-launch step, #71), so there is no update step: Play always reads Play,
+ * and a chapter without a server names the pack version the next Play syncs
+ * to, the same whether the installed pack is in step or behind its source.
  *
  * While the chapter's game is starting, running or closing (#44) its own line
  * sits beside Play, right after the hand-over to Prism, and Play and Install
@@ -132,7 +132,6 @@ export function ActionBar({
   const missing = engine !== null && !engine.found
   const working = install !== null && WORKING.includes(install.phase)
   const needsInstall = installed === false
-  const behind = updateAvailable(packState)
   const published = isPublished(chapter) || devPack !== undefined
   const source = installed ? packSourceLine(instancePack, chapter.pack.packwiz) : null
   const playing = isActive(game?.phase)
@@ -191,14 +190,6 @@ export function ActionBar({
     ]
   } else if (installedNow) {
     ;[state, meta] = ['● Installed', 'The first Play downloads the pack']
-  } else if (behind) {
-    ;[state, meta, tone] = [
-      '● Update available',
-      packState?.version
-        ? `Pack ${packState.version}; it syncs before the game starts`
-        : 'It syncs before the game starts',
-      'text-warning',
-    ]
   } else if (source) {
     ;[state, meta, tone] = [...source, 'text-warning']
   } else if (chapter.server) {
@@ -208,7 +199,7 @@ export function ActionBar({
     }
   } else {
     const version = packVersion(packState, chapter.pack.version)
-    ;[state, meta] = ['● Ready', version ? `Pack ${version}` : 'Pack version pending']
+    ;[state, meta] = ['● Updated', version ? `Version ${version}` : 'Version pending']
   }
 
   return (
@@ -230,12 +221,8 @@ export function ActionBar({
           </Button>
         ) : (
           <Button variant="play" onClick={onPlay} disabled={installing || missing || working}>
-            {behind ? (
-              <Icon icon={RefreshCw} size="sm" />
-            ) : (
-              <Icon icon={Play} size="sm" className="fill-current" />
-            )}
-            <span>{behind ? 'Update and play' : playLabel(chapter)}</span>
+            <Icon icon={Play} size="sm" className="fill-current" />
+            <span>{playLabel(chapter)}</span>
           </Button>
         )}
         {missing && (
