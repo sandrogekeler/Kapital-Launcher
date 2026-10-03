@@ -23,7 +23,7 @@ interface ChapterStore {
   loaded: boolean
   /** The wiki's pages, empty until loaded or when they could not be read. */
   wikiPages: WikiPage[]
-  /** The page picked for each chapter, by chapter id; re-picked on every switch. */
+  /** The page picked for each chapter, by chapter id; re-picked on every switch to it. */
   wikiPick: Record<string, WikiPage | undefined>
   load: () => Promise<void>
   loadWikiPages: () => Promise<void>
@@ -66,6 +66,8 @@ export const useChapterStore = create<ChapterStore>((set, get) => ({
   },
 
   select: (id) => {
+    // Clicking the open chapter is not a switch: its page stays (#140).
+    if (id === get().selectedId) return
     const chapter = chapterById(get().manifest, id)
     if (!chapter) return
     const { wikiPages, wikiPick } = get()
