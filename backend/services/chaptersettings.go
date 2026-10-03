@@ -37,6 +37,11 @@ const (
 	// instance to count as running. It is the fallback for a game the launcher
 	// did not start; one it did is followed by the GameTracker (#44).
 	runningWindow = time.Minute
+	// endedLogSlack is how long after a run this app saw end its game log may
+	// still change and be that run's own close: on Windows a file's last write
+	// time can land when the game's handles close, after the tracker saw the
+	// process go.
+	endedLogSlack = 5 * time.Second
 	// maxMemoryMB caps a value the panel sends, whatever the machine reports.
 	maxMemoryMB = 1 << 20
 )
@@ -270,12 +275,21 @@ func scanINIKeys(r io.Reader, want ...string) (map[string]string, error) {
 // checks this only at a write. Prism keeps the
 // game folder as "minecraft" or, in older instances, ".minecraft". A missing
 // log is not running.
-func InstanceRunning(instanceDir string, now time.Time) bool {
+//
+// ended is when this app saw the instance's last run end, zero when it saw
+// none. A log last written by then, give or take endedLogSlack, is that run
+// closing and says nothing of a game; only a later write does, from a start
+// outside the launcher.
+func InstanceRunning(instanceDir string, now, ended time.Time) bool {
 	for _, game := range []string{"minecraft", ".minecraft"} {
 		info, err := os.Stat(filepath.Join(instanceDir, game, "logs", "latest.log"))
-		if err == nil && now.Sub(info.ModTime()) < runningWindow {
-			return true
+		if err != nil || now.Sub(info.ModTime()) >= runningWindow {
+			continue
 		}
+		if !ended.IsZero() && !info.ModTime().After(ended.Add(endedLogSlack)) {
+			continue
+		}
+		return true
 	}
 	return false
 }

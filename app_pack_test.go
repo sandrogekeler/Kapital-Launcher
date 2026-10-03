@@ -197,3 +197,31 @@ func TestSetPackSourceIsRefusedWhileAGameStartedFromPrismLooksToBeRunning(t *tes
 		t.Fatalf("the file changed:\n%q", readFile(t, cfg))
 	}
 }
+
+// The loading card names the version the pack source served at the last
+// read, not the one built into the manifest, and an unread source leaves the
+// manifest's.
+func TestTheCardsPackVersionIsTheSourcesLastRead(t *testing.T) {
+	app := newTestApp(t)
+	chapter, ok := app.chapter("frangfurd")
+	if !ok {
+		t.Fatal("no frangfurd")
+	}
+	manifest := ""
+	if chapter.Pack.Version != nil {
+		manifest = *chapter.Pack.Version
+	}
+
+	app.notePackVersion(models.PackState{ChapterID: "frangfurd", Installed: true, Checked: false, Version: "9.9.9"})
+	if got := app.withPackVersion(chapter).Pack.Version; manifest != "" && (got == nil || *got != manifest) {
+		t.Fatalf("an unread source replaced the manifest's version: %v", got)
+	}
+
+	app.notePackVersion(models.PackState{ChapterID: "frangfurd", Installed: true, Checked: true, Version: "1.0.7"})
+	if got := app.withPackVersion(chapter).Pack.Version; got == nil || *got != "1.0.7" {
+		t.Fatalf("got %v", got)
+	}
+	if again, _ := app.chapter("frangfurd"); again.Pack.Version != chapter.Pack.Version {
+		t.Fatal("the manifest itself was changed")
+	}
+}

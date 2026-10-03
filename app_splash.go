@@ -47,11 +47,12 @@ func (a *App) beginSplash(chapter models.Chapter, settings models.AppSettings) b
 	if a.ctx == nil || !services.LoadingSplashOn(runtime.GOOS, settings) {
 		return false
 	}
-	return a.splash.Begin(chapter, services.CardTheme(settings.Theme))
+	return a.splash.Begin(a.withPackVersion(chapter), services.CardTheme(settings.Theme))
 }
 
 // onGameState is the tracker's emit: the event, with the splash flag on it.
 func (a *App) onGameState(s models.GameState) {
+	a.noteGameEnd(s)
 	s.Splash = a.splash.Observe(s)
 	a.emitGameState(s)
 }

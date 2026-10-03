@@ -105,8 +105,9 @@ type State struct {
 type StateChapter struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
-	// PackVersion is the manifest's, "" or "[PLACEHOLDER]" when unsettled,
-	// which the page does not show.
+	// PackVersion is the pack source's at its last read, else the
+	// manifest's: "" or "[PLACEHOLDER]" when unsettled, which the page does
+	// not show.
 	PackVersion string `json:"packVersion,omitempty"`
 }
 

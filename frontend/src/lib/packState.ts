@@ -11,6 +11,15 @@ export const updateAvailable = (state: PackState | undefined): boolean =>
   state !== undefined && state.installed && state.checked && !state.upToDate
 
 /**
+ * The pack version to name beside Play: the one the pack source serves, which
+ * the next Play syncs to, else the manifest's when the source is unread.
+ */
+export const packVersion = (
+  state: PackState | undefined,
+  manifest: string | null | undefined,
+): string | null => (state?.checked && state.version ? state.version : (manifest ?? null))
+
+/**
  * The Version row: the version when the installed pack is the source's,
  * "older than X" when it is behind, the placeholder when nothing is known.
  */
