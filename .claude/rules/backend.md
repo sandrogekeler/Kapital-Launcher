@@ -48,7 +48,9 @@ goroutine that ends only the two processes the run found itself, the launcher's
 Prism and the game's Java, by pid and never by name: the Java is ended, else
 Prism is asked to close (`WM_CLOSE` to its own windows on Windows, `SIGTERM` on
 macOS) and ended if it is still there five run-steps later, and the run ends
-`crashed` or `failed` with the reason `stopped` (S3.9). On macOS it holds one OS activity per run
+`crashed` or `failed` with the reason `stopped` (S3.9). A Prism that outlives a
+stopped game is closed the same way as the run ends (`closePrismAfterStop`,
+#133); a game that crashed by itself keeps its Prism for Show console. On macOS it holds one OS activity per run
 (`activity_darwin.go`: `NSProcessInfo`'s `beginActivity`, from `begin` to the
 end of `loop`) so App Nap does not coalesce its waits while the launcher is
 minimised; it reads nothing.

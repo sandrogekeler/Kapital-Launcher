@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -194,6 +195,55 @@ func (r *gameRun) escalateStop(now time.Time) {
 		return
 	}
 	slog.Info("stop: ended", "chapter", r.req.ChapterID, "target", target, "pid", pid)
+}
+
+// closePrismAfterStop is the end of a run the player stopped, with the
+// launcher's Prism still running: the game has gone, and Prism, which saw it
+// end as a crash, would wait on its console (hidden by the console hold) until
+// the next Play or the launcher's quit (#133). There is no error to keep after
+// a stop, so it is closed now, on a goroutine of its own that the tracker's
+// runs count. The launcher quitting (the run's context) ends the wait: its
+// Shutdown closes a Prism left on a console.
+func (r *gameRun) closePrismAfterStop() {
+	if !r.stop.asked || !r.prismAlive() {
+		return
+	}
+	r.t.runs.Add(1)
+	go func() {
+		defer r.t.runs.Done()
+		r.t.closeStoppedPrism(r.ctx, r.req.ChapterID, r.req.Prism.PID, r.req.Prism.Exited)
+	}()
+}
+
+// closeStoppedPrism gives Prism consoleGrace to see its game go and open its
+// console, then asks it to close (the held console first, then the OS routine,
+// as Stop does) and ends it if it is still there stopForce later, or at once
+// when nothing took the request.
+func (t *GameTracker) closeStoppedPrism(ctx context.Context, chapterID string, pid int, exited <-chan struct{}) {
+	select {
+	case <-exited:
+		return
+	case <-ctx.Done():
+		return
+	case <-time.After(t.consoleGrace):
+	}
+	if err := t.askPrismClose(chapterID, pid); err != nil {
+		slog.Info("stop: prism took no close request, ending it", "chapter", chapterID, "pid", pid, "error", err)
+	} else {
+		slog.Info("stop: prism asked to close after the game", "chapter", chapterID, "pid", pid)
+		select {
+		case <-exited:
+			return
+		case <-ctx.Done():
+			return
+		case <-time.After(t.stopForce):
+		}
+	}
+	if err := t.os.terminate(pid, true); err != nil {
+		slog.Warn("stop: end the process", "chapter", chapterID, "target", "prism", "pid", pid, "error", err)
+		return
+	}
+	slog.Info("stop: ended", "chapter", chapterID, "target", "prism", "pid", pid)
 }
 
 // prismAlive is whether the Prism the launcher started is still running, by
