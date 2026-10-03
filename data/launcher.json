@@ -84,10 +84,10 @@
         "type": "modpack",
         "loader": "NeoForge",
         "minecraft": "1.21.1",
-        "mods": 96,
+        "mods": 92,
         "memoryGb": 8,
         "jvm": "zgc",
-        "version": "1.0.0",
+        "version": "1.0.1",
         "packwiz": "https://kapital-packs.alessandrogekeler.workers.dev/frangfurd/pack.toml",
         "mrpack": null
       },
