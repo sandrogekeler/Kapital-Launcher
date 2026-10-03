@@ -9,8 +9,8 @@ Two reaches matter: **network** (a manifest, a pack index, a download, a server
 ping response) and **bridge** (a bound method on `App`, callable by anything
 that runs in the WebView).
 
-Bound methods on 2026-09-30: **21** (`grep -c '^func (a \*App) [A-Z]' app.go`).
-A different count is new surface to classify: add the method to this table.
+Bound methods on 2026-10-03: **34** (`grep -c '^func (a \*App) [A-Z]' app.go app_*.go`,
+summed). A different count is new surface to classify: add the method to this table.
 
 | Method | Takes from the bridge | Reaches | Item |
 |---|---|---|---|
@@ -34,6 +34,8 @@ A different count is new surface to classify: add the method to this table.
 | `OpenWikiPage` | a URL | the system browser, only for a URL `GetWikiPages` returned | S3.3 |
 | `GetChapterSettings` | a chapter id | four keys of the chapter's own `instance.cfg` | S1.1, S3.3 |
 | `SaveChapterSettings` | a chapter id and a `ChapterSettings` | five keys rewritten in the chapter's own `instance.cfg`, held to the preset list and the machine's memory | S3.2, S3.3, S4.6 |
+| `GetPreviewSituations` | nothing | the fixed list of developer previews, in memory | none |
+| `StartPreview`, `ClearPreviews` | a chapter id and a situation name, which must be one of the fixed list (`services.PreviewSituations`) | state and copy only: a synthetic `game:state`, the real loading card with a made-up report, synthetic pack, instance, engine and release answers, and a made-up Prism install that never reaches the installer. No file, process, URL or network request; a real launch, game event or write to the chapter ends the preview | S3.3, S3.8, S4.5 |
 
 ## S1. Credentials
 
@@ -137,8 +139,13 @@ Probe: `--dir` as an instance id; a newline in a profile name.
 **S3.3 Bridge-supplied ids resolve through the manifest.**
 Holds when: `LaunchChapter`, `OpenChapterWiki` and `GetServerStatus` look the
 chapter id up and use the manifest's instance id, address and path, never the
-caller's.
-Verify: read `app.go`.
+caller's. `StartPreview` (#124) does the same and takes its situation from a
+fixed list, so nothing the caller sends reaches a file, a process or a URL; a
+preview never writes, which `refuseUnderPreview` holds for install, pack source
+and chapter settings.
+Verify: read `app.go`; `TestStartPreviewRefusesWhatIsNotInTheManifestOrTheList`,
+`TestWritesToAPreviewedChapterAreRefusedAndEndThePreview`,
+`TestInstallPrismUnderAPreviewPlaysAFailureAndNeverInstalls`.
 
 **S3.4 Only web URLs reach the system browser.**
 Holds when: `OpenExternal` runs `services.ExternalURL` first (http, https, host

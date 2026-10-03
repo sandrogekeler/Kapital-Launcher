@@ -143,7 +143,9 @@ func (a *App) chapterInstance(chapterID string) (models.Chapter, string, error) 
 	if !ok {
 		return models.Chapter{}, "", fmt.Errorf("no chapter %q", chapterID)
 	}
-	report, err := a.GetInstances()
+	// The disk's own report, not a preview's (#124): a preview never decides
+	// which folder is written.
+	report, err := a.realInstances()
 	if err != nil {
 		return models.Chapter{}, "", err
 	}

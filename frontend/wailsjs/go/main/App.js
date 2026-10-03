@@ -10,6 +10,10 @@ export function ChoosePrismRoot() {
   return window['go']['main']['App']['ChoosePrismRoot']();
 }
 
+export function ClearPreviews() {
+  return window['go']['main']['App']['ClearPreviews']();
+}
+
 export function CopyRedactedLog() {
   return window['go']['main']['App']['CopyRedactedLog']();
 }
@@ -40,6 +44,10 @@ export function GetManifest() {
 
 export function GetPackStates() {
   return window['go']['main']['App']['GetPackStates']();
+}
+
+export function GetPreviewSituations() {
+  return window['go']['main']['App']['GetPreviewSituations']();
 }
 
 export function GetPrismRelease() {
@@ -120,6 +128,10 @@ export function SetPackSource(arg1, arg2) {
 
 export function ShowPrismConsole(arg1) {
   return window['go']['main']['App']['ShowPrismConsole'](arg1);
+}
+
+export function StartPreview(arg1, arg2) {
+  return window['go']['main']['App']['StartPreview'](arg1, arg2);
 }
 
 export function StopGame(arg1) {

@@ -36,7 +36,8 @@ func (a *App) newSplashCard(dist fs.FS, newHost func() splashhost.Host) *service
 			OpenFolder: a.OpenInstanceFolder, CopyLog: a.CopyRedactedLog, ShowConsole: a.ShowPrismConsole,
 		},
 		// The tracker is made after the card, so it is looked up when needed.
-		Report:  func(id string) (models.RunReport, error) { return a.games.Report(id) },
+		// A previewed run's report is a made-up one (#124).
+		Report:  a.runReport,
 		Changed: a.splashChanged,
 	})
 }
@@ -52,6 +53,9 @@ func (a *App) beginSplash(chapter models.Chapter, settings models.AppSettings) b
 
 // onGameState is the tracker's emit: the event, with the splash flag on it.
 func (a *App) onGameState(s models.GameState) {
+	// A real event wins over a preview of its chapter (#124): the preview
+	// ends before the card and the view hear of the run.
+	a.previews.ClearChapter(s.ChapterID)
 	a.noteGameEnd(s)
 	s.Splash = a.splash.Observe(s)
 	a.emitGameState(s)
@@ -70,9 +74,7 @@ func (a *App) emitGameState(s models.GameState) {
 // splashChanged tells the view a chapter's card has gone without a game event:
 // its latest state, with the splash flag as it is now.
 func (a *App) splashChanged(chapterID string) {
-	s := a.games.Latest(chapterID)
-	s.Splash = a.splash.Showing(chapterID)
-	a.emitGameState(s)
+	a.emitGameState(a.latestGame(chapterID))
 }
 
 // windowCalls are the Wails runtime's window calls launcherWindow makes. They

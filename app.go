@@ -48,8 +48,14 @@ type App struct {
 	// openFolder shows a folder in the file manager; a test swaps it.
 	openFolder func(string) error
 	// emit, when set, takes the game:state events in place of the window; a
-	// test sets it.
-	emit func(models.GameState)
+	// test sets it. emitInstall does the same for prism:install.
+	emit        func(models.GameState)
+	emitInstall func(models.PrismInstallProgress)
+
+	// previews are the developer previews that are on (#124, app_preview.go),
+	// and previewStep the pause between the steps of a made-up Prism install.
+	previews    services.PreviewSet
+	previewStep time.Duration
 
 	// What CopyRedactedLog needs: where the log is, who to mask, and the
 	// clipboard. The clipboard is a field so a test needs no window.
@@ -105,6 +111,7 @@ func NewApp(dataDir string, manifest []byte, dist fs.FS) (*App, error) {
 		wiki:           services.NewWikiService(dataDir, m.Wiki.BaseURL),
 		openFolder:     services.OpenFolder,
 		frontendErrors: services.NewFrontendErrorLog(),
+		previewStep:    previewInstallStep,
 	}
 	a.splash = a.newSplashCard(dist, splashhost.New)
 	// Each phase change of a launched game is an event the frontend listens
@@ -127,16 +134,35 @@ func (a *App) GetManifest() (models.Manifest, error) {
 }
 
 // GetEngine returns what is known about the Prism install, from the last
-// detection. RefreshEngine re-runs detection.
+// detection. RefreshEngine re-runs detection. Under a Prism preview (#124) it
+// answers with the synthetic engine; the app's own work reads realEngine.
 func (a *App) GetEngine() (models.EngineInfo, error) {
+	if info, ok := a.previewEngine(); ok {
+		return info, nil
+	}
+	return a.realEngine(), nil
+}
+
+// realEngine is the Prism the last detection found, which every action of the
+// app uses whatever a preview shows the view.
+func (a *App) realEngine() models.EngineInfo {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	return a.engine, nil
+	return a.engine
 }
 
 // RefreshEngine re-detects Prism with the current settings and returns the
-// result. Called on startup and after the settings change.
+// result. Called on startup and after the settings change. Under a Prism
+// preview it runs nothing and answers with the synthetic engine.
 func (a *App) RefreshEngine() (models.EngineInfo, error) {
+	if info, ok := a.previewEngine(); ok {
+		return info, nil
+	}
+	return a.detectEngine()
+}
+
+// detectEngine is the detection itself, and keeps the result.
+func (a *App) detectEngine() (models.EngineInfo, error) {
 	settings, err := a.settings.Load()
 	if err != nil {
 		return models.EngineInfo{}, err
@@ -152,35 +178,44 @@ func (a *App) RefreshEngine() (models.EngineInfo, error) {
 // GetInstances reports which chapters' Prism instances exist, read fresh from
 // disk under the resolved Prism root. It stats one file per chapter and reads
 // one key from Prism's config; see services/instances.go for exactly what.
+// A chapter under a preview that fakes its instance (#124) is reported as the
+// preview says.
 func (a *App) GetInstances() (models.InstanceReport, error) {
+	report, err := a.realInstances()
+	if err != nil {
+		return report, err
+	}
+	return a.previewInstances(report), nil
+}
+
+// realInstances is the read of the disk itself, which every action that
+// resolves an instance folder uses whatever a preview shows the view.
+func (a *App) realInstances() (models.InstanceReport, error) {
 	settings, err := a.settings.Load()
 	if err != nil {
 		return models.InstanceReport{}, err
 	}
-	engine, err := a.GetEngine()
-	if err != nil {
-		return models.InstanceReport{}, err
-	}
-	return a.prism.Instances(settings, engine, a.manifest.Chapters), nil
+	return a.prism.Instances(settings, a.realEngine(), a.manifest.Chapters), nil
 }
 
 // GetPackStates says, per chapter, whether the installed pack is the one its
 // source serves now (#71): the source's pack.toml is fetched (the manifest's
 // URL rules or the loopback rule, bounded) and its hash compared with the one
 // packwiz-installer recorded at the last sync. Called when the instances are
-// read, never on a timer.
+// read, never on a timer. A chapter under a preview that fakes its pack (#124)
+// is answered by the preview, and its source is not fetched.
 func (a *App) GetPackStates() ([]models.PackState, error) {
 	settings, err := a.settings.Load()
 	if err != nil {
 		return nil, err
 	}
-	engine, err := a.GetEngine()
-	if err != nil {
-		return nil, err
-	}
-	report := a.prism.Instances(settings, engine, a.manifest.Chapters)
+	report := a.prism.Instances(settings, a.realEngine(), a.manifest.Chapters)
 	states := make([]models.PackState, 0, len(a.manifest.Chapters))
 	for _, chapter := range a.manifest.Chapters {
+		if state, ok := a.previewPackState(chapter.ID); ok {
+			states = append(states, state)
+			continue
+		}
 		state := a.creator.PackState(a.context(), chapter, report, settings.PackOverrides[chapter.ID])
 		a.notePackVersion(state)
 		states = append(states, state)
@@ -198,10 +233,10 @@ func (a *App) InstallChapter(chapterID string) (models.InstanceReport, error) {
 	if !ok {
 		return models.InstanceReport{}, fmt.Errorf("no chapter %q", chapterID)
 	}
-	engine, err := a.GetEngine()
-	if err != nil {
+	if err := a.refuseUnderPreview(chapter); err != nil {
 		return models.InstanceReport{}, err
 	}
+	engine := a.realEngine()
 	if a.games.Active(chapterID) {
 		return models.InstanceReport{}, fmt.Errorf("%s is starting or running; close the game first", chapter.Name)
 	}
@@ -228,12 +263,16 @@ func (a *App) InstallChapter(chapterID string) (models.InstanceReport, error) {
 // download, and whether the launcher-managed copy has an update. Nothing is
 // downloaded; the approval card shows this before InstallPrism is called.
 func (a *App) GetPrismRelease() (models.PrismRelease, error) {
+	// Under a Prism preview (#124) the release is a made-up one: no request.
+	if rel, ok := a.previewRelease(); ok {
+		return rel, nil
+	}
 	rel, err := a.managed.Latest(a.context())
 	if err != nil {
 		return rel, err
 	}
 	// An update is only worth offering for the Prism the launcher runs.
-	if engine, err := a.GetEngine(); err != nil || engine.Source != "managed" {
+	if a.realEngine().Source != "managed" {
 		rel.UpdateAvailable = false
 	}
 	return rel, nil
@@ -245,22 +284,33 @@ func (a *App) GetPrismRelease() (models.PrismRelease, error) {
 // what Prism published. Progress arrives as prism:install events; detection
 // re-runs once it is in place.
 func (a *App) InstallPrism() error {
-	emit := func(p models.PrismInstallProgress) {
-		if a.ctx != nil {
-			wailsrt.EventsEmit(a.ctx, services.EventPrismInstall, p)
-		}
+	// Under a Prism preview (#124) the install is a made-up one that fails: it
+	// never reaches the installer, so nothing is downloaded or unpacked.
+	if a.previews.Prism() != "" {
+		return a.playPreviewInstall()
 	}
 	rel, err := a.managed.Latest(a.context())
 	if err != nil {
-		emit(models.PrismInstallProgress{Phase: "failed", Error: err.Error()})
+		a.emitPrismInstall(models.PrismInstallProgress{Phase: "failed", Error: err.Error()})
 		return err
 	}
-	if err := a.managed.Install(a.context(), rel, emit); err != nil {
+	if err := a.managed.Install(a.context(), rel, a.emitPrismInstall); err != nil {
 		slog.Error("install prism", "version", rel.Version, "error", err)
 		return err
 	}
-	_, err = a.RefreshEngine()
+	_, err = a.detectEngine()
 	return err
+}
+
+// emitPrismInstall is one prism:install event.
+func (a *App) emitPrismInstall(p models.PrismInstallProgress) {
+	if a.emitInstall != nil {
+		a.emitInstall(p)
+		return
+	}
+	if a.ctx != nil {
+		wailsrt.EventsEmit(a.ctx, services.EventPrismInstall, p)
+	}
 }
 
 // LaunchChapter starts the chapter's Prism instance, joining its server when
@@ -276,6 +326,8 @@ func (a *App) LaunchChapter(chapterID string) error {
 	if a.games.Active(chapterID) {
 		return fmt.Errorf("%s is already starting or running", chapter.Name)
 	}
+	// A preview of the chapter ends here: the real run's events replace it.
+	a.endChapterPreview(chapter.ID)
 	// A Prism still up on the last start's hidden console is closed first, or
 	// the new Prism would hand this launch to it (ADR-0012, amendment).
 	a.games.CloseConsole(chapter.ID)
@@ -283,10 +335,7 @@ func (a *App) LaunchChapter(chapterID string) error {
 	if err != nil {
 		return err
 	}
-	engine, err := a.GetEngine()
-	if err != nil {
-		return err
-	}
+	engine := a.realEngine()
 	req := models.LaunchRequest{
 		InstanceID: chapter.Instance.ID,
 		Profile:    settings.ProfileName,
@@ -369,6 +418,11 @@ func (a *App) StopGame(chapterID string) (models.GameState, error) {
 	if !ok {
 		return models.GameState{}, fmt.Errorf("no chapter %q", chapterID)
 	}
+	// Stop on a previewed run (#124) ends the preview, in a stopped state
+	// of its own, and never reaches the tracker or a process.
+	if s, ok := a.stopPreview(chapter); ok {
+		return s, nil
+	}
 	if err := a.games.Stop(chapter.ID); err != nil {
 		slog.Info("stop game", "chapter", chapter.ID, "error", err)
 		if errors.Is(err, services.ErrNoGameToStop) {
@@ -388,9 +442,7 @@ func (a *App) StopGame(chapterID string) (models.GameState, error) {
 func (a *App) GetGameStates() ([]models.GameState, error) {
 	states := make([]models.GameState, 0, len(a.manifest.Chapters))
 	for _, c := range a.manifest.Chapters {
-		s := a.games.Latest(c.ID)
-		s.Splash = a.splash.Showing(c.ID)
-		states = append(states, s)
+		states = append(states, a.latestGame(c.ID))
 	}
 	return states, nil
 }
@@ -442,7 +494,7 @@ func (a *App) SaveSettings(settings models.AppSettings) error {
 	if !services.AffectsDetection(before, settings) {
 		return nil
 	}
-	_, err = a.RefreshEngine()
+	_, err = a.detectEngine()
 	return err
 }
 
@@ -546,6 +598,11 @@ func (a *App) GetChapterSettings(chapterID string) (models.ChapterSettingsInfo, 
 // running instance is refused rather than raced with the game, on the
 // tracker's word or on the game log's (refuseIfRunning).
 func (a *App) SaveChapterSettings(chapterID string, settings models.ChapterSettings) (models.ChapterSettingsInfo, error) {
+	if chapter, ok := a.chapter(chapterID); ok {
+		if err := a.refuseUnderPreview(chapter); err != nil {
+			return models.ChapterSettingsInfo{}, err
+		}
+	}
 	chapter, cfg, err := a.chapterInstance(chapterID)
 	if err != nil {
 		return models.ChapterSettingsInfo{}, err

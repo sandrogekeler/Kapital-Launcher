@@ -37,7 +37,7 @@ func (a *App) GetRunReport(chapterID string) (models.RunReport, error) {
 	if !ok {
 		return models.RunReport{}, fmt.Errorf("no chapter %q", chapterID)
 	}
-	report, err := a.games.Report(chapter.ID)
+	report, err := a.runReport(chapter.ID)
 	if err != nil {
 		return models.RunReport{}, fmt.Errorf("%s: %w", chapter.Name, err)
 	}

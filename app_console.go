@@ -14,5 +14,9 @@ func (a *App) ShowPrismConsole(chapterID string) (bool, error) {
 	if !ok {
 		return false, fmt.Errorf("no chapter %q", chapterID)
 	}
+	// A previewed run (#124) has no console: say so, and touch no window.
+	if a.previews.Chapter(chapter.ID) != "" {
+		return false, nil
+	}
 	return a.games.ShowConsole(chapter.ID)
 }

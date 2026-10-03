@@ -35,10 +35,10 @@ func (a *App) SetPackSource(chapterID, source string) (models.InstanceReport, er
 	if source != packSourcePublished && source != packSourceDev {
 		return models.InstanceReport{}, fmt.Errorf("unknown pack source %q", source)
 	}
-	engine, err := a.GetEngine()
-	if err != nil {
+	if err := a.refuseUnderPreview(chapter); err != nil {
 		return models.InstanceReport{}, err
 	}
+	engine := a.realEngine()
 	if a.games.Active(chapterID) {
 		return models.InstanceReport{}, errGameActive(chapter)
 	}
