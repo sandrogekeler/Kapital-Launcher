@@ -146,6 +146,7 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
   return (
     <Page
       label={`${chapter.name} settings`}
+      eyebrow={chapter.name}
       title="Settings"
       onBack={onClose}
       ready={ready}
