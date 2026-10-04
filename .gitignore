@@ -3,6 +3,10 @@
 frontend/dist/*
 !frontend/dist/.gitkeep
 build/bin/
+# Written by `wails build -nsis` on every build: the resolved macros and the
+# WebView2 bootstrapper. project.nsi beside them is ours and committed.
+build/windows/installer/wails_tools.nsh
+build/windows/installer/tmp/
 site/dist/
 
 # Wails frontend-hash cache

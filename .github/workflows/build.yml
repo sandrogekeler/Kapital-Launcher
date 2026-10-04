@@ -2,7 +2,8 @@ name: Build
 
 # Every push and pull request packages both targets (ADR-7) with `wails build`,
 # which nothing else does: CI compiles the Go, this links the macOS card host
-# with Wails' cgo flags, renders the plist and wraps the bundle. A dispatch from
+# with Wails' cgo flags, renders the plist and wraps the bundle, and the
+# installers are made here: an NSIS setup and a disk image. A dispatch from
 # the Actions tab does the same with a version stamped, then attests the files
 # and publishes the GitHub Release (ADR-6).
 on:
@@ -104,18 +105,32 @@ jobs:
           go install "github.com/wailsapp/wails/v2/cmd/wails@$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)"
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      # Nothing else stamps wails.json, and the Windows version info reads it.
-      - name: Stamp the product version
-        if: env.NUMERIC != ''
+      # The runner image has no NSIS, and `wails build -nsis` only warns when
+      # makensis is missing. Pinned, like every other tool here.
+      - name: Install NSIS
         run: |
-          jq --arg v "$NUMERIC" '.info.productVersion = $v' wails.json > wails.json.tmp
+          choco install nsis --version=3.13.0 --yes --no-progress
+          echo 'C:\Program Files (x86)\NSIS' >> "$GITHUB_PATH"
+
+      # Nothing else stamps wails.json, and the Windows version info and the
+      # installer read it. The installer's VIProductVersion takes digits and
+      # dots only, so a build without a tag drops the -dev here too; it stays
+      # in main.Version.
+      - name: Stamp the product version
+        run: |
+          v="${NUMERIC:-$(jq -r '.info.productVersion' wails.json)}"
+          jq --arg v "${v%%-*}" '.info.productVersion = $v' wails.json > wails.json.tmp
           mv wails.json.tmp wails.json
 
       # -s and -skipbindings: the frontend is built above and the bindings are
-      # committed. Without a tag the -dev in version.go stays.
+      # committed. Without a tag the -dev in version.go stays. -nsis wraps the
+      # exe in build/windows/installer/project.nsi's setup, installed for the
+      # one user (no UAC prompt), which runs Microsoft's WebView2 bootstrapper
+      # when the runtime is missing.
       - name: Build
         run: |
-          args=(-platform windows/amd64 -trimpath -s -skipbindings)
+          makensis -VERSION
+          args=(-platform windows/amd64 -trimpath -s -skipbindings -nsis -installscope user)
           if [ -n "$TAG" ]; then
             args+=(-ldflags "-X main.Version=$TAG")
           fi
@@ -124,11 +139,14 @@ jobs:
       - name: go.mod and go.sum are unchanged
         run: git diff --exit-code go.mod go.sum
 
-      # No installer yet (no NSIS here), so the bare exe is the artefact.
-      - name: Name the artefact
+      # The setup is what a player downloads; the bare exe beside it runs
+      # without installing. A missing setup fails the copy, which is the check
+      # that makensis ran.
+      - name: Name the artefacts
         run: |
           mkdir out
           cp build/bin/kapital-launcher.exe "out/Kapital-Launcher-${TAG:-dev}-windows-amd64.exe"
+          cp "build/bin/Kapital Launcher-amd64-installer.exe" "out/Kapital-Launcher-${TAG:-dev}-windows-amd64-setup.exe"
           sha="${{ github.event.pull_request.head.sha || github.sha }}"
           echo "SHORT=${sha::7}" >> "$GITHUB_ENV"
 
@@ -201,6 +219,14 @@ jobs:
       - name: go.mod and go.sum are unchanged
         run: git diff --exit-code go.mod go.sum
 
+      # The identifier is the app's identity on macOS, and the template's
+      # com.wails.* would come back if the plist were ever regenerated.
+      - name: The bundle carries its identifier
+        run: |
+          id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "build/bin/Kapital Launcher.app/Contents/Info.plist")"
+          echo "$id"
+          [ "$id" = "io.github.sandrogekeler.kapital-launcher" ]
+
       # The amd64 half is compiled with cgo on an arm64 runner, so check that
       # both halves made it in rather than trust the exit code.
       - name: The executable holds both architectures
@@ -212,21 +238,33 @@ jobs:
             *) echo "::error::Expected x86_64 and arm64, got: $archs"; exit 1 ;;
           esac
 
-      # upload-artifact normalises file modes, which breaks a bundle, so the
-      # .app goes up zipped. ditto is Apple's documented way to zip one: it
-      # keeps symlinks, modes and resource forks. The bundle is named from
-      # wails.json's `name`, hence the space.
-      - name: Zip the bundle
+      # A disk image with the bundle and a link to Applications: open it, drag
+      # one onto the other. ditto copies the bundle whole (symlinks, modes,
+      # the signature); the image is one file, so upload-artifact cannot
+      # flatten the modes inside it. The bundle is named from wails.json's
+      # `name`, hence the space. hdiutil now and then finds the volume busy on
+      # a hosted runner, so it gets three tries.
+      - name: Build the disk image
         run: |
-          mkdir out
-          ditto -c -k --keepParent "build/bin/Kapital Launcher.app" "out/Kapital-Launcher-${TAG:-dev}-macos-universal.zip"
+          mkdir out dmg
+          ditto "build/bin/Kapital Launcher.app" "dmg/Kapital Launcher.app"
+          ln -s /Applications dmg/Applications
+          dmg="out/Kapital-Launcher-${TAG:-dev}-macos-universal.dmg"
+          for try in 1 2 3; do
+            if hdiutil create -volname "Kapital Launcher" -srcfolder dmg -fs HFS+ -format UDZO -ov "$dmg"; then
+              break
+            fi
+            [ "$try" = 3 ] && exit 1
+            sleep 5
+          done
+          hdiutil verify "$dmg"
           sha="${{ github.event.pull_request.head.sha || github.sha }}"
           echo "SHORT=${sha::7}" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: kapital-launcher-${{ env.SHORT }}-macos-universal
-          path: out/*.zip
+          path: out/*.dmg
           retention-days: 14
           if-no-files-found: error
 
@@ -263,13 +301,13 @@ jobs:
       - name: Write checksums.txt
         working-directory: release
         run: |
-          sha256sum *.zip *.exe > checksums.txt
+          sha256sum *.dmg *.exe > checksums.txt
           cat checksums.txt
 
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: |
-            release/*.zip
+            release/*.dmg
             release/*.exe
 
       # The generator names what changed in the binary since the latest
@@ -281,7 +319,7 @@ jobs:
           REPO: ${{ github.repository }}
           HEAD_REF: ${{ github.sha }}
         run: |
-          args=("$TAG" release/*.zip release/*.exe release/checksums.txt
+          args=("$TAG" release/*.dmg release/*.exe release/checksums.txt
             --title "Kapital Launcher $TAG" --target "$GITHUB_SHA")
           case "$TAG" in
             *-*) args+=(--prerelease) ;;

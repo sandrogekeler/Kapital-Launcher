@@ -13,14 +13,14 @@ paths:
 not a release. A release stamps it with `-ldflags "-X main.Version=<tag>"`.
 
 `.github/workflows/build.yml` packages both targets with `wails build`. On every
-push to `main` and every pull request it uploads `windows-amd64` (the bare
-`.exe`) and `macos-universal` (the `.app`, zipped with `ditto`, which keeps the
-modes `upload-artifact` would flatten) as workflow artefacts for 14 days, named
+push to `main` and every pull request it uploads `windows-amd64` (the NSIS
+setup and the bare `.exe`) and `macos-universal` (a disk image holding the
+`.app` and a link to Applications) as workflow artefacts for 14 days, named
 `kapital-launcher-<short sha>-<target>`. A release is cut from the Actions tab:
 run it with a `version` input, `vX.Y.Z[-alpha.N|-beta.N]`. The tag is
 validated, the build stamps `main.Version` with it and `wails.json`'s
-`productVersion` with its numeric part, and the `release` job attests the zip
-and exe with `actions/attest`, writes `checksums.txt` and publishes a GitHub
+`productVersion` with its numeric part, and the `release` job attests the disk
+image and both exes with `actions/attest`, writes `checksums.txt` and publishes a GitHub
 Release at that commit, a prerelease when the tag has a suffix. No
 code-signing certificate (ADR-6). The body is `.github/release-body.md` (the
 Minecraft disclaimer, the SmartScreen and Gatekeeper steps, how to verify)
@@ -30,6 +30,27 @@ fails if it changed `go.mod`. The macOS build sets `CGO_CFLAGS` and
 `CGO_LDFLAGS` to `-mmacosx-version-min=12.0` (Wails hardcodes 10.13) to match
 `LSMinimumSystemVersion` in `build/darwin/*.plist`: Go 1.26 and Prism 11 both
 need macOS 12.
+
+## The installers
+
+Issue 177. Windows: `wails build -nsis -installscope user` runs
+`build/windows/installer/project.nsi`, Wails' template with three changes
+(the installed file keeps the name `kapital-launcher.exe`, a "Run" tick on the
+last page, a note on what the uninstaller leaves). It installs to
+`%LOCALAPPDATA%\Programs\Kapital Launcher` with no UAC prompt, runs
+Microsoft's WebView2 bootstrapper when the runtime is missing, and its
+uninstaller never touches `%APPDATA%\KapitalLauncher` (settings, the managed
+Prism, the player's worlds). `wails_tools.nsh` and `tmp/` beside it are
+written by every build and ignored. The runner image has no NSIS and Wails
+only warns when `makensis` is missing, so the job installs a pinned one and
+the copy of the setup is the check that it ran. The installer's version field
+takes digits and dots only, so the Windows job always stamps `wails.json`
+with the numeric part.
+
+macOS: `hdiutil` makes a compressed image from the bundle and an Applications
+link. The bundle identifier is `io.github.sandrogekeler.kapital-launcher`,
+written in both plists and checked in the job; it is the app's identity
+(preferences, WebKit data) and does not change again.
 
 ## The toolchain directive is what CI runs
 
