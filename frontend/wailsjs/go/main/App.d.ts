@@ -14,6 +14,8 @@ export function CopyRedactedLog():Promise<number>;
 
 export function GetAppVersion():Promise<string>;
 
+export function GetChangelogs():Promise<Array<models.PackChangelog>>;
+
 export function GetChapterMods(arg1:string):Promise<models.ChapterMods>;
 
 export function GetChapterSettings(arg1:string):Promise<models.ChapterSettingsInfo>;

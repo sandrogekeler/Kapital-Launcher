@@ -1,4 +1,4 @@
-import type { Chapter, PackState, WikiPage } from '../../types'
+import type { Chapter, ChangelogEntry, PackChangelog, PackState, WikiPage } from '../../types'
 import { factValue, sizeValue, unsetLabel } from '../../lib/manifest'
 import { versionValue } from '../../lib/packState'
 import { Drift } from '../ui/Drift'
@@ -13,6 +13,8 @@ interface Props {
   sizeBytes: number | undefined
   /** Whether the installed pack is its source's current one (#71); undefined until checked. */
   packState: PackState | undefined
+  /** What the pack source publishes as its changelog (issue 164); undefined until read. */
+  changelog: PackChangelog | undefined
   /** The slide's wiki page (#58, issue 142); undefined shows the manifest's teaser. */
   wikiPage: WikiPage | undefined
   onOpenWiki: () => void
@@ -37,17 +39,31 @@ function PanelTitle({ children }: { children: string }) {
  * The row keeps one height whatever it holds, because the hero takes what the
  * panels leave: the wiki post's title is one line and its text reserves four,
  * with its link pinned under them, and the changelog shows only its latest
- * entries, each clamped, so it can never be the tallest column.
+ * entries, each clamped, so it can never be the tallest column. The entries
+ * are the pack source's own changelog (issue 164), their first line each and
+ * the rest in the tooltip, and the manifest's when the source has none.
  *
  * The columns are equal, and each has the same 28 px on every side: the first
  * column's text starts as far from the card's edge as the others' from their
  * divider, and the space under the row matches its sides (the author, issue
  * 162, to see how it looks; the Play button and the hero keep their gutter).
  */
-export function Panels({ chapter, installed, sizeBytes, packState, wikiPage, onOpenWiki }: Props) {
+export function Panels({
+  chapter,
+  installed,
+  sizeBytes,
+  packState,
+  changelog,
+  wikiPage,
+  onOpenWiki,
+}: Props) {
   const { pack } = chapter
   const wiki = wikiPage ?? chapter.wiki
   const unset = unsetLabel(installed)
+  // The pack source's entries when it has some, else the manifest's, which have no details.
+  const entries: (ChangelogEntry & { details?: string })[] = (
+    changelog?.entries.length ? changelog.entries : chapter.changelog
+  ).slice(0, CHANGELOG_SHOWN)
   const facts: [string, string, string?][] = [
     ['Version', versionValue(packState), unset],
     ['Loader', pack.type === 'client-visuals' ? 'Client visuals' : factValue(pack.loader)],
@@ -75,16 +91,16 @@ export function Panels({ chapter, installed, sizeBytes, packState, wikiPage, onO
       <div className="border-line flex flex-col gap-3 border-r p-7">
         <PanelTitle>Changelog</PanelTitle>
         <div className="flex flex-col gap-3">
-          {chapter.changelog.length === 0 ? (
+          {entries.length === 0 ? (
             <span className="text-fg-faint text-sm">No entries yet.</span>
           ) : (
-            chapter.changelog.slice(0, CHANGELOG_SHOWN).map((entry) => (
+            entries.map((entry) => (
               <div
                 key={entry.version}
                 className="grid grid-cols-[64px_minmax(0,1fr)] items-baseline gap-3 text-sm"
               >
-                <span className="text-accent text-2xs font-mono">{entry.version}</span>
-                <span className="text-fg-soft line-clamp-2" title={entry.summary}>
+                <span className="text-accent text-2xs truncate font-mono">{entry.version}</span>
+                <span className="text-fg-soft line-clamp-2" title={entry.details ?? entry.summary}>
                   {entry.summary}
                 </span>
               </div>

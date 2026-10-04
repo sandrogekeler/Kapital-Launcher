@@ -240,7 +240,7 @@ describe('ChapterSettingsPanel', () => {
       let finish: (v: ChapterSettingsInfo) => void = () => undefined
       vi.mocked(App.GetChapterSettings).mockReturnValue(new Promise((r) => (finish = r)) as never)
       render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
-      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/^Frangfurd$/)
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/^Settings$/)
       expect(screen.getByText('Reading.')).toHaveClass('reveal-wait')
       expect(screen.queryByLabelText('Memory')).toBeNull()
       expect(document.querySelector('.reveal')).toBeNull()

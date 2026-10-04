@@ -237,7 +237,7 @@ export function ActionBar({
   }
 
   return (
-    <section className="border-line flex flex-col gap-3 border-b px-14 py-5">
+    <section className="border-line flex flex-col gap-3 border-b px-7 py-5">
       <div className="flex items-center gap-3">
         {playing || launching ? (
           <Button variant="stop" onClick={clickStop} disabled={launching}>

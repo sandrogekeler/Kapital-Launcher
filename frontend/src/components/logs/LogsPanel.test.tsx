@@ -110,7 +110,7 @@ describe('LogsPanel', () => {
   describe('the dropdown', () => {
     it('lists the live log, the most recent run, the dated runs, then the crash reports, with no kind word', async () => {
       panel()
-      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Frangfurd logs')
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/^Logs$/)
       await block('latest.log')
       expect(Bindings.GetRunLogs).toHaveBeenCalledExactlyOnceWith('frangfurd')
       fireEvent.click(dropdown())
