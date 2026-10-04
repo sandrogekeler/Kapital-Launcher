@@ -156,6 +156,7 @@ describe('SettingsPanel', () => {
 
   it('writes and clears a local pack address per chapter', async () => {
     render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Developer' }))
     const field = screen.getByLabelText('Local pack for Frangfurd')
     fireEvent.change(field, { target: { value: 'http://localhost:8080/pack.toml' } })
     fireEvent.keyDown(field, { key: 'Enter' })
@@ -283,6 +284,13 @@ describe('SettingsPanel previews', () => {
     const onShowChapter = vi.fn()
     render(<SettingsPanel onClose={() => undefined} onShowChapter={onShowChapter} />)
     expect(screen.getByRole('heading', { name: 'Developer' })).toBeInTheDocument()
+    // Closed until its title is clicked: nothing of it is on the page.
+    const toggle = screen.getByRole('button', { name: 'Developer' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByLabelText(/Local pack for/)).toBeNull()
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByLabelText('Local pack for Luxemburg')).toBeInTheDocument()
     fireEvent.click(await screen.findByRole('button', { name: 'Crashed, with a crash report' }))
     await waitFor(() => expect(onShowChapter).toHaveBeenCalledExactlyOnceWith('luxemburg'))
     expect(App.StartPreview).toHaveBeenCalledExactlyOnceWith('luxemburg', 'crashed')

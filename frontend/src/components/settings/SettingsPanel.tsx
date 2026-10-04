@@ -195,7 +195,7 @@ function DeveloperSection({
   onShowChapter,
 }: SectionProps & { chapters: readonly Chapter[]; onShowChapter: (chapterId: string) => void }) {
   return (
-    <Section title="Developer">
+    <Section title="Developer" collapsible>
       <Hint>
         A chapter can be installed from a packwiz serve running on this machine instead of its
         published pack. Loopback addresses only; the field is empty for a normal install. An

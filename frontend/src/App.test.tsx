@@ -457,6 +457,7 @@ describe('App', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
       expect(await screen.findByRole('region', { name: 'Settings' })).toBeInTheDocument()
 
+      fireEvent.click(screen.getByRole('button', { name: 'Developer' }))
       fireEvent.click(await screen.findByRole('button', { name: 'Crashed, with a crash report' }))
       await waitFor(() => expect(Bindings.StartPreview).toHaveBeenCalledOnce())
       await waitFor(() => expect(screen.queryByRole('region', { name: 'Settings' })).toBeNull())
