@@ -229,20 +229,41 @@ func ReadRunLog(instanceDir, kind, name string, before int64, r *Redactor) (mode
 }
 
 func readRunLog(instanceDir, kind, name string, before int64, r *Redactor, unpackMax int64) (models.RunLogText, error) {
+	got, err := readRunChunk(instanceDir, kind, name, before, r, unpackMax)
+	return got.text, err
+}
+
+// runChunk is a chunk as readRunChunk read it: the text for the page, and what
+// the live log needs to carry on from it.
+type runChunk struct {
+	text models.RunLogText
+	// end is the byte offset in the file just after the last byte of the chunk
+	// that was kept: for the end of latest.log, the line after which a follower
+	// reads on.
+	end int64
+	// player is the in-game name the chunk was masked with, "" when none.
+	player string
+}
+
+// errRunLogMissing is ErrRunLogName for a file, or a game folder, that is not
+// there (yet): the live log waits for latest.log, where a read refuses it.
+var errRunLogMissing = fmt.Errorf("%w: it is not there", ErrRunLogName)
+
+func readRunChunk(instanceDir, kind, name string, before int64, r *Redactor, unpackMax int64) (runChunk, error) {
 	dirName := runLogFolder(kind)
 	if dirName == "" || !validRunLogName(kind, name) {
-		return models.RunLogText{}, ErrRunLogName
+		return runChunk{}, ErrRunLogName
 	}
 	if r == nil {
-		return models.RunLogText{}, errors.New("no redactor to read the log with")
+		return runChunk{}, errors.New("no redactor to read the log with")
 	}
 	game := gameFolder(instanceDir)
 	if game == "" {
-		return models.RunLogText{}, ErrRunLogName
+		return runChunk{}, errRunLogMissing
 	}
 	root, err := os.OpenRoot(game)
 	if err != nil {
-		return models.RunLogText{}, fmt.Errorf("open game folder: %w", err)
+		return runChunk{}, fmt.Errorf("open game folder: %w", err)
 	}
 	defer closeReadOnly(root)
 	rel := filepath.Join(dirName, name)
@@ -250,18 +271,18 @@ func readRunLog(instanceDir, kind, name string, before int64, r *Redactor, unpac
 	info, err := root.Lstat(rel)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return models.RunLogText{}, ErrRunLogName
+			return runChunk{}, errRunLogMissing
 		}
-		return models.RunLogText{}, fmt.Errorf("read %s: %w", name, err)
+		return runChunk{}, fmt.Errorf("read %s: %w", name, err)
 	}
 	if !info.Mode().IsRegular() {
-		return models.RunLogText{}, ErrRunLogName
+		return runChunk{}, ErrRunLogName
 	}
 	gz := strings.HasSuffix(name, ".gz")
 	size := info.Size()
 	if gz {
 		if size, err = unpackedSize(root, rel, unpackMax); err != nil {
-			return models.RunLogText{}, err
+			return runChunk{}, err
 		}
 	}
 	end := size
@@ -273,7 +294,7 @@ func readRunLog(instanceDir, kind, name string, before int64, r *Redactor, unpac
 	from := max(start-1, 0)
 	raw, err := readRunRange(root, rel, gz, from, end-from)
 	if err != nil {
-		return models.RunLogText{}, fmt.Errorf("read %s: %w", name, err)
+		return runChunk{}, fmt.Errorf("read %s: %w", name, err)
 	}
 	data, offset := wholeLines(raw, from, start)
 	// The game writes latest.log while this reads: its last line may be half
@@ -284,9 +305,13 @@ func readRunLog(instanceDir, kind, name string, before int64, r *Redactor, unpac
 	}
 	player := learnPlayer(root, rel, gz, data, offset)
 	text := r.WithPlayer(player).Redact(strings.ToValidUTF8(string(data), "�"))
-	return models.RunLogText{
-		Kind: kind, Name: name, Text: text, Offset: offset, Size: size,
-		Lines: countLines(text), Truncated: offset > 0,
+	return runChunk{
+		text: models.RunLogText{
+			Kind: kind, Name: name, Text: text, Offset: offset, Size: size,
+			Lines: countLines(text), Truncated: offset > 0,
+		},
+		end:    offset + int64(len(data)),
+		player: player,
 	}, nil
 }
 

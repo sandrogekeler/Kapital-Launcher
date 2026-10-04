@@ -1,7 +1,7 @@
 import type { Chapter } from '../../types'
 import { chapterArt, chapterTitleArt } from '../../lib/art'
 import { knownFacts, stateLabel } from '../../lib/manifest'
-import { BookOpen, Pencil, ScrollText } from '../../lib/icons'
+import { BookOpen, Pencil, SquareTerminal } from '../../lib/icons'
 import { Drift } from '../ui/Drift'
 import { IconButton } from '../ui/IconButton'
 import { Pill } from '../ui/Pill'
@@ -58,7 +58,7 @@ export function Hero({ chapter, art: slideArt, onOpenWiki, onOpenSettings, onOpe
       {/* A wash behind the tools, so they read on bright art too (#77). */}
       <div className="bg-sunken/55 absolute top-5 right-6 flex gap-1 rounded-md backdrop-blur-sm">
         <IconButton icon={Pencil} title={`${chapter.name} settings`} onClick={onOpenSettings} />
-        <IconButton icon={ScrollText} title={`Logs for ${chapter.name}`} onClick={onOpenLogs} />
+        <IconButton icon={SquareTerminal} title={`Logs for ${chapter.name}`} onClick={onOpenLogs} />
         <IconButton icon={BookOpen} title="Read the history on the wiki" onClick={onOpenWiki} />
       </div>
 

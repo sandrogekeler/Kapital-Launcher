@@ -33,6 +33,11 @@ interface PageProps extends HeaderProps {
    * wait for leaves it out.
    */
   ready?: boolean
+  /**
+   * The body is as tall as the card leaves and does not scroll: for a page that
+   * is one view filling the space, which scrolls inside itself (the logs).
+   */
+  fill?: boolean
   children: ReactNode
 }
 
@@ -44,18 +49,26 @@ interface PageProps extends HeaderProps {
  * while the body scrolls beneath it, with the app's own scrollbar, and the
  * body reveals once `ready`. Escape closes the page, as Back does.
  */
-export function Page({ label, title, onBack, actions, ready = true, children }: PageProps) {
+export function Page({ label, title, onBack, actions, ready = true, fill, children }: PageProps) {
   useEscapeClose(onBack)
   return (
     <section aria-label={label} className={CARD}>
       <PageHeader title={title} onBack={onBack} actions={actions} />
-      <Scrollable>
-        <div className="max-w-200 px-14 pt-8 pb-16">
-          <Reveal ready={ready} className="flex flex-col gap-10">
+      {fill ? (
+        <div className="flex min-h-0 grow flex-col px-14 pt-8 pb-10">
+          <Reveal ready={ready} className="flex min-h-0 grow flex-col gap-3">
             {children}
           </Reveal>
         </div>
-      </Scrollable>
+      ) : (
+        <Scrollable>
+          <div className="max-w-200 px-14 pt-8 pb-16">
+            <Reveal ready={ready} className="flex flex-col gap-10">
+              {children}
+            </Reveal>
+          </div>
+        </Scrollable>
+      )}
     </section>
   )
 }

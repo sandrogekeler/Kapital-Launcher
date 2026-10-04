@@ -71,6 +71,18 @@ describe('Page', () => {
     expect(onBack).toHaveBeenCalledTimes(2)
   })
 
+  it('can give its body the height the card leaves, without a scroll of its own', () => {
+    render(
+      <Page label="Things" title="Things" onBack={() => undefined} fill>
+        <p>Body</p>
+      </Page>,
+    )
+    const body = screen.getByText('Body').parentElement!
+    expect(body).toHaveClass('grow', 'min-h-0', 'flex-col')
+    expect(body.closest('.overflow-y-auto')).toBeNull()
+    expect(screen.getByRole('region', { name: 'Things' })).toContainElement(body)
+  })
+
   it('stops listening for Escape once it is gone', () => {
     const onBack = vi.fn()
     const { unmount } = render(

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"kapital/backend/models"
 	"kapital/backend/services"
@@ -119,5 +120,101 @@ func TestALogsErrorShownToThePageIsMasked(t *testing.T) {
 	}
 	if !errors.Is(got, cause) {
 		t.Fatal("the masked error must still wrap its cause")
+	}
+}
+
+// catchLive collects the log:live events into a channel.
+func catchLive(app *App) chan models.LiveLogEvent {
+	events := make(chan models.LiveLogEvent, 16)
+	app.emitLive = func(e models.LiveLogEvent) { events <- e }
+	return events
+}
+
+func appendToFile(t *testing.T, path, text string) {
+	t.Helper()
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString(text); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWatchLiveLogRefusesAnUnknownChapterAndOneThatIsNotInstalled(t *testing.T) {
+	app := newTestApp(t)
+	if _, err := app.WatchLiveLog("atlantis"); err == nil || !strings.Contains(err.Error(), "no chapter") {
+		t.Fatalf("got %v", err)
+	}
+	if err := app.StopLiveLog("atlantis"); err == nil || !strings.Contains(err.Error(), "no chapter") {
+		t.Fatalf("got %v", err)
+	}
+	if err := app.SaveSettings(models.AppSettings{Theme: "dark", PrismRoot: t.TempDir()}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.WatchLiveLog("frangfurd"); err == nil || !strings.Contains(err.Error(), "not installed") {
+		t.Fatalf("got %v", err)
+	}
+}
+
+func TestWatchLiveLogReturnsWhatReadRunLogDoesAndThenEmitsWhatIsAppendedMasked(t *testing.T) {
+	app := newTestApp(t)
+	app.home, app.osUser = `C:\Users\sandro`, "sandro"
+	game := installedFrangfurd(t, app)
+	events := catchLive(app)
+	path := filepath.Join(game, "logs", "latest.log")
+	if err := os.WriteFile(path, []byte("Game dir C:\\Users\\sandro\\x\nwho: sandro\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := app.StopLiveLog("frangfurd"); err != nil {
+			t.Error(err)
+		}
+	})
+
+	got, err := app.WatchLiveLog("frangfurd")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := app.ReadRunLog("frangfurd", models.RunLogKindLog, "latest.log", 0)
+	if err != nil || got != want {
+		t.Fatalf("got %+v, %v; want %+v", got, err, want)
+	}
+
+	appendToFile(t, path, "again from C:\\Users\\sandro\\y\n")
+	select {
+	case e := <-events:
+		if e.ChapterID != "frangfurd" || e.Reset || e.Lines != "again from [home]\\y\n" {
+			t.Fatalf("got %+v", e)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("no log:live event")
+	}
+}
+
+func TestStopLiveLogEndsTheFollowerAndIsNoErrorTwice(t *testing.T) {
+	app := newTestApp(t)
+	game := installedFrangfurd(t, app)
+	events := catchLive(app)
+	path := filepath.Join(game, "logs", "latest.log")
+	if err := os.WriteFile(path, []byte("a\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.WatchLiveLog("frangfurd"); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if err := app.StopLiveLog("frangfurd"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	appendToFile(t, path, "b\n")
+	select {
+	case e := <-events:
+		t.Fatalf("an event after Stop: %+v", e)
+	case <-time.After(1200 * time.Millisecond):
 	}
 }

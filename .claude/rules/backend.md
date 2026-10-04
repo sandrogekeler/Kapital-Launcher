@@ -73,6 +73,15 @@ file a 256 KiB chunk at a time, unpacking a `.log.gz` under a cap, through an
 chunk goes through the redactor with the in-game name added before it leaves,
 and nothing of it is kept or logged.
 
+The live log (`livelog.go`, `WatchLiveLog` and `StopLiveLog`, issue 155) is
+that reader kept going for `logs/latest.log` alone: while the page shows it, Go
+looks at the file every 500 ms (the one place that polls, as the game tracker
+does; the frontend never does), reads what was appended through the same
+`os.Root` and name rules, keeps a half-written last line until its newline,
+redacts the lines and emits `log:live` (`EventLiveLog`) in events of at most
+64 KiB. A shrunk or replaced file, told by its first 128 bytes, emits a reset.
+One follower at a time, under the app's run context.
+
 The window holder (`gamewindow*.go`, #45, Windows only; the loading splash,
 #43, is what turns it on for a run) hooks the show events of the game's own
 process and hides and shows its `GLFW30` window through user32. Every hide,
