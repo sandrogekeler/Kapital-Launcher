@@ -1,36 +1,47 @@
-name: Build
+name: Release
 
-# Every push and pull request packages both targets (ADR-7) with `wails build`,
-# which nothing else does: CI compiles the Go, this links the macOS card host
-# with Wails' cgo flags, renders the plist and wraps the bundle, and the
-# installers are made here: an NSIS setup and a disk image. A dispatch from
-# the Actions tab does the same with a version stamped, then attests the files
-# and publishes the GitHub Release (ADR-6).
+# The one place the app is packaged with `wails build`: an NSIS setup for
+# Windows and a disk image for macOS (ADR-7), attested and published as a
+# GitHub Release (ADR-6). It runs only from the Actions tab, "Run workflow",
+# with the version filled in; pull requests and pushes are judged by ci.yml,
+# which compiles and tests the Go on both systems. Tick "dry run" to build and
+# keep the installers as workflow artefacts without publishing anything.
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release tag, vX.Y.Z or vX.Y.Z-alpha.N or vX.Y.Z-beta.N'
+        description: 'Version number, X.Y.Z (no leading v)'
         required: true
         type: string
+      channel:
+        description: 'Channel: beta and alpha are published as prereleases'
+        required: true
+        type: choice
+        default: beta
+        options: [beta, alpha, stable]
+      number:
+        description: 'Prerelease number, the N in beta.N (ignored for stable)'
+        required: true
+        type: string
+        default: '1'
+      dry_run:
+        description: 'Dry run: build the installers, publish nothing'
+        required: true
+        type: boolean
+        default: false
 
-# A superseded push build is dead weight; a release in flight is not to be cut
-# short.
+# A release in flight is not to be cut short by a second one.
 concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  # Fail before any runner time is spent on a tag that is wrong or taken. The
-  # input reaches the script through env, never through `${{ }}` in `run:`.
+  # Fail before any runner time is spent on a version that is wrong or taken.
+  # The inputs reach the script through env, never through `${{ }}` in `run:`.
   version:
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.v.outputs.tag }}
@@ -39,32 +50,43 @@ jobs:
       - id: v
         env:
           VERSION: ${{ inputs.version }}
+          CHANNEL: ${{ inputs.channel }}
+          NUMBER: ${{ inputs.number }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          # The tag shape from .claude/rules/builds-and-releases.md.
-          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta)\.[0-9]+)?$ ]]; then
-            echo "::error::The version must look like v1.2.3, v1.2.3-alpha.1 or v1.2.3-beta.1."
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::The version must look like 1.2.3."
             exit 1
           fi
+          # The tag shape from .claude/rules/builds-and-releases.md:
+          # vX.Y.Z, vX.Y.Z-alpha.N or vX.Y.Z-beta.N.
+          case "$CHANNEL" in
+            stable) tag="v$VERSION" ;;
+            alpha | beta)
+              if ! [[ "$NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+                echo "::error::The prerelease number must be a whole number from 1."
+                exit 1
+              fi
+              tag="v$VERSION-$CHANNEL.$NUMBER"
+              ;;
+            *) echo "::error::Unknown channel."; exit 1 ;;
+          esac
           # `gh release create` would reuse an existing tag and silently release
           # whatever it points at, so a taken tag stops here.
-          if gh api "repos/$GH_REPO/git/ref/tags/$VERSION" >/dev/null 2>&1; then
-            echo "::error::That tag already exists."
+          if gh api "repos/$GH_REPO/git/ref/tags/$tag" >/dev/null 2>&1; then
+            echo "::error::The tag $tag already exists."
             exit 1
           fi
-          # CFBundleVersion and the Windows version info want a dotted numeric
-          # string, so v0.1.0-alpha.1 becomes 0.1.0 there and stays whole in
-          # main.Version.
-          numeric="${VERSION#v}"
-          numeric="${numeric%%-*}"
-          echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "numeric=$numeric" >> "$GITHUB_OUTPUT"
+          # CFBundleVersion, the Windows version info and the installer want a
+          # dotted numeric string, so v0.1.0-beta.1 is 0.1.0 there and stays
+          # whole in main.Version.
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "numeric=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building $tag" >> "$GITHUB_STEP_SUMMARY"
 
   windows:
     needs: version
-    # `version` is skipped outside a dispatch; only its failure stops the build.
-    if: ${{ !cancelled() && needs.version.result != 'failure' }}
     runs-on: windows-latest
     defaults:
       run:
@@ -114,27 +136,22 @@ jobs:
 
       # Nothing else stamps wails.json, and the Windows version info and the
       # installer read it. The installer's VIProductVersion takes digits and
-      # dots only, so a build without a tag drops the -dev here too; it stays
-      # in main.Version.
+      # dots only, which the numeric part is.
       - name: Stamp the product version
         run: |
-          v="${NUMERIC:-$(jq -r '.info.productVersion' wails.json)}"
-          jq --arg v "${v%%-*}" '.info.productVersion = $v' wails.json > wails.json.tmp
+          jq --arg v "$NUMERIC" '.info.productVersion = $v' wails.json > wails.json.tmp
           mv wails.json.tmp wails.json
 
       # -s and -skipbindings: the frontend is built above and the bindings are
-      # committed. Without a tag the -dev in version.go stays. -nsis wraps the
+      # committed. The tag replaces the -dev in version.go. -nsis wraps the
       # exe in build/windows/installer/project.nsi's setup, installed for the
       # one user (no UAC prompt), which runs Microsoft's WebView2 bootstrapper
       # when the runtime is missing.
       - name: Build
         run: |
           makensis -VERSION
-          args=(-platform windows/amd64 -trimpath -s -skipbindings -nsis -installscope user)
-          if [ -n "$TAG" ]; then
-            args+=(-ldflags "-X main.Version=$TAG")
-          fi
-          wails build "${args[@]}"
+          wails build -platform windows/amd64 -trimpath -s -skipbindings \
+            -nsis -installscope user -ldflags "-X main.Version=$TAG"
 
       - name: go.mod and go.sum are unchanged
         run: git diff --exit-code go.mod go.sum
@@ -145,21 +162,18 @@ jobs:
       - name: Name the artefacts
         run: |
           mkdir out
-          cp build/bin/kapital-launcher.exe "out/Kapital-Launcher-${TAG:-dev}-windows-amd64.exe"
-          cp "build/bin/Kapital Launcher-amd64-installer.exe" "out/Kapital-Launcher-${TAG:-dev}-windows-amd64-setup.exe"
-          sha="${{ github.event.pull_request.head.sha || github.sha }}"
-          echo "SHORT=${sha::7}" >> "$GITHUB_ENV"
+          cp build/bin/kapital-launcher.exe "out/Kapital-Launcher-${TAG}-windows-amd64.exe"
+          cp "build/bin/Kapital Launcher-amd64-installer.exe" "out/Kapital-Launcher-${TAG}-windows-amd64-setup.exe"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: kapital-launcher-${{ env.SHORT }}-windows-amd64
+          name: kapital-launcher-${{ env.TAG }}-windows-amd64
           path: out/*.exe
           retention-days: 14
           if-no-files-found: error
 
   macos:
     needs: version
-    if: ${{ !cancelled() && needs.version.result != 'failure' }}
     runs-on: macos-latest
     env:
       TAG: ${{ needs.version.outputs.tag }}
@@ -199,7 +213,6 @@ jobs:
 
       # Feeds CFBundleVersion and CFBundleShortVersionString in the plist.
       - name: Stamp the product version
-        if: env.NUMERIC != ''
         run: |
           jq --arg v "$NUMERIC" '.info.productVersion = $v' wails.json > wails.json.tmp
           mv wails.json.tmp wails.json
@@ -210,11 +223,8 @@ jobs:
       # Developer ID (ADR-6).
       - name: Build
         run: |
-          args=(-platform darwin/universal -trimpath -s -skipbindings)
-          if [ -n "$TAG" ]; then
-            args+=(-ldflags "-X main.Version=$TAG")
-          fi
-          wails build "${args[@]}"
+          wails build -platform darwin/universal -trimpath -s -skipbindings \
+            -ldflags "-X main.Version=$TAG"
 
       - name: go.mod and go.sum are unchanged
         run: git diff --exit-code go.mod go.sum
@@ -249,7 +259,7 @@ jobs:
           mkdir out dmg
           ditto "build/bin/Kapital Launcher.app" "dmg/Kapital Launcher.app"
           ln -s /Applications dmg/Applications
-          dmg="out/Kapital-Launcher-${TAG:-dev}-macos-universal.dmg"
+          dmg="out/Kapital-Launcher-${TAG}-macos-universal.dmg"
           for try in 1 2 3; do
             if hdiutil create -volname "Kapital Launcher" -srcfolder dmg -fs HFS+ -format UDZO -ov "$dmg"; then
               break
@@ -258,12 +268,10 @@ jobs:
             sleep 5
           done
           hdiutil verify "$dmg"
-          sha="${{ github.event.pull_request.head.sha || github.sha }}"
-          echo "SHORT=${sha::7}" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: kapital-launcher-${{ env.SHORT }}-macos-universal
+          name: kapital-launcher-${{ env.TAG }}-macos-universal
           path: out/*.dmg
           retention-days: 14
           if-no-files-found: error
@@ -271,7 +279,7 @@ jobs:
   # The only job that can write, and the only one that runs the attestation:
   # the files are attested exactly as they are published.
   release:
-    if: github.event_name == 'workflow_dispatch'
+    if: ${{ !inputs.dry_run }}
     needs: [version, windows, macos]
     runs-on: ubuntu-latest
     permissions:

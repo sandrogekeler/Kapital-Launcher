@@ -95,7 +95,8 @@ and the splash on reads as a failed start, because its console appears during
 ## Work items, in the order agreed
 
 1. **Run the first prerelease** from the
-   Actions tab (Build, "Run workflow", `v0.1.0-alpha.1`). That is the test of
+   Actions tab (Release, "Run workflow": version `0.1.0`, channel `beta`,
+   number `1`; tick "dry run" to build without publishing). That is the test of
    the release half of #107, and it gives the iMac a universal bundle for #30
    without building there. Then set `site/links.json`'s `release` (issue
    178). Since issue 177 (2026-10-04) the release carries an NSIS setup and a
@@ -383,8 +384,9 @@ one, the icon check on the PC is what is left), #35 (decided on 2026-10-01).
 - **The repository is public since 2026-09-30 evening**, made so because the
   private allowance of Actions minutes ran out mid-stack and every job failed
   unstarted. Actions on standard runners is free now, and CodeQL and
-  Scorecard run (#88); `build.yml` adds a Windows and a macOS job to every
-  pull request.
+  Scorecard run (#88); `build.yml` added a Windows
+  and a macOS job to every pull request until issue 177 made it run from the
+  Actions tab only.
 - The vendored files (`.claude/suite-*.py`, three workflows, the notes
   generator, `.aislop/base.yml`) are copied from `kollektiv-mc/Kollektiv` by
   hand, and `codeql.yml` and `scorecard.yml` from `kollektiv-mc/Konnekt`.
