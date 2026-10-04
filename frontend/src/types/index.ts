@@ -157,6 +157,17 @@ export interface RunLogText {
   truncated: boolean
 }
 
+/**
+ * What the live log follower emits as `log:live` (issue 155): whole lines
+ * appended to a chapter's latest.log, masked by Go, or, with `reset`, the end of
+ * a new run's file in place of what was shown.
+ */
+export interface LiveLogEvent {
+  chapterId: string
+  lines: string
+  reset: boolean
+}
+
 // Go pointer fields arrive optional from the bindings, so they are optional here too.
 export interface Pack {
   type: 'modpack' | 'client-visuals' | string

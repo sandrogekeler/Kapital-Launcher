@@ -573,11 +573,20 @@ describe('App', () => {
     }
   })
 
-  it("opens a chapter's logs from the scroll in its hero, and closes them with Back, Escape and a switch", async () => {
+  it("opens a chapter's logs from the console icon in its hero, and closes them with Back, Escape and a switch", async () => {
     Object.assign(window, { go: {} })
     try {
       vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
       vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ luxemburg: true }))
+      vi.mocked(Bindings.ReadRunLog).mockResolvedValue({
+        kind: 'log',
+        name: 'latest.log',
+        text: 'a line',
+        offset: 0,
+        size: 7,
+        lines: 1,
+        truncated: false,
+      } as never)
       vi.mocked(Bindings.GetRunLogs).mockResolvedValue([
         {
           kind: 'log',
@@ -593,7 +602,8 @@ describe('App', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Logs for Luxemburg' }))
       expect(await screen.findByRole('region', { name: 'Luxemburg logs' })).toBeInTheDocument()
-      expect(await screen.findByRole('list', { name: 'Logs and crash reports' })).toBeVisible()
+      expect(await screen.findByRole('button', { name: /Choose a log/ })).toBeVisible()
+      expect(Bindings.ReadRunLog).toHaveBeenCalledWith('luxemburg', 'log', 'latest.log', 0)
       expect(Bindings.GetRunLogs).toHaveBeenCalledExactlyOnceWith('luxemburg')
 
       fireEvent.click(screen.getByRole('button', { name: 'Back' }))

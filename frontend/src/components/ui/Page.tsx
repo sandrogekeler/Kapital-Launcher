@@ -29,6 +29,11 @@ export function PageHeader({ title, onBack, actions }: HeaderProps) {
 interface PageProps extends HeaderProps {
   /** The section's accessible name. */
   label: string
+  /**
+   * The body is as tall as the card leaves and does not scroll: for a page that
+   * is one view filling the space, which scrolls inside itself (the logs).
+   */
+  fill?: boolean
   children: ReactNode
 }
 
@@ -39,15 +44,19 @@ interface PageProps extends HeaderProps {
  * while the body scrolls beneath it, with the app's own scrollbar. Escape
  * closes the page, as Back does.
  */
-export function Page({ label, title, onBack, actions, children }: PageProps) {
+export function Page({ label, title, onBack, actions, fill, children }: PageProps) {
   useEscapeClose(onBack)
   return (
     <div className="m-5 flex min-h-0 grow flex-col">
       <section aria-label={label} className={CARD}>
         <PageHeader title={title} onBack={onBack} actions={actions} />
-        <Scrollable>
-          <div className="flex max-w-200 flex-col gap-10 px-14 pt-8 pb-16">{children}</div>
-        </Scrollable>
+        {fill ? (
+          <div className="flex min-h-0 grow flex-col gap-3 px-14 pt-8 pb-10">{children}</div>
+        ) : (
+          <Scrollable>
+            <div className="flex max-w-200 flex-col gap-10 px-14 pt-8 pb-16">{children}</div>
+          </Scrollable>
+        )}
       </section>
     </div>
   )

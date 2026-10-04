@@ -77,7 +77,10 @@ function LogTail({ report, height, note }: { report: RunReport; height: string; 
 }
 
 interface BlockProps {
-  /** The block's height, as the classes of a whole number of its 16px lines. */
+  /**
+   * The block's height, as the classes of a whole number of its 16px lines, or
+   * `grow` to take the height its column leaves.
+   */
   height: string
   label: string
   children: ReactNode
