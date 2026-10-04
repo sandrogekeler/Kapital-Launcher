@@ -30,6 +30,17 @@ describe('Toggle', () => {
     expect(screen.getByRole('switch')).not.toBeChecked()
   })
 
+  it('cannot be used while disabled, and its label no longer toggles it', () => {
+    const onChange = vi.fn()
+    render(<Toggle label="Mod" checked disabled onChange={onChange} />)
+    const sw = screen.getByRole('switch', { name: 'Mod' })
+    expect(sw).toBeDisabled()
+    expect(sw).toBeChecked()
+    fireEvent.click(sw)
+    fireEvent.click(screen.getByText('Mod'))
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   it('describes the switch with its hint, and with the error in the hint place', () => {
     const { rerender } = render(
       <Toggle label="Splash" checked hint="What it does." onChange={() => undefined} />,

@@ -14,21 +14,22 @@ var ErrPreLaunchNotOurs = errors.New("the launcher did not write this instance's
 // SwitchPackSource points an instance the launcher made at another pack: the
 // pack URL in its pre-launch command becomes to (ADR-2's seventh amendment,
 // #41's way back from a dev pack). It is RewritePreLaunchCommand's check run
-// the other way round: the command must be exactly the launcher's current
-// template or its earlier one for the URL it ends in, else the key is left as
-// it is, PreLaunchForeign comes back with ErrPreLaunchNotOurs, and nothing of
-// the command is in the error or the log.
+// the other way round: the command must be exactly one of the launcher's
+// templates (the sync command, the packwiz one or the first) for the URL it ends
+// in, else the key is left as it is, PreLaunchForeign comes back with
+// ErrPreLaunchNotOurs, and nothing of the command is in the error or the log.
+// syncExe is the launcher's sync copy, as RewritePreLaunchCommand's.
 //
 // Only the one key is written, in the current template, atomically, every
 // other line and its line ending kept (rewriteINIKeys). A command that already
 // names to in the current template is not written (PreLaunchCurrent); one that
-// names to in the earlier template is brought up to date (PreLaunchRewritten).
+// names to in an earlier template is brought up to date (PreLaunchRewritten).
 //
 // to is the caller's to pick from the two values it knows, the manifest's pack
 // and the loopback override from settings. It is still held to the rule either
 // would have passed, so no other URL can reach the command line from here.
 // Whether the game is running is the caller's to ask.
-func SwitchPackSource(cfgPath, to string) (PreLaunchResult, error) {
+func SwitchPackSource(cfgPath, syncExe, to string) (PreLaunchResult, error) {
 	if !commandSafeURL.MatchString(to) && !IsLocalPackURL(to) {
 		return PreLaunchAbsent, errors.New("pack source: that pack URL cannot go on a command line")
 	}
@@ -54,14 +55,15 @@ func SwitchPackSource(cfgPath, to string) (PreLaunchResult, error) {
 	if !ok {
 		return PreLaunchAbsent, nil
 	}
-	old := packURLFromCommand(cmd)
-	if old == "" || (cmd != preLaunchCommand(old) && cmd != legacyPreLaunchCommand(old)) {
+	own := classifyPreLaunch(cmd)
+	if own.kind == kindForeign {
 		return PreLaunchForeign, fmt.Errorf("pack source: %w", ErrPreLaunchNotOurs)
 	}
-	if cmd == preLaunchCommand(to) {
+	want := own.targetCommand(syncExe, to)
+	if cmd == want {
 		return PreLaunchCurrent, nil
 	}
-	out, err := rewriteINIKeys(raw, map[string]string{preLaunchKey: qtString(preLaunchCommand(to))})
+	out, err := rewriteINIKeys(raw, map[string]string{preLaunchKey: qtString(want)})
 	if err != nil {
 		return PreLaunchAbsent, fmt.Errorf("pack source: %w", err)
 	}

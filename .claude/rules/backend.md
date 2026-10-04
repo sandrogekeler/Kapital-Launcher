@@ -24,8 +24,10 @@ through.
 documented CLI, quoted at the top of the file; `LaunchArgs` is the pure, tested
 function that builds the argument array, and `Launch` starts Prism and returns
 its process. The only other processes are macOS's `codesign`, with fixed
-arguments, in `verify_darwin.go`, and macOS's `open`, with the absolute path of
-a folder that exists as its only argument, in `openfolder_darwin.go`. Windows
+arguments, in `verify_darwin.go`, macOS's `open`, with the absolute path of
+a folder that exists as its only argument, in `openfolder_darwin.go`, and the
+pre-launch sync's Java, the `INST_JAVA` Prism named with the packwiz template's
+arguments, in `modsync.go` (`ExecSyncRunner`). Windows
 opens a folder with `ShellExecute`, an API call and not a process. Copying the
 log (`CopyRedactedLog`) goes through Wails' `ClipboardSetText`, which on macOS
 runs `pbcopy` with no argument and the redacted text on its stdin
@@ -161,13 +163,30 @@ exist, `instance.cfg` last, and touched again only in the keys the amendments
 name (ADR-2, amendment). In the managed root it owns it also seeds `prismlauncher.cfg`,
 `prismlauncher_update.cfg` and `qtlogging.ini` once, before Prism first starts
 (the last also before a launch, when absent, for an earlier install). The pre-launch
-command it writes runs packwiz-installer headless (`-g`, #95); before a launch
+command it writes is the launcher's own copy in a sync mode,
+`"<data dir>/sync/kapital-launcher" --prelaunch-sync <pack URL>` (issue 156, ADR-2
+ninth amendment; `prelaunchcommand.go` has the three templates the launcher has
+written and reads them all, the URL always last). `main()` branches on the flag
+before it opens a log or a window and `services.RunSync` (`modsync.go`) does the
+work: it puts the player's disabled mods back from `.jar.disabled`, runs
+packwiz-installer headless (`-g`, #95) as an argument array with the arguments of
+the packwiz template (`packwizSyncArgs`), and puts them away again, with a journal
+(`kapital-disabled.json`) written first because Prism's cancel is a hard kill. It
+reads `INST_MC_DIR`, `INST_JAVA` and `INST_ID` from Prism's environment, prints
+ASCII `kapital-sync:` lines, touches only regular files directly in the instance's
+`mods` folder through an `os.Root` by the `ModJarName` shape (`mods.go`), and is
+the one place that starts Java. The copy (`synccopy.go`, `SyncCopy`) is refreshed
+when the version differs, atomically, in `sync/` or, for a dev build, `sync-dev/`;
+with none the instance keeps the packwiz command. Before a launch
 `RewritePreLaunchCommand` (`prelaunch.go`) brings an instance made earlier up to
-that command, only when the key is exactly the launcher's earlier template, with
-the same URL, and leaves anything else alone (ADR-2, fourth amendment). On the
-player's request `SwitchPackSource` (`packswitch.go`, `SetPackSource`) rewrites
-the same key between the manifest's pack and the loopback override, under the
-same template check (ADR-2, seventh amendment).
+the current command, only when the key is exactly one of the launcher's templates
+with the same URL, and leaves anything else alone (ADR-2, fourth and ninth
+amendments). On the player's request `SwitchPackSource` (`packswitch.go`,
+`SetPackSource`) rewrites the same key between the manifest's pack and the
+loopback override, under the same template check (ADR-2, seventh amendment).
+`SetModsDisabled` and `GetChapterMods` (`app_mods.go`) are the settings page's
+side: the list lives in settings (`disabledMods`), is validated against the mods
+folder, applied at once, and refused while the game runs.
 
 ## Data shapes
 

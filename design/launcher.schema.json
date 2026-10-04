@@ -70,6 +70,24 @@
             "mrpack": {
               "oneOf": [{ "$ref": "#/$defs/httpsUrl" }, { "type": "null" }],
               "description": "The .mrpack a fresh install imports (ADR-3, option A)."
+            },
+            "toggles": {
+              "type": "array",
+              "maxItems": 12,
+              "description": "Mods a player may switch off from the chapter's settings as a quick choice (issue 156). Each names a mod and the start of its jar's file name; every jar in the instance's mods folder that starts with it is that mod, whichever version the pack ships. Names are unique, and no prefix starts another.",
+              "items": {
+                "type": "object",
+                "required": ["name", "jarPrefix"],
+                "additionalProperties": false,
+                "properties": {
+                  "name": { "type": "string", "minLength": 1, "maxLength": 40, "description": "What the switch is called." },
+                  "jarPrefix": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]{2,63}$",
+                    "description": "The part of the jar's file name before its version, separator included: DistantHorizons- for DistantHorizons-3.3.3-1.21.1-fabric-neoforge.jar. A prefix, never a path or a pattern."
+                  }
+                }
+              }
             }
           }
         },

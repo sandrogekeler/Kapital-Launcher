@@ -130,7 +130,7 @@ func TestInstancesReadBackThePackURLTheLauncherWrote(t *testing.T) {
 	local := "http://localhost:8080/pack.toml"
 	hosted := "https://kapitel-kapital.pages.dev/frangfurd/pack.toml"
 	written := func(url string) string {
-		cfg, err := renderInstanceConfig(frangfurdChapter(url), url)
+		cfg, err := renderInstanceConfig(frangfurdChapter(url), testSyncExe, url)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -158,13 +158,19 @@ func TestInstancesReadBackThePackURLTheLauncherWrote(t *testing.T) {
 
 func TestPackURLFromCommand(t *testing.T) {
 	cases := map[string]string{
-		preLaunchCommand("https://kapitel-kapital.pages.dev/p/pack.toml"): "https://kapitel-kapital.pages.dev/p/pack.toml",
-		preLaunchCommand("http://[::1]:8080/pack.toml"):                   "http://[::1]:8080/pack.toml",
+		packwizPreLaunchCommand("https://kapitel-kapital.pages.dev/p/pack.toml"): "https://kapitel-kapital.pages.dev/p/pack.toml",
+		packwizPreLaunchCommand("http://[::1]:8080/pack.toml"):                   "http://[::1]:8080/pack.toml",
 		// An instance made before the pack sync ran headless (#95).
 		legacyPreLaunchCommand("https://kapitel-kapital.pages.dev/p/pack.toml"): "https://kapitel-kapital.pages.dev/p/pack.toml",
-		"":                                "",
-		"packwiz-installer-bootstrap.jar": "",
-		`java -jar packwiz-installer-bootstrap.jar $X`: "",
+		// The launcher's own copy, which runs the sync (issue 156).
+		preLaunchCommand(testSyncExe, "https://kapitel-kapital.pages.dev/p/pack.toml"): "https://kapitel-kapital.pages.dev/p/pack.toml",
+		preLaunchCommand(testSyncExe, "http://[::1]:8080/pack.toml"):                   "http://[::1]:8080/pack.toml",
+		`"` + testSyncExe + `" ` + SyncFlag + ` https://example.com/$X`:                "",
+		`"` + testSyncExe + `" ` + SyncFlag:                                            "",
+		`"` + testSyncExe + `"`:                                                        "",
+		"":                                                                             "",
+		"packwiz-installer-bootstrap.jar":                                              "",
+		`java -jar packwiz-installer-bootstrap.jar $X`:                                 "",
 	}
 	for cmd, want := range cases {
 		if got := packURLFromCommand(cmd); got != want {

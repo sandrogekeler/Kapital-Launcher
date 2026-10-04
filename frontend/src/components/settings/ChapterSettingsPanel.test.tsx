@@ -50,6 +50,7 @@ describe('ChapterSettingsPanel', () => {
   // The pack source section is its own chunk; loading it first keeps the tests off the transform.
   beforeAll(async () => {
     await import('./PackSourceSection')
+    await import('./ModsSection')
   }, 60_000)
 
   beforeEach(() => {
@@ -166,6 +167,36 @@ describe('ChapterSettingsPanel', () => {
     unmount()
     window.dispatchEvent(new Event('focus'))
     expect(App.GetChapterSettings).toHaveBeenCalledTimes(2)
+  })
+
+  it('shows the mods section for an installed chapter, after the memory and before the pack source', async () => {
+    vi.mocked(App.GetChapterMods).mockResolvedValue({
+      chapterId: 'frangfurd',
+      running: false,
+      mods: [
+        { name: 'DistantHorizons-3.3.3-1.21.1-fabric-neoforge.jar', disabled: false, size: 1 },
+      ],
+      toggles: [
+        {
+          name: 'Distant Horizons',
+          jarPrefix: 'DistantHorizons-',
+          jars: ['DistantHorizons-3.3.3-1.21.1-fabric-neoforge.jar'],
+          disabled: false,
+        },
+      ],
+    } as never)
+    render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+    expect(await screen.findByRole('switch', { name: 'Distant Horizons' })).toBeChecked()
+    expect(App.GetChapterMods).toHaveBeenCalledWith('frangfurd')
+    const headings = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
+    expect(headings.indexOf('Mods')).toBeGreaterThanOrEqual(0)
+  })
+
+  it('does not read the mods of a chapter that is not installed', () => {
+    useEngineStore.setState({ instances: report(false) })
+    render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+    expect(App.GetChapterMods).not.toHaveBeenCalled()
+    expect(screen.queryByRole('region', { name: 'Mods' })).toBeNull()
   })
 
   it('explains when the chapter is not installed', () => {

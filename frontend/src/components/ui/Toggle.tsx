@@ -8,6 +8,8 @@ interface Props {
   hint?: string
   /** The backend's rejection, shown under the label in place of the hint. */
   error?: string | null
+  /** The switch cannot be used now (a write in flight, a game that runs); the label stays readable. */
+  disabled?: boolean
   /** Called with the new state on a click; the caller saves it. */
   onChange: (checked: boolean) => void
 }
@@ -20,7 +22,7 @@ interface Props {
  * control's name, so it stays in the foreground colour, and clicking it
  * toggles the switch.
  */
-export function Toggle({ label, checked, hint, error, onChange }: Props) {
+export function Toggle({ label, checked, hint, error, disabled, onChange }: Props) {
   const id = useId()
   const lineId = `${id}-line`
   const track = checked ? 'bg-accent border-accent' : 'bg-sunken border-line-strong'
@@ -28,7 +30,10 @@ export function Toggle({ label, checked, hint, error, onChange }: Props) {
   return (
     <div className="flex items-start justify-between gap-6">
       <div className="flex min-w-0 flex-col gap-1.5">
-        <label htmlFor={id} className="text-fg w-fit cursor-pointer text-sm">
+        <label
+          htmlFor={id}
+          className={`text-fg w-fit text-sm ${disabled ? 'cursor-default' : 'cursor-pointer'}`}
+        >
           {label}
         </label>
         {error ? (
@@ -43,8 +48,9 @@ export function Toggle({ label, checked, hint, error, onChange }: Props) {
         role="switch"
         aria-checked={checked}
         aria-describedby={error || hint ? lineId : undefined}
+        disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={`${track} duration-fast ease-standard rounded-pill inline-flex h-6 w-11 shrink-0 cursor-pointer items-center border p-0.5 transition-colors motion-reduce:transition-none`}
+        className={`${track} duration-fast ease-standard rounded-pill inline-flex h-6 w-11 shrink-0 cursor-pointer items-center border p-0.5 transition-colors disabled:cursor-default disabled:opacity-50 motion-reduce:transition-none`}
       >
         <span
           aria-hidden

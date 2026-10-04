@@ -128,6 +128,9 @@ func ValidateManifest(m models.Manifest) error {
 				return fmt.Errorf("%s: jvm preset %q needs Minecraft %s or later", where, *c.Pack.JVM, preset.minMinecraft)
 			}
 		}
+		if err := validateToggles(where, c.Pack.Toggles); err != nil {
+			return err
+		}
 		if c.Pack.Mrpack != nil {
 			if err := checkURL(where+".pack.mrpack", *c.Pack.Mrpack); err != nil {
 				return err
@@ -141,6 +144,45 @@ func ValidateManifest(m models.Manifest) error {
 		}
 		if !wikiPathPattern.MatchString(c.Wiki.Path) {
 			return fmt.Errorf("%s: wiki path %q must be absolute and carry no whitespace", where, c.Wiki.Path)
+		}
+	}
+	return nil
+}
+
+// maxToggles is how many quick switches a chapter may name.
+const maxToggles = 12
+
+// modTogglePrefixShape is what a manifest may name as the start of a jar: the
+// part of a file name before the version, "DistantHorizons-". Narrower than a
+// jar name, with no space or bracket, and long enough not to match a stranger.
+var modTogglePrefixShape = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._+-]{2,63}$`)
+
+// validateToggles holds a chapter's quick mod switches to what a manifest may
+// say about a mod: a name to show and the start of its jar's file name, in a
+// shape with no separator, space or bracket (modTogglePrefixShape). Names are
+// unique, prefixes are unique, and no prefix starts another, so a jar is never
+// two switches. A prefix names jars and never runs one: it is only matched
+// against the file names in the instance's mods folder.
+func validateToggles(where string, toggles []models.ModToggle) error {
+	if len(toggles) > maxToggles {
+		return fmt.Errorf("%s: pack.toggles has %d entries, the limit is %d", where, len(toggles), maxToggles)
+	}
+	for i, t := range toggles {
+		at := fmt.Sprintf("%s.pack.toggles[%d]", where, i)
+		name := strings.TrimSpace(t.Name)
+		if name == "" || name != t.Name || len(name) > 40 || strings.ContainsFunc(name, unicode.IsControl) {
+			return fmt.Errorf("%s: name %q is not a short plain name", at, t.Name)
+		}
+		if !modTogglePrefixShape.MatchString(t.JarPrefix) {
+			return fmt.Errorf("%s: jarPrefix %q is not the start of a jar file name", at, t.JarPrefix)
+		}
+		for j, other := range toggles[:i] {
+			switch {
+			case other.Name == t.Name:
+				return fmt.Errorf("%s: name %q is used by toggles[%d] too", at, t.Name, j)
+			case strings.HasPrefix(t.JarPrefix, other.JarPrefix) || strings.HasPrefix(other.JarPrefix, t.JarPrefix):
+				return fmt.Errorf("%s: jarPrefix %q overlaps toggles[%d]'s %q", at, t.JarPrefix, j, other.JarPrefix)
+			}
 		}
 	}
 	return nil

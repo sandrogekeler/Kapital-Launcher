@@ -3,8 +3,9 @@
 // Validate the data files against their schemas, with no dependency: the two
 // schemas here use a small subset of JSON Schema (type, required, properties,
 // additionalProperties, enum, const, pattern, oneOf, $ref to #/$defs, minimum,
-// minItems, minLength, propertyNames, minProperties). Anything outside that
-// subset is an error here, so a schema cannot quietly grow past what is checked.
+// minItems, maxItems, minLength, maxLength, propertyNames, minProperties).
+// Anything outside that subset is an error here, so a schema cannot quietly
+// grow past what is checked.
 //
 // The Go side checks the manifest again at startup (services.ValidateManifest),
 // with the rules a schema cannot state. This is the editor-time half.
@@ -46,6 +47,7 @@ const KNOWN = new Set([
   "maxItems",
   "items",
   "minLength",
+  "maxLength",
   "propertyNames",
   "minProperties",
 ]);
@@ -130,6 +132,8 @@ function validateNumber(value, schema, at, errors) {
 function validateString(value, schema, at, errors) {
   if (schema.minLength !== undefined && value.length < schema.minLength)
     errors.push(`${at}: shorter than ${schema.minLength}`);
+  if (schema.maxLength !== undefined && value.length > schema.maxLength)
+    errors.push(`${at}: longer than ${schema.maxLength}`);
   if (schema.pattern && !new RegExp(schema.pattern).test(value))
     errors.push(
       `${at}: ${JSON.stringify(value)} does not match ${schema.pattern}`,

@@ -8,6 +8,7 @@ export namespace models {
 	    lastChapter: string;
 	    packOverrides?: Record<string, string>;
 	    serverChoices?: Record<string, string>;
+	    disabledMods?: Record<string, Array<string>>;
 	    loadingSplash?: boolean;
 	    loadingSplashAvailable?: boolean;
 	    loadingSplashOn?: boolean;
@@ -26,6 +27,7 @@ export namespace models {
 	        this.lastChapter = source["lastChapter"];
 	        this.packOverrides = source["packOverrides"];
 	        this.serverChoices = source["serverChoices"];
+	        this.disabledMods = source["disabledMods"];
 	        this.loadingSplash = source["loadingSplash"];
 	        this.loadingSplashAvailable = source["loadingSplashAvailable"];
 	        this.loadingSplashOn = source["loadingSplashOn"];
@@ -110,6 +112,20 @@ export namespace models {
 		    return a;
 		}
 	}
+	export class ModToggle {
+	    name: string;
+	    jarPrefix: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ModToggle(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.jarPrefix = source["jarPrefix"];
+	    }
+	}
 	export class Pack {
 	    type: string;
 	    loader: string;
@@ -120,6 +136,7 @@ export namespace models {
 	    packwiz?: string;
 	    mrpack?: string;
 	    jvm?: string;
+	    toggles?: ModToggle[];
 	
 	    static createFrom(source: any = {}) {
 	        return new Pack(source);
@@ -136,7 +153,26 @@ export namespace models {
 	        this.packwiz = source["packwiz"];
 	        this.mrpack = source["mrpack"];
 	        this.jvm = source["jvm"];
+	        this.toggles = this.convertValues(source["toggles"], ModToggle);
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class Instance {
 	    id: string;
@@ -182,6 +218,76 @@ export namespace models {
 	        this.server = this.convertValues(source["server"], Server);
 	        this.wiki = this.convertValues(source["wiki"], WikiTeaser);
 	        this.changelog = this.convertValues(source["changelog"], ChangelogEntry);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ModToggleState {
+	    name: string;
+	    jarPrefix: string;
+	    jars: string[];
+	    disabled: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ModToggleState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.jarPrefix = source["jarPrefix"];
+	        this.jars = source["jars"];
+	        this.disabled = source["disabled"];
+	    }
+	}
+	export class ModFile {
+	    name: string;
+	    disabled: boolean;
+	    size: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ModFile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.disabled = source["disabled"];
+	        this.size = source["size"];
+	    }
+	}
+	export class ChapterMods {
+	    chapterId: string;
+	    mods: ModFile[];
+	    toggles: ModToggleState[];
+	    running: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ChapterMods(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.chapterId = source["chapterId"];
+	        this.mods = this.convertValues(source["mods"], ModFile);
+	        this.toggles = this.convertValues(source["toggles"], ModToggleState);
+	        this.running = source["running"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -373,6 +479,9 @@ export namespace models {
 		    return a;
 		}
 	}
+	
+	
+	
 	
 	export class PackState {
 	    chapterId: string;

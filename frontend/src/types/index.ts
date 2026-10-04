@@ -180,6 +180,17 @@ export interface Pack {
   version?: string | null
   packwiz?: string | null
   mrpack?: string | null
+  /** Mods a player may switch off from the chapter's settings as a quick choice (issue 156). */
+  toggles?: ModToggle[] | null
+}
+
+/**
+ * A mod the manifest offers as a quick switch: a name to show and the start of its jar's
+ * file name, the part before the version, so it keeps matching when the pack updates the mod.
+ */
+export interface ModToggle {
+  name: string
+  jarPrefix: string
 }
 
 /** One page of the wiki, from its lore export (#58); eras are chapter names. */
@@ -309,6 +320,33 @@ export interface ChapterSettingsInfo {
   running: boolean
 }
 
+/** One jar in a chapter's mods folder (issue 156). */
+export interface ModFile {
+  /** The jar's base name, `Mod-1.2.3.jar`, whether the file on disk is that or `.jar.disabled`. */
+  name: string
+  /** Whether the file is switched off: Prism's own `.jar.disabled`. */
+  disabled: boolean
+  /** Bytes. */
+  size: number
+}
+
+/** A manifest toggle resolved against the mods folder. */
+export interface ModToggleState extends ModToggle {
+  /** The jars it matches now; none before the pack's first sync. */
+  jars: string[]
+  /** True when it matches at least one jar and every one of them is switched off. */
+  disabled: boolean
+}
+
+/** A chapter's mods as the settings page shows them: the folder, and the quick toggles in it. */
+export interface ChapterMods {
+  chapterId: string
+  mods: ModFile[]
+  toggles: ModToggleState[]
+  /** The tracker or the game log says the game runs; the log half is a guess, shown as a hint. */
+  running: boolean
+}
+
 export interface AppSettings {
   theme: Theme | string
   prismExecutable: string
@@ -319,6 +357,12 @@ export interface AppSettings {
   packOverrides?: Record<string, string>
   /** Chapter id to the label of the server address the player picked (issue 151); absent is the first. */
   serverChoices?: Record<string, string>
+  /**
+   * Chapter id to the jars switched off (issue 156). Go's own: GetSettings never fills it and a
+   * save never changes it; the mods section reads and writes the list through GetChapterMods and
+   * SetModsDisabled.
+   */
+  disabledMods?: Record<string, string[]>
   /** The player's choice for the loading splash (#43, #97); absent is the default: on for Windows, off for macOS, unavailable elsewhere. */
   loadingSplash?: boolean
   /** Whether the splash can run on this OS at all (Windows and macOS). Derived by GetSettings, never saved. */

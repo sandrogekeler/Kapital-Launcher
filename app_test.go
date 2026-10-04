@@ -15,10 +15,17 @@ import (
 
 func newTestApp(t *testing.T) *App {
 	t.Helper()
-	app, err := NewApp(t.TempDir(), bundledManifest, nil)
+	dataDir := t.TempDir()
+	app, err := NewApp(dataDir, bundledManifest, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The sync copy is of a small file, not of this test binary.
+	launcher := filepath.Join(t.TempDir(), "launcher")
+	if err := os.WriteFile(launcher, []byte("not the launcher"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	app.syncCopy = services.NewSyncCopyFrom(dataDir, Version, func() (string, error) { return launcher, nil })
 	return app
 }
 

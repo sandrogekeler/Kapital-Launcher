@@ -16,6 +16,11 @@ func (a *App) startup(ctx context.Context) {
 	if _, err := a.detectEngine(); err != nil {
 		slog.Warn("engine detection", "error", err)
 	}
+	// The copy Prism's pre-launch command runs follows this build, when there is
+	// one, off the startup path (it is the size of the launcher).
+	if a.syncCopy != nil && a.syncCopy.Exists() {
+		go a.syncExe()
+	}
 	// The status ticker lives as long as the window. Each result is an event
 	// the frontend listens for; a chapter's line updates without asking.
 	runCtx, cancel := context.WithCancel(ctx)

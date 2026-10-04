@@ -4,6 +4,7 @@ import (
 	"embed"
 	"io/fs"
 	"log/slog"
+	"os"
 	"runtime"
 
 	"github.com/wailsapp/wails/v2"
@@ -30,6 +31,13 @@ var assets embed.FS
 var bundledManifest []byte
 
 func main() {
+	// Prism runs the launcher's own copy as the pre-launch command, with this
+	// flag: that run is the pack sync and never the app, so it is looked for
+	// first, before a log is opened or anything of the window starts
+	// (issue 156, docs/adr/0002-prism-data-root.md, ninth amendment).
+	if services.IsSyncInvocation(os.Args[1:]) {
+		os.Exit(runPreLaunchSync(os.Args[1:]))
+	}
 	// Before wails.Run, so a failure to open the window is itself logged
 	// somewhere retrievable: a packaged GUI build has no terminal.
 	dataDir := services.DataDir()

@@ -9,7 +9,7 @@ Two reaches matter: **network** (a manifest, a pack index, a download, a server
 ping response) and **bridge** (a bound method on `App`, callable by anything
 that runs in the WebView).
 
-Bound methods on 2026-10-04: **38** (`grep -c '^func (a \*App) [A-Z]' app.go app_*.go`,
+Bound methods on 2026-10-04: **40** (`grep -c '^func (a \*App) [A-Z]' app.go app_*.go`,
 summed). A different count is new surface to classify: add the method to this table.
 
 | Method | Takes from the bridge | Reaches | Item |
@@ -36,6 +36,8 @@ summed). A different count is new surface to classify: add the method to this ta
 | `SaveChapterSettings` | a chapter id and a `ChapterSettings` | five keys rewritten in the chapter's own `instance.cfg`, held to the preset list and the machine's memory | S3.2, S3.3, S4.6 |
 | `GetRunLogs` | a chapter id | the names, times and sizes of `logs/latest.log`, `logs/*.log.gz` and `crash-reports/*.txt` in that chapter's instance game folder, listed through an `os.Root`; no file is opened | S3.3, S3.10 |
 | `ReadRunLog` | a chapter id, a kind (`log` or `crash`), a base name the listing produces and a byte offset | one chunk (at most 256 KiB, from a whole line) of one such file in that game folder, unpacked if `.log.gz` up to 256 MiB, redacted before it leaves Go; nothing written | S3.3, S3.10, S7.5 |
+| `GetChapterMods` | a chapter id | the file names, sizes and disabled state of the regular files directly in that chapter's instance `mods` folder, listed through an `os.Root`; when the game is not running, a left-over sync journal is recovered (jars in it that are still on the player's list are renamed to `.jar.disabled`) | S3.3, S3.11 |
+| `SetModsDisabled` | a chapter id and a list of jar base names | the settings file (the chapter's `disabledMods`), then renames of `x.jar` and `x.jar.disabled` in that `mods` folder only, each name a plain jar name present in the folder; refused while the game runs and under a developer preview | S3.3, S3.11 |
 | `WatchLiveLog` | a chapter id | the same chunk of `logs/latest.log` as `ReadRunLog` (at most 256 KiB, redacted), and a follower of that one file in that game folder, which emits what is appended as `log:live` events (at most 64 KiB each, redacted); one follower at a time, ended by the app's shutdown; nothing written | S3.3, S3.10, S7.5 |
 | `StopLiveLog` | a chapter id | the follower of that chapter's log, ended; nothing else | S3.3, S3.10 |
 | `GetPreviewSituations` | nothing | the fixed list of developer previews, in memory | none |
@@ -74,7 +76,8 @@ ever open a file or leave the instance folder?
 
 **S1.2 App data holds no secrets.**
 Holds when: `models.AppSettings` carries no password, token or key, and the
-settings file is written `0600`.
+settings file is written `0600`. `disabledMods` (issue 156) is per chapter a list
+of jar file names and nothing else.
 Verify: read `backend/models/settings.go`; `TestSettingsRoundTrip` checks the mode.
 
 ## S2. The manifest
@@ -84,7 +87,8 @@ Holds when: `models.Manifest` has no field for a command, an argument, a JVM
 option or a filesystem path, and `ParseManifest` refuses unknown fields.
 `pack.jvm` names a preset the launcher maps to arguments (`jvmPresets`) and is
 refused when unknown; the `pack.toml` URL is the only manifest value on the
-pre-launch command line, and `commandSafeURL` refuses the characters Prism
+pre-launch command line (`pack.toggles` names a jar-name prefix that is only
+matched against file names, S3.11), and `commandSafeURL` refuses the characters Prism
 reads there (`$`, quotes, spaces, a backslash, `#`).
 Verify: `TestParseManifestRefusesUnknownFields`; `TestValidateManifestRefuses`;
 `TestRenderInstanceConfigRefuses`; read `design/launcher.schema.json`.
@@ -128,7 +132,9 @@ Holds when: the `exec.Command`s in the tree are Prism's (launch, `--version`,
 `flatpak info`), all with argument arrays built from validated values, plus
 `/usr/bin/codesign --verify` on macOS with a fixed argument list (S4.5) and
 `/usr/bin/open` on macOS with one argument, the absolute path of a chapter's
-instance folder (S3.6); nothing invokes `sh`, `cmd` or `powershell`. One
+instance folder (S3.6), plus the one the pre-launch sync starts, the `INST_JAVA`
+Prism named with the packwiz template's arguments (S3.11); nothing invokes `sh`,
+`cmd` or `powershell`. One
 process is not ours: on macOS Wails' `ClipboardSetText` runs `pbcopy`, no
 argument and the redacted log tail on its stdin, when the log is copied (S7.3).
 Verify: the `shell never sees a command string` invariant in `.claude/suite.json`.
@@ -347,6 +353,55 @@ Probe: `../../instance.cfg`, `..\..\instance.cfg`, `logs/latest.log`, a kind of
 `instance`; a `latest.log` that is a link to another file; `logs` itself a link
 out of the game folder; a `.log.gz` that unpacks to gigabytes.
 
+**S3.11 The mod switches rename only plain jar files in one folder, and the pre-launch sync runs only what the pre-launch command did.**
+Holds when: (a) `services.ModJarName` is the one test of a jar name, used on the
+bridge's list (`ValidateDisabledMods`), on the settings file (save and load),
+on every folder entry before it is listed and again before each rename: letters,
+digits, space and `._+()[],'&!@-`, ending in `.jar`, no separator of either kind,
+no `..`, no colon, no leading dot or space, at most 160 bytes. (b) Every rename
+and removal goes through an `*os.Root` on `<game folder>/mods` opened from an
+`os.Root` on the game folder, so a link that leaves either is refused by the OS
+layer, and acts only on a name `Lstat`ed as a regular file: a folder or link
+named like a jar is an error and untouched. (c) A manifest toggle carries only a
+display name and a jar-name prefix (`jarPrefix`, `[A-Za-z0-9][A-Za-z0-9._+-]{2,63}`,
+unique, none the start of another); it is matched against file names and never
+reaches a path, a command or Prism. (d) The sync mode (`--prelaunch-sync`,
+`services.RunSync`, ADR-2 ninth amendment) is entered only through `main()`'s
+check of `os.Args`, takes exactly the flag and one URL, refuses a URL that is not
+`commandSafeURL` and on the manifest allowlist or loopback (the rule an
+instance's URL passes at install), reads `INST_MC_DIR`, `INST_JAVA` (both
+absolute) and `INST_ID` (the instance folder pattern) from the environment,
+renames mods only for an `INST_ID` that is a chapter's instance and whose game
+folder is that instance's own, and runs one process: the `INST_JAVA` Prism named,
+with the argument array of the packwiz template (`packwizSyncArgs`, equal to that
+template token for token by `TestPackwizSyncArgsAreThePackwizCommandsArguments`),
+in the game folder, no shell. It prints ASCII lines prefixed `kapital-sync:` and
+reads nothing of Prism's account data. (e) A journal (`kapital-disabled.json` in
+the game folder, `0600`, written atomically) is written before the first rename
+and removed only when the mods are away again. (f) The launcher's copy of itself
+(`SyncCopy`) is made in the data folder only, atomically, from `os.Executable`;
+the path written into `instance.cfg` is held to no `$`, no `"`, no control
+character and absolute (`checkSyncExePath`), and a command is the launcher's own
+only when it names `<anything>/sync/kapital-launcher(.exe)` or `sync-dev`, the
+flag and a URL (`classifyPreLaunch`).
+Verify: `TestModJarNameAcceptsTheRealOnesAndNothingThatCouldNameAPath`,
+`TestSetDisabledRefusesAFolderOrALinkNamedLikeAJar`,
+`TestSetDisabledNeverFollowsALink` and
+`TestModsFolderThatIsALinkOutOfTheGameFolderIsRefused` (skipped on Windows, where
+a test runner cannot make links), `TestSyncRenamesNothingOutsideTheModsFolder`,
+`TestSyncRefusesWhatItCannotRunSafely`,
+`TestSyncRestoresRunsAndPutsTheDisabledModsAwayAgain`,
+`TestSyncPutsModsAwayWhateverTheInstallerDoes`, `TestSyncAfterAKilledRun`,
+`TestSetModsDisabledRefusesBeforeChangingAnything`,
+`TestSetModsDisabledIsRefusedWhileTheGameRunsAndUnderAPreview`,
+`TestCheckSyncExePathRefusesWhatPrismWouldReadAsSomethingElse`,
+`TestValidateManifestRefusesBadToggles`; `grep -rn 'exec.Command' backend | grep -v _test`
+shows `ExecSyncRunner`'s as the one new process.
+Probe: a settings file with `../options.txt` or `mods/x.jar` as a name; a `mods`
+folder that is a link out of the instance; a jar-named folder; INST_MC_DIR
+pointing at another instance; a pack URL with `$`, a quote or another host; a
+copy path with a `$` in it; a pre-launch command naming another program in a
+`sync` folder.
 The live log (`WatchLiveLog`, `StopLiveLog`, `services/livelog.go`) is the same
 reader kept going and holds the same rules. It follows one file only, the
 instance's `logs/latest.log` (the name goes through `validRunLogName` with the
@@ -420,18 +475,20 @@ only from GitHub's hosts, checked against the size and SHA-256 pinned in
 the launcher's fixed list and a memory the machine has
 (`ValidateChapterSettings`), and `SaveChapterSettings` refuses while the
 instance looks to be running. Before a launch, `RewritePreLaunchCommand`
-(`prelaunch.go`, #95, ADR-2's fourth amendment) rewrites the one key
-`PreLaunchCommand` and only when it is exactly the launcher's earlier template
-(the same jar paths and flags, a URL that passes `packURLFromCommand`), to the
-current template with the same URL, atomically, every other line and its line
+(`prelaunch.go`, #95, ADR-2's fourth and ninth amendments) rewrites the one key
+`PreLaunchCommand` and only when it is exactly one of the launcher's own
+templates (`classifyPreLaunch`: the first, the packwiz one with the same jar
+paths and flags, or the sync one naming `<dir>/sync/kapital-launcher(.exe)` or
+`sync-dev`, each with a URL that passes `packURLFromCommand`), to the current
+template with the same URL, atomically, every other line and its line
 ending kept; anything else in the key is left alone, nothing of it is logged,
 and a failed rewrite never stops the launch. It is skipped while the instance
 looks to be running. On the player's request, `SwitchPackSource`
 (`packswitch.go`, `SetPackSource`, ADR-2's seventh amendment) rewrites that same
 key between exactly two values, the manifest's `pack.toml` and the loopback
 address from `packOverrides` (`CheckLocalPackURL` again at the call), under the
-same template check: the command must be exactly the launcher's current or
-earlier template for the URL it ends in, else it is refused with an error that
+same template check: the command must be exactly one of the launcher's templates
+for the URL it ends in, else it is refused with an error that
 names no part of it, and nothing is logged beyond the chapter and the word
 `published` or `dev`. The caller supplies a chapter id and one of those two
 words, never a URL. The write is atomic with every other line and its line
@@ -441,9 +498,9 @@ Verify: `packinstance_test.go`; `TestWriteChapterSettingsTouchesOnlyItsKeys`,
 `TestRewriteINIKeysAddsMissingKeysToGeneralOnly`,
 `TestValidateChapterSettingsHoldsToThePresetsAndTheMachine`,
 `TestChapterSettingsRoundTripThroughTheInstance`;
-`TestRewritePreLaunchCommandMovesTheEarlierTemplateToTheCurrentOne`,
+`TestRewritePreLaunchCommandMovesEveryEarlierTemplateToTheCurrentOne`,
 `TestRewritePreLaunchCommandLeavesWhatIsNotItsOwnAlone`,
-`TestPreLaunchCommandRunsThePackSyncHeadless`;
+`TestPreLaunchCommandTemplates`, `TestSyncCommandIsReadBackOnAnyOSPath`;
 `TestSwitchPackSourceMovesTheURLAndNothingElse`,
 `TestSwitchPackSourceRefusesWhatIsNotTheLaunchersOwnCommand`,
 `TestSwitchPackSourceRefusesAURLNeitherSourceCouldHave`,

@@ -58,7 +58,7 @@ func (a *App) SetPackSource(chapterID, source string) (models.InstanceReport, er
 	if err := a.refuseIfRunning(chapter, filepath.Dir(cfg)); err != nil {
 		return models.InstanceReport{}, err
 	}
-	result, err := services.SwitchPackSource(cfg, to)
+	result, err := services.SwitchPackSource(cfg, a.syncExe(), to)
 	if err != nil {
 		slog.Warn("pack source not switched", "chapter", chapterID, "source", source, "error", err)
 		return models.InstanceReport{}, fmt.Errorf("%s: %w", chapter.Name, err)

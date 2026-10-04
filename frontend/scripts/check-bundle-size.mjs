@@ -34,7 +34,11 @@ import { ensureFreshDist } from './lib/dist-freshness.mjs'
 // the lazy page chunks. The pages' own code, the page frame and the reveal
 // stay in those chunks, and the three chapter pages now load as one. Measured
 // 88.04 KB, from 87.8 KB before it.
-const BUDGET_KB = 88.1
+// 88.3 since the mod switches (2026-10-04, issue 156): the bundled manifest,
+// which the first paint embeds, names the mods a player may switch off for
+// Frangfurd and Lichdenstein; the switches' own code loads with the chapter's
+// settings. Measured 88.2 KB, from 88.04 KB before it.
+const BUDGET_KB = 88.3
 
 const DIST_ASSETS = await ensureFreshDist()
 const DIST = path.dirname(DIST_ASSETS)
