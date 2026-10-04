@@ -16,6 +16,7 @@ export {
   ArrowLeft,
   BookOpen,
   Check,
+  ChevronDown,
   Copy,
   Download,
   ExternalLink,
