@@ -1091,15 +1091,15 @@
          on its download page (signpath.org/terms; issue 179). The heading,
          the attribution sentence, the two roles and the privacy sentence are
          theirs to word; keep them as they are. The same text is in the
-         README and in .github/release-body.md. -->
-    <section
-      aria-labelledby="signing-policy"
-      class="border-line border-t px-6 py-10"
-    >
-      <div class="text-fg-soft mx-auto flex max-w-140 flex-col gap-4 text-sm leading-normal">
-        <h2 id="signing-policy" class="text-fg m-0 text-lg font-semibold">
-          Code signing policy
-        </h2>
+         README and in .github/release-body.md. It is a details element, closed
+         until a visitor opens it: one quiet line above the footer, no script. -->
+    <details class="group border-line border-t px-6 py-4">
+      <summary
+        class="text-fg-muted hover:text-fg duration-fast ease-standard mx-auto w-fit cursor-pointer text-xs transition-[color]"
+      >
+        <h2 class="m-0 inline text-xs font-normal">Code signing policy</h2>
+      </summary>
+      <div class="text-fg-soft mx-auto flex max-w-140 flex-col gap-4 pt-6 pb-6 text-sm leading-normal">
         <p class="m-0">
           Free code signing provided by
           <a
@@ -1167,7 +1167,7 @@
           worlds stay where they are until you delete them yourself.
         </p>
       </div>
-    </section>
+    </details>
 
     <footer
       class="text-fg-muted border-line border-t px-6 py-4 text-center text-xs"
