@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"path/filepath"
 
+	wailsrt "github.com/wailsapp/wails/v2/pkg/runtime"
+
 	"kapital/backend/models"
 	"kapital/backend/services"
 )
@@ -103,4 +105,58 @@ func (a *App) ReadRunLog(chapterID, kind, name string, before int64) (models.Run
 	}
 	slog.Info("run log read", "chapter", chapter.ID, "kind", kind, "lines", text.Lines, "earlier", text.Truncated)
 	return text, nil
+}
+
+// WatchLiveLog returns the end of a chapter's logs/latest.log exactly as
+// ReadRunLog(chapter, "log", "latest.log", 0) does, masked, and starts
+// following the file: what the game appends to it, and the start of a new run
+// replacing it, arrive as "log:live" events (models.LiveLogEvent), each line
+// masked before it leaves Go. One log is followed at a time, so starting one
+// ends the one before; it also ends with StopLiveLog and with the app. The
+// chapter id resolves through the manifest and the follower reads only that
+// instance's logs/latest.log, by the page's own name rules. A latest.log that
+// is not there yet is waited for and the text is empty. Nothing is written or
+// kept, and no line goes to slog.
+func (a *App) WatchLiveLog(chapterID string) (models.RunLogText, error) {
+	chapter, dir, installed, err := a.installedInstance(chapterID)
+	if err != nil {
+		return models.RunLogText{}, err
+	}
+	if !installed {
+		return models.RunLogText{}, fmt.Errorf("%s is not installed", chapter.Name)
+	}
+	redactor, err := a.redactor()
+	if err != nil {
+		return models.RunLogText{}, err
+	}
+	text, err := a.live.Start(a.trackContext(), chapter.ID, dir, redactor, a.emitLiveLog)
+	if err != nil {
+		slog.Warn("watch live log", "chapter", chapter.ID, "error", err)
+		return models.RunLogText{}, maskErr(chapter, redactor, err)
+	}
+	slog.Info("live log followed", "chapter", chapter.ID)
+	return text, nil
+}
+
+// StopLiveLog ends the live log of a chapter, when that is the one followed,
+// and returns once no more events of it will come. A chapter that is not being
+// followed is not an error.
+func (a *App) StopLiveLog(chapterID string) error {
+	chapter, ok := a.chapter(chapterID)
+	if !ok {
+		return fmt.Errorf("no chapter %q", chapterID)
+	}
+	a.live.Stop(chapter.ID)
+	return nil
+}
+
+// emitLiveLog sends a live log event to the window, or to the test's catcher.
+func (a *App) emitLiveLog(e models.LiveLogEvent) {
+	if a.emitLive != nil {
+		a.emitLive(e)
+		return
+	}
+	if a.ctx != nil {
+		wailsrt.EventsEmit(a.ctx, services.EventLiveLog, e)
+	}
 }

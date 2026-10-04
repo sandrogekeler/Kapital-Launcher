@@ -42,16 +42,21 @@ A bare `catch {}` that swallows a rejection is the thing to refuse in review.
 
 ## Events
 
-Three: `server:status`, a `models.ServerStatus` emitted by
+Four: `server:status`, a `models.ServerStatus` emitted by
 `StatusService.Run`'s ticker and by `GetServerStatus`; `prism:install`, a
 `models.PrismInstallProgress` per step while `InstallPrism` runs, heard by the
 engine store (`EVENT_PRISM_INSTALL`), the install's outcome still coming from
-the promise, so a missed event cannot leave it hanging; and `game:state`, a
+the promise, so a missed event cannot leave it hanging; `game:state`, a
 `models.GameState` per phase change of a launched game, emitted by
 `GameTracker` (`EventGameState`), heard by the game store
 (`EVENT_GAME_STATE`), with `GetGameStates` for the state now; it carries the
 splash flag (the card is up for the run) and the start's estimate (#43), and
-`LeaveSplash` closes the card and brings the launcher's window back.
+`LeaveSplash` closes the card and brings the launcher's window back; and
+`log:live` (issue 155), a `models.LiveLogEvent` (`chapterId`, redacted `lines`,
+`reset`) from the follower of `logs/latest.log` that `WatchLiveLog` starts and
+`StopLiveLog` ends, heard by the log store (`EVENT_LOG_LIVE`) only while the
+logs page shows the live log: it subscribes when the page starts the watch and
+unsubscribes when the page leaves it.
 
 The loading card (#97) is a second page in a window of its own and has no Wails
 bridge: it is not on this list. What it can ask Go for is its four actions,

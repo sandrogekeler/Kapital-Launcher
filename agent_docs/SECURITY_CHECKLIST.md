@@ -9,7 +9,7 @@ Two reaches matter: **network** (a manifest, a pack index, a download, a server
 ping response) and **bridge** (a bound method on `App`, callable by anything
 that runs in the WebView).
 
-Bound methods on 2026-10-04: **36** (`grep -c '^func (a \*App) [A-Z]' app.go app_*.go`,
+Bound methods on 2026-10-04: **38** (`grep -c '^func (a \*App) [A-Z]' app.go app_*.go`,
 summed). A different count is new surface to classify: add the method to this table.
 
 | Method | Takes from the bridge | Reaches | Item |
@@ -36,6 +36,8 @@ summed). A different count is new surface to classify: add the method to this ta
 | `SaveChapterSettings` | a chapter id and a `ChapterSettings` | five keys rewritten in the chapter's own `instance.cfg`, held to the preset list and the machine's memory | S3.2, S3.3, S4.6 |
 | `GetRunLogs` | a chapter id | the names, times and sizes of `logs/latest.log`, `logs/*.log.gz` and `crash-reports/*.txt` in that chapter's instance game folder, listed through an `os.Root`; no file is opened | S3.3, S3.10 |
 | `ReadRunLog` | a chapter id, a kind (`log` or `crash`), a base name the listing produces and a byte offset | one chunk (at most 256 KiB, from a whole line) of one such file in that game folder, unpacked if `.log.gz` up to 256 MiB, redacted before it leaves Go; nothing written | S3.3, S3.10, S7.5 |
+| `WatchLiveLog` | a chapter id | the same chunk of `logs/latest.log` as `ReadRunLog` (at most 256 KiB, redacted), and a follower of that one file in that game folder, which emits what is appended as `log:live` events (at most 64 KiB each, redacted); one follower at a time, ended by the app's shutdown; nothing written | S3.3, S3.10, S7.5 |
+| `StopLiveLog` | a chapter id | the follower of that chapter's log, ended; nothing else | S3.3, S3.10 |
 | `GetPreviewSituations` | nothing | the fixed list of developer previews, in memory | none |
 | `StartPreview`, `ClearPreviews` | a chapter id and a situation name, which must be one of the fixed list (`services.PreviewSituations`) | state and copy only: a synthetic `game:state`, the real loading card with a made-up report, synthetic pack, instance, engine and release answers, and a made-up Prism install that never reaches the installer. No file, process, URL or network request; a real launch, game event or write to the chapter ends the preview | S3.3, S3.8, S4.5 |
 
@@ -344,6 +346,32 @@ test runner cannot make links), `TestAGzipBombBeyondTheCapIsRefused`,
 Probe: `../../instance.cfg`, `..\..\instance.cfg`, `logs/latest.log`, a kind of
 `instance`; a `latest.log` that is a link to another file; `logs` itself a link
 out of the game folder; a `.log.gz` that unpacks to gigabytes.
+
+The live log (`WatchLiveLog`, `StopLiveLog`, `services/livelog.go`) is the same
+reader kept going and holds the same rules. It follows one file only, the
+instance's `logs/latest.log` (the name goes through `validRunLogName` with the
+kind `log`, and nothing the caller sends picks it), looked at every 500 ms
+through a fresh `os.Root` on the game folder and `Lstat`ed each time, so a link
+is refused and a folder is not a file. What it keeps is a byte offset and the
+first 128 bytes of the file, to tell a new run's file from the one it replaced;
+what it reads goes out as `log:live` events of at most 64 KiB, cut at a line
+(a line still being written waits for its newline, up to one event's worth),
+at most 16 events per look, every one redacted with the in-game name learned
+from the log. A file that shrank or was replaced emits a reset carrying its
+end. One follower runs at a time: starting one ends the one before, and
+`StopLiveLog` ends the chapter's own and returns once no event can follow. It
+runs under the app's run context, so quitting ends it. Nothing is written, and
+no line goes to slog.
+Verify: `TestAnythingButLatestLogIsNeverFollowed`,
+`TestAppendedLinesArriveMaskedAndAPartialLineWaitsForItsNewline`,
+`TestWhatOneLookReadsIsSentInCappedEventsWithoutLoss`,
+`TestAFileThatShrankIsAResetWithTheNewFilesEnd`,
+`TestStopStopsTheFollowerAndWaitsForIt`, `TestOnlyOneLogIsFollowedAtATime`,
+`TestACancelledContextStopsTheFollower`, `TestALatestLogThatIsNotARegularFileIsNotRead`.
+Probe: a `latest.log` swapped for a link between two looks (the root refuses
+it); a game writing a line of megabytes with no newline (sent as it stands in
+64 KiB pieces); two chapters' pages opened one after the other (the first is
+ended before the second reads).
 
 ## S4. Downloads (milestone 4)
 
