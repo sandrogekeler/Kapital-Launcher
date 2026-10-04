@@ -2,6 +2,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import { DEFAULT_SETTINGS, useSettingsStore } from '../../stores/useSettingsStore'
+import { useArtStatsStore } from '../../stores/useArtStatsStore'
 import { useChapterStore } from '../../stores/useChapterStore'
 import { useEngineStore } from '../../stores/useEngineStore'
 import type { EngineInfo } from '../../types'
@@ -322,6 +323,67 @@ describe('SettingsPanel previews', () => {
   afterEach(() => {
     cleanup()
     Reflect.deleteProperty(window, 'go')
+  })
+
+  describe('pictures per chapter (issue 172)', () => {
+    const stats = { avgBytes: 102_400, pools: { Luxemburg: 60, Frangfurd: 73, Lichdenstein: 4 } }
+    beforeEach(() => {
+      vi.mocked(App.GetWikiArtStats).mockResolvedValue(stats)
+      vi.mocked(App.GetWikiShots).mockResolvedValue([])
+      useArtStatsStore.setState({ stats })
+    })
+    const show = () =>
+      render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
+
+    it('offers 5, 10, 20 and All, with 10 chosen by default and the space it takes', () => {
+      show()
+      const group = screen.getByRole('radiogroup', { name: 'Pictures per chapter' })
+      expect(Array.from(group.querySelectorAll('[role=radio]')).map((r) => r.textContent)).toEqual([
+        '5',
+        '10',
+        '20',
+        'All',
+      ])
+      expect(screen.getByRole('radio', { name: '10' })).toBeChecked()
+      expect(
+        screen.getByText('About 2.3 MB on disk. A new set is picked each day.'),
+      ).toBeInTheDocument()
+    })
+
+    it('saves a choice, draws again and reads the estimate again', async () => {
+      show()
+      fireEvent.click(screen.getByRole('radio', { name: '20' }))
+      await waitFor(() =>
+        expect(App.SaveSettings).toHaveBeenCalledWith(
+          expect.objectContaining({ wikiPictures: 20 }),
+        ),
+      )
+      await waitFor(() => expect(App.GetWikiShots).toHaveBeenCalledOnce())
+      await waitFor(() => expect(App.GetWikiArtStats).toHaveBeenCalledTimes(2))
+      expect(screen.getByRole('radio', { name: '20' })).toBeChecked()
+      expect(
+        screen.getByText('About 4.3 MB on disk. A new set is picked each day.'),
+      ).toBeInTheDocument()
+    })
+
+    it('stores All as 0 and says what it is', async () => {
+      show()
+      fireEvent.click(screen.getByRole('radio', { name: 'All' }))
+      await waitFor(() =>
+        expect(App.SaveSettings).toHaveBeenCalledWith(expect.objectContaining({ wikiPictures: 0 })),
+      )
+      expect(screen.getByText(/every picture the wiki has/)).toBeInTheDocument()
+      expect(screen.getByRole('radio', { name: 'All' })).toBeChecked()
+    })
+
+    it('shows a rejection and draws nothing again', async () => {
+      vi.mocked(App.SaveSettings).mockRejectedValueOnce('settings: 7 pictures per chapter')
+      show()
+      fireEvent.click(screen.getByRole('radio', { name: '5' }))
+      await screen.findByText(/7 pictures per chapter/)
+      expect(screen.getByRole('radio', { name: '10' })).toBeChecked()
+      expect(App.GetWikiShots).not.toHaveBeenCalled()
+    })
   })
 
   it('has the previews under Developer, and a start brings the chapter up on its main view', async () => {

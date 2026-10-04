@@ -14,6 +14,7 @@ export namespace models {
 	    loadingSplashAvailable?: boolean;
 	    loadingSplashOn?: boolean;
 	    staticArt?: boolean;
+	    wikiPictures?: number;
 	    mapIn?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -35,6 +36,7 @@ export namespace models {
 	        this.loadingSplashAvailable = source["loadingSplashAvailable"];
 	        this.loadingSplashOn = source["loadingSplashOn"];
 	        this.staticArt = source["staticArt"];
+	        this.wikiPictures = source["wikiPictures"];
 	        this.mapIn = source["mapIn"];
 	    }
 	}
@@ -765,6 +767,20 @@ export namespace models {
 	    }
 	}
 	
+	export class WikiArtStats {
+	    avgBytes: number;
+	    pools: Record<string, number>;
+	
+	    static createFrom(source: any = {}) {
+	        return new WikiArtStats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.avgBytes = source["avgBytes"];
+	        this.pools = source["pools"];
+	    }
+	}
 	export class WikiPage {
 	    title: string;
 	    line: string;

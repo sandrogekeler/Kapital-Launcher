@@ -1,5 +1,6 @@
-import { Suspense, lazy, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import type { AppSettings, Chapter } from '../../types'
+import { useArtStatsStore } from '../../stores/useArtStatsStore'
 import { useChapterStore } from '../../stores/useChapterStore'
 import { useEngineStore } from '../../stores/useEngineStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
@@ -13,6 +14,13 @@ import {
   rootPlaceholder,
   withPackOverride,
 } from '../../lib/settingsView'
+import {
+  WIKI_PICTURES_OPTIONS,
+  choiceOf,
+  numberOf,
+  picturesHint,
+  picturesOf,
+} from '../../lib/wikiArt'
 import { FolderOpen } from '../../lib/icons'
 import { ChoosePrismExecutable, ChoosePrismRoot } from '../../../wailsjs/go/main/App'
 import { AboutSection } from './AboutSection'
@@ -66,6 +74,8 @@ export function SettingsPanel({ onClose, onShowChapter }: Props) {
   const update = useSettingsStore((s) => s.update)
   const loadEngine = useEngineStore((s) => s.load)
   const chapters = useChapterStore((s) => s.manifest.chapters)
+  const loadWikiShots = useChapterStore((s) => s.loadWikiShots)
+  const loadArtStats = useArtStatsStore((s) => s.load)
   // The page reveals once Go has said what the settings are.
   const loaded = useSettingsStore((s) => s.loaded)
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({})
@@ -78,6 +88,11 @@ export function SettingsPanel({ onClose, onShowChapter }: Props) {
       await update(patch)
       setErrors(({ [field]: _cleared, ...rest }) => rest)
       if (field === 'prismExecutable' || field === 'prismRoot') await loadEngine()
+      // A new number draws again at once (issue 172): read the set, then what it weighs.
+      if (field === 'wikiPictures') {
+        await loadWikiShots()
+        await loadArtStats()
+      }
     } catch (e) {
       setErrors((prev) => ({ ...prev, [field]: errMsg(e) }))
     }
@@ -156,6 +171,15 @@ function PrismSection({
 }
 
 function AppearanceSection({ settings, errors, save }: SectionProps) {
+  const chapters = useChapterStore((s) => s.manifest.chapters)
+  const artStats = useArtStatsStore((s) => s.stats)
+  const loadArtStats = useArtStatsStore((s) => s.load)
+  const count = picturesOf(settings)
+  // The estimate wants the pools and the cache's average, which Go has once the
+  // wiki's export is read.
+  useEffect(() => {
+    void loadArtStats()
+  }, [loadArtStats])
   return (
     <Section title="Appearance">
       <Segmented
@@ -172,6 +196,16 @@ function AppearanceSection({ settings, errors, save }: SectionProps) {
         error={errors.staticArt}
         onChange={(on) => void save('staticArt', { staticArt: !on })}
       />
+      <div className="flex flex-col gap-1.5">
+        <Segmented
+          label="Pictures per chapter"
+          value={choiceOf(count)}
+          options={WIKI_PICTURES_OPTIONS}
+          error={errors.wikiPictures}
+          onChange={(choice) => void save('wikiPictures', { wikiPictures: numberOf(choice) })}
+        />
+        <Hint>{picturesHint(count, chapters, artStats)}</Hint>
+      </div>
       <div className="flex flex-col gap-1.5">
         <Segmented
           label="Open the map"
