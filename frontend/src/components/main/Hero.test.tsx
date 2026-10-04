@@ -22,7 +22,7 @@ function hero(pack: Partial<typeof chapter.pack>) {
 describe('Hero tools', () => {
   afterEach(cleanup)
 
-  it('has the settings pen, the logs scroll and the wiki book, each doing its own thing', () => {
+  it('has the settings pen, the logs console and the wiki book, each doing its own thing', () => {
     const onOpenWiki = vi.fn()
     const onOpenSettings = vi.fn()
     const onOpenLogs = vi.fn()

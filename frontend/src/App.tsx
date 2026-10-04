@@ -89,7 +89,7 @@ export default function App() {
   const [chapterSettingsFor, setChapterSettingsFor] = useState<string | null>(null)
   const closeChapterSettings = useCallback(() => setChapterSettingsFor(null), [])
   useEffect(() => setChapterSettingsFor(null), [selectedId])
-  // A chapter's logs (issue 155) likewise, from the scroll in its hero.
+  // A chapter's logs (issue 155) likewise, from the console icon in its hero.
   const [logsFor, setLogsFor] = useState<string | null>(null)
   const closeLogs = useCallback(() => setLogsFor(null), [])
   useEffect(() => setLogsFor(null), [selectedId])
