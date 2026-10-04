@@ -6,11 +6,13 @@ These builds are not code-signed, so Windows and macOS both warn before the firs
 
 ## Windows 11
 
-Download `Kapital-Launcher-<version>-windows-amd64.exe` and run it. If SmartScreen shows "Windows protected your PC", choose "More info", then "Run anyway".
+Download `Kapital-Launcher-<version>-windows-amd64-setup.exe` and run it. If SmartScreen shows "Windows protected your PC", choose "More info", then "Run anyway". The setup installs for your user only, so it asks for no administrator rights, adds Kapital Launcher to the Start menu and the desktop, and installs Microsoft's WebView2 runtime if it is missing. Uninstalling from Windows' settings leaves your settings and worlds in place.
+
+`Kapital-Launcher-<version>-windows-amd64.exe` is the same app without the setup: it runs from wherever you put it.
 
 ## macOS 12 or later
 
-Download `Kapital-Launcher-<version>-macos-universal.zip` (Apple Silicon and Intel), unzip it and move Kapital Launcher to Applications. The first time you open it, macOS says it cannot verify the app. Open System Settings, go to Privacy & Security, scroll to the Security section, choose "Open Anyway" for Kapital Launcher, then choose Open and confirm with your password. This is needed once.
+Download `Kapital-Launcher-<version>-macos-universal.dmg` (Apple Silicon and Intel), open it and drag Kapital Launcher onto Applications. The first time you open it, macOS says it cannot verify the app. Open System Settings, go to Privacy & Security, scroll to the Security section, choose "Open Anyway" for Kapital Launcher, then choose Open and confirm with your password. This is needed once.
 
 ## Verifying a download
 

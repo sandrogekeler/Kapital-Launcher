@@ -97,7 +97,12 @@ and the splash on reads as a failed start, because its console appears during
 1. **Run the first prerelease** from the
    Actions tab (Build, "Run workflow", `v0.1.0-alpha.1`). That is the test of
    the release half of #107, and it gives the iMac a universal bundle for #30
-   without building there. Then set `site/links.json`'s `download`.
+   without building there. Then set `site/links.json`'s `release` (issue
+   178). Since issue 177 (2026-10-04) the release carries an NSIS setup and a
+   disk image, and the bundle identifier is
+   `io.github.sandrogekeler.kapital-launcher`; the first beta is
+   `v0.1.0-beta.1`, unsigned, with signing to follow (issue 179). Neither
+   installer has been run on real hardware.
 2. **#30 on the iMac**, now with more to check than the list on the issue:
    the card on macOS (opt-in under settings until then), #109's quit during a
    start, #110's four behaviours, and Gatekeeper's prompt on the unsigned
@@ -165,10 +170,9 @@ one, the icon check on the PC is what is left), #35 (decided on 2026-10-01).
 
 ## Open questions, all the author's
 
-- **The bundle identifier.** `build/darwin/Info.plist` still carries the
-  template's `com.wails.{{safeBundleID .Name}}`. It is the app's identity on
-  macOS (preferences, WebKit data), so changing it later changes identity;
-  decide before the first release.
+- **The licence.** The repository has none, and SignPath Foundation signs
+  only projects under an OSI licence (issue 179). Which one is the author's
+  call; nothing can be signed on Windows before it.
 - **ADR-7 and Intel Macs.** #107 builds a universal bundle because the only
   Mac to test on is an Intel iMac. ADR-7 still says Apple Silicon only (#31).
 - **The `codesign` check's strength.** `verify_darwin.go` runs

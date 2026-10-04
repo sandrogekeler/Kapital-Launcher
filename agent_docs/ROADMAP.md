@@ -126,6 +126,11 @@ What is left:
       signing decision (ADR-6): `.github/workflows/build.yml` (#107) builds both
       on every pull request and cuts an attested release from the Actions tab;
       the first prerelease dispatch is still to run
+- [x] Installers: an NSIS setup for Windows and a disk image for macOS, and
+      the bundle identifier (issue 177)
+- [ ] Code signing: SignPath Foundation for Windows once a licence and a first
+      release exist; Developer ID is not for the beta (issue 179, ADR-6
+      amendment)
 - [x] Create the labels in `.github/labels.yml` on the repository (`scripts/sync-labels.py`),
       done 2026-09-29
 - [x] Vendor CodeQL and Scorecard from Konnekt (Kollektiv has neither), possible
