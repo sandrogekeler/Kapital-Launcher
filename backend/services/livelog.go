@@ -76,10 +76,17 @@ func NewLiveLog() *LiveLog {
 // for. The follower ends when ctx is cancelled, on Stop, or when another Start
 // takes its place.
 func (l *LiveLog) Start(ctx context.Context, chapterID, instanceDir string, r *Redactor, emit func(models.LiveLogEvent)) (models.RunLogText, error) {
-	return l.start(ctx, chapterID, instanceDir, models.RunLogKindLog, "latest.log", r, emit)
+	return l.start(ctx, chapterID, instanceDir, liveTarget{models.RunLogKindLog, "latest.log"}, r, emit)
 }
 
-func (l *LiveLog) start(ctx context.Context, chapterID, instanceDir, kind, name string, r *Redactor, emit func(models.LiveLogEvent)) (models.RunLogText, error) {
+// liveTarget is the file a follower is asked to follow, by the kind and base
+// name a read takes.
+type liveTarget struct {
+	kind, name string
+}
+
+func (l *LiveLog) start(ctx context.Context, chapterID, instanceDir string, target liveTarget, r *Redactor, emit func(models.LiveLogEvent)) (models.RunLogText, error) {
+	kind, name := target.kind, target.name
 	// The one file it follows, held to the page's own name rules.
 	if kind != models.RunLogKindLog || name != "latest.log" || !validRunLogName(kind, name) {
 		return models.RunLogText{}, ErrRunLogName

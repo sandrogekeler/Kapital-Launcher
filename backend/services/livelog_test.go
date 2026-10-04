@@ -423,7 +423,7 @@ func TestAnythingButLatestLogIsNeverFollowed(t *testing.T) {
 		{models.RunLogKindLog, ""},
 		{"config", "latest.log"},
 	} {
-		_, err := r.live.start(context.Background(), "frangfurd", r.instance, c.kind, c.name, runLogRedactor(), r.emit)
+		_, err := r.live.start(context.Background(), "frangfurd", r.instance, liveTarget{c.kind, c.name}, runLogRedactor(), r.emit)
 		if !errors.Is(err, ErrRunLogName) {
 			t.Errorf("%q %q: got %v", c.kind, c.name, err)
 		}
