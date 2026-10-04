@@ -4,4 +4,4 @@ package main
 // `-ldflags "-X main.Version=<tag>"`. The "-dev" suffix marks a build that is
 // not a release: `wails dev`, or a plain `go build`. Mirror the base in
 // wails.json's info.productVersion (.claude/rules/builds-and-releases.md).
-var Version = "0.1.0-dev"
+var Version = "1.0.0-dev"

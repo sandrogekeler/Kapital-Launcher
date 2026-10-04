@@ -21,7 +21,7 @@ body:
     attributes:
       label: Which version of Kapital Launcher?
       description: Shown in the engine card. Leave blank if it is not relevant.
-      placeholder: 0.1.0
+      placeholder: 1.0.0
 
   - type: dropdown
     id: os

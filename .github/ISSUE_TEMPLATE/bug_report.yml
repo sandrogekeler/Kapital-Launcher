@@ -66,7 +66,7 @@ body:
     attributes:
       label: Which version of Kapital Launcher?
       description: Shown in the engine card at the bottom of the sidebar.
-      placeholder: 0.1.0
+      placeholder: 1.0.0
     validations:
       required: true
 
