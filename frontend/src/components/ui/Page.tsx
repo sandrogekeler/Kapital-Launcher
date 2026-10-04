@@ -12,14 +12,26 @@ interface HeaderProps {
   onBack: () => void
   /** Controls at the right end of the header, such as Open folder. */
   actions?: ReactNode
+  /**
+   * A small line above the title, in the accent, saying whose page it is: the chapter's name
+   * over its settings, "Launcher" over the launcher's own (issue 188).
+   */
+  eyebrow?: string
 }
 
 /** The header every page shares: Back, the title in the display face, and an optional action. */
-export function PageHeader({ title, onBack, actions }: HeaderProps) {
+export function PageHeader({ title, onBack, actions, eyebrow }: HeaderProps) {
   return (
     <div className="border-line flex shrink-0 items-center gap-3 border-b px-7 py-5">
       <IconButton icon={ArrowLeft} title="Back" onClick={onBack} />
-      <h1 className="font-display m-0 text-2xl font-semibold">{title}</h1>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        {eyebrow && (
+          <span className="text-accent text-2xs tracking-eyebrow truncate font-medium uppercase">
+            {eyebrow}
+          </span>
+        )}
+        <h1 className="font-display m-0 text-2xl leading-tight font-semibold">{title}</h1>
+      </div>
       {actions && <div className="ml-auto flex items-center gap-3">{actions}</div>}
     </div>
   )
@@ -63,12 +75,13 @@ export function Page({
   ready = true,
   fill,
   settings,
+  eyebrow,
   children,
 }: PageProps) {
   useEscapeClose(onBack)
   return (
     <section aria-label={label} className={CARD}>
-      <PageHeader title={title} onBack={onBack} actions={actions} />
+      <PageHeader title={title} onBack={onBack} actions={actions} eyebrow={eyebrow} />
       {settings ? (
         <Scrollable>
           <div className="px-7 pt-7 pb-14">
