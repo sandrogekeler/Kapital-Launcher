@@ -280,6 +280,30 @@
     filter: blur(var(--effect-reveal-blur));
   }
 }
+@keyframes page-in-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+    filter: blur(var(--effect-reveal-blur));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes page-out-bottom {
+  from {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(100%);
+    filter: blur(var(--effect-reveal-blur));
+  }
+}
 @utility page-in-right {
   animation: page-in-right var(--duration-page) var(--ease-glide) both;
 }
@@ -292,13 +316,21 @@
 @utility page-out-top {
   animation: page-out-top var(--duration-page) var(--ease-glide) both;
 }
+@utility page-in-bottom {
+  animation: page-in-bottom var(--duration-page) var(--ease-glide) both;
+}
+@utility page-out-bottom {
+  animation: page-out-bottom var(--duration-page) var(--ease-glide) both;
+}
 @media (prefers-reduced-motion: reduce) {
   .page-in-right,
-  .page-in-top {
+  .page-in-top,
+  .page-in-bottom {
     animation: card-fade-in var(--duration-page) ease-in-out both;
   }
   .page-out-right,
-  .page-out-top {
+  .page-out-top,
+  .page-out-bottom {
     animation: card-fade-out var(--duration-page) ease-in-out both;
   }
 }

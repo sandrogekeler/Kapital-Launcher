@@ -50,7 +50,14 @@ export function AccountPanel({ onClose }: Props) {
 
   const name = profile.trim()
   return (
-    <Page label="Account" title="Account" onBack={onClose} ready={loaded} settings>
+    <Page
+      label="Account"
+      eyebrow="Launcher"
+      title="Account"
+      onBack={onClose}
+      ready={loaded}
+      settings
+    >
       <div className="bg-raised-2 border-line mb-10 flex items-center gap-5 rounded-lg border p-5">
         <span className="bg-accent-wash border-accent-edge text-accent font-display flex size-16 shrink-0 items-center justify-center rounded-md border text-2xl font-semibold">
           {profileInitials(name) || 'KK'}

@@ -1024,9 +1024,11 @@ describe('App', () => {
       expect(screen.queryByRole('region', { name: 'Settings' })).toBeNull()
       expect(tile).toHaveAttribute('aria-pressed', 'true')
 
+      // It comes up from the bottom, above the tile, and goes back down.
+      expect(account.parentElement).toHaveClass('page-in-bottom')
       fireEvent.click(tile)
-      expect(sliding('page-out-top')).toContainElement(account)
-      endAnimation(sliding('page-out-top')!)
+      expect(sliding('page-out-bottom')).toContainElement(account)
+      endAnimation(sliding('page-out-bottom')!)
       expect(account).not.toBeInTheDocument()
       expect(tile).toHaveAttribute('aria-pressed', 'false')
     })

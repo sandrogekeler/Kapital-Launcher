@@ -196,7 +196,7 @@ export default function App() {
             {settings.slot && (
               <PageLayer
                 key={settings.slot.page}
-                edge="top"
+                edge={settings.slot.page === 'account' ? 'bottom' : 'top'}
                 open={settings.slot.open}
                 onExited={settings.done}
               >
