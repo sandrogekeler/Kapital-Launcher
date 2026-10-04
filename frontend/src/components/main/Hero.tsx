@@ -1,7 +1,7 @@
 import type { Chapter } from '../../types'
 import { chapterArt, chapterTitleArt } from '../../lib/art'
 import { isPlaceholder, knownFacts } from '../../lib/manifest'
-import { BookOpen, Pencil, SquareTerminal } from '../../lib/icons'
+import { MapIcon, Pencil, SquareTerminal } from '../../lib/icons'
 import { Drift } from '../ui/Drift'
 import { IconButton } from '../ui/IconButton'
 import { Pill } from '../ui/Pill'
@@ -10,11 +10,12 @@ interface Props {
   chapter: Chapter
   /** The slide's picture (issue 142); undefined shows the bundled art. */
   art?: string
-  onOpenWiki: () => void
   /** Opens the chapter's own settings: memory and JVM preset (#36). */
   onOpenSettings: () => void
   /** Opens the chapter's logs and crash reports (issue 155). */
   onOpenLogs: () => void
+  /** Opens the chapter's map, in the launcher or the browser as settings say (issue 161). */
+  onOpenMap: () => void
   /** The pack's version, as the pack line names it (issue 162); null when nobody knows it yet. */
   version: string | null
 }
@@ -29,9 +30,9 @@ interface Props {
 export function Hero({
   chapter,
   art: slideArt,
-  onOpenWiki,
   onOpenSettings,
   onOpenLogs,
+  onOpenMap,
   version,
 }: Props) {
   const art = slideArt ?? chapterArt(chapter.id)
@@ -84,12 +85,7 @@ export function Hero({
           title={`Logs for ${chapter.name}`}
           onClick={onOpenLogs}
         />
-        <IconButton
-          grouped
-          icon={BookOpen}
-          title="Read the history on the wiki"
-          onClick={onOpenWiki}
-        />
+        <IconButton grouped icon={MapIcon} title={`Map of ${chapter.name}`} onClick={onOpenMap} />
       </div>
 
       <div className="relative flex max-w-140 flex-col gap-3.5">

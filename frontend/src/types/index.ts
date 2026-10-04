@@ -29,6 +29,18 @@ export interface Chapter {
   server?: Server | null
   wiki: WikiTeaser
   changelog: ChangelogEntry[]
+  /** The chapter's BlueMap web map (issue 161): http or https on a playit tunnel, with a port. Absent when it has none. */
+  map?: string
+}
+
+/** What one reachability check of a chapter's map found (issue 161). */
+export interface MapStatus {
+  /** The manifest's map address, or "" when the chapter has none. */
+  url: string
+  /** Whether any HTTP response came back. */
+  reachable: boolean
+  /** Why not, in a few words: "no map", "timed out" or "no answer". */
+  reason: string
 }
 
 /** One way to reach a chapter's server, under the label settings offers (issue 151). */
@@ -398,4 +410,9 @@ export interface AppSettings {
   loadingSplashOn?: boolean
   /** The slideshow off (issue 142): each chapter shows its own bundled picture, with no timer. Absent is on. */
   staticArt?: boolean
+  /** Where the hero's map tool opens a chapter's map (issue 161). Absent is the launcher's own page. */
+  mapIn?: MapIn | string
 }
+
+/** Where a chapter's map opens: a page in the launcher, or the system browser. */
+export type MapIn = 'app' | 'browser'

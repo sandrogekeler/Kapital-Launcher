@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/sandrogekeler/Kapital-Launcher/design/launcher.schema.json",
   "title": "Kapital Launcher manifest",
-  "description": "What the launcher shows and launches: the chapter list, each chapter's pack and server, its wiki teaser and changelog. data/launcher.json is the copy built into the app; docs/adr/0004-launcher-manifest.md is the plan for the Kapitel Kapital site to publish the same shape. A manifest is untrusted input wherever it comes from: it can name things, never run them. There is no field for a command, a JVM argument or a path, and the Go loader refuses a URL that is not https on an allowlisted host.",
+  "description": "What the launcher shows and launches: the chapter list, each chapter's pack and server, its wiki teaser and changelog. data/launcher.json is the copy built into the app; docs/adr/0004-launcher-manifest.md is the plan for the Kapitel Kapital site to publish the same shape. A manifest is untrusted input wherever it comes from: it can name things, never run them. There is no field for a command, a JVM argument or a path, and the Go loader refuses a URL that is not https on an allowlisted host, except a chapter's map, which may be http on a playit tunnel with a port (ADR-4, second amendment).",
   "type": "object",
   "required": ["version", "wiki", "chapters"],
   "additionalProperties": false,
@@ -129,6 +129,11 @@
               }
             }
           ]
+        },
+        "map": {
+          "type": "string",
+          "pattern": "^https?://([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+tun\\.ply\\.gg:[1-9][0-9]{0,4}/?$",
+          "description": "The chapter's BlueMap web map (issue 161). The one URL a manifest may give as http, and only on a playit tunnel (*.tun.ply.gg) with an explicit port; no user info, query or fragment. The launcher opens it in the system browser, frames it in a page and checks that it answers, nothing more. Optional: a chapter with no map leaves it out."
         },
         "wiki": {
           "type": "object",

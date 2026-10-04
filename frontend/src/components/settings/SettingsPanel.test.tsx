@@ -160,6 +160,32 @@ describe('SettingsPanel', () => {
     expect(screen.getByRole('radio', { name: 'Light' })).toBeChecked()
   })
 
+  it('says where the map opens, in the launcher until chosen otherwise, and saves the choice (issue 161)', async () => {
+    render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
+    expect(screen.getByRole('radiogroup', { name: 'Open the map' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'In the launcher' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'In the browser' })).not.toBeChecked()
+
+    fireEvent.click(screen.getByRole('radio', { name: 'In the browser' }))
+    await waitFor(() =>
+      expect(App.SaveSettings).toHaveBeenCalledWith(expect.objectContaining({ mapIn: 'browser' })),
+    )
+    expect(screen.getByRole('radio', { name: 'In the browser' })).toBeChecked()
+
+    fireEvent.click(screen.getByRole('radio', { name: 'In the launcher' }))
+    await waitFor(() =>
+      expect(App.SaveSettings).toHaveBeenLastCalledWith(expect.objectContaining({ mapIn: 'app' })),
+    )
+  })
+
+  it('puts the map choice back and says why when Go refuses it', async () => {
+    vi.mocked(App.SaveSettings).mockRejectedValue('settings: map location is not one of')
+    render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
+    fireEvent.click(screen.getByRole('radio', { name: 'In the browser' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('map location')
+    expect(screen.getByRole('radio', { name: 'In the launcher' })).toBeChecked()
+  })
+
   it('moves the focus between theme options with the arrow keys and picks only on Enter or Space', () => {
     render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
     const dark = screen.getByRole('radio', { name: 'Dark' })

@@ -25,6 +25,7 @@ describe('ChapterStage', () => {
         chapters={chapters}
         onOpenSettings={noop}
         onOpenLogs={noop}
+        onOpenMap={noop}
       />,
     )
     expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Luxemburg')
@@ -39,6 +40,7 @@ describe('ChapterStage', () => {
         chapters={chapters}
         onOpenSettings={noop}
         onOpenLogs={noop}
+        onOpenMap={noop}
       />,
     )
     rerender(
@@ -47,6 +49,7 @@ describe('ChapterStage', () => {
         chapters={chapters}
         onOpenSettings={noop}
         onOpenLogs={noop}
+        onOpenMap={noop}
       />,
     )
     // A chapter further down: the content moves up, so the new card comes
@@ -65,6 +68,7 @@ describe('ChapterStage', () => {
         chapters={chapters}
         onOpenSettings={noop}
         onOpenLogs={noop}
+        onOpenMap={noop}
       />,
     )
     expect(leaving()).toHaveClass('card-out-down')
@@ -80,6 +84,7 @@ describe('ChapterStage', () => {
           chapters={chapters}
           onOpenSettings={noop}
           onOpenLogs={noop}
+          onOpenMap={noop}
         />,
       )
       rerender(
@@ -88,6 +93,7 @@ describe('ChapterStage', () => {
           chapters={chapters}
           onOpenSettings={noop}
           onOpenLogs={noop}
+          onOpenMap={noop}
         />,
       )
       expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Frangfurd')
@@ -100,7 +106,13 @@ describe('ChapterStage', () => {
 
   it('leaves the card inert and hidden while a page covers it, and the page in the same stage', () => {
     const { rerender, container } = render(
-      <ChapterStage chapter={luxemburg} chapters={chapters} onOpenSettings={noop} onOpenLogs={noop}>
+      <ChapterStage
+        chapter={luxemburg}
+        chapters={chapters}
+        onOpenSettings={noop}
+        onOpenLogs={noop}
+        onOpenMap={noop}
+      >
         <section aria-label="A page">Page</section>
       </ChapterStage>,
     )
@@ -113,6 +125,7 @@ describe('ChapterStage', () => {
         chapters={chapters}
         onOpenSettings={noop}
         onOpenLogs={noop}
+        onOpenMap={noop}
         covered
       >
         <section aria-label="A page">Page</section>
@@ -131,6 +144,7 @@ describe('ChapterStage', () => {
         chapters={chapters}
         onOpenSettings={noop}
         onOpenLogs={noop}
+        onOpenMap={noop}
       />,
     )
     expect(card()).not.toHaveAttribute('inert')
@@ -144,6 +158,7 @@ describe('ChapterStage', () => {
         chapters={chapters}
         onOpenSettings={noop}
         onOpenLogs={noop}
+        onOpenMap={noop}
       />,
     )
     rerender(
@@ -152,6 +167,7 @@ describe('ChapterStage', () => {
         chapters={chapters}
         onOpenSettings={noop}
         onOpenLogs={noop}
+        onOpenMap={noop}
       />,
     )
     rerender(
@@ -160,6 +176,7 @@ describe('ChapterStage', () => {
         chapters={chapters}
         onOpenSettings={noop}
         onOpenLogs={noop}
+        onOpenMap={noop}
       />,
     )
     expect(document.querySelectorAll('[inert]').length).toBe(1)

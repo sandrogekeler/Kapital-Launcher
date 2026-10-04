@@ -175,6 +175,36 @@ func TestValidateSettings(t *testing.T) {
 	}
 }
 
+// The map's place (issue 161) is one of two words, or none, which reads as the
+// launcher's own page.
+func TestMapInIsOneOfTwoPlacesAndDefaultsToTheApp(t *testing.T) {
+	for _, ok := range []string{"", "app", "browser"} {
+		if err := ValidateSettings(models.AppSettings{Theme: "dark", MapIn: ok}); err != nil {
+			t.Errorf("%q should be accepted: %v", ok, err)
+		}
+	}
+	for _, bad := range []string{"App", "window", "browser ", "http://x"} {
+		if err := ValidateSettings(models.AppSettings{Theme: "dark", MapIn: bad}); err == nil {
+			t.Errorf("%q should be refused", bad)
+		}
+	}
+	for stored, want := range map[string]string{"": "app", "app": "app", "browser": "browser", "nonsense": "app"} {
+		if got := MapIn(models.AppSettings{MapIn: stored}); got != want {
+			t.Errorf("MapIn(%q) = %q, want %q", stored, got, want)
+		}
+	}
+	svc := NewSettingsService(t.TempDir())
+	if err := svc.Save(models.AppSettings{Theme: "dark", MapIn: "browser"}); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := svc.Load(); err != nil || got.MapIn != "browser" {
+		t.Fatalf("%+v %v", got, err)
+	}
+	if got, err := NewSettingsService(t.TempDir()).Load(); err != nil || MapIn(got) != "app" {
+		t.Fatalf("a fresh install opens the map in the app: %+v %v", got, err)
+	}
+}
+
 func isWindows() bool { return os.PathSeparator == '\\' }
 
 func TestAffectsDetectionOnlyForPrismFields(t *testing.T) {

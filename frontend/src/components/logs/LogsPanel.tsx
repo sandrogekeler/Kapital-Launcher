@@ -83,7 +83,7 @@ export function LogsPanel({ chapter, onClose }: Props) {
       fill
       ready={installed !== true || listError !== null || unavailable || logs !== null}
       label={`${chapter.name} logs`}
-      title={`${chapter.name} logs`}
+      title="Logs"
       onBack={onClose}
       actions={
         <Button onClick={() => void onOpenFolder()} disabled={installed !== true}>

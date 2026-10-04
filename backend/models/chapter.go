@@ -7,7 +7,8 @@ package models
 //
 // A manifest is untrusted input wherever it comes from. It names things: it
 // carries no command, no JVM argument and no filesystem path, and the loader
-// refuses any URL that is not https on an allowlisted host.
+// refuses any URL that is not https on an allowlisted host, the chapters' map
+// addresses excepted (Chapter.Map).
 type Manifest struct {
 	// Schema is the editor hint data/launcher.json carries; read by nothing.
 	Schema   string    `json:"$schema,omitempty"`
@@ -36,6 +37,11 @@ type Chapter struct {
 	Server    *Server          `json:"server"`
 	Wiki      WikiTeaser       `json:"wiki"`
 	Changelog []ChangelogEntry `json:"changelog"`
+	// Map is the address of the chapter's BlueMap web map (issue 161), or nil
+	// when it has none. The one manifest URL that may be http, and only on a
+	// playit tunnel with a port (services.checkMapURL, ADR-4's second
+	// amendment); the launcher opens it and checks it answers, nothing more.
+	Map *string `json:"map,omitempty"`
 }
 
 // Instance names the Prism instance the chapter launches. The id is the

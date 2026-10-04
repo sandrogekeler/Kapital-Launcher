@@ -188,6 +188,15 @@ loopback override, under the same template check (ADR-2, seventh amendment).
 side: the list lives in settings (`disabledMods`), is validated against the mods
 folder, applied at once, and refused while the game runs.
 
+The map check (`maps.go`, `app_map.go`, `CheckChapterMap`, issue 161, ADR-4's
+third amendment) is the one network call for a chapter's web map: a GET of the
+address the manifest names for the chapter (a `*.tun.ply.gg` tunnel with a port,
+the one http URL a manifest may carry), 5 s, no redirect followed, at most 4 KiB
+of the body read and dropped. Any HTTP status is reachable. It returns a
+`models.MapStatus` and never an error for a map that does not answer; the page
+frames the map only when it did (SECURITY_CHECKLIST S5.4). `CheckMap` holds the
+address to the manifest's rule again, so a caller cannot widen it.
+
 ## Data shapes
 
 Live in `backend/models/`, JSON tags in `camelCase`, and Wails generates the
