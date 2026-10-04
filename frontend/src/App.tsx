@@ -17,10 +17,13 @@ import { SLIDE_INTERVAL_MS } from './lib/slides'
 // The pages that take the chapter card's place are opened on demand, so they
 // load when asked for and stay out of the launcher's first paint and its
 // bundle budget (scripts/check-bundle-size.mjs): the settings, a chapter's own
-// settings, and the run report, opened rarely, from Details beside a game that
-// went wrong.
+// settings, the run report, opened rarely, from Details beside a game that
+// went wrong, and a chapter's logs (issue 155).
 const RunReportPanel = lazy(() =>
   import('./components/main/RunReportPanel').then((m) => ({ default: m.RunReportPanel })),
+)
+const LogsPanel = lazy(() =>
+  import('./components/logs/LogsPanel').then((m) => ({ default: m.LogsPanel })),
 )
 const SettingsPanel = lazy(() =>
   import('./components/settings/SettingsPanel').then((m) => ({ default: m.SettingsPanel })),
@@ -86,6 +89,10 @@ export default function App() {
   const [chapterSettingsFor, setChapterSettingsFor] = useState<string | null>(null)
   const closeChapterSettings = useCallback(() => setChapterSettingsFor(null), [])
   useEffect(() => setChapterSettingsFor(null), [selectedId])
+  // A chapter's logs (issue 155) likewise, from the scroll in its hero.
+  const [logsFor, setLogsFor] = useState<string | null>(null)
+  const closeLogs = useCallback(() => setLogsFor(null), [])
+  useEffect(() => setLogsFor(null), [selectedId])
   // A run's report (Details, on the corner's notice of a game that ended
   // badly) takes it likewise. The notice can be another chapter's, so opening
   // it selects that chapter too, and a report stays only while its chapter
@@ -102,6 +109,7 @@ export default function App() {
       select(chapterId)
       setSettingsOpen(false)
       setChapterSettingsFor(null)
+      setLogsFor(null)
       setReportFor(null)
     },
     [select],
@@ -219,6 +227,10 @@ export default function App() {
             <Suspense fallback={<PageFallback />}>
               <ChapterSettingsPanel chapter={chapter} onClose={closeChapterSettings} />
             </Suspense>
+          ) : logsFor === chapter.id ? (
+            <Suspense fallback={<PageFallback />}>
+              <LogsPanel chapter={chapter} onClose={closeLogs} />
+            </Suspense>
           ) : reportFor === chapter.id ? (
             <Suspense fallback={<PageFallback />}>
               <RunReportPanel chapter={chapter} onClose={closeReport} />
@@ -228,6 +240,7 @@ export default function App() {
               chapter={chapter}
               chapters={chapters}
               onOpenSettings={setChapterSettingsFor}
+              onOpenLogs={setLogsFor}
             />
           )}
         </Scrollable>

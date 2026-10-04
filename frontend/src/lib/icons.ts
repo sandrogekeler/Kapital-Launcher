@@ -26,6 +26,7 @@ export {
   Pencil,
   Play,
   RefreshCw,
+  ScrollText,
   Settings,
   Square,
   TriangleAlert,

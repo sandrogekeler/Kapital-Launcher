@@ -89,6 +89,7 @@ describe('App', () => {
       import('./components/settings/PreviewSection'),
       import('./components/settings/PackSourceSection'),
       import('./components/main/RunReportPanel'),
+      import('./components/logs/LogsPanel'),
     ])
   }, 60_000)
 
@@ -569,6 +570,48 @@ describe('App', () => {
       expect(within(notice).getByRole('button', { name: 'Details' })).toBeInTheDocument()
     } finally {
       useGameStore.setState({ report: original })
+    }
+  })
+
+  it("opens a chapter's logs from the scroll in its hero, and closes them with Back, Escape and a switch", async () => {
+    Object.assign(window, { go: {} })
+    try {
+      vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
+      vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ luxemburg: true }))
+      vi.mocked(Bindings.GetRunLogs).mockResolvedValue([
+        {
+          kind: 'log',
+          name: 'latest.log',
+          modifiedAt: '2026-10-03T15:00:00Z',
+          size: 10,
+          crashed: false,
+        },
+      ] as never)
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      const logs = () => screen.queryByRole('region', { name: 'Luxemburg logs' })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Logs for Luxemburg' }))
+      expect(await screen.findByRole('region', { name: 'Luxemburg logs' })).toBeInTheDocument()
+      expect(await screen.findByRole('list', { name: 'Logs and crash reports' })).toBeVisible()
+      expect(Bindings.GetRunLogs).toHaveBeenCalledExactlyOnceWith('luxemburg')
+
+      fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+      expect(logs()).toBeNull()
+      expect(screen.getByRole('button', { name: 'Logs for Luxemburg' })).toBeInTheDocument()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Logs for Luxemburg' }))
+      await screen.findByRole('region', { name: 'Luxemburg logs' })
+      fireEvent.keyDown(window, { key: 'Escape' })
+      expect(logs()).toBeNull()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Logs for Luxemburg' }))
+      await screen.findByRole('region', { name: 'Luxemburg logs' })
+      switchTo(/03.*Frangfurd/)
+      expect(logs()).toBeNull()
+      expect(screen.getByRole('button', { name: 'Logs for Frangfurd' })).toBeInTheDocument()
+    } finally {
+      Reflect.deleteProperty(window, 'go')
     }
   })
 

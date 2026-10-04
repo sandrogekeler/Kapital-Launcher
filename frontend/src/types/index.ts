@@ -127,6 +127,36 @@ export interface RunReport {
   consoleAvailable: boolean
 }
 
+/** The two kinds of file the logs page lists (issue 155). */
+export type RunLogKind = 'log' | 'crash'
+
+/** One game log or crash report of a chapter's instance, as the logs page lists it. */
+export interface RunLog {
+  kind: RunLogKind
+  /** The file's base name, which `ReadRunLog` takes back; never a path. */
+  name: string
+  /** When the file was last written, RFC 3339 in UTC. */
+  modifiedAt: string
+  /** Bytes on disk; a dated log's is its compressed size. */
+  size: number
+  /** Whether a crash report was written during this log's run; best effort. */
+  crashed: boolean
+}
+
+/** A chunk of one RunLog, whole lines, masked by Go before it left. */
+export interface RunLogText {
+  kind: RunLogKind
+  name: string
+  text: string
+  /** Where `text` begins in the file; the `before` that reads the stretch preceding it. */
+  offset: number
+  /** The file's length, unpacked. */
+  size: number
+  lines: number
+  /** Whether the file has more before `text`. */
+  truncated: boolean
+}
+
 // Go pointer fields arrive optional from the bindings, so they are optional here too.
 export interface Pack {
   type: 'modpack' | 'client-visuals' | string

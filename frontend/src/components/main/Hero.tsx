@@ -1,7 +1,7 @@
 import type { Chapter } from '../../types'
 import { chapterArt, chapterTitleArt } from '../../lib/art'
 import { knownFacts, stateLabel } from '../../lib/manifest'
-import { BookOpen, Pencil } from '../../lib/icons'
+import { BookOpen, Pencil, ScrollText } from '../../lib/icons'
 import { Drift } from '../ui/Drift'
 import { IconButton } from '../ui/IconButton'
 import { Pill } from '../ui/Pill'
@@ -13,6 +13,8 @@ interface Props {
   onOpenWiki: () => void
   /** Opens the chapter's own settings: memory and JVM preset (#36). */
   onOpenSettings: () => void
+  /** Opens the chapter's logs and crash reports (issue 155). */
+  onOpenLogs: () => void
 }
 
 /**
@@ -22,7 +24,7 @@ interface Props {
  * action bar and the panels, up to the layout token, so the card fits the
  * window without scrolling (#68).
  */
-export function Hero({ chapter, art: slideArt, onOpenWiki, onOpenSettings }: Props) {
+export function Hero({ chapter, art: slideArt, onOpenWiki, onOpenSettings, onOpenLogs }: Props) {
   const art = slideArt ?? chapterArt(chapter.id)
   const title = chapterTitleArt(chapter.id)
   // A fact nobody has settled has no chip: a placeholder in brackets is for the
@@ -56,6 +58,7 @@ export function Hero({ chapter, art: slideArt, onOpenWiki, onOpenSettings }: Pro
       {/* A wash behind the tools, so they read on bright art too (#77). */}
       <div className="bg-sunken/55 absolute top-5 right-6 flex gap-1 rounded-md backdrop-blur-sm">
         <IconButton icon={Pencil} title={`${chapter.name} settings`} onClick={onOpenSettings} />
+        <IconButton icon={ScrollText} title={`Logs for ${chapter.name}`} onClick={onOpenLogs} />
         <IconButton icon={BookOpen} title="Read the history on the wiki" onClick={onOpenWiki} />
       </div>
 

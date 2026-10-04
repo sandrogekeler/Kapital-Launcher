@@ -8,6 +8,7 @@ interface Props {
   /** The nav's order, which decides which way a switch moves. */
   chapters: readonly Chapter[]
   onOpenSettings: (chapterId: string) => void
+  onOpenLogs: (chapterId: string) => void
 }
 
 type Direction = 'down' | 'up'
@@ -33,7 +34,7 @@ interface Outgoing {
  * React's pattern for state derived from a prop change, so the first render
  * shows the card still and every later change animates.
  */
-export function ChapterStage({ chapter, chapters, onOpenSettings }: Props) {
+export function ChapterStage({ chapter, chapters, onOpenSettings, onOpenLogs }: Props) {
   const [shown, setShown] = useState(chapter)
   const [outgoing, setOutgoing] = useState<Outgoing | null>(null)
   if (shown.id !== chapter.id) {
@@ -52,7 +53,7 @@ export function ChapterStage({ chapter, chapters, onOpenSettings }: Props) {
   return (
     <div className="card-stage relative m-5 flex min-h-0 grow flex-col">
       <div key={chapter.id} className={`${CARD} ${entering}`}>
-        <ChapterView chapter={chapter} onOpenSettings={onOpenSettings} />
+        <ChapterView chapter={chapter} onOpenSettings={onOpenSettings} onOpenLogs={onOpenLogs} />
       </div>
       {outgoing && (
         <div
@@ -62,7 +63,11 @@ export function ChapterStage({ chapter, chapters, onOpenSettings }: Props) {
           onAnimationEnd={() => setOutgoing(null)}
           className={`${CARD} ${leaving} pointer-events-none absolute inset-0`}
         >
-          <ChapterView chapter={outgoing.chapter} onOpenSettings={onOpenSettings} />
+          <ChapterView
+            chapter={outgoing.chapter}
+            onOpenSettings={onOpenSettings}
+            onOpenLogs={onOpenLogs}
+          />
         </div>
       )}
     </div>
