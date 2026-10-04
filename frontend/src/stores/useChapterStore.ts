@@ -78,14 +78,22 @@ export const useChapterStore = create<ChapterStore>((set, get) => ({
       })
   },
 
-  // Go waits for the downloads, so the screenshots come after the pages. The
-  // open chapter's slide takes a picture as soon as there is one for it.
+  // Go waits for the downloads, so the pictures come after the pages. The open
+  // chapter's slide takes a picture as soon as there is one for it. Read again
+  // when the number of pictures changes (issue 172): a new draw prunes what it
+  // did not pick, so the open slide, if its picture is gone, takes another. The
+  // other chapters' slides are picked again when they are switched to.
   loadWikiShots: async () => {
     const wikiShots = asList<WikiShot>(await readOr(GetWikiShots, []))
     set({ wikiShots })
     const { manifest, selectedId, wikiPages, slides } = get()
     const chapter = chapterById(manifest, selectedId)
-    if (!chapter || slides[selectedId]?.art || shotsForChapter(wikiShots, chapter).length === 0)
+    const art = slides[selectedId]?.art
+    if (
+      !chapter ||
+      wikiShots.some((s) => s.src === art) ||
+      shotsForChapter(wikiShots, chapter).length === 0
+    )
       return
     const next = pickSlide(wikiShots, wikiPages, chapter, slides[selectedId])
     await preload(next.art)

@@ -144,6 +144,40 @@ describe('useChapterStore', () => {
       expect(useChapterStore.getState().slides.luxemburg).toBe(next)
     })
 
+    it('reads the pictures again after a new draw and gives a slide whose picture was pruned another (issue 172)', async () => {
+      vi.mocked(App.GetWikiPages).mockResolvedValue([page('castle', 'Luxemburg')])
+      vi.mocked(App.GetWikiShots).mockResolvedValue([
+        shot('/wiki-art/pages/old.webp', 'Luxemburg', 'castle'),
+      ])
+      await useChapterStore.getState().loadWikiPages()
+      await useChapterStore.getState().loadWikiShots()
+      expect(useChapterStore.getState().slides.luxemburg?.art).toBe('/wiki-art/pages/old.webp')
+
+      // The draw changed: the old picture is gone from the cache and the list.
+      vi.mocked(App.GetWikiShots).mockResolvedValue([
+        shot('/wiki-art/pages/new.webp', 'Luxemburg', 'castle'),
+      ])
+      await useChapterStore.getState().loadWikiShots()
+      const s = useChapterStore.getState()
+      expect(s.wikiShots.map((x) => x.src)).toEqual(['/wiki-art/pages/new.webp'])
+      expect(s.slides.luxemburg?.art).toBe('/wiki-art/pages/new.webp')
+      expect(s.slides.luxemburg?.page?.id).toBe('castle')
+    })
+
+    it('keeps a slide whose picture the new draw kept', async () => {
+      vi.mocked(App.GetWikiShots).mockResolvedValue([
+        shot('/a', 'Luxemburg'),
+        shot('/b', 'Luxemburg'),
+      ])
+      await useChapterStore.getState().loadWikiShots()
+      const before = useChapterStore.getState().slides.luxemburg
+      vi.mocked(App.GetWikiShots).mockResolvedValue(
+        [before!.art!, '/c'].map((x) => shot(x, 'Luxemburg')),
+      )
+      await useChapterStore.getState().loadWikiShots()
+      expect(useChapterStore.getState().slides.luxemburg?.art).toBe(before!.art)
+    })
+
     it('has no screenshots without a bridge, and the bundled art stays', async () => {
       vi.mocked(App.GetWikiShots).mockRejectedValue('wiki pages: offline (no cached copy)')
       await useChapterStore.getState().loadWikiShots()

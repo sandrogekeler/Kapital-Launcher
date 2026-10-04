@@ -215,12 +215,20 @@ export interface WikiPage {
   related: string[]
 }
 
-/** One of the wiki's screenshots, cached and served by Go at `src` (#141). */
+/** One of the wiki's pictures, a screenshot or a page's, cached and served by Go at `src` (issue 172). */
 export interface WikiShot {
   era: string
   src: string
   /** The id of the page the picture shows, '' when none. */
   subject: string
+}
+
+/** What the settings screen needs to estimate the room the wiki pictures take (issue 172). */
+export interface WikiArtStats {
+  /** The mean size of the pictures in the cache, about 100 KB while it holds none. */
+  avgBytes: number
+  /** How many pictures each chapter can draw from, by era id (the chapter's name). */
+  pools: Record<string, number>
 }
 
 export interface WikiTeaser {
@@ -410,6 +418,8 @@ export interface AppSettings {
   loadingSplashOn?: boolean
   /** The slideshow off (issue 142): each chapter shows its own bundled picture, with no timer. Absent is on. */
   staticArt?: boolean
+  /** How many wiki pictures each chapter's slideshow has (issue 172): 5, 10 or 20, 0 for all. Absent is 10. */
+  wikiPictures?: number
   /** Where the hero's map tool opens a chapter's map (issue 161). Absent is the launcher's own page. */
   mapIn?: MapIn | string
 }

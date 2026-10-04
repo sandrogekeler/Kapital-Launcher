@@ -71,9 +71,26 @@ type WikiService struct {
 	raw   []byte
 	fresh bool
 
-	// art is the screenshots, downloaded once per start (wikiart.go).
-	artOnce sync.Once
+	// chapters are the manifest's, whose eras the pictures are drawn for
+	// (wikidraw.go); none means every era the export names.
+	chapters []models.Chapter
+	// now is the clock the daily draw reads, the local date.
+	now func() time.Time
+
+	// art is the drawn pictures that are cached, for the draw artKey names
+	// (count and date); checked is which cached pictures were asked the wiki
+	// about this start (wikiart.go).
+	artMu   sync.Mutex
 	art     []models.WikiShot
+	artKey  drawKey
+	checked map[string]bool
+}
+
+// drawKey is what a draw depends on besides the export: how many pictures a
+// chapter has, and the local date (YYYY-MM-DD).
+type drawKey struct {
+	count int
+	date  string
 }
 
 // NewWikiService reads pages from the wiki at baseURL, the manifest's
@@ -82,12 +99,21 @@ func NewWikiService(dataDir, baseURL string) *WikiService {
 	return &WikiService{
 		baseURL: strings.TrimRight(baseURL, "/"),
 		cache:   filepath.Join(dataDir, wikiCacheName),
+		now:     time.Now,
+		checked: map[string]bool{},
 		client: &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error {
 			// The export is one file at a fixed path on an allowlisted host;
 			// a redirect anywhere would be a surprise, and is not followed.
 			return http.ErrUseLastResponse
 		}},
 	}
+}
+
+// ForChapters limits the pictures to the eras of the manifest's chapters, named
+// as the wiki names its eras, and seeds each chapter's draw with its id.
+func (w *WikiService) ForChapters(chapters []models.Chapter) *WikiService {
+	w.chapters = chapters
+	return w
 }
 
 // Pages returns the wiki's pages: from memory after the first call, else
