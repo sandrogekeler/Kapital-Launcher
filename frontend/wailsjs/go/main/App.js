@@ -54,6 +54,10 @@ export function GetPrismRelease() {
   return window['go']['main']['App']['GetPrismRelease']();
 }
 
+export function GetRunLogs(arg1) {
+  return window['go']['main']['App']['GetRunLogs'](arg1);
+}
+
 export function GetRunReport(arg1) {
   return window['go']['main']['App']['GetRunReport'](arg1);
 }
@@ -108,6 +112,10 @@ export function OpenInstanceFolder(arg1) {
 
 export function OpenWikiPage(arg1) {
   return window['go']['main']['App']['OpenWikiPage'](arg1);
+}
+
+export function ReadRunLog(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ReadRunLog'](arg1, arg2, arg3, arg4);
 }
 
 export function RefreshEngine() {

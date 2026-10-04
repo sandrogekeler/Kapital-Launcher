@@ -111,6 +111,9 @@ What is left:
 
 - [ ] Changelog panel fed by the manifest
 - [x] Copy redacted log action (`services.Redactor`, #84)
+- [x] Logs page per chapter: the instance's game logs and crash reports, newest
+      first, opened masked and a chunk at a time, read only (#155, ADR-2 eighth
+      amendment)
 - [x] About section on the settings screen: version, disclaimer, licences (#87)
 - [x] Forward frontend render errors to the Go log (#83)
 - [x] Release workflow with attested artefacts for Windows and macOS; code

@@ -64,6 +64,15 @@ player's in-game name learned from the log added, and returns it. It is built
 for the call and kept nowhere, and no line of it goes to `slog`; a run with no
 game log of its own has none to show, and without a redactor there is no report.
 
+The logs page (`runlogs.go`, `app_logs.go`, `GetRunLogs` and `ReadRunLog`, #155,
+ADR-2 eighth amendment) is the other reader of the game folder, on request and
+read only: it lists `logs/latest.log`, `logs/*.log.gz` and `crash-reports/*.txt`
+by file times, marks the logs of a run a crash report falls in, and reads one
+file a 256 KiB chunk at a time, unpacking a `.log.gz` under a cap, through an
+`os.Root` on the game folder and only by a name `validRunLogName` accepts. The
+chunk goes through the redactor with the in-game name added before it leaves,
+and nothing of it is kept or logged.
+
 The window holder (`gamewindow*.go`, #45, Windows only; the loading splash,
 #43, is what turns it on for a run) hooks the show events of the game's own
 process and hides and shows its `GLFW30` window through user32. Every hide,

@@ -28,6 +28,8 @@ export function GetPreviewSituations():Promise<Array<models.PreviewSituation>>;
 
 export function GetPrismRelease():Promise<models.PrismRelease>;
 
+export function GetRunLogs(arg1:string):Promise<Array<models.RunLog>>;
+
 export function GetRunReport(arg1:string):Promise<models.RunReport>;
 
 export function GetServerStatus(arg1:string):Promise<models.ServerStatus>;
@@ -55,6 +57,8 @@ export function OpenExternal(arg1:string):Promise<void>;
 export function OpenInstanceFolder(arg1:string):Promise<void>;
 
 export function OpenWikiPage(arg1:string):Promise<void>;
+
+export function ReadRunLog(arg1:string,arg2:string,arg3:string,arg4:number):Promise<models.RunLogText>;
 
 export function RefreshEngine():Promise<models.EngineInfo>;
 

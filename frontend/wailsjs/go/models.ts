@@ -466,6 +466,50 @@ export namespace models {
 	        this.updateAvailable = source["updateAvailable"];
 	    }
 	}
+	export class RunLog {
+	    kind: string;
+	    name: string;
+	    modifiedAt: string;
+	    size: number;
+	    crashed: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new RunLog(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.name = source["name"];
+	        this.modifiedAt = source["modifiedAt"];
+	        this.size = source["size"];
+	        this.crashed = source["crashed"];
+	    }
+	}
+	export class RunLogText {
+	    kind: string;
+	    name: string;
+	    text: string;
+	    offset: number;
+	    size: number;
+	    lines: number;
+	    truncated: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new RunLogText(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.name = source["name"];
+	        this.text = source["text"];
+	        this.offset = source["offset"];
+	        this.size = source["size"];
+	        this.lines = source["lines"];
+	        this.truncated = source["truncated"];
+	    }
+	}
 	export class RunReport {
 	    game: GameState;
 	    phases: PhaseTime[];

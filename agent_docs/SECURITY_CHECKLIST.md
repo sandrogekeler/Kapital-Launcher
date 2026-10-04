@@ -9,7 +9,7 @@ Two reaches matter: **network** (a manifest, a pack index, a download, a server
 ping response) and **bridge** (a bound method on `App`, callable by anything
 that runs in the WebView).
 
-Bound methods on 2026-10-03: **34** (`grep -c '^func (a \*App) [A-Z]' app.go app_*.go`,
+Bound methods on 2026-10-04: **36** (`grep -c '^func (a \*App) [A-Z]' app.go app_*.go`,
 summed). A different count is new surface to classify: add the method to this table.
 
 | Method | Takes from the bridge | Reaches | Item |
@@ -34,6 +34,8 @@ summed). A different count is new surface to classify: add the method to this ta
 | `OpenWikiPage` | a URL | the system browser, only for a URL `GetWikiPages` returned | S3.3 |
 | `GetChapterSettings` | a chapter id | four keys of the chapter's own `instance.cfg` | S1.1, S3.3 |
 | `SaveChapterSettings` | a chapter id and a `ChapterSettings` | five keys rewritten in the chapter's own `instance.cfg`, held to the preset list and the machine's memory | S3.2, S3.3, S4.6 |
+| `GetRunLogs` | a chapter id | the names, times and sizes of `logs/latest.log`, `logs/*.log.gz` and `crash-reports/*.txt` in that chapter's instance game folder, listed through an `os.Root`; no file is opened | S3.3, S3.10 |
+| `ReadRunLog` | a chapter id, a kind (`log` or `crash`), a base name the listing produces and a byte offset | one chunk (at most 256 KiB, from a whole line) of one such file in that game folder, unpacked if `.log.gz` up to 256 MiB, redacted before it leaves Go; nothing written | S3.3, S3.10, S7.5 |
 | `GetPreviewSituations` | nothing | the fixed list of developer previews, in memory | none |
 | `StartPreview`, `ClearPreviews` | a chapter id and a situation name, which must be one of the fixed list (`services.PreviewSituations`) | state and copy only: a synthetic `game:state`, the real loading card with a made-up report, synthetic pack, instance, engine and release answers, and a made-up Prism install that never reaches the installer. No file, process, URL or network request; a real launch, game event or write to the chapter ends the preview | S3.3, S3.8, S4.5 |
 
@@ -317,6 +319,32 @@ Probe: Stop on a chapter whose launch went to a Prism that was already open (no
 process of ours is alive, and none may be signalled); a Prism whose pid has been
 reused after it exited (its exit channel is closed, so it is not touched).
 
+**S3.10 The logs page reads only files its own listing produces, inside the instance's game folder, and only a bounded chunk of one.**
+Holds when: `GetRunLogs` and `ReadRunLog` (issue 155, ADR-2 eighth amendment)
+take a chapter id, resolved through the manifest and the disk's own instance
+report (S3.3), never a path. `services.ReadRunLog` takes a kind and a base name
+and refuses anything but `log` or `crash` and a name that is plain
+(`[A-Za-z0-9][A-Za-z0-9._-]{0,119}`, so no separator, drive, stream marker or
+leading dot, and no `..`) and is `latest.log` or `*.log.gz` for a log, `*.txt`
+for a crash report: the one test (`validRunLogName`) the listing also uses, so a
+name that is read is a name that is listed. The file is reached through an
+`os.Root` on the game folder, which refuses a path that leaves it, a link
+included, and is `Lstat`ed first, so a link is refused whatever it points at and
+a folder is not a file. A read returns at most 256 KiB, from a whole line; a
+`.log.gz` is unpacked through a counting reader and refused past 256 MiB, so a
+gzip bomb is never held (the unpack is streamed twice, to measure and to read,
+and neither keeps more than the chunk). The listing caps each kind at 50. Nothing
+is written, moved or deleted, and no path is returned.
+Verify: `TestAReadRefusesANameThatIsNotOneTheListingProduces`,
+`TestAReadRefusesWhatIsNotAFileOrHasNoGameFolder`,
+`TestASymlinkOutOfTheFolderIsNeitherListedNorRead` (skipped on Windows, where a
+test runner cannot make links), `TestAGzipBombBeyondTheCapIsRefused`,
+`TestACorruptGzipIsAnErrorNotAPanic`, `TestListRunLogsCapsEachKindAtTheNewest`,
+`TestReadRunLogRefusesWhatIsNotAListedName`.
+Probe: `../../instance.cfg`, `..\..\instance.cfg`, `logs/latest.log`, a kind of
+`instance`; a `latest.log` that is a link to another file; `logs` itself a link
+out of the game folder; a `.log.gz` that unpacks to gigabytes.
+
 ## S4. Downloads (milestone 4)
 
 **S4.1 Every downloaded file is verified against its hash before use.** `.mrpack`
@@ -474,6 +502,27 @@ Verify: `TestReportMasksWhatIdentifiesThePlayerAndLearnsTheirInGameName`,
 `TestRedactMasksALaunchArgumentListsIdentityAndCredential`.
 Probe: a log whose first line is a loader's argument list, and a chat line with
 the player's name, in a log over 16 KiB.
+**S7.5 The logs page shows a file redacted, and keeps none of it.**
+`ReadRunLog` (issue 155) is the second place a line of the game's log leaves
+its file, and the first for an earlier run's log, a dated `.log.gz` and a crash
+report. Holds when: (a) every chunk goes through `NewRedactor` as S7.4's does
+(home path, OS user, profile name, every manifest server address, IPv4
+addresses, UUIDs, launch-argument values) with the in-game name added, learned
+from the chunk, else the file's head up to 8 MiB, else `latest.log`'s head, and
+a read is refused when there is no redactor; (b) a chunk starts and ends on a
+line, so a value is not cut in two, and `latest.log`, which the game is writing,
+drops a half-written last line; (c) the text is returned for the call and held by
+the page alone, which empties its store when it closes, and no line of it, or of
+a name learned from it, goes to `slog` (the log line is the chapter, the kind and
+the number of lines); (d) the view renders it as text, never as HTML (S5.2);
+(e) Copy puts on the clipboard the masked text shown, through Wails' runtime
+`ClipboardSetText`, which takes no path and reads nothing.
+Verify: `TestAReadMasksWhatIdentifiesThePlayer`,
+`TestACrashReportsPlayerNameIsLearnedFromTheLatestLog`,
+`TestTheLiveLogsHalfWrittenLastLineIsLeftOut`,
+`TestRunLogsListAndReadAnInstalledChaptersFilesMasked`.
+Probe: a name that appears only in the head of a log over 256 KiB, read from the
+chunk before the end; a crash report from a player whose log is gone.
 
 ## S8. CI and supply chain
 

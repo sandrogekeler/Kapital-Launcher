@@ -218,3 +218,38 @@ no URL, so it syncs by the new pack's index. It removes the files only the other
 pack had, adds the ones only the new pack has and updates the rest. Saves,
 options and the optional-mod choices are left alone. Nothing else in the instance refers to the pack URL, so one instance and
 the one key are enough.
+
+## Eighth amendment, 2026-10-04
+
+The run report (sixth amendment) shows the end of the latest run's log and
+nothing before it. An earlier run's log, a crash from yesterday and a run started
+from Prism directly are out of reach, and a player asked for "the log from when
+it crashed" has to find the instance folder and unpack a `.log.gz`. The author
+chose a Logs page per chapter (issue 155), opened from a third tool in the hero,
+over sending the player to the folder. The launcher now reads more of the game
+folder, on request, read only:
+
+- **What is listed.** The instance's own `logs/latest.log`, `logs/*.log.gz` and
+  `crash-reports/*.txt`, newest first, at most 50 of each kind, with each file's
+  name, modified time and size. Listing opens no file.
+- **The crash mark.** A log is marked as crashed when a crash report's modified
+  time falls in its run: after the next older log was archived (the game
+  archives a run's log at the next start, so that is when this run began) and by
+  the log's own last write plus two minutes. The oldest log, with no older one,
+  is taken to have begun a day before its end. It is a rule over file times and
+  is best effort.
+- **What is read.** One file at a time, named by kind (`log` or `crash`) and by a
+  base name the listing would produce. Go resolves it inside the instance's game
+  folder through an `os.Root`, so a link out of the folder is refused, and
+  refuses a name with a separator, `..`, a stream marker, or the wrong shape. A
+  file is read a chunk at a time: the last 256 KiB from a whole line, or the
+  256 KiB before an offset the caller was given ("Load earlier"). A dated log is
+  unpacked while it is read and refused past 256 MiB unpacked.
+- **What is shown.** The chunk, redacted as the run report's is (sixth
+  amendment): home path, OS user, profile name, server addresses, IPv4
+  addresses, UUIDs, launch-argument values and the player's in-game name, which
+  is learned from the chunk, else the file's head, else `latest.log`'s head.
+  Copy puts on the clipboard what is shown, through Wails' runtime.
+- **What is kept.** Nothing, as before: the text is returned for the call and
+  held by the page alone, which drops it on closing. What is logged is the
+  chapter, the kind and the number of lines.
