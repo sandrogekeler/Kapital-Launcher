@@ -3,12 +3,17 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import type { ComponentProps } from 'react'
 import { ActionBar } from './ActionBar'
 import { BUNDLED_MANIFEST } from '../../lib/manifest'
-import type { GamePhase, GameState, PrismInstallProgress, ServerStatus } from '../../types'
+import type { Chapter, GamePhase, GameState, PrismInstallProgress, ServerStatus } from '../../types'
 
 vi.mock('../../../wailsjs/go/main/App')
 
 const chapter = BUNDLED_MANIFEST.chapters.find((c) => c.id === 'frangfurd')!
 const noop = () => undefined
+/** A chapter with no server, whose right side is the pack line. */
+const serverless: Chapter = {
+  ...BUNDLED_MANIFEST.chapters.find((c) => c.id === 'luxemburg')!,
+  server: null,
+}
 
 const game = (phase: GamePhase, exitCode?: number): GameState => ({
   chapterId: chapter.id,
@@ -158,7 +163,7 @@ describe('ActionBar game line', () => {
   })
 
   it('leaves the right side as the pack line without a server or a game', () => {
-    const lux = BUNDLED_MANIFEST.chapters.find((c) => !c.server)!
+    const lux = serverless
     bar({ chapter: lux })
     expect(screen.getByText('● Updated')).toBeInTheDocument()
     expect(screen.queryByText('● Ready')).toBeNull()
@@ -174,7 +179,7 @@ describe('ActionBar game line', () => {
   ])(
     'reads Play and names the source version when the installed pack is %s',
     (_, upToDate, version) => {
-      const lux = BUNDLED_MANIFEST.chapters.find((c) => !c.server)!
+      const lux = serverless
       bar({
         chapter: lux,
         packState: { chapterId: lux.id, installed: true, checked: true, upToDate, version },
@@ -188,7 +193,7 @@ describe('ActionBar game line', () => {
   )
 
   it('says the version is pending when none is known', () => {
-    const lux = BUNDLED_MANIFEST.chapters.find((c) => !c.server)!
+    const lux = serverless
     bar({ chapter: { ...lux, pack: { ...lux.pack, version: null } } })
     expect(screen.getByText('● Updated')).toBeInTheDocument()
     expect(screen.getByText('Version pending')).toBeInTheDocument()
@@ -261,12 +266,21 @@ describe('ActionBar game line', () => {
     cleanup()
     bar({ status: { ...online, online: false } })
     expect(screen.getByText('○ Server offline').nextElementSibling?.textContent).toMatch(/^as of /)
+    // Down is red; an address nobody has settled yet stays quiet.
+    expect(screen.getByText('○ Server offline')).toHaveClass('text-danger')
   })
 
   it('reads a placeholder address as pending only when that is the address in use', () => {
     const lichdenstein = BUNDLED_MANIFEST.chapters.find((c) => c.id === 'lichdenstein')!
-    bar({ chapter: lichdenstein, status: online })
-    expect(screen.getByText('○ No server yet')).toBeInTheDocument()
+    const unsettled: Chapter = {
+      ...lichdenstein,
+      server: {
+        ...lichdenstein.server!,
+        addresses: [{ label: 'Main', address: 'placeholder.invalid' }],
+      },
+    }
+    bar({ chapter: unsettled, status: online })
+    expect(screen.getByText('○ No server yet')).toHaveClass('text-fg-muted')
     expect(screen.getByText('Address pending')).toBeInTheDocument()
   })
 
