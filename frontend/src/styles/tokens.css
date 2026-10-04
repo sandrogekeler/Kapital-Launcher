@@ -72,6 +72,12 @@
      --transition-duration-*, never --duration-*. */
   --duration-fast: 140ms;
   --transition-duration-fast: 140ms;
+  --duration-reveal: 200ms;
+  --transition-duration-reveal: 200ms;
+  --duration-page: 320ms;
+  --transition-duration-page: 320ms;
+  --duration-grace: 300ms;
+  --transition-duration-grace: 300ms;
   --duration-slow: 420ms;
   --transition-duration-slow: 420ms;
   --duration-drift: 900ms;
@@ -123,6 +129,10 @@
   --effect-motion-blur: 4px;
   --effect-tile-blur: 14px;
   --effect-tile-tint: 75%;
+  --layout-reveal-rise: 4px;
+  --effect-reveal-blur: 2px;
+  --effect-glow-blur: 18px;
+  --effect-glow-strength: 40%;
 }
 
 /* Dark is the default. Light is opt-in through data-theme; the system
