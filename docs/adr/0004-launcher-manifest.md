@@ -120,3 +120,19 @@ the system browser (issue 161). The shape, still `version: 1`:
   the top document and the sending frame alike (SECURITY_CHECKLIST S5.4).
 - The settings choose where it opens (`mapIn`: "In the launcher", the default,
   or "In the browser"), saved with the other settings and checked in Go.
+
+## Amendment, 2026-10-04: the changelog comes from the pack, the manifest's is the fallback
+
+Changelog entries typed into `data/launcher.json` would ship with a launcher
+release, and all three chapters' were empty (issue 164). A chapter's changelog
+is now a file its pack's host serves beside `pack.toml`
+(`<chapter>/changelog.json`, docs/PACKS.md), read by the launcher from the pack
+source it already trusts for that chapter, under that source's URL rule, with
+`pack.toml`'s timeout and a size bound, and validated strictly
+(`services.ParseChangelog`): a file that deviates is refused whole.
+
+The manifest's `changelog` stays, in the schema and the Go and TypeScript
+shapes, as the **fallback**: it is what the panel shows for a chapter whose
+pack publishes no changelog (a 404) or whose file could not be read. It is
+still data a manifest names and never runs: one summary per version, shown as
+plain text.

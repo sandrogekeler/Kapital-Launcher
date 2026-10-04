@@ -114,7 +114,8 @@ What is left:
 
 ## Milestone 7: Polish
 
-- [ ] Changelog panel fed by the manifest
+- [x] Changelog panel fed by the pack's own `changelog.json`, with the
+      manifest's `changelog` as the fallback (issue 164, ADR-4 amendment)
 - [x] Copy redacted log action (`services.Redactor`, #84)
 - [x] Logs page per chapter: the instance's game logs and crash reports, newest
       first, opened masked and a chunk at a time, read only (#155, ADR-2 eighth

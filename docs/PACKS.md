@@ -147,6 +147,40 @@ compares its checksum with the one packwiz-installer recorded at the last
 sync; the Version row in the chapter's settings uses that check to say
 "older than X" when the installed pack is behind. There is nothing to click.
 
+## The changelog is a file beside the pack
+
+The Changelog panel does not come from the pack's own files or from the
+launcher's release. A chapter's changelog is `changelogs/<chapter>.json` in
+the packs repository, which the pack build copies to
+`<pack host>/<chapter>/changelog.json` next to `pack.toml`, served with
+`Cache-Control: no-cache` like it. It lives outside the pack folder on
+purpose: `packwiz refresh` indexes every file in a pack folder, so a changelog
+there would be synced into every player's instance. The author adds the
+version to it as part of each release, so the release notes and the file say
+the same.
+
+```json
+{"entries": [{"version": "1.0.1", "date": "2026-10-03", "lines": ["Removed JEI.", "..."]}]}
+```
+
+Newest first. When the app starts and whenever it regains focus, with the pack
+states, the launcher downloads each chapter's file from the pack source it
+already uses for that chapter (the instance's own pack URL, else the local
+override, else the manifest's), with `pack.toml` replaced by `changelog.json`
+in the URL and the same rules as `pack.toml`: https on the allowlisted host
+(or loopback for a dev pack), redirects held to the same rule, a 15 second
+timeout and a 64 KiB bound. The file is refused whole unless it is exactly
+that shape: at most 50 entries, a `version` of 1 to 32 letters, digits, dots,
+hyphens and pluses, a `date` as YYYY-MM-DD, and one to ten `lines` of 1 to
+200 characters of plain text (no control characters), with no other field.
+
+The panel shows the latest three entries: the version, and the first line
+of each, with the rest in its tooltip. A chapter with no file (a 404, as
+Luxemburg and Lichdenstein have for now), or whose file cannot be read or
+fails the checks, shows the changelog in the launcher's manifest instead
+(ADR-4), which is empty today. The launcher keeps the entries it last read
+when a later read fails, so being offline does not empty the panel.
+
 ## The dev pack
 
 `packwiz serve` is packwiz's own small web server. Run inside a chapter's
@@ -215,7 +249,8 @@ and the pack's `pack.toml` names them.
 - ADR-3: the pack format and hosting, and why a repository rather than a panel.
 - ADR-2 and its amendments: exactly what the launcher writes in Prism's
   folders and when.
-- ADR-4: the manifest, and the plan to have the wiki publish it.
+- ADR-4: the manifest, and the plan to have the wiki publish it; its
+  amendment on the changelog.
 - ADR-11: how the launcher gets and updates Prism for a player without one.
 - `docs/HANDOVER.md`, "The packs": the repository, the host and the tools
   around them as they stand.

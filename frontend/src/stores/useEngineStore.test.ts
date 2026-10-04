@@ -19,6 +19,7 @@ describe('useEngineStore', () => {
     useEngineStore.setState({
       engine: null,
       instances: null,
+      changelogs: {},
       launching: null,
       installing: null,
       installedNow: null,
@@ -35,6 +36,7 @@ describe('useEngineStore', () => {
     vi.mocked(App.InstallChapter).mockReset()
     vi.mocked(App.SetPackSource).mockReset()
     vi.mocked(App.GetPackStates).mockReset()
+    vi.mocked(App.GetChangelogs).mockReset()
   })
 
   it('installs a chapter and takes the instances Go read back', async () => {
@@ -116,6 +118,31 @@ describe('useEngineStore', () => {
     )
     expect(useEngineStore.getState().instances).toBe(before)
     expect(App.GetPackStates).not.toHaveBeenCalled()
+  })
+
+  it('reads the changelogs with the pack states, unknown without a bridge', async () => {
+    const entry = {
+      version: '1.0.1',
+      date: '2026-10-03',
+      summary: 'Removed JEI.',
+      details: 'Removed JEI.',
+    }
+    vi.mocked(App.GetPackStates).mockResolvedValue([])
+    vi.mocked(App.GetChangelogs).mockResolvedValue([
+      models.PackChangelog.createFrom({ chapterId: 'frangfurd', checked: true, entries: [entry] }),
+      models.PackChangelog.createFrom({ chapterId: 'luxemburg', checked: false, entries: [] }),
+    ])
+    await useEngineStore.getState().loadPackStates()
+    const s = useEngineStore.getState()
+    expect(s.changelogs.frangfurd?.entries).toEqual([entry])
+    expect(s.changelogs.luxemburg?.checked).toBe(false)
+    expect(s.changelogs.lichdenstein).toBeUndefined()
+
+    vi.mocked(App.GetChangelogs).mockImplementation(() => {
+      throw new TypeError('no bridge')
+    })
+    await useEngineStore.getState().loadPackStates()
+    expect(useEngineStore.getState().changelogs).toEqual({})
   })
 
   it('reads the engine and degrades to unknown without a bridge', async () => {

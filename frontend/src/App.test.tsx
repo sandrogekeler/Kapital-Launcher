@@ -122,6 +122,7 @@ describe('App', () => {
     useEngineStore.setState({
       engine: null,
       instances: null,
+      changelogs: {},
       launching: null,
       installing: null,
       installedNow: null,
@@ -158,6 +159,7 @@ describe('App', () => {
     vi.mocked(Bindings.SaveSettings).mockResolvedValue()
     vi.mocked(Bindings.GetWikiPages).mockResolvedValue([])
     vi.mocked(Bindings.GetPackStates).mockResolvedValue([])
+    vi.mocked(Bindings.GetChangelogs).mockResolvedValue([])
     vi.mocked(Bindings.GetGameStates).mockResolvedValue([])
   })
   afterEach(cleanup)
@@ -595,6 +597,32 @@ describe('App', () => {
     expect(screen.getByText('● Updated')).toBeInTheDocument()
     // The bar's pack line and the hero's version pill (issue 162) both name it.
     expect(screen.getAllByText('Version 4.2')).toHaveLength(2)
+  })
+
+  it('fills the Changelog panel from the pack source, again when the window regains focus', async () => {
+    const entry = {
+      version: '4.2',
+      date: '2026-10-03',
+      summary: 'Removed JEI.',
+      details: 'Removed JEI.\nFixed a crash.',
+    }
+    vi.mocked(Bindings.GetChangelogs).mockResolvedValue([
+      models.PackChangelog.createFrom({ chapterId: 'luxemburg', checked: true, entries: [entry] }),
+    ])
+    render(<App />)
+    const first = await screen.findByText('Removed JEI.')
+    expect(first).toHaveAttribute('title', 'Removed JEI.\nFixed a crash.')
+    expect(screen.queryByText('Fixed a crash.')).toBeNull()
+
+    vi.mocked(Bindings.GetChangelogs).mockResolvedValue([
+      models.PackChangelog.createFrom({
+        chapterId: 'luxemburg',
+        checked: true,
+        entries: [{ ...entry, summary: 'Added a map.', details: 'Added a map.' }],
+      }),
+    ])
+    fireEvent.focus(window)
+    expect(await screen.findByText('Added a map.')).toBeInTheDocument()
   })
 
   it('opens the run report from Details on the notice of a game that crashed, and closes it', async () => {

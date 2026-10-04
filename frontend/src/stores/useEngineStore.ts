@@ -4,6 +4,7 @@ import type {
   ChapterSettingsInfo,
   EngineInfo,
   InstanceReport,
+  PackChangelog,
   PackSource,
   PackState,
   PrismInstallProgress,
@@ -11,6 +12,7 @@ import type {
 } from '../types'
 import { errMsg, hasWailsBridge, readOr } from '../lib/ipc'
 import {
+  GetChangelogs,
   GetChapterSettings,
   GetEngine,
   GetInstances,
@@ -39,6 +41,8 @@ interface EngineStore {
   instances: InstanceReport | null
   /** Whether each installed pack is its source's current one (#71), by chapter id. */
   packStates: Record<string, PackState | undefined>
+  /** What each chapter's pack source publishes as its changelog (issue 164), by chapter id. */
+  changelogs: Record<string, PackChangelog | undefined>
   launching: string | null
   /** The chapter whose instance is being written, while InstallChapter runs. */
   installing: string | null
@@ -80,6 +84,7 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
   engine: null,
   instances: null,
   packStates: {},
+  changelogs: {},
   launching: null,
   installing: null,
   installedNow: null,
@@ -156,10 +161,20 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
     await get().loadPackStates()
   },
 
+  // The pack states and the changelogs are both the pack source's word, read
+  // at the same moments: one more read, never a timer (issue 164).
   loadPackStates: async () => {
-    const raw: unknown = await readOr(GetPackStates, [])
+    const [raw, changes] = await Promise.all([
+      readOr<unknown, unknown>(GetPackStates, []),
+      readOr<unknown, unknown>(GetChangelogs, []),
+    ])
     const states = Array.isArray(raw) ? (raw as PackState[]) : []
-    set({ packStates: Object.fromEntries(states.map((s) => [s.chapterId, s])) })
+    set({
+      packStates: Object.fromEntries(states.map((s) => [s.chapterId, s])),
+      changelogs: Object.fromEntries(
+        (Array.isArray(changes) ? (changes as PackChangelog[]) : []).map((c) => [c.chapterId, c]),
+      ),
+    })
   },
 
   refresh: async () => {

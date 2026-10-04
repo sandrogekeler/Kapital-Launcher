@@ -16,6 +16,7 @@ function panels(over: Partial<ComponentProps<typeof Panels>> = {}) {
       installed={true}
       sizeBytes={undefined}
       packState={undefined}
+      changelog={undefined}
       wikiPage={undefined}
       onOpenWiki={noop}
       {...over}
@@ -79,6 +80,36 @@ describe('Panels', () => {
     expect(screen.getByText('1.0.3')).toBeInTheDocument()
     expect(screen.queryByText('1.0.2')).toBeNull()
     expect(screen.getByText('Summary of 1.0.5')).toHaveClass('line-clamp-2')
+  })
+
+  it('shows the entries of the pack source by their first line, the rest in the tooltip', () => {
+    const entries = ['1.0.5', '1.0.4', '1.0.3', '1.0.2'].map((version) => ({
+      version,
+      date: '2026-10-03',
+      summary: `First of ${version}.`,
+      details: `First of ${version}.\nSecond of ${version}.`,
+    }))
+    const manifested = { ...chapter, changelog: [{ version: '0.1', summary: 'Manifest entry.' }] }
+    panels({ chapter: manifested, changelog: { chapterId: chapter.id, checked: true, entries } })
+    expect(screen.getByText('1.0.5')).toHaveClass('text-accent', 'font-mono')
+    expect(screen.getByText('First of 1.0.5.')).toHaveClass('line-clamp-2')
+    expect(screen.getByText('First of 1.0.5.')).toHaveAttribute(
+      'title',
+      'First of 1.0.5.\nSecond of 1.0.5.',
+    )
+    expect(screen.queryByText('Second of 1.0.5.')).toBeNull()
+    expect(screen.queryByText('1.0.2')).toBeNull()
+    expect(screen.queryByText('Manifest entry.')).toBeNull()
+  })
+
+  it('falls back to the manifest changelog when the source has none or cannot be read', () => {
+    const manifested = { ...chapter, changelog: [{ version: '0.1', summary: 'Manifest entry.' }] }
+    const none = { chapterId: chapter.id, checked: true, entries: [] }
+    panels({ chapter: manifested, changelog: none })
+    expect(screen.getByText('Manifest entry.')).toBeInTheDocument()
+    cleanup()
+    panels({ chapter: manifested, changelog: { ...none, checked: false } })
+    expect(screen.getByText('Manifest entry.')).toBeInTheDocument()
   })
 
   it('has one sentence for an empty changelog', () => {
