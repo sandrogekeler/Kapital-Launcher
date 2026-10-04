@@ -1087,6 +1087,88 @@
       </div>
     </main>
 
+    <!-- The code signing policy SignPath Foundation asks a project to publish
+         on its download page (signpath.org/terms; issue 179). The heading,
+         the attribution sentence, the two roles and the privacy sentence are
+         theirs to word; keep them as they are. The same text is in the
+         README and in .github/release-body.md. -->
+    <section
+      aria-labelledby="signing-policy"
+      class="border-line border-t px-6 py-10"
+    >
+      <div class="text-fg-soft mx-auto flex max-w-140 flex-col gap-4 text-sm leading-normal">
+        <h2 id="signing-policy" class="text-fg m-0 text-lg font-semibold">
+          Code signing policy
+        </h2>
+        <p class="m-0">
+          Free code signing provided by
+          <a
+            href="https://about.signpath.io"
+            class="text-accent underline-offset-2 hover:underline"
+            >SignPath.io</a
+          >, certificate by
+          <a
+            href="https://signpath.org"
+            class="text-accent underline-offset-2 hover:underline"
+            >SignPath Foundation</a
+          >. This covers the Windows builds. The first beta was published
+          before signing was set up and is not signed.
+        </p>
+        <p class="m-0">
+          Every release is built from the public source by the project's
+          release workflow on GitHub, and only those builds are signed.
+        </p>
+
+        <h3 class="text-fg m-0 text-base font-semibold">Team roles</h3>
+        <ul class="m-0 flex list-none flex-col gap-1 p-0">
+          <li>
+            Committers and reviewers:
+            <a
+              href="https://github.com/sandrogekeler"
+              class="text-accent underline-offset-2 hover:underline"
+              >Alessandro Gekeler</a
+            >
+          </li>
+          <li>
+            Approvers:
+            <a
+              href="https://github.com/sandrogekeler"
+              class="text-accent underline-offset-2 hover:underline"
+              >Alessandro Gekeler</a
+            >
+          </li>
+        </ul>
+
+        <h3 class="text-fg m-0 text-base font-semibold">Privacy policy</h3>
+        <p class="m-0">
+          This program will not transfer any information to other networked
+          systems unless specifically requested by the user or the person
+          installing or operating it.
+        </p>
+        <p class="m-0">
+          It has no telemetry and no account of its own. To show what it
+          shows, it reads the Kapitel Kapital wiki, asks each chapter's game
+          server whether it is online, checks the pack host for a newer pack
+          and GitHub for a newer Prism Launcher. It downloads Prism Launcher
+          and a chapter's pack only when you ask it to. Signing in to
+          Minecraft is done by
+          <a
+            href="https://prismlauncher.org"
+            class="text-accent underline-offset-2 hover:underline"
+            >Prism Launcher</a
+          >
+          with Microsoft, under their own terms; this app never sees it.
+        </p>
+
+        <h3 class="text-fg m-0 text-base font-semibold">Removing it</h3>
+        <p class="m-0">
+          On Windows, uninstall Kapital Launcher from Settings, Apps. On
+          macOS, move it from Applications to the Trash. Your settings and
+          worlds stay where they are until you delete them yourself.
+        </p>
+      </div>
+    </section>
+
     <footer
       class="text-fg-muted border-line border-t px-6 py-4 text-center text-xs"
     >

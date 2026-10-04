@@ -98,6 +98,16 @@ build leaves the popup out of the page.
 The CSP in `public/_headers` allows it with `script-src 'self'` and nothing
 more, so an inline script would be blocked.
 
+## The code signing policy
+
+Under the window is the "Code signing policy" section SignPath Foundation
+asks a project to publish on its download page (signpath.org/terms, issue
+179): the attribution sentence, the two team roles, the privacy sentence, and
+how to remove the app. The heading and those sentences are SignPath's wording
+and stay as they are. The same text is in the repository's `README.md` and in
+`.github/release-body.md`, which heads every release; change the three
+together.
+
 ## Commands
 
 ```bash
