@@ -25,7 +25,10 @@ import { ensureFreshDist } from './lib/dist-freshness.mjs'
 // 92 since the slideshow (2026-10-03, #142): the chapter's picture and wiki post
 // cycle together, which every chapter view shows from the first paint (Drift,
 // the slide pairing, the rotation). Measured 91.2 KB.
-const BUDGET_KB = 92
+// 88 since the design pass (2026-10-04): the settings pages, the chapter's
+// settings and the run report load on demand, so the launcher's first paint
+// no longer carries them. Measured 87.4 KB.
+const BUDGET_KB = 88
 
 const DIST_ASSETS = await ensureFreshDist()
 const DIST = path.dirname(DIST_ASSETS)
