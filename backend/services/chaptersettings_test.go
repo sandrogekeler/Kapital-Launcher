@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -39,13 +41,107 @@ func TestReadChapterSettingsFromAnInstance(t *testing.T) {
 		t.Fatalf("a 4 GB machine: total / 1.5, got %d", got.MaxMemoryMB)
 	}
 
-	// Arguments that are nobody's preset read as none.
-	if err := os.WriteFile(cfg, []byte("[General]\nOverrideJavaArgs=true\nJvmArgs=\"-Xss1M\"\n"), 0o600); err != nil {
+	// Arguments that are nobody's preset read as no preset and the player's own
+	// (issue 191), so what Prism's window wrote is shown.
+	if err := os.WriteFile(cfg, []byte("[General]\nOverrideJavaArgs=true\nJvmArgs=\"-Xss1M -Dfoo=bar\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	got, _ = ReadChapterSettings(cfg, 0)
-	if got.JVM != "" {
+	if got.JVM != "" || !slices.Equal(got.JVMArgs, []string{"-Xss1M", "-Dfoo=bar"}) {
 		t.Fatalf("%+v", got)
+	}
+
+	// A preset followed by more: the preset and the rest.
+	if err := os.WriteFile(cfg, []byte("[General]\nOverrideJavaArgs=true\nJvmArgs=\"-XX:+UseZGC -XX:+ZGenerational -Xss1M\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = ReadChapterSettings(cfg, 0)
+	if got.JVM != "zgc" || !slices.Equal(got.JVMArgs, []string{"-Xss1M"}) {
+		t.Fatalf("%+v", got)
+	}
+
+	// Override off: whatever JvmArgs holds does not apply, so nothing is listed.
+	if err := os.WriteFile(cfg, []byte("[General]\nOverrideJavaArgs=false\nJvmArgs=\"-Xss1M\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = ReadChapterSettings(cfg, 0)
+	if got.JVM != "" || got.JVMArgs == nil || len(got.JVMArgs) != 0 {
+		t.Fatalf("an empty list, never null for the panel: %+v", got)
+	}
+}
+
+// The player's own arguments go after the preset's in one JvmArgs, and alone
+// they turn the override on (issue 191).
+func TestWriteChapterSettingsPutsThePlayersArgumentsAfterThePreset(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "instance.cfg")
+	if err := os.WriteFile(cfg, []byte(prismRewrittenCfg), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		s    models.ChapterSettings
+		want string
+	}{
+		{models.ChapterSettings{MaxMemoryMB: 8192, JVM: "zgc", JVMArgs: []string{"-Xss4m", "-Dsodium.checks=false"}},
+			"OverrideJavaArgs=true\r\nJvmArgs=\"-XX:+UseZGC -XX:+ZGenerational -Xss4m -Dsodium.checks=false\"\r\n"},
+		{models.ChapterSettings{MaxMemoryMB: 8192, JVMArgs: []string{"-Xss4m"}},
+			"OverrideJavaArgs=true\r\nJvmArgs=\"-Xss4m\"\r\n"},
+	} {
+		if err := WriteChapterSettings(cfg, tc.s); err != nil {
+			t.Fatal(err)
+		}
+		raw, _ := os.ReadFile(cfg) //nolint:errcheck // the next check fails on an empty read
+		if !strings.Contains(string(raw), tc.want) {
+			t.Fatalf("%q lacks %q", raw, tc.want)
+		}
+		back, err := ReadChapterSettings(cfg, 32768)
+		if err != nil || back.JVM != tc.s.JVM || !slices.Equal(back.JVMArgs, tc.s.JVMArgs) {
+			t.Fatalf("read back %+v from %+v: %v", back, tc.s, err)
+		}
+	}
+}
+
+func TestValidateJVMArgsRefusesWhatCouldDoMoreThanTuneTheGame(t *testing.T) {
+	if err := ValidateJVMArgs([]string{"-Xss4m", "-XX:+UseStringDeduplication", "-Dfml.readTimeout=180"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateJVMArgs(nil); err != nil {
+		t.Fatal(err)
+	}
+	refused := map[string][]string{
+		"no dash":          {"Xss4m"},
+		"a lone dash":      {"-"},
+		"a space":          {"-Dfoo=a b"},
+		"a tab":            {"-Dfoo=a\tb"},
+		"a newline":        {"-Dfoo=a\nb"},
+		"a quote":          {`-Dfoo="a"`},
+		"a backslash":      {`-Dfoo=C:\x`},
+		"memory max":       {"-Xmx16G"},
+		"memory min":       {"-Xms1G"},
+		"java agent":       {"-javaagent:evil.jar"},
+		"native agent":     {"-agentpath:/tmp/x.so"},
+		"agent library":    {"-agentlib:jdwp=transport=dt_socket"},
+		"command on error": {"-XX:OnError=calc.exe"},
+		"command on OOM":   {"-XX:OnOutOfMemoryError=calc.exe"},
+		"options file":     {"-XX:VMOptionsFile=x"},
+		"flags file":       {"-XX:Flags=x"},
+		"twice":            {"-Xss4m", "-Xss4m"},
+		"too long":         {"-D" + strings.Repeat("a", maxJVMArgLen)},
+		"an argument file": {"@args.txt"},
+		"too many":         slices.Repeat([]string{"-Da"}, maxJVMArgs+1),
+	}
+	for name, args := range refused {
+		if name == "too many" {
+			for i := range args {
+				args[i] = "-Da" + strconv.Itoa(i)
+			}
+		}
+		if err := ValidateJVMArgs(args); err == nil {
+			t.Errorf("%s: %q passed", name, args)
+		}
+	}
+	// A save carries them through the same check.
+	if err := ValidateChapterSettings(models.ChapterSettings{MaxMemoryMB: 8192, JVMArgs: []string{"-javaagent:x.jar"}}, 32768); err == nil {
+		t.Fatal("ValidateChapterSettings let an agent through")
 	}
 }
 

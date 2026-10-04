@@ -291,6 +291,15 @@ func TestChapterSettingsRoundTripThroughTheInstance(t *testing.T) {
 	if err != nil || !strings.HasPrefix(string(raw), "[General]\nname=Frangfurd\n") {
 		t.Fatalf("the other lines stay: %v %q", err, raw)
 	}
+	// The player's own arguments go through after the preset's, and one that
+	// could do more than tune the game is refused (issue 191).
+	if _, err := app.SaveChapterSettings("frangfurd", models.ChapterSettings{MaxMemoryMB: 4096, JVM: "zgc", JVMArgs: []string{"-XX:OnError=calc"}}); err == nil {
+		t.Fatal("a command on error is refused")
+	}
+	saved, err = app.SaveChapterSettings("frangfurd", models.ChapterSettings{MaxMemoryMB: 4096, JVM: "zgc", JVMArgs: []string{"-Xss4m"}})
+	if err != nil || saved.Settings.JVM != "zgc" || len(saved.Settings.JVMArgs) != 1 || saved.Settings.JVMArgs[0] != "-Xss4m" {
+		t.Fatalf("%v %+v", err, saved)
+	}
 	if _, err := app.SaveChapterSettings("atlantis", models.ChapterSettings{MaxMemoryMB: 4096}); err == nil {
 		t.Fatal("unknown chapter")
 	}

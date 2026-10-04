@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"kapital/backend/models"
 )
@@ -22,7 +23,7 @@ import (
 // one place that writes into one again, and only these keys:
 //
 //	OverrideMemory, MinMemAlloc, MaxMemAlloc      the heap
-//	OverrideJavaArgs, JvmArgs                     the preset's arguments
+//	OverrideJavaArgs, JvmArgs                     the preset's arguments and the player's own
 //
 // Every other line of the file is copied through unchanged, unread beyond
 // finding its key, with its own line ending. Nothing from the file is logged.
@@ -82,20 +83,91 @@ func ReadChapterSettings(cfgPath string, machineMB int) (models.ChapterSettings,
 	if err != nil {
 		return models.ChapterSettings{}, fmt.Errorf("read instance settings: %w", err)
 	}
-	s := models.ChapterSettings{MaxMemoryMB: PrismDefaultMaxMB(machineMB)}
+	s := models.ChapterSettings{MaxMemoryMB: PrismDefaultMaxMB(machineMB), JVMArgs: []string{}}
 	if keys[memoryKeyOverride] == "true" {
 		if n, err := strconv.Atoi(keys[memoryKeyMax]); err == nil && n > 0 {
 			s.MaxMemoryMB = n
 		}
 	}
 	if keys[jvmKeyOverride] == "true" {
-		for name, preset := range jvmPresets {
-			if preset.args == keys[jvmKeyArgs] {
-				s.JVM = name
-			}
-		}
+		s.JVM, s.JVMArgs = splitJVMArgs(keys[jvmKeyArgs])
 	}
 	return s, nil
+}
+
+// splitJVMArgs reads a JvmArgs value back as a preset and the player's own
+// arguments: a value that starts with a preset's arguments is that preset and
+// what follows, and anything else is no preset and all of it the player's
+// (issue 191). Arguments written in Prism's own window come back the same way,
+// so the panel shows them; a save holds them to ValidateJVMArgs like the rest.
+func splitJVMArgs(value string) (string, []string) {
+	value = strings.TrimSpace(value)
+	for name, preset := range jvmPresets {
+		if value == preset.args {
+			return name, []string{}
+		}
+		if rest, ok := strings.CutPrefix(value, preset.args+" "); ok {
+			return name, strings.Fields(rest)
+		}
+	}
+	return "", strings.Fields(value)
+}
+
+const (
+	// maxJVMArgs and maxJVMArgLen bound what a player may add; Prism's own
+	// window has no limit, but nothing a player needs comes near these.
+	maxJVMArgs   = 32
+	maxJVMArgLen = 200
+)
+
+// refusedJVMArgs are prefixes the launcher never writes, whoever asks:
+// memory, which the slider owns; an agent, which loads code into the game; and
+// the two options that run a command when the JVM fails or runs out of memory,
+// and the one that reads more options from a file (issue 191, S3.2).
+var refusedJVMArgs = []struct{ prefix, why string }{
+	{"-Xmx", "memory is set with the slider"},
+	{"-Xms", "memory is set with the slider"},
+	{"-javaagent", "an agent loads code into the game"},
+	{"-agentpath", "an agent loads code into the game"},
+	{"-agentlib", "an agent loads code into the game"},
+	{"-XX:OnError", "it runs a command"},
+	{"-XX:OnOutOfMemoryError", "it runs a command"},
+	{"-XX:VMOptionsFile", "it reads more options from a file"},
+	{"-XX:Flags", "it reads more options from a file"},
+}
+
+// ValidateJVMArgs holds the player's own Java arguments (issue 191, S3.2):
+// each one argument that starts with a dash, with no space, quote, backslash
+// or control character (Prism splits JvmArgs on spaces and reads quotes and
+// backslashes itself), none of refusedJVMArgs, no repeat, and a bounded list.
+func ValidateJVMArgs(args []string) error {
+	if len(args) > maxJVMArgs {
+		return fmt.Errorf("at most %d Java arguments", maxJVMArgs)
+	}
+	seen := map[string]bool{}
+	for _, arg := range args {
+		if len(arg) > maxJVMArgLen {
+			return fmt.Errorf("Java argument %.24q… is longer than %d characters", arg, maxJVMArgLen)
+		}
+		if !strings.HasPrefix(arg, "-") || len(arg) < 2 {
+			return fmt.Errorf("Java argument %q does not start with a dash", arg)
+		}
+		for _, r := range arg {
+			if r <= ' ' || r == 0x7f || r == '"' || r == '\'' || r == '\\' || unicode.IsSpace(r) || unicode.IsControl(r) {
+				return fmt.Errorf("Java argument %q holds a space, a quote, a backslash or a control character", arg)
+			}
+		}
+		for _, refused := range refusedJVMArgs {
+			if strings.HasPrefix(arg, refused.prefix) {
+				return fmt.Errorf("Java argument %q is not allowed: %s", arg, refused.why)
+			}
+		}
+		if seen[arg] {
+			return fmt.Errorf("Java argument %q is listed twice", arg)
+		}
+		seen[arg] = true
+	}
+	return nil
 }
 
 // ValidateChapterSettings holds a value from the bridge to the fixed preset
@@ -105,6 +177,9 @@ func ValidateChapterSettings(s models.ChapterSettings, machineMB int) error {
 		if _, ok := jvmPresets[s.JVM]; !ok {
 			return fmt.Errorf("unknown JVM preset %q", s.JVM)
 		}
+	}
+	if err := ValidateJVMArgs(s.JVMArgs); err != nil {
+		return err
 	}
 	ceiling := maxMemoryMB
 	if machineMB > 0 {
@@ -133,11 +208,18 @@ func WriteChapterSettings(cfgPath string, s models.ChapterSettings) error {
 		memoryKeyMin:      strconv.Itoa(minMemMiB),
 		memoryKeyMax:      strconv.Itoa(s.MaxMemoryMB),
 	}
-	if s.JVM == "" {
+	// The preset's arguments, then the player's own (issue 191). With neither,
+	// Prism's own arguments apply and JvmArgs is left as it stands.
+	var args []string
+	if s.JVM != "" {
+		args = append(args, jvmPresets[s.JVM].args)
+	}
+	args = append(args, s.JVMArgs...)
+	if len(args) == 0 {
 		set[jvmKeyOverride] = "false"
 	} else {
 		set[jvmKeyOverride] = "true"
-		set[jvmKeyArgs] = qtString(jvmPresets[s.JVM].args)
+		set[jvmKeyArgs] = qtString(strings.Join(args, " "))
 	}
 	out, err := rewriteINIKeys(raw, set)
 	if err != nil {

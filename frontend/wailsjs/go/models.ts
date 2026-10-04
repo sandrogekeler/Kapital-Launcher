@@ -317,6 +317,7 @@ export namespace models {
 	export class ChapterSettings {
 	    maxMemoryMb: number;
 	    jvm: string;
+	    jvmArgs: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new ChapterSettings(source);
@@ -326,6 +327,7 @@ export namespace models {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.maxMemoryMb = source["maxMemoryMb"];
 	        this.jvm = source["jvm"];
+	        this.jvmArgs = source["jvmArgs"];
 	    }
 	}
 	export class ChapterSettingsInfo {

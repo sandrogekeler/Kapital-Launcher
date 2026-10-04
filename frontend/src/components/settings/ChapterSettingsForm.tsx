@@ -14,6 +14,7 @@ import { RangeField } from '../ui/RangeField'
 import { SubHeading } from '../ui/Section'
 import { SettingsCard } from '../ui/SettingsLayout'
 import { StableLabel } from '../ui/StableLabel'
+import { JavaArgsList } from './JavaArgsList'
 import { RunningHint } from './RunningHint'
 
 interface Props {
@@ -38,7 +39,8 @@ const SAVE_LABELS = ['Save', 'Saving'] as const
 
 /**
  * The editable part of a chapter's settings, one row each of the Game card (issues 188, 189):
- * memory with the pack's recommendation marked on the track, the Java preset, and a footer that
+ * memory with the pack's recommendation marked on the track, the Java preset and the player's own
+ * arguments after it (issue 191), and a footer that
  * says whether there is anything to save, with Revert and Save. The button keeps its box when it
  * says Saving.
  */
@@ -90,6 +92,11 @@ export function ChapterSettingsForm({
             note: presetNote(name),
           }))}
           onChange={(jvm) => onDraft({ ...draft, jvm })}
+        />
+        <JavaArgsList
+          args={draft.jvmArgs}
+          disabled={playing || saving}
+          onChange={(jvmArgs) => onDraft({ ...draft, jvmArgs })}
         />
       </div>
 

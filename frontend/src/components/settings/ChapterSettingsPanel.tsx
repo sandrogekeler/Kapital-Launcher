@@ -29,7 +29,9 @@ interface Props {
 }
 
 const sameSettings = (a: ChapterSettings, b: ChapterSettings) =>
-  a.maxMemoryMb === b.maxMemoryMb && a.jvm === b.jvm
+  a.maxMemoryMb === b.maxMemoryMb &&
+  a.jvm === b.jvm &&
+  (a.jvmArgs ?? []).join(' ') === (b.jvmArgs ?? []).join(' ')
 
 /**
  * A chapter's own settings (#36): how much memory its game may take and
