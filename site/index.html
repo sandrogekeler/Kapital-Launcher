@@ -10,9 +10,11 @@
       content="One place to play the three chapters of Kapitel Kapital. Starts the game through Prism Launcher."
     />
     <link rel="stylesheet" href="/src/style.css" />
+    <script type="module" src="/src/detect.js"></script>
   </head>
   <!--
-    One page, no script. The three links are filled in at build time by
+    One page, one small script (src/detect.js, it only picks the OS in the
+    download popup). The links are filled in at build time by
     vite.config.js from links.json and the manifest; see site/README.md. The
     classes on the buttons are the app's Button variants (play and ghost).
 
@@ -29,6 +31,105 @@
     root): the artwork and the window are drawn for the dark palette.
   -->
   <body class="flex min-h-dvh flex-col">
+    <!--release:start-->
+    <!-- The download popup: the browser's own popover, opened by the Download
+         button with no script. The OS switch is two radios and :has() in the
+         group classes, so it works without script too; src/detect.js only
+         checks the radio for the visitor's OS. %TAG% and the URLs are filled
+         in by vite.config.js from links.json. -->
+    <div
+      id="download"
+      popover
+      aria-labelledby="download-title"
+      class="bg-raised text-fg border-line m-auto w-[min(calc(100vw-2rem),26rem)] rounded-lg border p-0 shadow-2xl backdrop:scrim-wash"
+    >
+      <div class="group/dl flex flex-col gap-5 p-6">
+        <div class="flex items-start justify-between gap-4">
+          <h2 id="download-title" class="m-0 text-xl font-semibold">
+            Download Kapital Launcher
+          </h2>
+          <button
+            type="button"
+            popovertarget="download"
+            popovertargetaction="hide"
+            class="border-line-strong hover:bg-hover text-fg duration-fast ease-standard inline-flex h-9 shrink-0 cursor-pointer items-center rounded-md border bg-transparent px-3 font-[inherit] text-sm font-semibold transition-[background-color]"
+          >
+            Close
+          </button>
+        </div>
+
+        <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
+          <legend class="text-fg-muted mb-2 p-0 text-sm">Your system</legend>
+          <div class="flex gap-2">
+            <div class="relative flex-1">
+              <input
+                type="radio"
+                name="os"
+                id="os-windows"
+                value="windows"
+                checked
+                class="peer sr-only"
+              />
+              <label
+                for="os-windows"
+                class="border-line-strong text-fg-soft hover:bg-hover peer-checked:bg-hover peer-checked:text-fg peer-checked:border-accent peer-focus-visible:outline-(length:--focus-ring-width) peer-focus-visible:outline-fg flex h-11 cursor-pointer items-center justify-center rounded-md border text-base font-semibold"
+                >Windows</label
+              >
+            </div>
+            <div class="relative flex-1">
+              <input
+                type="radio"
+                name="os"
+                id="os-macos"
+                value="macos"
+                class="peer sr-only"
+              />
+              <label
+                for="os-macos"
+                class="border-line-strong text-fg-soft hover:bg-hover peer-checked:bg-hover peer-checked:text-fg peer-checked:border-accent peer-focus-visible:outline-(length:--focus-ring-width) peer-focus-visible:outline-fg flex h-11 cursor-pointer items-center justify-center rounded-md border text-base font-semibold"
+                >macOS</label
+              >
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="group-has-[#os-macos:checked]/dl:hidden flex flex-col gap-3">
+          <a
+            href="%WINDOWS_URL%"
+            class="showcase-accent bg-accent text-canvas duration-fast ease-standard inline-flex h-13 items-center justify-center rounded-md px-7.5 text-md font-semibold tracking-control no-underline transition-[filter] hover:brightness-(--effect-hover-brightness)"
+            >Download for Windows</a
+          >
+          <p class="text-fg-soft m-0 text-sm">
+            For Windows 11. The setup installs the WebView2 runtime if it is
+            missing.
+          </p>
+        </div>
+
+        <div class="group-not-has-[#os-macos:checked]/dl:hidden flex flex-col gap-3">
+          <a
+            href="%MACOS_URL%"
+            class="showcase-accent bg-accent text-canvas duration-fast ease-standard inline-flex h-13 items-center justify-center rounded-md px-7.5 text-md font-semibold tracking-control no-underline transition-[filter] hover:brightness-(--effect-hover-brightness)"
+            >Download for macOS</a
+          >
+          <p class="text-fg-soft m-0 text-sm">
+            For macOS 12 or later, on Apple Silicon and Intel. Open the disk
+            image and drag Kapital Launcher to Applications.
+          </p>
+        </div>
+
+        <p class="text-fg-muted m-0 text-sm">
+          This beta is not code-signed yet. The
+          <a
+            href="%NOTES_URL%"
+            class="text-accent underline-offset-2 hover:underline"
+            >release notes</a
+          >
+          have the SmartScreen and Gatekeeper steps.
+        </p>
+      </div>
+    </div>
+    <!--release:end-->
+
     <main
       class="relative flex min-w-0 grow flex-col items-center overflow-hidden px-4 pt-16 pb-12 md:px-10 md:pt-24"
     >
@@ -55,13 +156,17 @@
         </p>
 
         <div class="flex flex-wrap items-center justify-center gap-3">
-          <a
-            data-link="download"
-            class="showcase-accent bg-accent text-canvas duration-fast ease-standard inline-flex h-13 items-center gap-2 rounded-md px-7.5 text-md font-semibold tracking-control no-underline transition-[filter] hover:brightness-(--effect-hover-brightness)"
-            >Download</a
+          <!--release:start-->
+          <button
+            type="button"
+            popovertarget="download"
+            class="showcase-accent bg-accent text-canvas duration-fast ease-standard inline-flex h-13 cursor-pointer items-center gap-2 rounded-md border-0 px-7.5 font-[inherit] text-md font-semibold tracking-control transition-[filter] hover:brightness-(--effect-hover-brightness)"
           >
+            Download
+          </button>
+          <!--release:end-->
           <span
-            data-link-fallback="download"
+            data-link-fallback="release"
             class="showcase-accent bg-accent text-canvas inline-flex h-13 cursor-default items-center gap-2 rounded-md px-7.5 text-md font-semibold tracking-control opacity-50"
             >Download · coming soon</span
           >
@@ -78,7 +183,7 @@
         </div>
 
         <p class="text-fg-muted m-0 text-sm">
-          <span class="block">For Windows 11 and macOS on Apple Silicon.</span>
+          <span class="block">For Windows 11 and macOS 12 or later, on Apple Silicon and Intel.</span>
           <span class="block"
             >Needs
             <a
