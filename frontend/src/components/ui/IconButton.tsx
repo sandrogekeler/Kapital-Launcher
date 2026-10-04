@@ -9,6 +9,11 @@ interface Props {
   /** `md` is the 44px box the hero tools use; `sm` the 32px one in the account card. */
   size?: 'sm' | 'md'
   disabled?: boolean
+  /**
+   * One cell of a joined group of tools (the hero's): square, so its hover
+   * fills the whole cell, and the group's own frame rounds the outer corners.
+   */
+  grouped?: boolean
 }
 
 const BOX = {
@@ -17,14 +22,14 @@ const BOX = {
 } as const
 
 /** One square, centred box for every icon control, so a column of them lines up. */
-export function IconButton({ icon, title, onClick, size = 'md', disabled }: Props) {
+export function IconButton({ icon, title, onClick, size = 'md', disabled, grouped }: Props) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={title}
       disabled={disabled}
-      className={`${BOX[size]} text-fg-muted hover:bg-hover hover:text-fg duration-fast ease-standard inline-flex shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent`}
+      className={`${BOX[size]} text-fg-muted hover:bg-hover hover:text-fg duration-fast ease-standard inline-flex shrink-0 cursor-pointer items-center justify-center ${grouped ? '' : 'rounded-md'} transition-colors disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent`}
     >
       <Icon icon={icon} size={size} />
     </button>

@@ -142,7 +142,7 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
   return (
     <Page
       label={`${chapter.name} settings`}
-      title={`${chapter.name} settings`}
+      title={chapter.name}
       onBack={onClose}
       ready={ready}
       actions={
