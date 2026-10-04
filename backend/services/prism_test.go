@@ -73,6 +73,20 @@ func TestShowArgsOpensTheInstanceWindowAndNothingElse(t *testing.T) {
 	}
 }
 
+// Open Prism (issue 192) passes the root and nothing else.
+func TestOpenArgsIsTheRootAlone(t *testing.T) {
+	root := t.TempDir()
+	if got, err := OpenArgs(root); err != nil || !reflect.DeepEqual(got, []string{"--dir", root}) {
+		t.Fatalf("%q %v", got, err)
+	}
+	if got, err := OpenArgs("  "); err != nil || len(got) != 0 {
+		t.Fatalf("no root: %q %v", got, err)
+	}
+	if _, err := OpenArgs("prism"); err == nil {
+		t.Fatal("a relative root is refused")
+	}
+}
+
 func TestLaunchArgsRefusesAnythingThatIsNotAPlainValue(t *testing.T) {
 	cases := map[string]models.LaunchRequest{
 		"empty instance":        {InstanceID: ""},

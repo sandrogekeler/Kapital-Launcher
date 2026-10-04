@@ -1011,6 +1011,26 @@ describe('App', () => {
       expect(gear).toHaveFocus()
     })
 
+    it('opens the account from the sidebar tile, over the settings, and closes it from the tile (issue 192)', async () => {
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
+      await screen.findByRole('region', { name: 'Settings' })
+
+      const tile = screen.getByRole('button', { name: /^Account, / })
+      expect(tile).toHaveAttribute('aria-pressed', 'false')
+      fireEvent.click(tile)
+      const account = await screen.findByRole('region', { name: 'Account' }, { timeout: 5000 })
+      expect(screen.queryByRole('region', { name: 'Settings' })).toBeNull()
+      expect(tile).toHaveAttribute('aria-pressed', 'true')
+
+      fireEvent.click(tile)
+      expect(sliding('page-out-top')).toContainElement(account)
+      endAnimation(sliding('page-out-top')!)
+      expect(account).not.toBeInTheDocument()
+      expect(tile).toHaveAttribute('aria-pressed', 'false')
+    })
+
     it("closes a chapter's page when another chapter is picked, sliding it out as the card changes", async () => {
       prism()
       render(<App />)

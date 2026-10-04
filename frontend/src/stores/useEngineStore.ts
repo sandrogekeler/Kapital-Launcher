@@ -22,6 +22,7 @@ import {
   InstallPrism,
   LaunchChapter,
   OpenInstanceFolder,
+  OpenPrism,
   RefreshEngine,
   SaveChapterSettings,
   SetPackSource,
@@ -64,6 +65,8 @@ interface EngineStore {
   openInstanceFolder: (chapterId: string) => Promise<void>
   /** Opens the chapter's instance in Prism's own window (issue 190); rejects with Go's reason. */
   showInPrism: (chapterId: string) => Promise<void>
+  /** Opens Prism's main window, where its accounts are (issue 192); rejects with Go's reason. */
+  openPrism: () => Promise<void>
   loadRelease: () => Promise<void>
   installPrism: () => Promise<void>
   listenInstall: () => () => void
@@ -113,6 +116,7 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
   // Go resolves the folder from the chapter id, so there is nothing to keep.
   openInstanceFolder: (chapterId) => OpenInstanceFolder(chapterId),
   showInPrism: (chapterId) => ShowInstanceInPrism(chapterId),
+  openPrism: () => OpenPrism(),
 
   // What installing or updating Prism would fetch. A read: without a bridge,
   // or when GitHub cannot be reached, there is simply nothing to offer.

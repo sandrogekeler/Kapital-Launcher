@@ -53,6 +53,8 @@ type App struct {
 	openFolder func(string) error
 	// showInPrism opens an instance's window in Prism (issue 190); a test swaps it.
 	showInPrism func(engine models.EngineInfo, instanceID, root string) error
+	// openPrism opens Prism's main window (issue 192); a test swaps it.
+	openPrism func(engine models.EngineInfo, root string) error
 	// emit, when set, takes the game:state events in place of the window; a
 	// test sets it. emitInstall does the same for prism:install.
 	emit        func(models.GameState)
@@ -121,6 +123,9 @@ func NewApp(dataDir string, manifest []byte, dist fs.FS) (*App, error) {
 		frontendErrors: services.NewFrontendErrorLog(),
 		showInPrism: func(engine models.EngineInfo, instanceID, root string) error {
 			return prism.Show(context.Background(), engine, instanceID, root)
+		},
+		openPrism: func(engine models.EngineInfo, root string) error {
+			return prism.Open(context.Background(), engine, root)
 		},
 		previewStep: previewInstallStep,
 		live:        services.NewLiveLog(),
@@ -596,6 +601,19 @@ func (a *App) ShowInstanceInPrism(chapterID string) error {
 		return fmt.Errorf("could not open %s in Prism: %w", chapter.Name, err)
 	}
 	slog.Info("opened in prism", "chapter", chapter.ID)
+	return nil
+}
+
+// OpenPrism opens Prism's main window (issue 192), where the player signs in,
+// adds and switches accounts: Prism with the engine's root and nothing else.
+// The launcher sees none of it (S1.1).
+func (a *App) OpenPrism() error {
+	engine := a.realEngine()
+	if err := a.openPrism(engine, engine.Root); err != nil {
+		slog.Error("open prism", "error", err)
+		return fmt.Errorf("could not open Prism: %w", err)
+	}
+	slog.Info("opened prism")
 	return nil
 }
 

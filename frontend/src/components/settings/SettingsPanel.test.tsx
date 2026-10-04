@@ -51,24 +51,16 @@ describe('SettingsPanel', () => {
     )
   })
 
-  it('saves the profile on Enter and the root on blur, then re-reads the engine', async () => {
+  it('saves the root on blur, then re-reads the engine', async () => {
     render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
-    const profile = screen.getByLabelText('Profile name')
-    fireEvent.change(profile, { target: { value: ' Sandro ' } })
-    fireEvent.keyDown(profile, { key: 'Enter' })
-    await waitFor(() =>
-      expect(App.SaveSettings).toHaveBeenCalledWith(
-        expect.objectContaining({ profileName: 'Sandro' }),
-      ),
-    )
-    expect(App.GetEngine).not.toHaveBeenCalled()
-
+    // The profile name moved to the account page (issue 192).
+    expect(screen.queryByLabelText('Profile name')).toBeNull()
     const root = screen.getByLabelText('Prism data folder')
     fireEvent.change(root, { target: { value: 'D:\\prism' } })
     fireEvent.blur(root)
     await waitFor(() =>
       expect(App.SaveSettings).toHaveBeenLastCalledWith(
-        expect.objectContaining({ prismRoot: 'D:\\prism', profileName: 'Sandro' }),
+        expect.objectContaining({ prismRoot: 'D:\\prism' }),
       ),
     )
     await waitFor(() => expect(App.GetEngine).toHaveBeenCalled())
@@ -77,10 +69,10 @@ describe('SettingsPanel', () => {
 
   it('does not save an unchanged field', () => {
     render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
-    const profile = screen.getByLabelText('Profile name')
-    fireEvent.change(profile, { target: { value: '  ' } })
-    fireEvent.blur(profile)
-    fireEvent.keyDown(profile, { key: 'Enter' })
+    const exe = screen.getByLabelText('Prism program')
+    fireEvent.change(exe, { target: { value: '  ' } })
+    fireEvent.blur(exe)
+    fireEvent.keyDown(exe, { key: 'Enter' })
     expect(App.SaveSettings).not.toHaveBeenCalled()
   })
 
@@ -222,10 +214,10 @@ describe('SettingsPanel', () => {
   it('closes on Back and on Escape, but Escape on a dirty field reverts it first', async () => {
     const onClose = vi.fn()
     render(<SettingsPanel onClose={onClose} onShowChapter={() => undefined} />)
-    const profile = screen.getByLabelText('Profile name')
-    fireEvent.change(profile, { target: { value: 'typo' } })
-    fireEvent.keyDown(profile, { key: 'Escape' })
-    expect(profile).toHaveValue('')
+    const exe = screen.getByLabelText('Prism program')
+    fireEvent.change(exe, { target: { value: 'typo' } })
+    fireEvent.keyDown(exe, { key: 'Escape' })
+    expect(exe).toHaveValue('')
     expect(onClose).not.toHaveBeenCalled()
 
     await act(async () => {

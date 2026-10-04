@@ -7,10 +7,14 @@ export interface ChapterPageSpec {
   chapterId: string
 }
 
+/** A page of the launcher's own, over the card: the settings (the gear) or the account (issue 192). */
+export type AppPage = 'settings' | 'account'
+
 /**
  * The pages laid over the chapter card, and what opens and closes them.
  *
- * The app's settings (the gear in the header) come down over the card area; a
+ * The app's settings (the gear in the header) and the account (the tile at the
+ * foot of the sidebar, issue 192) come down over the card area, one at a time; a
  * chapter's own pages, its settings (the pen), its logs, its map (issue 161)
  * and its run report (Details, on the corner's notice of a game that ended
  * badly), come in from the right inside the card. Each closes with Back and
@@ -27,7 +31,7 @@ export interface ChapterPageSpec {
  * the other. Closing keeps a page until it has slid out (`usePageSlot`).
  */
 export function usePages(selectedId: string, select: (chapterId: string) => void) {
-  const settings = usePageSlot<true>()
+  const settings = usePageSlot<AppPage>()
   const chapterPage = usePageSlot<ChapterPageSpec>()
   const { hide: hideSettings, show: showSettings } = settings
   const { hide: hideChapterPage, show: showChapterPage } = chapterPage
@@ -45,16 +49,19 @@ export function usePages(selectedId: string, select: (chapterId: string) => void
   }
   const showPage = (kind: ChapterPageSpec['kind']) => (chapterId: string) =>
     showChapterPage({ kind, chapterId })
+  // The gear and the account tile each close their own page, and open theirs over the other.
+  const toggle = (page: AppPage) => {
+    if (settings.slot?.open && settings.slot.page === page) return hideSettings()
+    hideChapterPage()
+    showSettings(page)
+  }
 
   return {
     settings,
     chapterPage,
     covered: !!(settings.slot?.open || chapterPage.slot?.open),
-    toggleSettings: () => {
-      if (settings.slot?.open) return hideSettings()
-      hideChapterPage()
-      showSettings(true)
-    },
+    toggleSettings: () => toggle('settings'),
+    toggleAccount: () => toggle('account'),
     showChapter,
     openReport: (chapterId: string) => {
       showChapter(chapterId)
