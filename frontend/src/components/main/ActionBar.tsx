@@ -8,7 +8,13 @@ import type {
   PrismRelease,
   ServerStatus,
 } from '../../types'
-import { installLabel, isPlaceholderAddress, isPublished, playLabel } from '../../lib/manifest'
+import {
+  chosenAddress,
+  installLabel,
+  isPlaceholderAddress,
+  isPublished,
+  playLabel,
+} from '../../lib/manifest'
 import { installLine } from '../../lib/prismInstall'
 import { packVersion } from '../../lib/packState'
 import { packHost, packSourceLine } from '../../lib/packSource'
@@ -30,6 +36,8 @@ interface Props {
   installed: boolean | undefined
   /** A local packwiz serve address from settings, which Install uses instead (#41). */
   devPack: string | undefined
+  /** The label of the server address the player picked in settings (issue 151); undefined is the first. */
+  serverChoice: string | undefined
   /** The pack URL the chapter's instance syncs from, when the launcher made it. */
   instancePack: string | undefined
   /** Whether the installed pack is its source's current one (#71). */
@@ -117,6 +125,7 @@ export function ActionBar({
   status,
   installed,
   devPack,
+  serverChoice,
   instancePack,
   packState,
   game,
@@ -204,8 +213,11 @@ export function ActionBar({
     ;[state, meta, tone] = [...source, 'text-warning']
   } else if (chapter.server) {
     serverShown = true
-    ;[state, meta] = serverLine(status, chapter.server.address)
-    if (isPlaceholderAddress(chapter.server.address) || (status?.checked && !status.online)) {
+    // Whether the address in use is still unsettled; the address itself is
+    // not on the line (issue 151).
+    const pending = isPlaceholderAddress(chosenAddress(chapter.server, serverChoice))
+    ;[state, meta] = serverLine(status, pending)
+    if (pending || (status?.checked && !status.online)) {
       tone = 'text-fg-muted'
     }
   } else {

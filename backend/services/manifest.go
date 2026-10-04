@@ -133,10 +133,8 @@ func ValidateManifest(m models.Manifest) error {
 				return err
 			}
 		}
-		if c.Server != nil {
-			if _, _, err := ParseServerAddress(c.Server.Address); err != nil {
-				return fmt.Errorf("%s: server: %w", where, err)
-			}
+		if err := validateServer(where, c.Server); err != nil {
+			return err
 		}
 		if strings.TrimSpace(c.Wiki.Title) == "" || strings.TrimSpace(c.Wiki.Line) == "" {
 			return fmt.Errorf("%s: wiki teaser is incomplete", where)

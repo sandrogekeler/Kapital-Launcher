@@ -21,7 +21,7 @@ func (a *App) startup(ctx context.Context) {
 	runCtx, cancel := context.WithCancel(ctx)
 	a.stop = cancel
 	a.runCtx = runCtx
-	go a.status.Run(runCtx, a.manifest.Chapters, func(s models.ServerStatus) {
+	go a.status.Run(runCtx, a.manifest.Chapters, a.serverAddress, func(s models.ServerStatus) {
 		wailsrt.EventsEmit(a.ctx, services.EventServerStatus, s)
 	})
 }

@@ -112,6 +112,13 @@ func ValidateSettings(s models.AppSettings) error {
 			return fmt.Errorf("settings: %w", err)
 		}
 	}
+	// Shape only: whether the chapter and label exist is the manifest's to
+	// say (ValidateServerChoices, run by App.SaveSettings).
+	for id, label := range s.ServerChoices {
+		if !chapterIDPattern.MatchString(id) || !serverLabelPattern.MatchString(label) {
+			return fmt.Errorf("settings: server choice %q for %q is not a chapter and a label", label, id)
+		}
+	}
 	return nil
 }
 
@@ -143,6 +150,9 @@ func normalize(s models.AppSettings) models.AppSettings {
 		s.PackOverrides = trimmed
 	} else {
 		s.PackOverrides = nil
+	}
+	if len(s.ServerChoices) == 0 {
+		s.ServerChoices = nil
 	}
 	return s
 }

@@ -245,10 +245,8 @@ func (a *App) LaunchChapter(chapterID string) error {
 		Profile:    settings.ProfileName,
 		// The detected engine's root: the configured one for the player's own
 		// Prism, the managed root for the launcher's copy.
-		Root: engine.Root,
-	}
-	if chapter.Server != nil && chapter.Server.JoinOnLaunch {
-		req.Server = chapter.Server.Address
+		Root:   engine.Root,
+		Server: joinAddress(chapter, settings),
 	}
 	// The game log as it is before Prism runs, so the log of an earlier start
 	// is not taken for this one.
@@ -369,6 +367,9 @@ func (a *App) GetSettings() (models.AppSettings, error) {
 	if err != nil {
 		return settings, err
 	}
+	// A choice the manifest no longer lists is not handed back, so a save of
+	// something else cannot write it again.
+	settings.ServerChoices = services.PruneServerChoices(a.manifest.Chapters, settings.ServerChoices)
 	return services.WithLoadingSplash(runtime.GOOS, settings), nil
 }
 
@@ -392,9 +393,14 @@ func (a *App) SaveSettings(settings models.AppSettings) error {
 			return fmt.Errorf("settings: %w", err)
 		}
 	}
+	// A server choice is a label from the chapter's own list (issue 151).
+	if err := services.ValidateServerChoices(a.manifest.Chapters, settings.ServerChoices); err != nil {
+		return err
+	}
 	if err := a.settings.Save(settings); err != nil {
 		return err
 	}
+	a.recheckServers(before, settings)
 	if !services.AffectsDetection(before, settings) {
 		return nil
 	}
@@ -473,11 +479,7 @@ func (a *App) GetServerStatus(chapterID string) (models.ServerStatus, error) {
 	if !ok {
 		return models.ServerStatus{}, fmt.Errorf("no chapter %q", chapterID)
 	}
-	status := a.status.Check(a.context(), chapter)
-	if a.ctx != nil {
-		wailsrt.EventsEmit(a.ctx, services.EventServerStatus, status)
-	}
-	return status, nil
+	return a.checkServer(chapter), nil
 }
 
 // GetChapterSettings reads a chapter's memory and JVM preset from its

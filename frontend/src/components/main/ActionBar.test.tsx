@@ -45,6 +45,7 @@ function bar(over: Partial<ComponentProps<typeof ActionBar>> = {}) {
       status={undefined}
       installed={true}
       devPack={undefined}
+      serverChoice={undefined}
       instancePack={undefined}
       packState={undefined}
       game={undefined}
@@ -238,6 +239,35 @@ describe('ActionBar game line', () => {
     bar({ engine: null })
     const state = screen.getByText('○ Checking engine')
     expect(state.nextElementSibling?.textContent).toBe('\u00a0')
+  })
+
+  it('shows players and ping under the server state, and never an address', () => {
+    bar({ status: online })
+    expect(screen.getByText('3/20 players · 42 ms')).toBeInTheDocument()
+    const text = document.body.textContent ?? ''
+    for (const { address } of chapter.server!.addresses) expect(text).not.toContain(address)
+    // Whichever address the player picked.
+    cleanup()
+    bar({ status: online, serverChoice: 'Germany' })
+    for (const { address } of chapter.server!.addresses) {
+      expect(document.body.textContent).not.toContain(address)
+    }
+  })
+
+  it('keeps both rows while the first ping is out, and says offline with the time', () => {
+    bar({ status: undefined })
+    const checking = screen.getByText('○ Checking server')
+    expect(checking.nextElementSibling?.textContent).toBe(' ')
+    cleanup()
+    bar({ status: { ...online, online: false } })
+    expect(screen.getByText('○ Server offline').nextElementSibling?.textContent).toMatch(/^as of /)
+  })
+
+  it('reads a placeholder address as pending only when that is the address in use', () => {
+    const lichdenstein = BUNDLED_MANIFEST.chapters.find((c) => c.id === 'lichdenstein')!
+    bar({ chapter: lichdenstein, status: online })
+    expect(screen.getByText('○ No server yet')).toBeInTheDocument()
+    expect(screen.getByText('Address pending')).toBeInTheDocument()
   })
 
   it('sets a status label in the UI face and its detail in the data it names', () => {

@@ -56,6 +56,7 @@ export function ChapterView({ chapter, onOpenSettings }: Props) {
   const checkServer = useServerStore((s) => s.check)
 
   const devPack = useSettingsStore((s) => s.settings.packOverrides?.[chapter.id])
+  const serverChoice = useSettingsStore((s) => s.settings.serverChoices?.[chapter.id])
 
   // The page the panel shows is the one that opens: the pick, or the
   // manifest's teaser when there is none.
@@ -84,6 +85,7 @@ export function ChapterView({ chapter, onOpenSettings }: Props) {
         status={status}
         installed={installed}
         devPack={devPack}
+        serverChoice={serverChoice}
         instancePack={instancePack}
         packState={packState}
         game={game}

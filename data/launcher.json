@@ -58,7 +58,7 @@
         "mrpack": null
       },
       "server": {
-        "address": "placeholder.invalid",
+        "addresses": [{ "label": "Main", "address": "placeholder.invalid" }],
         "joinOnLaunch": true,
         "software": "Paper"
       },
@@ -92,7 +92,10 @@
         "mrpack": null
       },
       "server": {
-        "address": "rails-enjoyed.tun.ply.gg",
+        "addresses": [
+          { "label": "Global", "address": "female-specified.gl.joinmc.link" },
+          { "label": "Germany", "address": "rails-enjoyed.tun.ply.gg" }
+        ],
         "joinOnLaunch": false,
         "software": "[PLACEHOLDER]"
       },

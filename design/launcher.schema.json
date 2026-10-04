@@ -78,13 +78,30 @@
             { "type": "null" },
             {
               "type": "object",
-              "required": ["address", "joinOnLaunch"],
+              "required": ["addresses", "joinOnLaunch"],
               "additionalProperties": false,
               "properties": {
-                "address": {
-                  "type": "string",
-                  "pattern": "^[A-Za-z0-9.-]+(:[0-9]{1,5})?$",
-                  "description": "host[:port]. Pinged for the status line and, when joinOnLaunch is true, passed to Prism's --server, so nothing else is accepted."
+                "addresses": {
+                  "type": "array",
+                  "minItems": 1,
+                  "description": "Every address the server is reached at, the first being the default. The player picks one in settings, saved as its label; the chosen address is pinged for the status line and, when joinOnLaunch is true, passed to Prism's --server. Labels are unique within the chapter.",
+                  "items": {
+                    "type": "object",
+                    "required": ["label", "address"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "label": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9 .-]{0,23}$",
+                        "description": "A short name the settings screen offers: Global, Germany. Never an address."
+                      },
+                      "address": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9.-]+(:[0-9]{1,5})?$",
+                        "description": "host[:port]. Passed to Prism's --server and dialled for the status line, so nothing else is accepted."
+                      }
+                    }
+                  }
                 },
                 "joinOnLaunch": {
                   "type": "boolean",
