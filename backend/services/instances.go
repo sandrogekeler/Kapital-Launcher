@@ -143,10 +143,7 @@ func scanINIKey(r io.Reader, want string) (string, error) {
 			continue
 		}
 		value = strings.TrimSpace(value)
-		if len(value) >= 2 && strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`) {
-			value = strings.ReplaceAll(value[1:len(value)-1], `\\`, `\`)
-		}
-		return value, nil
+		return unescapeINIValue(value), nil
 	}
 	if err := sc.Err(); err != nil {
 		return "", fmt.Errorf("scan for %s: %w", want, err)
@@ -235,11 +232,13 @@ func (p *PrismService) instancePackURL(cfg string) string {
 	return packURLFromCommand(cmd)
 }
 
-// packURLFromCommand is preLaunchCommand read backwards: the command as Qt
-// stores it (quotes escaped) must name the bootstrap jar and end in a URL
-// that could have been written there.
+// packURLFromCommand is the pre-launch command read backwards: the command as
+// Qt stores it (quotes escaped) must name the bootstrap jar (the two packwiz
+// templates) or be the launcher's sync copy with its flag (the sync template),
+// and end in a URL that could have been written there. Whether it is exactly
+// one of the launcher's templates is classifyPreLaunch's to say.
 func packURLFromCommand(cmd string) string {
-	if !strings.Contains(cmd, "packwiz-installer-bootstrap.jar") {
+	if _, _, sync := parseSyncCommand(cmd); !sync && !strings.Contains(cmd, packwizBootstrapJar) {
 		return ""
 	}
 	fields := strings.Fields(cmd)

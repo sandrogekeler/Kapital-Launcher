@@ -30,13 +30,16 @@ import (
 // argument, a path or a URL; Prism is called with an argument array, never a
 // shell string; and nothing here reads, copies or logs Prism's account data.
 type App struct {
-	ctx            context.Context
-	manifest       models.Manifest
-	settings       *services.SettingsService
-	prism          *services.PrismService
-	managed        *services.ManagedPrism
-	status         *services.StatusService
-	creator        *services.InstanceCreator
+	ctx      context.Context
+	manifest models.Manifest
+	settings *services.SettingsService
+	prism    *services.PrismService
+	managed  *services.ManagedPrism
+	status   *services.StatusService
+	creator  *services.InstanceCreator
+	// syncCopy is the copy of this executable that Prism's pre-launch command
+	// runs (issue 156); nil in a test that has no use for it.
+	syncCopy       *services.SyncCopy
 	wiki           *services.WikiService
 	games          *services.GameTracker
 	splash         *services.SplashCard
@@ -113,6 +116,8 @@ func NewApp(dataDir string, manifest []byte, dist fs.FS) (*App, error) {
 		frontendErrors: services.NewFrontendErrorLog(),
 		previewStep:    previewInstallStep,
 	}
+	a.syncCopy = services.NewSyncCopy(dataDir, Version)
+	a.creator.UseSyncCopy(a.syncExe)
 	a.splash = a.newSplashCard(dist, splashhost.New)
 	// Each phase change of a launched game is an event the frontend listens
 	// for; before the window is up there is nobody to tell. The card sees the
@@ -370,6 +375,9 @@ func (a *App) GetSettings() (models.AppSettings, error) {
 	// A choice the manifest no longer lists is not handed back, so a save of
 	// something else cannot write it again.
 	settings.ServerChoices = services.PruneServerChoices(a.manifest.Chapters, settings.ServerChoices)
+	// The disabled mods are the mods page's, through GetChapterMods; the screen
+	// holds no copy to send back (SaveSettings keeps what is stored).
+	settings.DisabledMods = nil
 	return services.WithLoadingSplash(runtime.GOOS, settings), nil
 }
 
@@ -397,6 +405,10 @@ func (a *App) SaveSettings(settings models.AppSettings) error {
 	if err := services.ValidateServerChoices(a.manifest.Chapters, settings.ServerChoices); err != nil {
 		return err
 	}
+	// The list of disabled mods is written only by SetModsDisabled, which checks
+	// it against the instance's mods folder; the screen's copy is none, and a
+	// save from it never changes the stored one (issue 156).
+	settings.DisabledMods = before.DisabledMods
 	if err := a.settings.Save(settings); err != nil {
 		return err
 	}

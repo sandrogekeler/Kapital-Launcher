@@ -91,6 +91,9 @@ func validRunLogName(kind, name string) bool {
 	return false
 }
 
+// GameFolder is gameFolder for the App: the instance's game folder, or "".
+func GameFolder(instanceDir string) string { return gameFolder(instanceDir) }
+
 // gameFolder is the instance's game folder as Prism names it, "minecraft" or,
 // in older instances, ".minecraft", "" when it has neither.
 func gameFolder(instanceDir string) string {

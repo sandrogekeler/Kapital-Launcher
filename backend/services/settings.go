@@ -55,6 +55,27 @@ func NewSettingsService(dataDir string) *SettingsService {
 func (s *SettingsService) Load() (models.AppSettings, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.load()
+}
+
+// Update reads the settings, lets change edit them and saves the result, all
+// under the one lock, so a write the app makes on its own (the disabled mods)
+// never loses one the player's settings screen made at the same moment. A change
+// that returns an error saves nothing.
+func (s *SettingsService) Update(change func(*models.AppSettings) error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	settings, err := s.load()
+	if err != nil {
+		return err
+	}
+	if err := change(&settings); err != nil {
+		return err
+	}
+	return s.save(settings)
+}
+
+func (s *SettingsService) load() (models.AppSettings, error) {
 	data, err := os.ReadFile(s.path)
 	if errors.Is(err, os.ErrNotExist) {
 		return models.DefaultSettings(), nil
@@ -75,16 +96,40 @@ func (s *SettingsService) Load() (models.AppSettings, error) {
 			delete(settings.PackOverrides, id)
 		}
 	}
+	// The disabled mods are written by the app, but the file is the player's to
+	// edit: a name that is not a jar name, or a list past the cap, is dropped
+	// with a log line, as a bad override is, so it never blocks a write.
+	for id, names := range settings.DisabledMods {
+		if !chapterIDPattern.MatchString(id) {
+			slog.Warn("settings: disabled mods dropped", "chapter", id, "reason", "not a chapter id")
+			delete(settings.DisabledMods, id)
+			continue
+		}
+		kept := make([]string, 0, len(names))
+		for _, name := range names {
+			if ModJarName(name) && len(kept) < maxDisabledMods {
+				kept = append(kept, name)
+			}
+		}
+		if len(kept) != len(names) {
+			slog.Warn("settings: disabled mods dropped", "chapter", id, "dropped", len(names)-len(kept))
+		}
+		settings.DisabledMods[id] = kept
+	}
 	return normalize(settings), nil
 }
 
 // Save validates and writes the settings atomically.
 func (s *SettingsService) Save(settings models.AppSettings) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.save(settings)
+}
+
+func (s *SettingsService) save(settings models.AppSettings) error {
 	if err := ValidateSettings(settings); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	data, err := json.MarshalIndent(normalize(settings), "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode settings: %w", err)
@@ -117,6 +162,21 @@ func ValidateSettings(s models.AppSettings) error {
 	for id, label := range s.ServerChoices {
 		if !chapterIDPattern.MatchString(id) || !serverLabelPattern.MatchString(label) {
 			return fmt.Errorf("settings: server choice %q for %q is not a chapter and a label", label, id)
+		}
+	}
+	// Shape only, as the server choices: that each name is in the instance's
+	// mods folder is checked where the list is written (ValidateDisabledMods).
+	for id, names := range s.DisabledMods {
+		if !chapterIDPattern.MatchString(id) {
+			return fmt.Errorf("settings: disabled mods for %q: not a chapter id", id)
+		}
+		if len(names) > maxDisabledMods {
+			return fmt.Errorf("settings: disabled mods for %q: more than %d names", id, maxDisabledMods)
+		}
+		for _, name := range names {
+			if !ModJarName(name) {
+				return fmt.Errorf("settings: disabled mods for %q: %q is not a jar name", id, name)
+			}
 		}
 	}
 	return nil
@@ -154,6 +214,18 @@ func normalize(s models.AppSettings) models.AppSettings {
 	if len(s.ServerChoices) == 0 {
 		s.ServerChoices = nil
 	}
+	// A chapter with nothing disabled has no entry.
+	var kept map[string][]string
+	for id, names := range s.DisabledMods {
+		if len(names) == 0 {
+			continue
+		}
+		if kept == nil {
+			kept = map[string][]string{}
+		}
+		kept[id] = names
+	}
+	s.DisabledMods = kept
 	return s
 }
 

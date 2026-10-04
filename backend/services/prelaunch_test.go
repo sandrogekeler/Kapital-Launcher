@@ -9,16 +9,26 @@ import (
 
 const testPackURL = "https://kapitel-kapital.pages.dev/frangfurd/pack.toml"
 
-func TestPreLaunchCommandRunsThePackSyncHeadless(t *testing.T) {
-	want := `"$INST_JAVA" -jar "$INST_MC_DIR/packwiz-installer-bootstrap.jar" ` +
+// The three templates the launcher has written, each as Prism runs it.
+func TestPreLaunchCommandTemplates(t *testing.T) {
+	packwiz := `"$INST_JAVA" -jar "$INST_MC_DIR/packwiz-installer-bootstrap.jar" ` +
 		`--bootstrap-no-update --bootstrap-main-jar "$INST_MC_DIR/packwiz-installer.jar" ` +
 		`-g ` + testPackURL
-	if got := preLaunchCommand(testPackURL); got != want {
-		t.Fatalf("got  %s\nwant %s", got, want)
+	if got := packwizPreLaunchCommand(testPackURL); got != packwiz {
+		t.Fatalf("got  %s\nwant %s", got, packwiz)
 	}
 	// The installer's flag sits before the URL and after the bootstrap's own.
 	if legacy := legacyPreLaunchCommand(testPackURL); strings.Contains(legacy, " -g ") {
-		t.Fatalf("the earlier command had no -g: %s", legacy)
+		t.Fatalf("the first command had no -g: %s", legacy)
+	}
+	// The current command is the launcher's copy, quoted, then the flag, then the URL.
+	want := `"` + testSyncExe + `" --prelaunch-sync ` + testPackURL
+	if got := preLaunchCommand(testSyncExe, testPackURL); got != want {
+		t.Fatalf("got  %s\nwant %s", got, want)
+	}
+	// With no copy to name, the command is the packwiz one: Play works as before.
+	if got := preLaunchCommand("", testPackURL); got != packwiz {
+		t.Fatalf("got  %s\nwant %s", got, packwiz)
 	}
 }
 
@@ -58,32 +68,41 @@ func readCfg(t *testing.T, path string) string {
 	return string(b)
 }
 
-func TestRewritePreLaunchCommandMovesTheEarlierTemplateToTheCurrentOne(t *testing.T) {
+func TestRewritePreLaunchCommandMovesEveryEarlierTemplateToTheCurrentOne(t *testing.T) {
 	urls := map[string]string{
 		"hosted":  testPackURL,
 		"a local": "http://127.0.0.1:8080/pack.toml",
 		"a ::1":   "http://[::1]:8080/pack.toml",
 	}
+	earlier := map[string]func(url string) string{
+		"the first template":  legacyPreLaunchCommand,
+		"the packwiz command": packwizPreLaunchCommand,
+		"another copy": func(url string) string {
+			return preLaunchCommand(syncExeIn(filepath.Join(os.TempDir(), "elsewhere"), "sync-dev"), url)
+		},
+	}
 	for name, url := range urls {
-		for _, newline := range []string{"\n", "\r\n"} {
-			t.Run(name+" "+strings.ReplaceAll(newline, "\r\n", "CRLF"), func(t *testing.T) {
-				path := writeCfg(t, instanceCfg(legacyPreLaunchCommand(url), newline))
-				got, err := RewritePreLaunchCommand(path)
-				if err != nil || got != PreLaunchRewritten {
-					t.Fatalf("got %v, %v", got, err)
-				}
-				// Every other line, and every line ending, is as it was.
-				if want := instanceCfg(preLaunchCommand(url), newline); readCfg(t, path) != want {
-					t.Fatalf("instance.cfg:\n%q\nwant:\n%q", readCfg(t, path), want)
-				}
-				// The URL is the one that was there.
-				if !strings.Contains(readCfg(t, path), "-g "+url+`"`) {
-					t.Fatalf("the URL changed:\n%s", readCfg(t, path))
-				}
-				if again, err := RewritePreLaunchCommand(path); err != nil || again != PreLaunchCurrent {
-					t.Fatalf("a second look: %v, %v", again, err)
-				}
-			})
+		for from, command := range earlier {
+			for _, newline := range []string{"\n", "\r\n"} {
+				t.Run(name+" "+from+" "+strings.ReplaceAll(newline, "\r\n", "CRLF"), func(t *testing.T) {
+					path := writeCfg(t, instanceCfg(command(url), newline))
+					got, err := RewritePreLaunchCommand(path, testSyncExe)
+					if err != nil || got != PreLaunchRewritten {
+						t.Fatalf("got %v, %v", got, err)
+					}
+					// Every other line, and every line ending, is as it was.
+					if want := instanceCfg(preLaunchCommand(testSyncExe, url), newline); readCfg(t, path) != want {
+						t.Fatalf("instance.cfg:\n%q\nwant:\n%q", readCfg(t, path), want)
+					}
+					// The URL is the one that was there, and last.
+					if !strings.Contains(readCfg(t, path), "--prelaunch-sync "+url+`"`) {
+						t.Fatalf("the URL changed:\n%s", readCfg(t, path))
+					}
+					if again, err := RewritePreLaunchCommand(path, testSyncExe); err != nil || again != PreLaunchCurrent {
+						t.Fatalf("a second look: %v, %v", again, err)
+					}
+				})
+			}
 		}
 	}
 }
@@ -93,15 +112,51 @@ func TestRewritePreLaunchCommandMovesTheEarlierTemplateToTheCurrentOne(t *testin
 // author's instance held on 2026-10-01, and it is still the launcher's own.
 func TestRewritePreLaunchCommandReadsTheFormPrismSavesBack(t *testing.T) {
 	url := "http://localhost:8080/pack.toml"
-	saved := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(legacyPreLaunchCommand(url))
-	path := writeCfg(t, "[General]\r\nOverrideCommands=true\r\nPreLaunchCommand="+saved+"\r\nname=Frangfurd\r\n")
-	got, err := RewritePreLaunchCommand(path)
-	if err != nil || got != PreLaunchRewritten {
+	for name, command := range map[string]string{
+		"the first template":  legacyPreLaunchCommand(url),
+		"the packwiz command": packwizPreLaunchCommand(url),
+	} {
+		t.Run(name, func(t *testing.T) {
+			saved := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(command)
+			path := writeCfg(t, "[General]\r\nOverrideCommands=true\r\nPreLaunchCommand="+saved+"\r\nname=Frangfurd\r\n")
+			got, err := RewritePreLaunchCommand(path, testSyncExe)
+			if err != nil || got != PreLaunchRewritten {
+				t.Fatalf("got %v, %v", got, err)
+			}
+			want := "[General]\r\nOverrideCommands=true\r\nPreLaunchCommand=" + qtString(preLaunchCommand(testSyncExe, url)) + "\r\nname=Frangfurd\r\n"
+			if readCfg(t, path) != want {
+				t.Fatalf("instance.cfg:\n%q\nwant:\n%q", readCfg(t, path), want)
+			}
+		})
+	}
+	// The current command, in the form Prism saves it back, is current.
+	saved := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(preLaunchCommand(testSyncExe, url))
+	path := writeCfg(t, "[General]\r\nPreLaunchCommand="+saved+"\r\n")
+	if got, err := RewritePreLaunchCommand(path, testSyncExe); err != nil || got != PreLaunchCurrent {
 		t.Fatalf("got %v, %v", got, err)
 	}
-	want := "[General]\r\nOverrideCommands=true\r\nPreLaunchCommand=" + qtString(preLaunchCommand(url)) + "\r\nname=Frangfurd\r\n"
-	if readCfg(t, path) != want {
+}
+
+// With no copy of the launcher to name, the first template goes to the packwiz
+// command as it did before, and a sync command stays: its copy is still there.
+func TestRewritePreLaunchCommandWithNoSyncCopy(t *testing.T) {
+	path := writeCfg(t, instanceCfg(legacyPreLaunchCommand(testPackURL), "\n"))
+	if got, err := RewritePreLaunchCommand(path, ""); err != nil || got != PreLaunchRewritten {
+		t.Fatalf("got %v, %v", got, err)
+	}
+	if want := instanceCfg(packwizPreLaunchCommand(testPackURL), "\n"); readCfg(t, path) != want {
 		t.Fatalf("instance.cfg:\n%q\nwant:\n%q", readCfg(t, path), want)
+	}
+	if got, err := RewritePreLaunchCommand(path, ""); err != nil || got != PreLaunchCurrent {
+		t.Fatalf("the packwiz command with no copy to name: %v, %v", got, err)
+	}
+	content := instanceCfg(preLaunchCommand(testSyncExe, testPackURL), "\n")
+	path = writeCfg(t, content)
+	if got, err := RewritePreLaunchCommand(path, ""); err != nil || got != PreLaunchCurrent {
+		t.Fatalf("a sync command with no copy to name: %v, %v", got, err)
+	}
+	if readCfg(t, path) != content {
+		t.Fatalf("the file changed:\n%q", readCfg(t, path))
 	}
 }
 
@@ -117,12 +172,22 @@ func TestRewritePreLaunchCommandLeavesWhatIsNotItsOwnAlone(t *testing.T) {
 		"a URL with a quote":             legacyPreLaunchCommand(`https://example.com/"x`),
 		"a doubled space":                strings.Replace(legacyPreLaunchCommand(testPackURL), "--bootstrap-no-update ", "--bootstrap-no-update  ", 1),
 		"empty":                          "",
+		// The sync command is the launcher's only by its copy's name and place,
+		// the flag and a URL that could have been written there.
+		"a sync command with an extra flag":         preLaunchCommand(testSyncExe, testPackURL) + " --extra",
+		"a sync command with an extra argument":     strings.Replace(preLaunchCommand(testSyncExe, testPackURL), SyncFlag, SyncFlag+" -x", 1),
+		"a sync command to another program":         `"` + filepath.Join(os.TempDir(), "evil.exe") + `" ` + SyncFlag + " " + testPackURL,
+		"a sync command in another folder":          `"` + filepath.Join(os.TempDir(), "bin", syncExeBase+".exe") + `" ` + SyncFlag + " " + testPackURL,
+		"a sync command with a variable in a path":  strings.Replace(preLaunchCommand(testSyncExe, testPackURL), "Kapital Launcher", "$INST_NAME", 1),
+		"a sync command with a URL with a variable": preLaunchCommand(testSyncExe, "https://example.com/$X"),
+		"a sync command with a URL that is not web": preLaunchCommand(testSyncExe, "file:///c:/pack.toml"),
+		"a sync command with no quotes":             strings.ReplaceAll(preLaunchCommand(testSyncExe, testPackURL), `"`, ""),
 	}
 	for name, command := range cases {
 		t.Run(name, func(t *testing.T) {
 			content := instanceCfg(command, "\r\n")
 			path := writeCfg(t, content)
-			got, err := RewritePreLaunchCommand(path)
+			got, err := RewritePreLaunchCommand(path, testSyncExe)
 			if err != nil || got != PreLaunchForeign {
 				t.Fatalf("got %v, %v", got, err)
 			}
@@ -136,7 +201,7 @@ func TestRewritePreLaunchCommandLeavesWhatIsNotItsOwnAlone(t *testing.T) {
 func TestRewritePreLaunchCommandReadsOnlyTheGeneralSection(t *testing.T) {
 	content := "[General]\nname=x\n[Other]\nPreLaunchCommand=" + qtString(legacyPreLaunchCommand(testPackURL)) + "\n"
 	path := writeCfg(t, content)
-	got, err := RewritePreLaunchCommand(path)
+	got, err := RewritePreLaunchCommand(path, testSyncExe)
 	if err != nil || got != PreLaunchAbsent {
 		t.Fatalf("got %v, %v", got, err)
 	}
@@ -147,7 +212,7 @@ func TestRewritePreLaunchCommandReadsOnlyTheGeneralSection(t *testing.T) {
 
 func TestRewritePreLaunchCommandHasNothingToDoForAnInstanceWithoutIt(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "instance.cfg")
-	if got, err := RewritePreLaunchCommand(missing); err != nil || got != PreLaunchAbsent {
+	if got, err := RewritePreLaunchCommand(missing, testSyncExe); err != nil || got != PreLaunchAbsent {
 		t.Fatalf("a missing file: %v, %v", got, err)
 	}
 	if _, err := os.Stat(missing); !os.IsNotExist(err) {
@@ -155,7 +220,7 @@ func TestRewritePreLaunchCommandHasNothingToDoForAnInstanceWithoutIt(t *testing.
 	}
 	content := "[General]\nname=x\n"
 	path := writeCfg(t, content)
-	if got, err := RewritePreLaunchCommand(path); err != nil || got != PreLaunchAbsent {
+	if got, err := RewritePreLaunchCommand(path, testSyncExe); err != nil || got != PreLaunchAbsent {
 		t.Fatalf("no key: %v, %v", got, err)
 	}
 	if readCfg(t, path) != content {
@@ -165,11 +230,11 @@ func TestRewritePreLaunchCommandHasNothingToDoForAnInstanceWithoutIt(t *testing.
 
 func TestRewritePreLaunchCommandRefusesAFileThatIsNotAnInstanceConfig(t *testing.T) {
 	path := writeCfg(t, strings.Repeat("x", maxPrismConfigLen+1))
-	if _, err := RewritePreLaunchCommand(path); err == nil {
+	if _, err := RewritePreLaunchCommand(path, testSyncExe); err == nil {
 		t.Fatal("a file over the limit is not read whole")
 	}
 	dir := t.TempDir()
-	if _, err := RewritePreLaunchCommand(dir); err == nil {
+	if _, err := RewritePreLaunchCommand(dir, testSyncExe); err == nil {
 		t.Fatal("a folder is not an instance.cfg")
 	}
 }

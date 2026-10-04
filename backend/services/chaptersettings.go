@@ -250,20 +250,27 @@ func scanINIKeys(r io.Reader, want ...string) (map[string]string, error) {
 		if _, seen := found[key]; seen {
 			continue
 		}
-		value = strings.TrimSpace(value)
-		// Qt's INI writer escapes a quote or a backslash in every value but
-		// wraps the value in quotes only when it has to: Prism saves the
-		// launcher's quoted pre-launch command back without the quotes (#95).
-		if len(value) >= 2 && strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`) {
-			value = value[1 : len(value)-1]
-		}
-		value = strings.NewReplacer(`\\`, `\`, `\"`, `"`).Replace(value)
-		found[key] = value
+		found[key] = unescapeINIValue(strings.TrimSpace(value))
 	}
 	if err := sc.Err(); err != nil {
 		return nil, fmt.Errorf("scan instance.cfg: %w", err)
 	}
 	return found, nil
+}
+
+// iniUnescape reads the two escapes Qt's INI writer makes.
+var iniUnescape = strings.NewReplacer(`\\`, `\`, `\"`, `"`)
+
+// unescapeINIValue is a value as Qt stores it, read: Qt's INI writer escapes a
+// quote or a backslash in every value but wraps the value in quotes only when it
+// has to, and Prism saves the launcher's quoted pre-launch command back without
+// the quotes (#95), so the outer quotes are taken off when both are there and
+// the escapes are read either way.
+func unescapeINIValue(value string) string {
+	if len(value) >= 2 && strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`) {
+		value = value[1 : len(value)-1]
+	}
+	return iniUnescape.Replace(value)
 }
 
 // InstanceRunning says whether the instance looks to be running: its game

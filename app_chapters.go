@@ -20,12 +20,24 @@ func (a *App) instanceDir(settings models.AppSettings, engine models.EngineInfo,
 	return filepath.Join(report.Dir, chapter.Instance.ID)
 }
 
+// syncExe is the path of the launcher's sync copy for the pre-launch command
+// (services.SyncCopy, issue 156), made or refreshed on the way, or "" when it
+// cannot be made, which gives the packwiz command an instance ran before.
+func (a *App) syncExe() string {
+	if a.syncCopy == nil {
+		return ""
+	}
+	return a.syncCopy.Path()
+}
+
 // updatePreLaunch brings an instance the launcher made up to its current
-// pre-launch command before a launch (#95, ADR-2's fourth amendment). It
-// refuses nothing: a failure or a command that is not the launcher's own is
-// logged, never the command itself, and the launch goes on. An instance whose
-// game looks to be running is left alone, as a settings save is (ADR-2, second
-// amendment); Prism could be writing the file.
+// pre-launch command before a launch (#95, ADR-2's fourth amendment): the
+// headless sync, and from issue 156 the launcher's own sync copy (ninth
+// amendment), made or refreshed here first, so the command names a copy of this
+// build. It refuses nothing: a failure or a command that is not the launcher's
+// own is logged, never the command itself, and the launch goes on. An instance
+// whose game looks to be running is left alone, as a settings save is (ADR-2,
+// second amendment); Prism could be writing the file.
 func (a *App) updatePreLaunch(chapterID, instanceDir string) {
 	if instanceDir == "" {
 		return
@@ -36,12 +48,12 @@ func (a *App) updatePreLaunch(chapterID, instanceDir string) {
 		slog.Info("pre-launch command left as it is", "chapter", chapterID, "reason", "the game looks to be running")
 		return
 	}
-	result, err := services.RewritePreLaunchCommand(filepath.Join(instanceDir, "instance.cfg"))
+	result, err := services.RewritePreLaunchCommand(filepath.Join(instanceDir, "instance.cfg"), a.syncExe())
 	switch {
 	case err != nil:
 		slog.Warn("pre-launch command not updated", "chapter", chapterID, "error", err)
 	case result == services.PreLaunchRewritten:
-		slog.Info("pre-launch command updated", "chapter", chapterID, "headless", true)
+		slog.Info("pre-launch command updated", "chapter", chapterID, "syncCopy", a.syncCopy != nil)
 	case result == services.PreLaunchForeign:
 		slog.Info("pre-launch command left as it is", "chapter", chapterID, "reason", "not the launcher's own command")
 	}

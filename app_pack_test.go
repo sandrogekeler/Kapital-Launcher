@@ -14,12 +14,18 @@ import (
 
 const devPackURL = "http://127.0.0.1:8080/pack.toml"
 
-// commandLine is a PreLaunchCommand line of the launcher's current template
-// for a pack URL, as the launcher writes it.
+// commandLine is a PreLaunchCommand line of the launcher's packwiz template for
+// a pack URL, as an instance made before the sync copy (issue 156) holds it.
 func commandLine(url string) string {
 	const head = `"$INST_JAVA" -jar "$INST_MC_DIR/packwiz-installer-bootstrap.jar" ` +
 		`--bootstrap-no-update --bootstrap-main-jar "$INST_MC_DIR/packwiz-installer.jar" -g `
 	return `PreLaunchCommand="` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(head+url) + `"`
+}
+
+// syncCommandLine is the PreLaunchCommand line of the launcher's own sync copy,
+// as the launcher writes it.
+func syncCommandLine(exe, url string) string {
+	return `PreLaunchCommand="` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(`"`+exe+`" `+services.SyncFlag+` `+url) + `"`
 }
 
 // packApp is an app with Prism found and Frangfurd installed with the given
@@ -85,7 +91,9 @@ func TestSetPackSourceSwitchesBothWaysAndReportsTheNewURL(t *testing.T) {
 		if report.PackURL["frangfurd"] != step.url {
 			t.Fatalf("%s: the report says %q", step.source, report.PackURL["frangfurd"])
 		}
-		want := "[General]\r\nname=Frangfurd\r\n" + commandLine(step.url) + "\r\niconKey=default\r\n"
+		// The instance began on the packwiz command and is on the launcher's sync
+		// copy from the first switch.
+		want := "[General]\r\nname=Frangfurd\r\n" + syncCommandLine(app.syncExe(), step.url) + "\r\niconKey=default\r\n"
 		if got := readFile(t, cfg); got != want {
 			t.Fatalf("%s: instance.cfg:\n%q\nwant:\n%q", step.source, got, want)
 		}

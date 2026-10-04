@@ -84,6 +84,21 @@ type InstanceCreator struct {
 	client *http.Client
 	// checkPackURL is checkURL in the app; tests swap it for a local server.
 	checkPackURL func(field, raw string) error
+	// syncCopy gives the path of the launcher's sync copy for the pre-launch
+	// command (SyncCopy.Path); nil, or "" back, writes the packwiz command
+	// instead (preLaunchCommand).
+	syncCopy func() string
+}
+
+// UseSyncCopy sets where the creator gets the sync copy's path for a new
+// instance's pre-launch command.
+func (c *InstanceCreator) UseSyncCopy(path func() string) { c.syncCopy = path }
+
+func (c *InstanceCreator) syncExe() string {
+	if c.syncCopy == nil {
+		return ""
+	}
+	return c.syncCopy()
 }
 
 // NewInstanceCreator keeps its jar cache under dataDir.
@@ -148,7 +163,7 @@ func (c *InstanceCreator) create(ctx context.Context, chapter models.Chapter, in
 	if err := matchManifest(chapter.Pack, versions); err != nil {
 		return fmt.Errorf("%s: %w", chapter.ID, err)
 	}
-	cfg, err := renderInstanceConfig(chapter, packURL)
+	cfg, err := renderInstanceConfig(chapter, c.syncExe(), packURL)
 	if err != nil {
 		return err
 	}
@@ -303,36 +318,10 @@ func mmcPack(v packVersions) ([]byte, error) {
 	return append(data, '\n'), nil
 }
 
-// preLaunchCommand is the one command a chapter's instance runs. Prism
-// substitutes the $INST_ variables and then splits the string on spaces
-// outside double quotes, with no shell (launch/steps/PreLaunchCommand.cpp),
-// so the quotes keep a path with spaces in one argument. The URL passed
-// commandSafeURL in the manifest check and carries no quote, space or $.
-//
-// The order is the bootstrap's flags, then the installer's, then the URL. The
-// installer runs headless (-g, #95): no window of its own while the pack syncs,
-// its progress goes to Prism's log. The bootstrap hands every argument that is
-// not its own on to the installer, so -g reaches it (and the bootstrap takes
-// -g for its own update window, which it never opens with
-// --bootstrap-no-update). Optional mods (#36) will need the window back.
-func preLaunchCommand(packURL string) string {
-	return preLaunchBase + "-g " + packURL
-}
-
-// preLaunchBase is the command up to where the installer's flags begin. It is
-// what every pre-launch command the launcher has ever written starts with, and
-// legacyPreLaunchCommand is the form before -g (RewritePreLaunchCommand reads it).
-const preLaunchBase = `"$INST_JAVA" -jar "$INST_MC_DIR/packwiz-installer-bootstrap.jar" ` +
-	`--bootstrap-no-update --bootstrap-main-jar "$INST_MC_DIR/packwiz-installer.jar" `
-
-func legacyPreLaunchCommand(packURL string) string {
-	return preLaunchBase + packURL
-}
-
 // renderInstanceConfig renders instance.cfg in the format Prism writes (QSettings
 // INI, ConfigVersion 1.3). Every string is quoted and escaped the way Qt
 // reads it back.
-func renderInstanceConfig(chapter models.Chapter, packURL string) ([]byte, error) {
+func renderInstanceConfig(chapter models.Chapter, syncExe, packURL string) ([]byte, error) {
 	if !commandSafeURL.MatchString(packURL) {
 		return nil, fmt.Errorf("%s: pack URL %q cannot go on a command line", chapter.ID, packURL)
 	}
@@ -341,7 +330,7 @@ func renderInstanceConfig(chapter models.Chapter, packURL string) ([]byte, error
 		{"InstanceType", "OneSix"},
 		{"name", qtString(chapter.Name)},
 		{"OverrideCommands", "true"},
-		{"PreLaunchCommand", qtString(preLaunchCommand(packURL))},
+		{"PreLaunchCommand", qtString(preLaunchCommand(syncExe, packURL))},
 	}
 	if chapter.Pack.JVM != nil {
 		preset, ok := jvmPresets[*chapter.Pack.JVM]

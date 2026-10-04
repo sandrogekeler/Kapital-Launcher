@@ -24,18 +24,25 @@ const (
 )
 
 // RewritePreLaunchCommand brings the pre-launch command of an instance the
-// launcher made up to its current template (#95: the pack sync runs headless).
-// ADR-2's fourth amendment lets it write this one key, and only from the
-// launcher's own earlier template to its current one, keeping the URL.
+// launcher made up to its current template: headless (#95), then run through
+// the launcher's sync copy (issue 156). ADR-2's fourth and ninth amendments let
+// it write this one key, and only from the launcher's own earlier template to
+// its current one, keeping the URL.
 //
-// The command is parsed against the template, never guessed at: it must be
-// exactly the launcher's earlier command (the same jar paths and flags) with a
-// pack URL that passes the same check a URL read back from an instance does.
-// Anything else in the key is left alone. The file is replaced atomically with
+// syncExe is the launcher's sync copy (SyncCopy.Path), "" when there is none to
+// name. With it, either of the two older templates, and a sync command that
+// names another copy (a dev build's, or a data folder that moved), becomes the
+// sync command for it. Without it, the first template still becomes the packwiz
+// one and a sync command is left as it is: its copy is still where it was.
+//
+// The command is parsed against the templates, never guessed at: it must be
+// exactly one of the launcher's (the same jar paths and flags, or the same copy
+// by name and place) with a pack URL that passes the same check a URL read back
+// from an instance does. Anything else in the key is left alone. The file is replaced atomically with
 // every other line and its line ending kept (rewriteINIKeys). Nothing of the
 // command is logged by this function; a failure is for the caller to log, and
 // it never blocks a launch.
-func RewritePreLaunchCommand(cfgPath string) (PreLaunchResult, error) {
+func RewritePreLaunchCommand(cfgPath, syncExe string) (PreLaunchResult, error) {
 	info, err := os.Stat(cfgPath)
 	if errors.Is(err, os.ErrNotExist) {
 		return PreLaunchAbsent, nil
@@ -58,16 +65,15 @@ func RewritePreLaunchCommand(cfgPath string) (PreLaunchResult, error) {
 	if !ok {
 		return PreLaunchAbsent, nil
 	}
-	url := packURLFromCommand(cmd)
-	switch {
-	case url == "":
-		return PreLaunchForeign, nil
-	case cmd == preLaunchCommand(url):
-		return PreLaunchCurrent, nil
-	case cmd != legacyPreLaunchCommand(url):
+	own := classifyPreLaunch(cmd)
+	if own.kind == kindForeign {
 		return PreLaunchForeign, nil
 	}
-	out, err := rewriteINIKeys(raw, map[string]string{preLaunchKey: qtString(preLaunchCommand(url))})
+	want := own.targetCommand(syncExe, own.url)
+	if cmd == want {
+		return PreLaunchCurrent, nil
+	}
+	out, err := rewriteINIKeys(raw, map[string]string{preLaunchKey: qtString(want)})
 	if err != nil {
 		return PreLaunchAbsent, fmt.Errorf("pre-launch command: %w", err)
 	}

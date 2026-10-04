@@ -71,22 +71,34 @@ func frangfurdChapter(packURL string) models.Chapter {
 
 func TestRenderInstanceConfig(t *testing.T) {
 	c := frangfurdChapter("https://kapitel-kapital.pages.dev/frangfurd/pack.toml")
-	got, err := renderInstanceConfig(c, *c.Pack.Packwiz)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := `[General]
+	template := `[General]
 ConfigVersion=1.3
 InstanceType=OneSix
 name="Frangfurd"
 OverrideCommands=true
-PreLaunchCommand="\"$INST_JAVA\" -jar \"$INST_MC_DIR/packwiz-installer-bootstrap.jar\" --bootstrap-no-update --bootstrap-main-jar \"$INST_MC_DIR/packwiz-installer.jar\" -g https://kapitel-kapital.pages.dev/frangfurd/pack.toml"
+PreLaunchCommand=%s
 OverrideJavaArgs=true
 JvmArgs="-XX:+UseZGC -XX:+ZGenerational"
 OverrideMemory=true
 MinMemAlloc=512
 MaxMemAlloc=8192
 `
+	// With the launcher's copy, the command is the sync's, the path quoted for
+	// Prism and escaped for Qt's INI.
+	got, err := renderInstanceConfig(c, testSyncExe, *c.Pack.Packwiz)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := strings.Replace(template, "%s", qtString(`"`+testSyncExe+`" --prelaunch-sync https://kapitel-kapital.pages.dev/frangfurd/pack.toml`), 1)
+	if string(got) != want {
+		t.Fatalf("instance.cfg:\n%s\nwant:\n%s", got, want)
+	}
+	// With none, the packwiz command an instance ran before: Play still works.
+	got, err = renderInstanceConfig(c, "", *c.Pack.Packwiz)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want = strings.Replace(template, "%s", `"\"$INST_JAVA\" -jar \"$INST_MC_DIR/packwiz-installer-bootstrap.jar\" --bootstrap-no-update --bootstrap-main-jar \"$INST_MC_DIR/packwiz-installer.jar\" -g https://kapitel-kapital.pages.dev/frangfurd/pack.toml"`, 1)
 	if string(got) != want {
 		t.Fatalf("instance.cfg:\n%s\nwant:\n%s", got, want)
 	}
@@ -95,7 +107,7 @@ MaxMemAlloc=8192
 func TestRenderInstanceConfigLeavesUnsetFactsToPrism(t *testing.T) {
 	c := frangfurdChapter("https://kapitel-kapital.pages.dev/p.toml")
 	c.Pack.JVM, c.Pack.MemoryGB = nil, nil
-	got, err := renderInstanceConfig(c, *c.Pack.Packwiz)
+	got, err := renderInstanceConfig(c, testSyncExe, *c.Pack.Packwiz)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +134,7 @@ func TestRenderInstanceConfigRefuses(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			c := frangfurdChapter("")
 			url := mutate(&c)
-			if cfg, err := renderInstanceConfig(c, url); err == nil {
+			if cfg, err := renderInstanceConfig(c, testSyncExe, url); err == nil {
 				t.Fatalf("expected a refusal, got:\n%s", cfg)
 			}
 		})

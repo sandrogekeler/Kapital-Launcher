@@ -27,6 +27,13 @@ type AppSettings struct {
 	// or Prism. A missing, unknown or stale label means the chapter's first
 	// address (services.ServerAddress).
 	ServerChoices map[string]string `json:"serverChoices,omitempty"`
+	// DisabledMods maps a chapter id to the jar base names ("Mod-1.2.3.jar")
+	// the player has switched off in that chapter's instance (issue 156). Written
+	// only by SetModsDisabled, which checks each name against the instance's mods
+	// folder; the sync mode that Prism runs before the game reads it (ADR-2,
+	// ninth amendment). A save from the frontend never sets it, and GetSettings
+	// does not hand it back.
+	DisabledMods map[string][]string `json:"disabledMods,omitempty"`
 	// LoadingSplash shows a loading card, a window of its own, while a game
 	// starts, and on Windows holds the game's window until its resource reload
 	// begins (#43, #45, #97). Nil means the default: on for Windows, off for
