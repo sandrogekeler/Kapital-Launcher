@@ -24,3 +24,15 @@ gh attestation verify <file> -R sandrogekeler/Kapital-Launcher
 
 `checksums.txt` lists the SHA-256 of every file: check it with `sha256sum -c checksums.txt` (Linux, Git Bash) or `shasum -a 256 -c checksums.txt` (macOS), or compare `Get-FileHash <file>` in PowerShell with the matching line.
 
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). This covers the Windows builds. The first beta was published before signing was set up and is not signed.
+
+Every release is built from the public source by the project's release workflow on GitHub, and only those builds are signed.
+
+- Committers and reviewers: [Alessandro Gekeler](https://github.com/sandrogekeler)
+- Approvers: [Alessandro Gekeler](https://github.com/sandrogekeler)
+
+Privacy policy: this program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. It has no telemetry and no account of its own. To show what it shows, it reads the Kapitel Kapital wiki, asks each chapter's game server whether it is online, checks the pack host for a newer pack and GitHub for a newer Prism Launcher. It downloads Prism Launcher and a chapter's pack only when you ask it to. Signing in to Minecraft is done by Prism Launcher with Microsoft, under their own terms.
+
+To remove it: on Windows, uninstall Kapital Launcher from Settings, Apps; on macOS, move it from Applications to the Trash. Your settings and worlds stay until you delete them yourself.
