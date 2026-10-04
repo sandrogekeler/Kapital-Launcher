@@ -141,7 +141,7 @@ func TestWikiShotsDownloadCheckCacheAndRevalidate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	shots, err := NewWikiService(dir, srv.URL).Shots(ctx)
+	shots, err := NewWikiService(dir, srv.URL).Shots(ctx, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +164,7 @@ func TestWikiShotsDownloadCheckCacheAndRevalidate(t *testing.T) {
 	}
 
 	// The next start asks only for a change, and keeps what it has.
-	if _, err := NewWikiService(dir, srv.URL).Shots(ctx); err != nil {
+	if _, err := NewWikiService(dir, srv.URL).Shots(ctx, 0); err != nil {
 		t.Fatal(err)
 	}
 	if srv.count("/screenshots/luxemburg/01-bellum-castle.webp") != 2 {
@@ -179,7 +179,7 @@ func TestWikiShotsDownloadCheckCacheAndRevalidate(t *testing.T) {
 
 	// Offline, the cached export lists the cached pictures, and nothing is pruned.
 	srv.Close()
-	offline, err := NewWikiService(dir, srv.URL).Shots(ctx)
+	offline, err := NewWikiService(dir, srv.URL).Shots(ctx, 0)
 	if err != nil || len(offline) != 2 {
 		t.Fatalf("offline: %v %+v", err, offline)
 	}
@@ -189,7 +189,7 @@ func TestWikiArtMiddlewareServesOnlyCachedPictures(t *testing.T) {
 	srv := newWikiArtServer(t)
 	dir := t.TempDir()
 	w := NewWikiService(dir, srv.URL)
-	if _, err := w.Shots(context.Background()); err != nil {
+	if _, err := w.Shots(context.Background(), 0); err != nil {
 		t.Fatal(err)
 	}
 	// Something outside the art folder that a traversal would reach.
@@ -238,7 +238,7 @@ func TestWikiShotsRefuseAnOversizedPicture(t *testing.T) {
 		_, _ = w.Write(append(append([]byte{}, pngBytes...), make([]byte, maxWikiArt)...)) //nolint:errcheck // test server
 	}))
 	defer big.Close()
-	shots, err := NewWikiService(t.TempDir(), big.URL).Shots(context.Background())
+	shots, err := NewWikiService(t.TempDir(), big.URL).Shots(context.Background(), 0)
 	if err != nil || len(shots) != 0 {
 		t.Fatalf("a picture over the limit is not kept: %v %+v", err, shots)
 	}

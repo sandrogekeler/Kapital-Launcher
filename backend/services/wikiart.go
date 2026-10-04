@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -23,13 +24,15 @@ import (
 
 // The wiki's screenshots, for the chapter art (#141). The lore export lists
 // them as screenshots[] with the era, the site path and the page each one
-// shows (kapitel-kapital-wiki, resolved by its build from the file name). The
-// launcher downloads each from the manifest's wiki host, keeps it only when its
-// bytes are a WebP, PNG or JPEG under maxWikiArt, caches it in the app data dir
-// and serves it to its own page at /wiki-art/<world>/<file>: the page's CSP
-// stays closed to remote images, and the art is there offline after the first
-// start. A file the wiki drops is removed from the cache on the next start that
-// reached the wiki.
+// shows (kapitel-kapital-wiki, resolved by its build from the file name), and
+// the pictures of its pages as pages[].images (wikidraw.go, issue 172). Of the
+// pool those make, the launcher draws a set number per chapter once a day,
+// downloads only the drawn from the manifest's wiki host, keeps each only when
+// its bytes are a WebP, PNG or JPEG under maxWikiArt, caches it in the app data
+// dir and serves it to its own page at /wiki-art/<world>/<file> (a page picture
+// at /wiki-art/pages/<file>): the page's CSP stays closed to remote images, and
+// the art is there offline after the first start. A picture not drawn is
+// removed from the cache on a start that reached the wiki.
 
 const (
 	wikiArtDir   = "wiki-art"
@@ -57,7 +60,17 @@ type wikiShot struct {
 	era, world, file, subject string
 }
 
-func (s wikiShot) sitePath() string { return "/screenshots/" + s.world + "/" + s.file }
+// sitePath is where the wiki serves it: a page picture under /vault/images/, a
+// screenshot under /screenshots/<world>/.
+func (s wikiShot) sitePath() string {
+	if s.world == wikiPicturesDir {
+		return wikiPicturesSite + s.file
+	}
+	return "/screenshots/" + s.world + "/" + s.file
+}
+
+// rel is the picture's place in the cache and on the page, below wikiArtRoute.
+func (s wikiShot) rel() string { return s.world + "/" + s.file }
 
 // parseWikiShots keeps the export's screenshots that pass the shape, in order.
 // An entry that fails is dropped on its own.
@@ -79,7 +92,8 @@ func parseWikiShots(raw []byte) []wikiShot {
 		}
 		m := wikiShotPath.FindStringSubmatch(e.URL)
 		era := strings.TrimSpace(e.Era)
-		if m == nil || strings.Contains(m[2], "..") || era == "" || len(era) > maxWikiEra {
+		// The page pictures' cache folder is no world a screenshot may name.
+		if m == nil || strings.Contains(m[2], "..") || m[1] == wikiPicturesDir || era == "" || len(era) > maxWikiEra {
 			continue
 		}
 		subject := ""
@@ -91,28 +105,56 @@ func parseWikiShots(raw []byte) []wikiShot {
 	return shots
 }
 
-// Shots returns the wiki's screenshots that are in the cache, downloading
-// what is missing or changed once per start. It waits for the export first
-// (Pages), and for the downloads, each bounded; a picture that could not be
-// fetched is left out, or kept from an earlier start.
-func (w *WikiService) Shots(ctx context.Context) ([]models.WikiShot, error) {
+// Shots returns the drawn pictures of each chapter that are in the cache,
+// downloading what is missing. count is how many a chapter has, 0 for all of its
+// pool. It waits for the export first (Pages), and for the downloads, each
+// bounded; a picture that could not be fetched is left out, or kept from an
+// earlier start. The draw is made again when count or the local date has changed
+// since the last call, and otherwise returned as it was.
+func (w *WikiService) Shots(ctx context.Context, count int) ([]models.WikiShot, error) {
 	if _, err := w.Pages(ctx); err != nil {
 		return nil, err
 	}
-	w.artOnce.Do(func() {
-		w.mu.Lock()
-		raw, fresh := w.raw, w.fresh
-		w.mu.Unlock()
-		w.art = w.syncArt(ctx, parseWikiShots(raw), fresh)
-		slog.Info("wiki art", "count", len(w.art))
-	})
+	w.artMu.Lock()
+	defer w.artMu.Unlock()
+	key := drawKey{count: count, date: w.now().Format(time.DateOnly)}
+	if w.art != nil && w.artKey == key {
+		return w.art, nil
+	}
+	w.mu.Lock()
+	raw, fresh := w.raw, w.fresh
+	w.mu.Unlock()
+	w.art = w.syncArt(ctx, w.draw(raw, key, fresh), fresh)
+	w.artKey = key
+	slog.Info("wiki art", "count", len(w.art), "perChapter", count, "date", key.date)
 	return w.art, nil
 }
 
-// syncArt brings the cache up to the list and returns what it holds of it.
-// With the export fetched this start, the wiki was reachable: each picture is
-// asked for (only if changed, when one is cached) and a cached file the list no
-// longer names is removed. From the cached export, the cache is taken as it is.
+// draw makes the day's set of each chapter. From the cached export (the wiki
+// was not reached this start) only the pictures already in the cache are in a
+// pool, since nothing else could be fetched.
+func (w *WikiService) draw(raw []byte, key drawKey, fresh bool) []wikiShot {
+	var drawn []wikiShot
+	for _, p := range w.wikiPools(raw) {
+		pool := p.pics
+		if !fresh {
+			pool = slices.DeleteFunc(slices.Clone(pool), func(s wikiShot) bool { return !w.cached(s) })
+		}
+		drawn = append(drawn, drawPictures(pool, key.count, w.seedKey(key.date, p.era))...)
+	}
+	return drawn
+}
+
+func (w *WikiService) cached(s wikiShot) bool {
+	info, err := os.Stat(filepath.Join(w.artDir(), s.world, s.file))
+	return err == nil && info.Mode().IsRegular()
+}
+
+// syncArt brings the cache up to the drawn set and returns what it holds of it.
+// With the export fetched this start, the wiki was reachable: each drawn picture
+// is downloaded when it is not cached, or asked for (only if changed) the first
+// time this start, and every cached file that was not drawn is removed. From the
+// cached export, the cache is taken as it is.
 func (w *WikiService) syncArt(ctx context.Context, shots []wikiShot, fresh bool) []models.WikiShot {
 	dir := w.artDir()
 	if fresh {
@@ -129,7 +171,15 @@ func (w *WikiService) syncArt(ctx context.Context, shots []wikiShot, fresh bool)
 				}
 			}()
 		}
+		queued := map[string]bool{}
 		for _, s := range shots {
+			// One picture can be in two eras' sets, and one that was asked for
+			// this start and is cached needs no second request.
+			if queued[s.rel()] || w.checked[s.rel()] && w.cached(s) {
+				continue
+			}
+			queued[s.rel()] = true
+			w.checked[s.rel()] = true
 			jobs <- s
 		}
 		close(jobs)
@@ -138,8 +188,8 @@ func (w *WikiService) syncArt(ctx context.Context, shots []wikiShot, fresh bool)
 	}
 	out := make([]models.WikiShot, 0, len(shots))
 	for _, s := range shots {
-		if info, err := os.Stat(filepath.Join(dir, s.world, s.file)); err == nil && info.Mode().IsRegular() {
-			out = append(out, models.WikiShot{Era: s.era, Src: wikiArtRoute + s.world + "/" + s.file, Subject: s.subject})
+		if w.cached(s) {
+			out = append(out, models.WikiShot{Era: s.era, Src: wikiArtRoute + s.rel(), Subject: s.subject})
 		}
 	}
 	return out
@@ -238,10 +288,32 @@ func pruneArt(dir string, shots []wikiShot) {
 	}
 }
 
-// ArtMiddleware serves the cached pictures at /wiki-art/<world>/<file> to the
-// launcher's own page, ahead of the embedded assets, and hands every other
-// request on. Only a GET or HEAD of a name the screenshot shape allows is
-// answered, from the cache folder and nowhere else.
+// artRoute splits what follows /wiki-art/ into the cache folder and the file,
+// and says whether it has the shape of a cached picture: <world>/<file> of the
+// screenshot shape, or pages/<file> of the page picture shape, and no dot
+// segment or double slash.
+func artRoute(rest string) (dir, file string, ok bool) {
+	if path.Clean(rest) != rest {
+		return "", "", false
+	}
+	if f, isPage := strings.CutPrefix(rest, wikiPicturesDir+"/"); isPage {
+		if !wikiPictureFile.MatchString(f) || strings.Contains(f, "..") {
+			return "", "", false
+		}
+		return wikiPicturesDir, f, true
+	}
+	m := wikiShotPath.FindStringSubmatch("/screenshots/" + rest)
+	if m == nil || strings.Contains(m[2], "..") || m[1] == wikiPicturesDir {
+		return "", "", false
+	}
+	return m[1], m[2], true
+}
+
+// ArtMiddleware serves the cached pictures at /wiki-art/<world>/<file> and
+// /wiki-art/pages/<file> to the launcher's own page, ahead of the embedded
+// assets, and hands every other request on. Only a GET or HEAD of a name the
+// shapes above allow is answered, read through an os.Root on the cache folder,
+// which no name can leave.
 func (w *WikiService) ArtMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		rest, ok := strings.CutPrefix(r.URL.Path, wikiArtRoute)
@@ -253,12 +325,12 @@ func (w *WikiService) ArtMiddleware(next http.Handler) http.Handler {
 			http.Error(rw, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		m := wikiShotPath.FindStringSubmatch("/screenshots/" + rest)
-		if m == nil || strings.Contains(m[2], "..") || path.Clean(rest) != rest {
+		dir, file, ok := artRoute(rest)
+		if !ok {
 			http.NotFound(rw, r)
 			return
 		}
-		body, err := os.ReadFile(filepath.Join(w.artDir(), m[1], m[2]))
+		body, err := w.readArt(dir + "/" + file)
 		if err != nil || !isWikiArt(body) {
 			http.NotFound(rw, r)
 			return
@@ -266,6 +338,57 @@ func (w *WikiService) ArtMiddleware(next http.Handler) http.Handler {
 		rw.Header().Set("Content-Type", http.DetectContentType(body))
 		rw.Header().Set("X-Content-Type-Options", "nosniff")
 		rw.Header().Set("Cache-Control", "no-cache")
-		http.ServeContent(rw, r, m[2], time.Time{}, bytes.NewReader(body))
+		http.ServeContent(rw, r, file, time.Time{}, bytes.NewReader(body))
 	})
+}
+
+// readArt reads one cached file, by its place below the cache folder, through
+// an os.Root on that folder.
+func (w *WikiService) readArt(rel string) ([]byte, error) {
+	root, err := os.OpenRoot(w.artDir())
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close() //nolint:errcheck // read-only
+	return root.ReadFile(rel)
+}
+
+// ArtStats is what the settings screen needs to say how much room a number of
+// pictures takes: the cache's average picture size (defaultArtBytes while it
+// has none) and each chapter's pool, by era name. With no export to read the
+// pools are empty and the screen goes by the number alone.
+func (w *WikiService) ArtStats(ctx context.Context) models.WikiArtStats {
+	stats := models.WikiArtStats{AvgBytes: w.avgArtBytes(), Pools: map[string]int{}}
+	if _, err := w.Pages(ctx); err != nil {
+		return stats
+	}
+	w.mu.Lock()
+	raw := w.raw
+	w.mu.Unlock()
+	for _, p := range w.wikiPools(raw) {
+		stats.Pools[p.era] = len(p.pics)
+	}
+	return stats
+}
+
+// avgArtBytes is the mean size of the pictures in the cache.
+func (w *WikiService) avgArtBytes() int64 {
+	var total, n int64
+	err := filepath.WalkDir(w.artDir(), func(_ string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		if info, infoErr := d.Info(); infoErr == nil && info.Mode().IsRegular() {
+			total += info.Size()
+			n++
+		}
+		return nil
+	})
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		slog.Warn("wiki art: size", "error", err)
+	}
+	if n == 0 {
+		return defaultArtBytes
+	}
+	return total / n
 }
