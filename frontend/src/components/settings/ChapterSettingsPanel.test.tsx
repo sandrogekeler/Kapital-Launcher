@@ -206,6 +206,35 @@ describe('ChapterSettingsPanel', () => {
     expect(App.GetChapterSettings).not.toHaveBeenCalled()
   })
 
+  describe('reveal', () => {
+    it('holds the form back, with a faint line, until the instance has been read, then reveals it', async () => {
+      let finish: (v: ChapterSettingsInfo) => void = () => undefined
+      vi.mocked(App.GetChapterSettings).mockReturnValue(new Promise((r) => (finish = r)) as never)
+      render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Frangfurd settings')
+      expect(screen.getByText('Reading.')).toHaveClass('reveal-wait')
+      expect(screen.queryByLabelText('Memory')).toBeNull()
+      expect(document.querySelector('.reveal')).toBeNull()
+      await act(async () => finish(info()))
+      expect(screen.getByLabelText('Memory').closest('.reveal')).not.toBeNull()
+      expect(screen.queryByText('Reading.')).toBeNull()
+    })
+
+    it('is ready at once for an instance that is not there and for one that cannot be looked for', () => {
+      useEngineStore.setState({ instances: report(false) })
+      const { unmount } = render(
+        <ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />,
+      )
+      expect(screen.queryByText('Reading.')).toBeNull()
+      expect(screen.getByText(/not installed yet/).closest('.reveal')).not.toBeNull()
+      unmount()
+      useEngineStore.setState({ instances: null })
+      render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+      expect(screen.queryByText('Reading.')).toBeNull()
+      expect(screen.getByText(/could not be looked for/).closest('.reveal')).not.toBeNull()
+    })
+  })
+
   it('opens the instance folder by chapter id and shows a failure', async () => {
     vi.mocked(App.OpenInstanceFolder).mockResolvedValueOnce(undefined)
     render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)

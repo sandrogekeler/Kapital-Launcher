@@ -35,6 +35,9 @@ func (a *App) shutdown(context.Context) {
 	if a.stop != nil {
 		a.stop()
 	}
+	// The live log's follower ends with the context it ran under; this waits
+	// for it, so no event comes after the window is gone.
+	a.live.Shutdown()
 	// A Prism left on a hidden console is the launcher's to close, bounded so
 	// quitting never waits on it for long.
 	if a.games != nil {

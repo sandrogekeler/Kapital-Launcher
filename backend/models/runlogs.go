@@ -51,3 +51,22 @@ type RunLogText struct {
 	// Truncated is whether the file has more before Text.
 	Truncated bool `json:"truncated"`
 }
+
+// LiveLogEventBytes is the most one "log:live" event carries: a look that finds
+// more is sent as several events, each cut at a line.
+const LiveLogEventBytes = 64 << 10
+
+// LiveLogEvent is what the live log follower emits as "log:live": the lines
+// appended to a chapter's logs/latest.log since the last event, masked by the
+// redactor before they left Go. Keyed by the chapter, so a listener filters on
+// ChapterID.
+type LiveLogEvent struct {
+	ChapterID string `json:"chapterId"`
+	// Lines is whole lines, each ending in a newline, redacted. Empty for a
+	// reset that has nothing to show yet.
+	Lines string `json:"lines"`
+	// Reset is true when the file was replaced or truncated, which is a new
+	// run starting: Lines then holds the end of the new file and replaces
+	// what the listener shows, instead of being appended to it.
+	Reset bool `json:"reset"`
+}

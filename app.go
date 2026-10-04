@@ -43,6 +43,7 @@ type App struct {
 	wiki           *services.WikiService
 	games          *services.GameTracker
 	splash         *services.SplashCard
+	live           *services.LiveLog
 	stop           context.CancelFunc
 	frontendErrors *services.FrontendErrorLog
 	// runCtx is the context the background work runs under: cancelled in
@@ -54,6 +55,8 @@ type App struct {
 	// test sets it. emitInstall does the same for prism:install.
 	emit        func(models.GameState)
 	emitInstall func(models.PrismInstallProgress)
+	// emitLive does the same for log:live (issue 155).
+	emitLive func(models.LiveLogEvent)
 
 	// previews are the developer previews that are on (#124, app_preview.go),
 	// and previewStep the pause between the steps of a made-up Prism install.
@@ -115,6 +118,7 @@ func NewApp(dataDir string, manifest []byte, dist fs.FS) (*App, error) {
 		openFolder:     services.OpenFolder,
 		frontendErrors: services.NewFrontendErrorLog(),
 		previewStep:    previewInstallStep,
+		live:           services.NewLiveLog(),
 	}
 	a.syncCopy = services.NewSyncCopy(dataDir, Version)
 	a.creator.UseSyncCopy(a.syncExe)

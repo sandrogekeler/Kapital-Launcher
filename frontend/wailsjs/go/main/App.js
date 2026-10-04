@@ -153,3 +153,11 @@ export function StartPreview(arg1, arg2) {
 export function StopGame(arg1) {
   return window['go']['main']['App']['StopGame'](arg1);
 }
+
+export function StopLiveLog(arg1) {
+  return window['go']['main']['App']['StopLiveLog'](arg1);
+}
+
+export function WatchLiveLog(arg1) {
+  return window['go']['main']['App']['WatchLiveLog'](arg1);
+}

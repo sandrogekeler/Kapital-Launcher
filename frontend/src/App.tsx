@@ -1,9 +1,9 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, useEffect, useRef, useState } from 'react'
 import { HeaderBar } from './components/shell/HeaderBar'
 import { Toasts } from './components/shell/Toasts'
 import { Sidebar } from './components/sidebar/Sidebar'
 import { ChapterStage } from './components/main/ChapterStage'
-import { CARD } from './components/ui/Page'
+import { PageLayer } from './components/main/PageLayer'
 import { Scrollable } from './components/ui/Scrollable'
 import { selectCanRotate, selectChapter, useChapterStore } from './stores/useChapterStore'
 import { useEngineStore } from './stores/useEngineStore'
@@ -13,35 +13,19 @@ import { useGameStore } from './stores/useGameStore'
 import { Environment } from '../wailsjs/runtime/runtime'
 import { errMsg, readOr } from './lib/ipc'
 import { SLIDE_INTERVAL_MS } from './lib/slides'
+import { usePages } from './lib/usePages'
 
-// The pages that take the chapter card's place are opened on demand, so they
+// The pages that slide over the chapter card are opened on demand, so they
 // load when asked for and stay out of the launcher's first paint and its
-// bundle budget (scripts/check-bundle-size.mjs): the settings, a chapter's own
-// settings, the run report, opened rarely, from Details beside a game that
-// went wrong, and a chapter's logs (issue 155).
-const RunReportPanel = lazy(() =>
-  import('./components/main/RunReportPanel').then((m) => ({ default: m.RunReportPanel })),
-)
-const LogsPanel = lazy(() =>
-  import('./components/logs/LogsPanel').then((m) => ({ default: m.LogsPanel })),
-)
+// bundle budget (scripts/check-bundle-size.mjs): the settings, and a chapter's
+// own pages (components/main/ChapterPage), its settings, its logs and the run
+// report, opened rarely, from Details beside a game that went wrong.
 const SettingsPanel = lazy(() =>
   import('./components/settings/SettingsPanel').then((m) => ({ default: m.SettingsPanel })),
 )
-const ChapterSettingsPanel = lazy(() =>
-  import('./components/settings/ChapterSettingsPanel').then((m) => ({
-    default: m.ChapterSettingsPanel,
-  })),
+const ChapterPage = lazy(() =>
+  import('./components/main/ChapterPage').then((m) => ({ default: m.ChapterPage })),
 )
-
-/** The card's frame, empty, for the moment a page's code is on its way. */
-function PageFallback() {
-  return (
-    <div className="m-5 flex min-h-0 grow flex-col">
-      <div aria-hidden className={CARD} />
-    </div>
-  )
-}
 
 export default function App() {
   const chapter = useChapterStore(selectChapter)
@@ -77,50 +61,12 @@ export default function App() {
     void readOr(Environment, null).then((env) => env && setPlatform(env.platform))
   }, [])
 
-  // The settings screen takes the main column while open (#5). The gear
-  // toggles it, Back and Escape close it, and so does picking a chapter: the
-  // effect fires on the selection, including the restore at startup, when the
-  // panel is closed anyway.
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const closeSettings = useCallback(() => setSettingsOpen(false), [])
-  useEffect(() => setSettingsOpen(false), [selectedId])
-  // A chapter's own settings (#36) take the column the same way, opened from
-  // the pen in its hero, and close with the chapter they belong to.
-  const [chapterSettingsFor, setChapterSettingsFor] = useState<string | null>(null)
-  const closeChapterSettings = useCallback(() => setChapterSettingsFor(null), [])
-  useEffect(() => setChapterSettingsFor(null), [selectedId])
-  // A chapter's logs (issue 155) likewise, from the scroll in its hero.
-  const [logsFor, setLogsFor] = useState<string | null>(null)
-  const closeLogs = useCallback(() => setLogsFor(null), [])
-  useEffect(() => setLogsFor(null), [selectedId])
-  // A run's report (Details, on the corner's notice of a game that ended
-  // badly) takes it likewise. The notice can be another chapter's, so opening
-  // it selects that chapter too, and a report stays only while its chapter
-  // is the one selected.
-  const [reportFor, setReportFor] = useState<string | null>(null)
-  const closeReport = useCallback(() => setReportFor(null), [])
-  useEffect(() => setReportFor((open) => (open === selectedId ? open : null)), [selectedId])
-  // Every page over the chapter closes when one is brought up, the chapter's
-  // settings and report included: selecting the chapter that is already open
-  // changes no selection, so the effects above would leave them where they
-  // were (a preview started from Settings landed on the chapter's settings).
-  const showChapter = useCallback(
-    (chapterId: string) => {
-      select(chapterId)
-      setSettingsOpen(false)
-      setChapterSettingsFor(null)
-      setLogsFor(null)
-      setReportFor(null)
-    },
-    [select],
-  )
-  const openReport = useCallback(
-    (chapterId: string) => {
-      showChapter(chapterId)
-      setReportFor(chapterId)
-    },
-    [showChapter],
-  )
+  // The pages over the chapter card: the settings from the gear, a chapter's
+  // own from its hero and from the corner's notices (lib/usePages).
+  const pages = usePages(selectedId, select)
+  const { settings, chapterPage } = pages
+  const openedChapter =
+    chapterPage.slot && chapters.find((c) => c.id === chapterPage.slot?.page.chapterId)
 
   // One read per store on mount. These are reads of state Go holds, not
   // events, so an effect is the right tool.
@@ -212,40 +158,43 @@ export default function App() {
   return (
     <div className="bg-canvas flex h-full flex-col">
       <ChapterSelectionSync />
-      <HeaderBar platform={platform} onOpenSettings={() => setSettingsOpen((open) => !open)} />
+      <HeaderBar platform={platform} onOpenSettings={pages.toggleSettings} />
       <div className="flex min-h-0 grow">
         <Sidebar />
         {/* The chapter card scrolls under the header bar and beside the
-            sidebar when the window is shorter than it (#56). A page takes
-            the card's place in the same frame and scrolls inside it. */}
+            sidebar when the window is shorter than it (issue 56). A page slides
+            over the card in the same stage, and scrolls inside its own frame. */}
         <Scrollable as="main" className="flex flex-col">
-          {settingsOpen ? (
-            <Suspense fallback={<PageFallback />}>
-              <SettingsPanel onClose={closeSettings} onShowChapter={showChapter} />
-            </Suspense>
-          ) : chapterSettingsFor === chapter.id ? (
-            <Suspense fallback={<PageFallback />}>
-              <ChapterSettingsPanel chapter={chapter} onClose={closeChapterSettings} />
-            </Suspense>
-          ) : logsFor === chapter.id ? (
-            <Suspense fallback={<PageFallback />}>
-              <LogsPanel chapter={chapter} onClose={closeLogs} />
-            </Suspense>
-          ) : reportFor === chapter.id ? (
-            <Suspense fallback={<PageFallback />}>
-              <RunReportPanel chapter={chapter} onClose={closeReport} />
-            </Suspense>
-          ) : (
-            <ChapterStage
-              chapter={chapter}
-              chapters={chapters}
-              onOpenSettings={setChapterSettingsFor}
-              onOpenLogs={setLogsFor}
-            />
-          )}
+          <ChapterStage
+            chapter={chapter}
+            chapters={chapters}
+            onOpenSettings={pages.openChapterSettings}
+            onOpenLogs={pages.openLogs}
+            covered={pages.covered}
+          >
+            {chapterPage.slot && openedChapter && (
+              <PageLayer
+                key={`${chapterPage.slot.page.kind}:${openedChapter.id}`}
+                edge="right"
+                open={chapterPage.slot.open}
+                onExited={chapterPage.done}
+              >
+                <ChapterPage
+                  page={chapterPage.slot.page}
+                  chapter={openedChapter}
+                  onClose={chapterPage.hide}
+                />
+              </PageLayer>
+            )}
+            {settings.slot && (
+              <PageLayer edge="top" open={settings.slot.open} onExited={settings.done}>
+                <SettingsPanel onClose={settings.hide} onShowChapter={pages.showChapter} />
+              </PageLayer>
+            )}
+          </ChapterStage>
         </Scrollable>
       </div>
-      <Toasts onOpenReport={openReport} />
+      <Toasts onOpenReport={pages.openReport} />
     </div>
   )
 }

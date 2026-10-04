@@ -28,7 +28,17 @@ import { ensureFreshDist } from './lib/dist-freshness.mjs'
 // 88 since the design pass (2026-10-04): the settings pages, the chapter's
 // settings and the run report load on demand, so the launcher's first paint
 // no longer carries them. Measured 87.4 KB.
-const BUDGET_KB = 88
+// 88.1 since the page layer (2026-10-04): a page now slides over the chapter
+// card inside the stage, so the layer that animates it, keeps focus and leaves
+// the card inert (PageLayer, usePages) is in the launcher's own code and not in
+// the lazy page chunks. The pages' own code, the page frame and the reveal
+// stay in those chunks, and the three chapter pages now load as one. Measured
+// 88.04 KB, from 87.8 KB before it.
+// 88.3 since the mod switches (2026-10-04, issue 156): the bundled manifest,
+// which the first paint embeds, names the mods a player may switch off for
+// Frangfurd and Lichdenstein; the switches' own code loads with the chapter's
+// settings. Measured 88.2 KB, from 88.04 KB before it.
+const BUDGET_KB = 88.3
 
 const DIST_ASSETS = await ensureFreshDist()
 const DIST = path.dirname(DIST_ASSETS)

@@ -66,6 +66,8 @@ export function SettingsPanel({ onClose, onShowChapter }: Props) {
   const update = useSettingsStore((s) => s.update)
   const loadEngine = useEngineStore((s) => s.load)
   const chapters = useChapterStore((s) => s.manifest.chapters)
+  // The page reveals once Go has said what the settings are.
+  const loaded = useSettingsStore((s) => s.loaded)
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({})
 
   // One save per committed field. Go re-detects Prism when the executable or
@@ -84,7 +86,7 @@ export function SettingsPanel({ onClose, onShowChapter }: Props) {
   const common = { settings, errors, save }
 
   return (
-    <Page label="Settings" title="Settings" onBack={onClose}>
+    <Page label="Settings" title="Settings" onBack={onClose} ready={loaded}>
       <PrismSection {...common} onError={fail} />
       <AppearanceSection {...common} />
       <ServerSection {...common} chapters={chapters} />

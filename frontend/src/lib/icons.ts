@@ -13,10 +13,12 @@
 export type { LucideIcon } from 'lucide-react'
 
 export {
+  ArrowDown,
   ArrowLeft,
   BookOpen,
   Check,
   ChevronRight,
+  ChevronDown,
   Copy,
   Download,
   ExternalLink,
@@ -27,9 +29,9 @@ export {
   Pencil,
   Play,
   RefreshCw,
-  ScrollText,
   Settings,
   Square,
+  SquareTerminal,
   TriangleAlert,
   X,
 } from 'lucide-react'

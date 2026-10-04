@@ -74,9 +74,13 @@ function withLichdensteinAt(address: string) {
  */
 function switchTo(name: RegExp) {
   fireEvent.click(screen.getByRole('button', { name }))
-  const leaving = document.querySelector('[inert]')
-  // jsdom has no AnimationEvent, so React listens for the prefixed name there.
-  if (leaving) fireEvent(leaving, new Event('webkitAnimationEnd', { bubbles: true }))
+  const leaving = document.querySelector('[class*="card-out-"]')
+  if (leaving) endAnimation(leaving)
+}
+
+/** The end of an element's animation. jsdom has no AnimationEvent, so React listens for the prefixed name. */
+function endAnimation(el: Element) {
+  fireEvent(el, new Event('webkitAnimationEnd', { bubbles: true }))
 }
 
 describe('App', () => {
@@ -89,6 +93,7 @@ describe('App', () => {
       import('./components/settings/PreviewSection'),
       import('./components/settings/PackSourceSection'),
       import('./components/main/RunReportPanel'),
+      import('./components/main/ChapterPage'),
       import('./components/logs/LogsPanel'),
     ])
   }, 60_000)
@@ -573,11 +578,20 @@ describe('App', () => {
     }
   })
 
-  it("opens a chapter's logs from the scroll in its hero, and closes them with Back, Escape and a switch", async () => {
+  it("opens a chapter's logs from the console icon in its hero, and closes them with Back, Escape and a switch", async () => {
     Object.assign(window, { go: {} })
     try {
       vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
       vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ luxemburg: true }))
+      vi.mocked(Bindings.ReadRunLog).mockResolvedValue({
+        kind: 'log',
+        name: 'latest.log',
+        text: 'a line',
+        offset: 0,
+        size: 7,
+        lines: 1,
+        truncated: false,
+      } as never)
       vi.mocked(Bindings.GetRunLogs).mockResolvedValue([
         {
           kind: 'log',
@@ -593,7 +607,8 @@ describe('App', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Logs for Luxemburg' }))
       expect(await screen.findByRole('region', { name: 'Luxemburg logs' })).toBeInTheDocument()
-      expect(await screen.findByRole('list', { name: 'Logs and crash reports' })).toBeVisible()
+      expect(await screen.findByRole('button', { name: /Choose a log/ })).toBeVisible()
+      expect(Bindings.ReadRunLog).toHaveBeenCalledWith('luxemburg', 'log', 'latest.log', 0)
       expect(Bindings.GetRunLogs).toHaveBeenCalledExactlyOnceWith('luxemburg')
 
       fireEvent.click(screen.getByRole('button', { name: 'Back' }))
@@ -694,5 +709,154 @@ describe('App', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  describe('pages over the chapter', () => {
+    const sliding = (cls: string) => document.querySelector<HTMLElement>(`.${cls}`)
+    /** The chapter's card in the stage, which a page covers and never moves. */
+    const chapterCard = () =>
+      screen.getByRole('main').querySelector<HTMLElement>('.card-stage > div')!
+    const prism = () => {
+      vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
+      vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ luxemburg: true }))
+    }
+    beforeEach(() => void Object.assign(window, { go: {} }))
+    afterEach(() => void Reflect.deleteProperty(window, 'go'))
+
+    it("slides a chapter's settings in from the right inside the card, over a chapter that is left alone and inert", async () => {
+      prism()
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      expect(chapterCard()).not.toHaveAttribute('inert')
+
+      const pen = screen.getByRole('button', { name: 'Luxemburg settings' })
+      act(() => pen.focus())
+      fireEvent.click(pen)
+      const page = await screen.findByRole('region', { name: 'Luxemburg settings' })
+      // In the same stage as the card, in a frame the card's corners clip, sliding from the right.
+      const layer = page.parentElement!
+      expect(layer).toHaveClass('page-in-right')
+      expect(layer.parentElement).toHaveClass('overflow-hidden', 'rounded-lg')
+      expect(layer.parentElement!.parentElement).toBe(chapterCard().parentElement)
+      expect(chapterCard()).toHaveAttribute('inert')
+      expect(chapterCard()).toHaveAttribute('aria-hidden', 'true')
+      expect(chapterCard()).toHaveTextContent('Play Luxemburg')
+      expect(chapterCard().className).not.toMatch(/card-(in|out)|page-/)
+      // The page takes the focus, and the hero behind it is not reachable.
+      await waitFor(() => expect(layer).toHaveFocus())
+      expect(screen.queryByRole('button', { name: 'Logs for Luxemburg' })).toBeNull()
+    })
+
+    it('keeps the page mounted while it slides out, then removes it, and returns focus to the pen', async () => {
+      prism()
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      const pen = screen.getByRole('button', { name: 'Luxemburg settings' })
+      act(() => pen.focus())
+      fireEvent.click(pen)
+      const page = await screen.findByRole('region', { name: 'Luxemburg settings' })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+      // Out to the right, still there, but hidden and inert, and the chapter is back in use.
+      expect(sliding('page-out-right')).toContainElement(page)
+      expect(sliding('page-out-right')!.parentElement).toHaveAttribute('inert')
+      expect(screen.queryByRole('region', { name: 'Luxemburg settings' })).toBeNull()
+      expect(chapterCard()).not.toHaveAttribute('inert')
+      expect(chapterCard()).not.toHaveAttribute('aria-hidden')
+      expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Luxemburg')
+      expect(pen).toHaveFocus()
+
+      endAnimation(sliding('page-out-right')!)
+      expect(page).not.toBeInTheDocument()
+      expect(document.querySelector('[class*="page-"]')).toBeNull()
+    })
+
+    it('closes with Escape the same way', async () => {
+      prism()
+      vi.mocked(Bindings.GetRunLogs).mockResolvedValue([] as never)
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      fireEvent.click(screen.getByRole('button', { name: 'Logs for Luxemburg' }))
+      await screen.findByRole('region', { name: 'Luxemburg logs' })
+      expect(sliding('page-in-right')).not.toBeNull()
+      fireEvent.keyDown(window, { key: 'Escape' })
+      expect(sliding('page-out-right')).not.toBeNull()
+      expect(screen.queryByRole('region', { name: 'Luxemburg logs' })).toBeNull()
+      endAnimation(sliding('page-out-right')!)
+      expect(sliding('page-out-right')).toBeNull()
+    })
+
+    it('slides the settings down from the top over the card area, and back up on close', async () => {
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      const gear = screen.getByRole('button', { name: 'Settings' })
+      act(() => gear.focus())
+      fireEvent.click(gear)
+      const page = await screen.findByRole('region', { name: 'Settings' })
+      const layer = page.parentElement!
+      expect(layer).toHaveClass('page-in-top')
+      // Over the whole card area: no rounded clip of its own, and the stage is its frame.
+      expect(layer.parentElement).not.toHaveClass('overflow-hidden')
+      expect(layer.parentElement!.parentElement).toBe(chapterCard().parentElement)
+      expect(chapterCard()).toHaveAttribute('inert')
+      await waitFor(() => expect(layer).toHaveFocus())
+
+      // The gear toggles it.
+      fireEvent.click(gear)
+      expect(sliding('page-out-top')).toContainElement(page)
+      expect(chapterCard()).not.toHaveAttribute('inert')
+      endAnimation(sliding('page-out-top')!)
+      expect(page).not.toBeInTheDocument()
+      expect(gear).toHaveFocus()
+    })
+
+    it("closes a chapter's page when another chapter is picked, sliding it out as the card changes", async () => {
+      prism()
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      fireEvent.click(screen.getByRole('button', { name: 'Luxemburg settings' }))
+      await screen.findByRole('region', { name: 'Luxemburg settings' })
+
+      fireEvent.click(screen.getByRole('button', { name: /03.*Frangfurd/ }))
+      expect(sliding('page-out-right')).not.toBeNull()
+      expect(screen.queryByRole('region', { name: 'Luxemburg settings' })).toBeNull()
+      endAnimation(sliding('page-out-right')!)
+      expect(sliding('page-out-right')).toBeNull()
+      expect(screen.getByRole('button', { name: 'Logs for Frangfurd' })).toBeInTheDocument()
+    })
+
+    it('closes the settings when a chapter is picked, and a chapter page when the settings open', async () => {
+      prism()
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      fireEvent.click(screen.getByRole('button', { name: 'Luxemburg settings' }))
+      await screen.findByRole('region', { name: 'Luxemburg settings' })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
+      await screen.findByRole('region', { name: 'Settings' })
+      // The chapter's page leaves as the settings arrive, never both open.
+      expect(sliding('page-out-right')).not.toBeNull()
+      expect(sliding('page-in-top')).not.toBeNull()
+      expect(screen.queryByRole('region', { name: 'Luxemburg settings' })).toBeNull()
+
+      fireEvent.click(screen.getByRole('button', { name: /02.*Lichdenstein/ }))
+      expect(sliding('page-out-top')).not.toBeNull()
+      expect(screen.queryByRole('region', { name: 'Settings' })).toBeNull()
+    })
+
+    it('slides the frame in at once and reveals the body only when the data is there', async () => {
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      // The settings load on mount; hold them back to see the page wait.
+      act(() => useSettingsStore.setState({ loaded: false }))
+      fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
+      const page = await screen.findByRole('region', { name: 'Settings' })
+      expect(sliding('page-in-top')).toContainElement(page)
+      expect(within(page).getByRole('heading', { level: 1 })).toHaveTextContent('Settings')
+      expect(within(page).getByText('Reading.')).toBeInTheDocument()
+      expect(within(page).queryByLabelText('Prism program')).toBeNull()
+      act(() => useSettingsStore.setState({ loaded: true }))
+      expect(within(page).getByLabelText('Prism program')).toBeInTheDocument()
+    })
   })
 })

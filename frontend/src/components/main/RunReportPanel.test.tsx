@@ -94,6 +94,25 @@ describe('RunReportPanel', () => {
     expect(await screen.findByText(/wrote no log for this run/)).toBeInTheDocument()
   })
 
+  it('reveals the report only once it has been read, a faint line standing in until then', async () => {
+    let finish: (r: RunReport) => void = () => undefined
+    vi.mocked(Bindings.GetRunReport).mockReturnValue(new Promise((r) => (finish = r)) as never)
+    render(<RunReportPanel chapter={chapter} onClose={() => undefined} />)
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Frangfurd run report')
+    expect(screen.getByText('Reading.')).toHaveClass('reveal-wait')
+    expect(screen.queryByLabelText('Timeline')).toBeNull()
+    await act(async () => finish(runReport()))
+    expect(screen.getByLabelText('Timeline').closest('.reveal')).not.toBeNull()
+    expect(screen.queryByText('Reading.')).toBeNull()
+  })
+
+  it('reveals a refusal as well, as soon as it is known', async () => {
+    vi.mocked(Bindings.GetRunReport).mockRejectedValue('Frangfurd: there is no run to report on')
+    render(<RunReportPanel chapter={chapter} onClose={() => undefined} />)
+    expect((await screen.findByRole('alert')).closest('.reveal')).not.toBeNull()
+    expect(screen.queryByText('Reading.')).toBeNull()
+  })
+
   it('shows the refusal of a real backend', async () => {
     vi.mocked(Bindings.GetRunReport).mockRejectedValue('Frangfurd: there is no run to report on')
     render(<RunReportPanel chapter={chapter} onClose={() => undefined} />)

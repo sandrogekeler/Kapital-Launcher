@@ -127,6 +127,17 @@ describe('SettingsPanel', () => {
     expect(App.SaveSettings).not.toHaveBeenCalled()
   })
 
+  it('holds its sections back until the settings are loaded, then reveals them', () => {
+    useSettingsStore.setState({ loaded: false })
+    render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
+    expect(screen.getByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument()
+    expect(screen.getByText('Reading.')).toHaveClass('reveal-wait')
+    expect(screen.queryByLabelText('Prism program')).toBeNull()
+    act(() => useSettingsStore.setState({ loaded: true }))
+    expect(screen.queryByText('Reading.')).toBeNull()
+    expect(screen.getByLabelText('Prism program').closest('.reveal')).not.toBeNull()
+  })
+
   it('ends with the About section', () => {
     render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
     expect(screen.getByRole('heading', { name: 'About' })).toBeInTheDocument()

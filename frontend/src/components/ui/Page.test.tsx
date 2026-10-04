@@ -13,7 +13,8 @@ describe('Page', () => {
     )
     const page = screen.getByRole('region', { name: 'Things' })
     expect(page).toHaveClass('bg-raised', 'border-line', 'rounded-lg', 'overflow-hidden')
-    expect(page.parentElement).toHaveClass('m-5')
+    // The inset is the layer's, not the page's: the page is the card and nothing around it.
+    expect(page.parentElement).not.toHaveClass('m-5')
     const heading = screen.getByRole('heading', { level: 1, name: 'Things' })
     expect(heading).toHaveClass('font-display')
     // The header is outside the scrolling element, so it stays put.
@@ -21,6 +22,40 @@ describe('Page', () => {
     expect(scroller).not.toContainElement(heading)
     expect(page).toContainElement(scroller as HTMLElement)
     expect(screen.getByRole('button', { name: 'Do' })).toBeInTheDocument()
+  })
+
+  it('reveals its body once it is ready, with the header in place from the start', () => {
+    const { rerender } = render(
+      <Page label="Things" title="Things" onBack={() => undefined} ready={false}>
+        <p>Body</p>
+      </Page>,
+    )
+    expect(screen.getByRole('heading', { level: 1, name: 'Things' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
+    expect(screen.queryByText('Body')).toBeNull()
+    expect(screen.getByText('Reading.')).toBeInTheDocument()
+    rerender(
+      <Page label="Things" title="Things" onBack={() => undefined} ready>
+        <p>Body</p>
+      </Page>,
+    )
+    expect(screen.queryByText('Reading.')).toBeNull()
+    expect(screen.getByText('Body').parentElement).toHaveClass(
+      'reveal',
+      'flex',
+      'flex-col',
+      'gap-10',
+    )
+  })
+
+  it('is ready at once without being told, so a page with nothing to wait for reveals on open', () => {
+    render(
+      <Page label="Things" title="Things" onBack={() => undefined}>
+        <p>Body</p>
+      </Page>,
+    )
+    expect(screen.queryByText('Reading.')).toBeNull()
+    expect(screen.getByText('Body').parentElement).toHaveClass('reveal')
   })
 
   it('closes on Back and on Escape', () => {
@@ -34,6 +69,18 @@ describe('Page', () => {
     act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })))
     act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' })))
     expect(onBack).toHaveBeenCalledTimes(2)
+  })
+
+  it('can give its body the height the card leaves, without a scroll of its own', () => {
+    render(
+      <Page label="Things" title="Things" onBack={() => undefined} fill>
+        <p>Body</p>
+      </Page>,
+    )
+    const body = screen.getByText('Body').parentElement!
+    expect(body).toHaveClass('grow', 'min-h-0', 'flex-col')
+    expect(body.closest('.overflow-y-auto')).toBeNull()
+    expect(screen.getByRole('region', { name: 'Things' })).toContainElement(body)
   })
 
   it('stops listening for Escape once it is gone', () => {

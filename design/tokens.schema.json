@@ -168,7 +168,7 @@
     },
     "layout": {
       "type": "object",
-      "required": ["unit", "sidebar", "hero", "titlebar", "icon", "scrollbar", "slide", "drift", "title", "playMin", "window", "splash"],
+      "required": ["unit", "sidebar", "hero", "titlebar", "icon", "scrollbar", "slide", "drift", "revealRise", "title", "playMin", "window", "splash"],
       "additionalProperties": false,
       "properties": {
         "unit": { "const": "px" },
@@ -188,6 +188,11 @@
           "type": "integer",
           "minimum": 0,
           "description": "How far the hero's picture and the wiki post travel when the chapter's slide changes, in px (#142): out to the left, in from the right."
+        },
+        "revealRise": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How far a page's content rises into place as it is revealed once loaded (ui/Reveal), in px. Small: the reveal is subtler than the card's slide."
         },
         "title": {
           "type": "integer",
@@ -241,7 +246,7 @@
     "effect": {
       "type": "object",
       "description": "Values a utility cannot name on its own: the hover lift on the filled button, the focus outline, the stops of the scrim over artwork, and the grid shown where a chapter has no artwork yet.",
-      "required": ["hoverBrightness", "focusRing", "scrim", "accent", "artPending", "motionBlur", "tileBlur", "tileTint"],
+      "required": ["hoverBrightness", "focusRing", "scrim", "accent", "artPending", "motionBlur", "revealBlur", "glow", "tileBlur", "tileTint"],
       "additionalProperties": false,
       "properties": {
         "hoverBrightness": { "type": "number", "exclusiveMinimum": 1, "maximum": 2 },
@@ -303,6 +308,21 @@
           "type": "number",
           "minimum": 0,
           "description": "The blur in px on the chapter's art behind its selected nav tile (#69)."
+        },
+        "revealBlur": {
+          "type": "number",
+          "minimum": 0,
+          "description": "The blur in px a page's content starts from when it is revealed once loaded, and a page starts or ends its slide with. 0 turns the blur off."
+        },
+        "glow": {
+          "type": "object",
+          "description": "The soft light a filled button (Play, Install, Join, Stop) throws in its own colour on hover: blur is the radius in px, strength the share of the colour in the glow, in percent.",
+          "required": ["blur", "strength"],
+          "additionalProperties": false,
+          "properties": {
+            "blur": { "type": "number", "minimum": 0 },
+            "strength": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
         },
         "motionBlur": {
           "type": "number",

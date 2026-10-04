@@ -253,6 +253,15 @@ folder, on request, read only:
 - **What is kept.** Nothing, as before: the text is returned for the call and
   held by the page alone, which drops it on closing. What is logged is the
   chapter, the kind and the number of lines.
+- **The live log.** The page can also show `latest.log` as the game writes it. Go
+  follows that one file, looking at it every 500 ms through the same `os.Root`
+  and name rules, and emits what was appended as `log:live` events: redacted
+  lines, at most 64 KiB an event, a line still being written held back until
+  its newline. A file that shrank or was replaced, a new run starting, emits a
+  reset with the new file's end. One chapter's log is followed at a time, only
+  while the page asks (`WatchLiveLog`, `StopLiveLog`) and until the app quits.
+  The follower keeps an offset and the first 128 bytes of the file, nothing
+  else; the frontend holds the last 5000 lines and drops them with the page.
 
 ## Ninth amendment, 2026-10-04
 

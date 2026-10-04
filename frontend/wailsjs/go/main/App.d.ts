@@ -77,3 +77,7 @@ export function ShowPrismConsole(arg1:string):Promise<boolean>;
 export function StartPreview(arg1:string,arg2:string):Promise<models.PreviewStart>;
 
 export function StopGame(arg1:string):Promise<models.GameState>;
+
+export function StopLiveLog(arg1:string):Promise<void>;
+
+export function WatchLiveLog(arg1:string):Promise<models.RunLogText>;
