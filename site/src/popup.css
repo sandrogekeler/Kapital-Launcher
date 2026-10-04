@@ -1,0 +1,66 @@
+/* The download popup's motion: it opens and closes with the app's reveal (a
+   short rise out of a slight blur, frontend/src/style.css), the page dims and
+   softens behind it, and the panel for the other system fades in when the
+   switch moves. All of it is CSS on the browser's own popover: display and
+   overlay are transitioned as discrete properties so the closing half plays
+   too, and @starting-style gives the opening half somewhere to start from.
+   A browser without either simply shows and hides the popup. */
+#download {
+  opacity: 0;
+  translate: 0 var(--layout-reveal-rise);
+  filter: blur(var(--effect-reveal-blur));
+  transition:
+    opacity var(--duration-reveal) var(--ease-out),
+    translate var(--duration-reveal) var(--ease-out),
+    filter var(--duration-reveal) var(--ease-out),
+    display var(--duration-reveal) allow-discrete,
+    overlay var(--duration-reveal) allow-discrete;
+}
+#download:popover-open {
+  opacity: 1;
+  translate: 0 0;
+  filter: none;
+}
+@starting-style {
+  #download:popover-open {
+    opacity: 0;
+    translate: 0 var(--layout-reveal-rise);
+    filter: blur(var(--effect-reveal-blur));
+  }
+}
+
+#download::backdrop {
+  opacity: 0;
+  backdrop-filter: blur(var(--effect-motion-blur));
+  transition:
+    opacity var(--duration-reveal) var(--ease-standard),
+    display var(--duration-reveal) allow-discrete,
+    overlay var(--duration-reveal) allow-discrete;
+}
+#download:popover-open::backdrop {
+  opacity: 1;
+}
+@starting-style {
+  #download:popover-open::backdrop {
+    opacity: 0;
+  }
+}
+
+/* The two systems' panels swap by display, so the one coming in starts clear
+   and fades up. */
+.download-panel {
+  transition: opacity var(--duration-reveal) var(--ease-standard);
+}
+@starting-style {
+  .download-panel {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #download,
+  #download::backdrop,
+  .download-panel {
+    transition: none;
+  }
+}
