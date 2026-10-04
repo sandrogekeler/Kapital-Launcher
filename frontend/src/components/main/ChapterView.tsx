@@ -27,9 +27,10 @@ const PRISM_SITE = 'https://prismlauncher.org'
 interface Props {
   chapter: Chapter
   onOpenSettings: (chapterId: string) => void
+  onOpenLogs: (chapterId: string) => void
 }
 
-export function ChapterView({ chapter, onOpenSettings }: Props) {
+export function ChapterView({ chapter, onOpenSettings, onOpenLogs }: Props) {
   const slide = useChapterStore(selectSlide(chapter.id))
   const wikiPick = slide?.page
   // The slideshow off shows the bundled art; the post still follows the slide.
@@ -78,6 +79,7 @@ export function ChapterView({ chapter, onOpenSettings }: Props) {
         art={staticArt ? undefined : slide?.art}
         onOpenWiki={openWiki}
         onOpenSettings={() => onOpenSettings(chapter.id)}
+        onOpenLogs={() => onOpenLogs(chapter.id)}
       />
       <ActionBar
         chapter={chapter}

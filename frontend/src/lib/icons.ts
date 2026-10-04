@@ -13,6 +13,7 @@
 export type { LucideIcon } from 'lucide-react'
 
 export {
+  ArrowDown,
   ArrowLeft,
   BookOpen,
   Check,
@@ -29,6 +30,7 @@ export {
   RefreshCw,
   Settings,
   Square,
+  SquareTerminal,
   TriangleAlert,
   X,
 } from 'lucide-react'

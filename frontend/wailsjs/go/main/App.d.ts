@@ -28,6 +28,8 @@ export function GetPreviewSituations():Promise<Array<models.PreviewSituation>>;
 
 export function GetPrismRelease():Promise<models.PrismRelease>;
 
+export function GetRunLogs(arg1:string):Promise<Array<models.RunLog>>;
+
 export function GetRunReport(arg1:string):Promise<models.RunReport>;
 
 export function GetServerStatus(arg1:string):Promise<models.ServerStatus>;
@@ -56,6 +58,8 @@ export function OpenInstanceFolder(arg1:string):Promise<void>;
 
 export function OpenWikiPage(arg1:string):Promise<void>;
 
+export function ReadRunLog(arg1:string,arg2:string,arg3:string,arg4:number):Promise<models.RunLogText>;
+
 export function RefreshEngine():Promise<models.EngineInfo>;
 
 export function SaveChapterSettings(arg1:string,arg2:models.ChapterSettings):Promise<models.ChapterSettingsInfo>;
@@ -69,3 +73,7 @@ export function ShowPrismConsole(arg1:string):Promise<boolean>;
 export function StartPreview(arg1:string,arg2:string):Promise<models.PreviewStart>;
 
 export function StopGame(arg1:string):Promise<models.GameState>;
+
+export function StopLiveLog(arg1:string):Promise<void>;
+
+export function WatchLiveLog(arg1:string):Promise<models.RunLogText>;

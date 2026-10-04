@@ -160,7 +160,13 @@ func playerNameInHead(path string) string {
 		return ""
 	}
 	defer f.Close() //nolint:errcheck // read-only handle, nothing to flush
-	scan := bufio.NewScanner(io.LimitReader(f, playerHeadBytes))
+	return playerNameInStream(f)
+}
+
+// playerNameInStream is playerNameInHead over any reader of a log's text, up to
+// playerHeadBytes of it.
+func playerNameInStream(r io.Reader) string {
+	scan := bufio.NewScanner(io.LimitReader(r, playerHeadBytes))
 	// A line longer than this ends the search: nothing worth reading is that
 	// long.
 	scan.Buffer(make([]byte, 0, 64<<10), 1<<20)

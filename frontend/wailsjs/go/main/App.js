@@ -54,6 +54,10 @@ export function GetPrismRelease() {
   return window['go']['main']['App']['GetPrismRelease']();
 }
 
+export function GetRunLogs(arg1) {
+  return window['go']['main']['App']['GetRunLogs'](arg1);
+}
+
 export function GetRunReport(arg1) {
   return window['go']['main']['App']['GetRunReport'](arg1);
 }
@@ -110,6 +114,10 @@ export function OpenWikiPage(arg1) {
   return window['go']['main']['App']['OpenWikiPage'](arg1);
 }
 
+export function ReadRunLog(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ReadRunLog'](arg1, arg2, arg3, arg4);
+}
+
 export function RefreshEngine() {
   return window['go']['main']['App']['RefreshEngine']();
 }
@@ -136,4 +144,12 @@ export function StartPreview(arg1, arg2) {
 
 export function StopGame(arg1) {
   return window['go']['main']['App']['StopGame'](arg1);
+}
+
+export function StopLiveLog(arg1) {
+  return window['go']['main']['App']['StopLiveLog'](arg1);
+}
+
+export function WatchLiveLog(arg1) {
+  return window['go']['main']['App']['WatchLiveLog'](arg1);
 }

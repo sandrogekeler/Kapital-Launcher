@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from 'react'
+import type { ReactNode } from 'react'
 import type { RunReport } from '../../types'
 import { timeline } from '../../lib/runReport'
 import { Hint } from '../ui/Notes'
@@ -61,25 +62,49 @@ function LogTail({ report, height, note }: { report: RunReport; height: string; 
   const lines = `${report.logLines} ${report.logLines === 1 ? 'line' : 'lines'}`
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      {/* box-content: the height is the lines', and the border is on top of it. */}
-      <div
-        className={`bg-sunken border-line box-content flex min-h-0 overflow-hidden rounded-md border ${height}`}
-      >
-        <Scrollable
-          as="pre"
-          aria-label="The end of the game's log"
-          className="text-fg-soft text-2xs m-0 px-2 font-mono leading-4 break-all whitespace-pre-wrap select-text"
-        >
-          {report.logTail}
-          <span ref={end} />
-        </Scrollable>
-      </div>
+      <LogBlock height={height} label="The end of the game's log">
+        {report.logTail}
+        <span ref={end} />
+      </LogBlock>
       {note && (
         <Hint>
           {report.logTruncated ? `The last ${lines}` : `All ${lines}`} of the game's log, with your
           name, folders and server addresses masked
         </Hint>
       )}
+    </div>
+  )
+}
+
+interface BlockProps {
+  /**
+   * The block's height, as the classes of a whole number of its 16px lines, or
+   * `grow` to take the height its column leaves.
+   */
+  height: string
+  label: string
+  children: ReactNode
+}
+
+/**
+ * The log block every view of a log shares: a mono `pre` on the sunken surface
+ * that scrolls inside a box of a whole number of lines. Its children are the
+ * text, and a sentinel span in them is how a view finds the scrolling element:
+ * Scrollable does not hand its ref out.
+ */
+export function LogBlock({ height, label, children }: BlockProps) {
+  return (
+    // box-content: the height is the lines', and the border is on top of it.
+    <div
+      className={`bg-sunken border-line box-content flex min-h-0 overflow-hidden rounded-md border ${height}`}
+    >
+      <Scrollable
+        as="pre"
+        aria-label={label}
+        className="text-fg-soft text-2xs m-0 px-2 font-mono leading-4 break-all whitespace-pre-wrap select-text"
+      >
+        {children}
+      </Scrollable>
     </div>
   )
 }
