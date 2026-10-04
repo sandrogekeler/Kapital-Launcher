@@ -41,7 +41,8 @@ import { ensureFreshDist } from './lib/dist-freshness.mjs'
 // 88.6 since the hero waits for its pictures (2026-10-04): the bundled titles,
 // icons and chapter pictures are decoded at startup, and a new backdrop drifts
 // in only once it has decoded (lib/useLoadedImage). Both run from the first
-// paint, so they cannot load on demand. Measured 88.5 KB, from 88.2 KB before it.
+// paint, so they cannot load on demand. Measured 88.5 KB alone, 88.6 KB with the
+// wiki pictures setting beside it, from 88.2 KB before them.
 const BUDGET_KB = 88.6
 
 const DIST_ASSETS = await ensureFreshDist()
