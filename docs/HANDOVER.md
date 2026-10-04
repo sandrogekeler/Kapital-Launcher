@@ -171,9 +171,11 @@ one, the icon check on the PC is what is left), #35 (decided on 2026-10-01).
 
 ## Open questions, all the author's
 
-- **The licence.** The repository has none, and SignPath Foundation signs
-  only projects under an OSI licence (issue 179). Which one is the author's
-  call; nothing can be signed on Windows before it.
+- **The vendored files' licence.** This repository is GPL-3.0-only since
+  2026-10-04 (issue 179); `kollektiv-mc/Kollektiv` and `kollektiv-mc/Konnekt`,
+  where the vendored runner, workflows and notes generator come from, carry no
+  licence. If both are the author's own nothing is owed; a licence there would
+  make the copies here unambiguous. `[verify]`
 - **ADR-7 and Intel Macs.** #107 builds a universal bundle because the only
   Mac to test on is an Intel iMac. ADR-7 still says Apple Silicon only (#31).
 - **The `codesign` check's strength.** `verify_darwin.go` runs
