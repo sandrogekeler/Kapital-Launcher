@@ -253,3 +253,103 @@ folder, on request, read only:
 - **What is kept.** Nothing, as before: the text is returned for the call and
   held by the page alone, which drops it on closing. What is logged is the
   chapter, the kind and the number of lines.
+
+## Ninth amendment, 2026-10-04
+
+Some mods cost more than a player's machine can give (Distant Horizons above
+all) or are a matter of taste (Colorwheel, Create Better FPS), and there was no
+way to turn one off that lasted (issue 156). packwiz-installer fetches again any
+non-optional file whose jar is missing, even when the pack has not changed
+(v0.5.14, `UpdateManager.kt:137-152`, `DownloadTask.kt:231-263`), so a mod
+renamed to `.jar.disabled`, Prism's own convention and the one every loader
+skips (NeoForge and Forge's `ModsFolderLocator`, Fabric's
+`DirectoryModCandidateFinder`: only `*.jar`), came back at the next Play. Its own
+optional-file mechanism has no flag for a headless run and enables every optional
+file whenever a pack update adds one (`CLIHandler.kt:48-54`). The author chose to
+have the launcher wrap the sync over editing the packs or running the installer
+with its window.
+
+- **The command.** Prism's pre-launch command becomes
+  `"<copy>" --prelaunch-sync <pack URL>`, the launcher's own executable. The URL is
+  still last, which is what the pack source switch and the URL read back rely on.
+  Prism splits the command without a shell: `substituteVariables`, then
+  `QProcess::splitCommand`, then `start(program, args)` (`PreLaunchCommand.cpp`),
+  so the quotes keep a path with spaces together and a `$` would be read as a
+  variable, which is why a copy path with one is refused. The environment is
+  Prism's own (`INST_MC_DIR`, `INST_JAVA`, `INST_ID`), the working directory the
+  game folder. A GUI-subsystem program started this way gets Qt's piped stdio:
+  tested with a Go program built `-H=windowsgui`, whose output, exit code and an
+  argument with a space all arrived, and Wails creates no window before
+  `wails.Run`, so `main()` looks at `os.Args` first and nothing of the app starts.
+  Prism has no timeout on the command and cancels it with a hard kill; its output
+  is read in the system code page, so the sync prints ASCII lines prefixed
+  `kapital-sync:` and nothing else of its own.
+- **The copy.** The command names a copy of the launcher kept in its data folder,
+  not the running executable: `<data dir>/sync/kapital-launcher(.exe)`, beside a
+  version file. Its path never moves, so a Play from Prism directly keeps
+  working after the launcher is moved or updated, and a macOS app run from a
+  translocated path cannot break it. It is made before the pre-launch command is
+  written, rewritten or switched, and when the launcher starts if one exists;
+  refreshed when the running version differs from the version file, when the copy
+  is not the size it was written at, or when it is gone; written to a temporary
+  file, then renamed over the copy, then the version file, so a Prism that runs it
+  in the middle sees one whole copy. On Windows a copy a sync is running from
+  moves aside to `.old` first (a running program can be renamed, not replaced). A
+  dev build (`-dev` in `Version`: `wails dev`, a plain `go build`) keeps its copy
+  in `sync-dev/` and also refreshes when its own file changes, since every rebuild
+  shares the version; it never overwrites a release copy, and the command follows
+  whichever build last played, as the rewrite before each Play names the copy of
+  the build that runs it. Where no copy can be made (a data folder whose path
+  Prism would misread) the instance keeps the packwiz command, and only the mod
+  switches wait.
+- **The run.** (1) A journal, `kapital-disabled.json` in the game folder, lists
+  the jars about to be restored, written before anything is renamed. (2) Each of
+  the player's disabled mods is renamed from `x.jar.disabled` back to `x.jar`, so
+  the installer finds nothing missing and downloads nothing; if both exist, as
+  after a pack update downloaded the mod again, the stale `.disabled` is removed
+  and the new jar kept. (3) packwiz-installer runs with exactly the packwiz
+  template's arguments as an array (`packwizSyncArgs`, kept equal to the template
+  by a test), in the game folder, with its output on the sync's, and no window of
+  its own. (4) Whatever its exit code, every disabled mod is renamed to
+  `.jar.disabled` again, a jar the installer downloaded that is on the list
+  included, and so is a jar of a manifest toggle whose name a list entry matches
+  (the pack replaced `DistantHorizons-3.3.3` with `3.4.0`; the toggle's prefix says
+  it is the same mod). (5) The journal is removed, and the sync exits with the
+  installer's code. An instance that is not a chapter of the launcher, or whose
+  game folder is not the instance's own, is synced as it always was.
+- **What it touches.** Only regular files directly inside `<game folder>/mods`,
+  through an `os.Root`, by a name the strict jar shape accepts, plus the journal.
+  The list is the launcher's own, per chapter, in its settings
+  (`disabledMods`, jar base names), written only by `SetModsDisabled`, which checks
+  each name against the folder, saves the list, and renames at once so the folder
+  matches before the next Play. It is refused while the game runs and under a
+  developer preview, as the other writes are. The manifest's quick toggles
+  (`pack.toggles`, a name and a jar-name prefix) are matched against file names and
+  never reach a path or a command.
+- **Migration.** `RewritePreLaunchCommand` brings the first and the packwiz
+  template, and a sync command that names another copy of the launcher, to the sync
+  command before a Play, keeping the URL; `SwitchPackSource` accepts all of them.
+  A command that is not exactly one of the launcher's is left alone, as before.
+
+What it costs, and what stays open:
+
+- **A killed run.** Cancelling in Prism kills the sync, not the Java it started,
+  which goes on downloading, and leaves the mods as jars with the journal.
+  The next sync treats a jar as restored already and puts it away; the settings
+  page does the same when it opens with the game closed. Until one of them runs the
+  mods load if the game is started some other way.
+- **A disabled mod that is not a toggle and is updated** comes back enabled: its
+  list entry names a jar that is gone. Only a manifest toggle follows a version
+  bump. The list entry is shown skipped in the log, and the next save from the
+  page drops it.
+- **The first Play** has no mods to restore: a mod on the list that the installer
+  downloads is put away after it, so it is downloaded once.
+- **The copy can go missing** (the data folder cleared while an instance still
+  names it): Prism then fails the pre-launch step; the next Play from the launcher
+  makes it again.
+- **Not verified on a real run:** Windows security software and SmartScreen on a
+  copied unsigned program run from the data folder; that the sync's Java child
+  opens no console window (`CREATE_NO_WINDOW` is set, as Qt does); and on macOS
+  that the Wails binary runs outside its bundle, which a Go program linked against
+  AppKit and run before any window should, with its ad-hoc signature intact in a
+  byte copy.

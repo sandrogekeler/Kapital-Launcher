@@ -128,7 +128,15 @@ and the splash on reads as a failed start, because its console appears during
    launcher no longer looks at. Lichdenstein is Fabric 1.20.6 and has never
    run in Prism, so its log markers and #45's early-window behaviour are
    unmeasured.
-5. **#36**, second half: mod toggles, once `kapital-packs` marks mods optional.
+5. **#36**, second half: done differently as issue 156 (branch `feat/mod-control`,
+   stacked on `feat/run-logs`): mod toggles do not wait for `kapital-packs` to mark
+   mods optional. Prism's pre-launch command is the launcher's own copy in a sync
+   mode that puts the player's disabled mods back, runs packwiz-installer and puts
+   them away again (ADR-2 ninth amendment). Still to see on the PC: the real
+   Distant Horizons off through two Plays with nothing downloaded; Defender and
+   SmartScreen on the copy in `%APPDATA%\KapitalLauncher\sync`; Prism cancelled in
+   the middle of a sync; and on the iMac that the Wails binary runs outside its
+   bundle.
 6. **#124** Developer previews: a Preview section under Developer in
    Settings that pushes synthetic state through the real paths (card, bar,
    report, pack line, Prism install and update), so the author can judge the

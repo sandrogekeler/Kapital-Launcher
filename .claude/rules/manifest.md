@@ -22,7 +22,7 @@ one is added to the other two in the same change, and to
 It names things. It carries no command, JVM argument or filesystem path, and
 never will: a manifest is untrusted input wherever it comes from
 (`agent_docs/SECURITY_CHECKLIST.md`, S2). Pre-launch commands for pack sync
-(milestone 4) are built in Go from a template and the manifest contributes
+are built in Go from a template and the manifest contributes
 only the `pack.toml` URL.
 
 Every URL is https on a host in `AllowedManifestHosts`. Adding a host is a
@@ -43,6 +43,15 @@ deliberate edit to that list with a reason in the commit.
   `Addresses[0]`. `joinOnLaunch: true` is what turns Play into Join and adds
   `--server` to the launch; a modpack that merely has a server says `false`.
   `software` is a fact for the panel.
+- `pack.toggles` is optional: up to twelve `{ name, jarPrefix }`, the mods the
+  chapter's settings offer as quick switches (issue 156). `jarPrefix` is the part
+  of the jar's file name before its version, separator included
+  (`DistantHorizons-`, `colorwheel-neoforge-`, `colorwheel_patcher-neoforge-`):
+  every jar in the instance's mods folder that starts with it is that mod, so the
+  switch survives a version bump. Take it from the `filename` of the mod's
+  `.pw.toml` in `kapital-packs`. It is a prefix and never a path or a pattern
+  (`[A-Za-z0-9][A-Za-z0-9._+-]{2,63}`), names are unique, and no prefix starts
+  another, so a jar is never two switches (`validateToggles`).
 - `state` is `released`, `development` or `planned`.
 - An unsettled fact is `"[PLACEHOLDER]"` for a string and `null` for a number or
   URL. The UI renders both faint; do not invent a value to fill a slot.

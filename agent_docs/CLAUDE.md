@@ -21,8 +21,9 @@ Same shape as Konnekt, deliberately (docs/adr/0001-app-framework.md).
 - `backend/models/` holds the data shapes; Wails generates `frontend/wailsjs/` from
   the bound methods on `App` in `app.go`. Regenerate with `wails generate module`.
 - `backend/services/` holds everything with a side effect: Prism detection and
-  launch, the server ping and its ticker, settings, logging, redaction. Each
-  service ships with tests.
+  launch, the pre-launch sync (the launcher's own copy, `--prelaunch-sync`) and
+  the mod switches, the server ping and its ticker, settings, logging,
+  redaction. Each service ships with tests.
 - `site/` is the static download page (ADR-9). It imports the app's tokens,
   fonts and images from `frontend/`, and its links live in `site/links.json`.
 - `frontend/src/`: `components/` (view), `stores/` (one Zustand store per domain:

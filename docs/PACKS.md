@@ -68,8 +68,10 @@ in Prism's instances folder, under a fixed name such as `kapital-frangfurd`:
 
 - `instance.cfg`: Prism's settings for the instance, with the memory and the
   Java preset from the manifest, and one line Prism runs before every start,
-  the **pre-launch command**. That command runs packwiz-installer with the
-  pack's address. It is the whole link between the instance and the pack.
+  the **pre-launch command**. That command starts a copy of the launcher kept in
+  its data folder in a sync mode, with the pack's address, and the sync runs
+  packwiz-installer (the next section). It is the whole link between the instance
+  and the pack.
 - `mmc-pack.json`: the Minecraft version and the mod loader, read from the
   hosted `pack.toml` and checked against the manifest. Prism downloads the
   loader and a matching Java on the first start.
@@ -109,6 +111,26 @@ When the step fails, because the host or a mod site could not be reached or
 a file's checksum did not match, Prism stops before the game and the launcher
 reports "The pack could not be synced". Nothing half-done is kept as the new
 record, so the next Play tries the same difference again.
+
+### Switching a mod off
+
+packwiz-installer puts back any mod of the pack that is missing, so a jar
+renamed to `.jar.disabled` (Prism's way to switch a mod off, which every loader
+skips) would be downloaded again at the next Play. The launcher therefore runs the
+sync itself: Prism's pre-launch command is `kapital-launcher --prelaunch-sync
+<pack address>`, a copy of the launcher in its data folder. The copy renames the
+mods the player switched off back to `.jar`, so the installer finds nothing missing
+and downloads nothing, runs the installer exactly as above, and renames them to
+`.jar.disabled` again, whatever the installer's result was. The player's choice is
+the launcher's own, kept in its settings, and made from a chapter's settings (the
+pen in the hero, "Mods"): the few mods the manifest names as quick switches
+(Distant Horizons, Colorwheel and so on), and "Advanced mod control" for every jar
+in the mods folder. A change applies to the folder at once and to the game on the
+next Play, and waits while the game is running. A mod the pack updates keeps its
+switch only when it is one of the quick switches, since those match the jar by the
+part of its name before the version; any other comes back switched on after an
+update. A mod the pack has not downloaded yet cannot be switched until the first
+Play.
 
 ## Updates are pulled, never pushed
 
@@ -181,6 +203,7 @@ and the pack's `pack.toml` names them.
 | Thing | Where |
 |---|---|
 | The launcher's settings and log | The app data folder, `KapitalLauncher` under the OS's application data |
+| The copy of the launcher Prism's pre-launch command runs | `sync/` under that folder (`sync-dev/` for a development build), refreshed when the launcher's version changes |
 | The managed Prism program | `prism/app-<version>/` under that folder, replaced whole on an update |
 | Prism's data: accounts, Java, instances | `prism/root/` under that folder, never touched by an update; a player's own Prism keeps its own data folder |
 | The chapter's instance | `instances/kapital-<chapter>/` inside Prism's data |
