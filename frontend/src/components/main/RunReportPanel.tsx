@@ -97,7 +97,8 @@ export function RunReportPanel({ chapter, onClose }: Props) {
   if (error) {
     body = <ErrorLine>{error}</ErrorLine>
   } else if (!loaded) {
-    body = <p className="text-fg-muted m-0 text-sm">Reading the run.</p>
+    // The page reveals its body once the report has been read.
+    body = null
   } else if (!report) {
     // No bridge at all: the browser-only preview has no run to read.
     body = (
@@ -137,6 +138,7 @@ export function RunReportPanel({ chapter, onClose }: Props) {
       label={`${chapter.name} run report`}
       title={`${chapter.name} run report`}
       onBack={onClose}
+      ready={loaded}
     >
       {/* One report, not sections: its parts sit closer than a page's blocks do. */}
       <div className="flex flex-col gap-6">{body}</div>

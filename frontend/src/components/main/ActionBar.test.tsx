@@ -73,7 +73,7 @@ function bar(over: Partial<ComponentProps<typeof ActionBar>> = {}) {
 }
 
 const play = () => screen.getByRole('button', { name: new RegExp(chapter.name) })
-const stop = () => screen.getByRole('button', { name: /^Stop/ })
+const stop = () => screen.getByRole('button', { name: /^(Stop|Confirm)$/ })
 
 /** The two rows beside Play (or Stop) are the element right after the button, before the spacer. */
 const beside = () => screen.getAllByRole('button')[0]!.nextElementSibling as HTMLElement
@@ -335,7 +335,7 @@ describe('ActionBar Stop', () => {
       const { unmount } = bar({ game: game(phase), onStop })
       fireEvent.click(stop())
       expect(onStop).not.toHaveBeenCalled()
-      expect(stop()).toHaveTextContent('Stop the game?')
+      expect(stop()).toHaveTextContent('Confirm')
       fireEvent.click(stop())
       expect(onStop).toHaveBeenCalledTimes(1)
       expect(stop()).toHaveTextContent(/^Stop$/)
@@ -348,13 +348,34 @@ describe('ActionBar Stop', () => {
     const onStop = vi.fn()
     bar({ game: game('running'), onStop })
     fireEvent.click(stop())
-    expect(stop()).toHaveTextContent('Stop the game?')
+    expect(stop()).toHaveTextContent('Confirm')
     act(() => void vi.advanceTimersByTime(4900))
-    expect(stop()).toHaveTextContent('Stop the game?')
+    expect(stop()).toHaveTextContent('Confirm')
     act(() => void vi.advanceTimersByTime(200))
     expect(stop()).toHaveTextContent(/^Stop$/)
     fireEvent.click(stop())
     expect(onStop).not.toHaveBeenCalled()
+  })
+
+  it('is red, the danger colour, from the start to the question and back', () => {
+    bar({ game: game('running') })
+    expect(stop()).toHaveClass('bg-danger', 'glow-danger', 'min-w-(--layout-play-min)')
+    expect(stop()).not.toHaveClass('bg-accent')
+    fireEvent.click(stop())
+    expect(stop()).toHaveTextContent('Confirm')
+    expect(stop()).toHaveClass('bg-danger', 'glow-danger')
+  })
+
+  it('is red while the hand-over to Prism is still out, and waits', () => {
+    bar({ launching: true })
+    expect(stop()).toHaveClass('bg-danger')
+    expect(stop()).toBeDisabled()
+  })
+
+  it('keeps Play in the accent', () => {
+    bar()
+    expect(play()).toHaveClass('bg-accent', 'glow-accent')
+    expect(play()).not.toHaveClass('bg-danger')
   })
 
   it('clears its timer with the component', () => {

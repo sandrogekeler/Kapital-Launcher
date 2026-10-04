@@ -41,6 +41,7 @@ export default defineConfig({
         'src/**/*.test.{ts,tsx}',
         'src/styles/tokens.ts',
         'src/main.tsx',
+        'src/test-css.ts',
         'src/splash/main.tsx',
         'src/**/*.d.ts',
       ],

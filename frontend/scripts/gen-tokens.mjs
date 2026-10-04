@@ -16,6 +16,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
+import { emitRevealValues } from './lib/emit-reveal.mjs'
 
 const SOURCE = new URL('../../design/tokens.json', import.meta.url)
 const CSS_OUT = new URL('../src/styles/tokens.css', import.meta.url)
@@ -288,6 +289,7 @@ function emitEffects(src, push) {
   push(`  --effect-motion-blur: ${motionBlur}px;`)
   push(`  --effect-tile-blur: ${tileBlur}px;`)
   push(`  --effect-tile-tint: ${tileTint}%;`)
+  emitRevealValues(src, push)
   push(`}`)
 }
 

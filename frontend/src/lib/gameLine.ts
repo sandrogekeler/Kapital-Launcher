@@ -40,7 +40,7 @@ export function gameLine(
 ): [string, string, string] | null {
   switch (state?.phase) {
     case 'starting':
-      return ['◐ Starting', `Prism is getting ${chapterName} ready`, 'text-accent']
+      return ['◐ Starting', `Getting ${chapterName} ready`, 'text-accent']
     case 'mods':
       return ['◐ Loading mods', 'The game has started', 'text-accent']
     case 'window':

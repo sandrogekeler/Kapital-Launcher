@@ -68,7 +68,8 @@ export function LogsPanel({ chapter, onClose }: Props) {
   } else if (unavailable) {
     body = <p className="text-fg-muted m-0 text-sm">The logs can only be read in the app window.</p>
   } else if (!logs) {
-    body = <p className="text-fg-muted m-0 text-sm">Reading the logs.</p>
+    // Not read yet: the page's reveal waits for the list (issue 155).
+    body = null
   } else if (logs.length === 0 && !live) {
     body = (
       <p className="text-fg-muted m-0 text-sm">No logs yet. They appear after the first Play.</p>
@@ -80,6 +81,7 @@ export function LogsPanel({ chapter, onClose }: Props) {
   return (
     <Page
       fill
+      ready={installed !== true || listError !== null || unavailable || logs !== null}
       label={`${chapter.name} logs`}
       title={`${chapter.name} logs`}
       onBack={onClose}
