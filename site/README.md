@@ -60,7 +60,7 @@ chapter facts, is a change to this page in the same pull request.
 | Wiki | `data/launcher.json` `wiki.baseUrl` | Never null; the build fails |
 
 `vite.config.js` fills them in at build time and refuses anything that is not
-https. `release` is a tag such as `v0.1.0-beta.1`, checked against
+https. `release` is a tag such as `v1.0.0-beta.1`, checked against
 `^v\d+\.\d+\.\d+(-(alpha|beta)\.\d+)?$`; from it and the `github` link the
 build derives the two installers and the release notes:
 
@@ -74,7 +74,7 @@ was set on 2026-10-02, the repository being public. When a release exists, set:
 
 ```json
 {
-  "release": "v0.1.0-beta.1",
+  "release": "v1.0.0-beta.1",
   "github": "https://github.com/sandrogekeler/Kapital-Launcher"
 }
 ```
