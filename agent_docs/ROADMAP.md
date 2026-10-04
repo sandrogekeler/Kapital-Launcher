@@ -124,7 +124,7 @@ What is left:
 - [x] Forward frontend render errors to the Go log (#83)
 - [x] Release workflow with attested artefacts for Windows and macOS; code
       signing decision (ADR-6): `.github/workflows/build.yml` (#107) builds both
-      on every pull request and cuts an attested release from the Actions tab;
+      and cuts an attested release, only from the Actions tab since issue 177;
       the first prerelease dispatch is still to run
 - [x] Installers: an NSIS setup for Windows and a disk image for macOS, and
       the bundle identifier (issue 177)

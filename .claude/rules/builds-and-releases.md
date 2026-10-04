@@ -12,13 +12,17 @@ paths:
 `wails.json`'s `info.productVersion`. The `-dev` suffix marks a build that is
 not a release. A release stamps it with `-ldflags "-X main.Version=<tag>"`.
 
-`.github/workflows/build.yml` packages both targets with `wails build`. On every
-push to `main` and every pull request it uploads `windows-amd64` (the NSIS
-setup and the bare `.exe`) and `macos-universal` (a disk image holding the
-`.app` and a link to Applications) as workflow artefacts for 14 days, named
-`kapital-launcher-<short sha>-<target>`. A release is cut from the Actions tab:
-run it with a `version` input, `vX.Y.Z[-alpha.N|-beta.N]`. The tag is
-validated, the build stamps `main.Version` with it and `wails.json`'s
+`.github/workflows/build.yml`, named Release, is the one place both targets
+are packaged with `wails build`. It runs only from the Actions tab ("Run
+workflow"), never on a push or a pull request; those are judged by `ci.yml`.
+Its fields: `version` (`X.Y.Z`), `channel` (`beta`, `alpha` or `stable`),
+`number` (the N of a prerelease) and `dry_run`. Together they make the tag,
+`vX.Y.Z[-alpha.N|-beta.N]`. It uploads `windows-amd64` (the NSIS setup and the
+bare `.exe`) and `macos-universal` (a disk image holding the `.app` and a link
+to Applications) as workflow artefacts for 14 days, named
+`kapital-launcher-<tag>-<target>`; a dry run stops there and publishes
+nothing, which is how a change to the workflow or to `build/` is tried from
+its branch. The tag is validated and refused when taken, the build stamps `main.Version` with it and `wails.json`'s
 `productVersion` with its numeric part, and the `release` job attests the disk
 image and both exes with `actions/attest`, writes `checksums.txt` and publishes a GitHub
 Release at that commit, a prerelease when the tag has a suffix. No
