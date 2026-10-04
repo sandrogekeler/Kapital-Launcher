@@ -55,6 +55,9 @@ type LiveLog struct {
 	// newTick makes the channel that paces the follower and the func that
 	// stops it; a test swaps it for a channel it sends on.
 	newTick func() (<-chan time.Time, func())
+	// afterPoll, when set, is called when a look at the file is over; a test
+	// waits on it.
+	afterPoll func()
 }
 
 // NewLiveLog returns a LiveLog that looks at the file every 500 ms.
@@ -102,6 +105,7 @@ func (l *LiveLog) start(ctx context.Context, chapterID, instanceDir, kind, name 
 		r:       r.WithPlayer(got.player),
 		offset:  got.end,
 		emit:    emit,
+		after:   l.afterPoll,
 	}
 	f.head = f.readHead()
 	tick, stopTick := l.newTick()
@@ -152,8 +156,9 @@ type liveFollower struct {
 	// offset is the byte after the last line sent; the next read starts there.
 	offset int64
 	// head is the first bytes of the file followed, to tell it from a new one.
-	head []byte
-	emit func(models.LiveLogEvent)
+	head  []byte
+	emit  func(models.LiveLogEvent)
+	after func()
 }
 
 func (f *liveFollower) run(ctx context.Context, tick <-chan time.Time) {
@@ -163,6 +168,9 @@ func (f *liveFollower) run(ctx context.Context, tick <-chan time.Time) {
 			return
 		case <-tick:
 			f.poll(ctx)
+			if f.after != nil {
+				f.after()
+			}
 		}
 	}
 }

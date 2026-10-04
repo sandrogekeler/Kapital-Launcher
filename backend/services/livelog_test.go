@@ -14,25 +14,29 @@ import (
 )
 
 // liveRig is a LiveLog paced by the test: each tick it sends is one look at
-// the file, and sending two means the first has been finished.
+// the file, and the look reports when it is over.
 type liveRig struct {
 	*runLogRig
 	live   *LiveLog
 	ticks  []chan time.Time
+	polled chan struct{}
 	mu     sync.Mutex
 	events []models.LiveLogEvent
 }
 
 func newLiveRig(t *testing.T) *liveRig {
 	t.Helper()
-	rig := &liveRig{runLogRig: newRunLogRig(t)}
-	rig.live = &LiveLog{newTick: func() (<-chan time.Time, func()) {
-		tick := make(chan time.Time)
-		rig.mu.Lock()
-		rig.ticks = append(rig.ticks, tick)
-		rig.mu.Unlock()
-		return tick, func() {}
-	}}
+	rig := &liveRig{runLogRig: newRunLogRig(t), polled: make(chan struct{})}
+	rig.live = &LiveLog{
+		newTick: func() (<-chan time.Time, func()) {
+			tick := make(chan time.Time)
+			rig.mu.Lock()
+			rig.ticks = append(rig.ticks, tick)
+			rig.mu.Unlock()
+			return tick, func() {}
+		},
+		afterPoll: func() { rig.polled <- struct{}{} },
+	}
 	t.Cleanup(rig.live.Shutdown)
 	return rig
 }
@@ -47,19 +51,22 @@ func (r *liveRig) start(chapter string) (models.RunLogText, error) {
 	return r.live.Start(context.Background(), chapter, r.instance, runLogRedactor(), r.emit)
 }
 
-// look makes the follower of the n'th Start look at the file, and returns once
-// it has: the second tick is taken only after the first look is over.
+// look makes the follower of the n'th Start look at the file once, and returns
+// when the look is over.
 func (r *liveRig) look(n int) {
 	r.t.Helper()
 	r.mu.Lock()
 	tick := r.ticks[n]
 	r.mu.Unlock()
-	for range 2 {
-		select {
-		case tick <- time.Time{}:
-		case <-time.After(5 * time.Second):
-			r.t.Fatal("the follower is not looking at the file")
-		}
+	select {
+	case tick <- time.Time{}:
+	case <-time.After(5 * time.Second):
+		r.t.Fatal("the follower is not looking at the file")
+	}
+	select {
+	case <-r.polled:
+	case <-time.After(5 * time.Second):
+		r.t.Fatal("the look did not end")
 	}
 }
 
