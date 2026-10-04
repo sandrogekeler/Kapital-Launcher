@@ -55,6 +55,16 @@ const report = (present: Record<string, boolean>, sizeBytes: Record<string, numb
     sizeBytes,
   })
 
+/** The bundled manifest with Luxemburg's server taken away: a chapter with none. */
+function withLuxemburgServerless() {
+  return {
+    ...BUNDLED_MANIFEST,
+    chapters: BUNDLED_MANIFEST.chapters.map((c) =>
+      c.id === 'luxemburg' ? { ...c, server: null } : c,
+    ),
+  }
+}
+
 /** The bundled manifest with Lichdenstein's server at a settled address. */
 function withLichdensteinAt(address: string) {
   return {
@@ -203,6 +213,9 @@ describe('App', () => {
       root: '',
       source: 'path',
     })
+    const manifest = withLichdensteinAt('placeholder.invalid')
+    useChapterStore.setState({ manifest })
+    vi.mocked(Bindings.GetManifest).mockResolvedValue(models.Manifest.createFrom(manifest))
     render(<App />)
     await screen.findByRole('heading', { level: 1 })
     switchTo(/02.*Lichdenstein/)
@@ -499,6 +512,10 @@ describe('App', () => {
   })
 
   it('keeps Play reading Play when the installed pack is behind its source, and names the version', async () => {
+    // The pack line is the right side's only for a chapter without a server.
+    const manifest = withLuxemburgServerless()
+    useChapterStore.setState({ manifest })
+    vi.mocked(Bindings.GetManifest).mockResolvedValue(models.Manifest.createFrom(manifest))
     vi.mocked(Bindings.GetEngine).mockResolvedValue(prismFound)
     vi.mocked(Bindings.GetInstances).mockResolvedValue(report({ luxemburg: true }))
     vi.mocked(Bindings.LaunchChapter).mockResolvedValue()

@@ -180,7 +180,12 @@ func TestGetServerStatusRefusesAnUnknownChapterAndAnswersForOne(t *testing.T) {
 	if _, err := app.GetServerStatus("atlantis"); err == nil {
 		t.Fatal("unknown chapter must be refused")
 	}
-	// Luxemburg has no server: checked, offline, no dial attempted.
+	// A chapter with no server: checked, offline, no dial attempted.
+	for i := range app.manifest.Chapters {
+		if app.manifest.Chapters[i].ID == "luxemburg" {
+			app.manifest.Chapters[i].Server = nil
+		}
+	}
 	got, err := app.GetServerStatus("luxemburg")
 	if err != nil || !got.Checked || got.Online || got.ChapterID != "luxemburg" {
 		t.Fatalf("%v %+v", err, got)

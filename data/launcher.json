@@ -27,7 +27,11 @@
         "packwiz": "https://kapital-packs.alessandrogekeler.workers.dev/luxemburg/pack.toml",
         "mrpack": null
       },
-      "server": null,
+      "server": {
+        "addresses": [{ "label": "Main", "address": "stamina-exemplary.tun.ply.gg" }],
+        "joinOnLaunch": false,
+        "software": "[PLACEHOLDER]"
+      },
       "wiki": {
         "title": "Bellum Castle",
         "line": "A trade empire grown out of a mountain pass.",
@@ -58,7 +62,7 @@
         "mrpack": null
       },
       "server": {
-        "addresses": [{ "label": "Main", "address": "placeholder.invalid" }],
+        "addresses": [{ "label": "Main", "address": "stamina-berkshire.tun.ply.gg" }],
         "joinOnLaunch": true,
         "software": "Paper"
       },

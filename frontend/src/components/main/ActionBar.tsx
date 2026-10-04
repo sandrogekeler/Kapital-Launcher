@@ -217,9 +217,10 @@ export function ActionBar({
     // not on the line (issue 151).
     const pending = isPlaceholderAddress(chosenAddress(chapter.server, serverChoice))
     ;[state, meta] = serverLine(status, pending)
-    if (pending || (status?.checked && !status.online)) {
-      tone = 'text-fg-muted'
-    }
+    // A server that is down is a fact the player acts on, so it is red; one
+    // nobody has an address for yet is only quiet.
+    if (pending) tone = 'text-fg-muted'
+    else if (status?.checked && !status.online) tone = 'text-danger'
   } else {
     const version = packVersion(packState, chapter.pack.version)
     ;[state, meta] = ['● Updated', version ? `Version ${version}` : 'Version pending']
