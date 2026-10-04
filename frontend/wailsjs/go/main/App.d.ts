@@ -12,6 +12,8 @@ export function CopyRedactedLog():Promise<number>;
 
 export function GetAppVersion():Promise<string>;
 
+export function GetChapterMods(arg1:string):Promise<models.ChapterMods>;
+
 export function GetChapterSettings(arg1:string):Promise<models.ChapterSettingsInfo>;
 
 export function GetEngine():Promise<models.EngineInfo>;
@@ -65,6 +67,8 @@ export function RefreshEngine():Promise<models.EngineInfo>;
 export function SaveChapterSettings(arg1:string,arg2:models.ChapterSettings):Promise<models.ChapterSettingsInfo>;
 
 export function SaveSettings(arg1:models.AppSettings):Promise<void>;
+
+export function SetModsDisabled(arg1:string,arg2:Array<string>):Promise<models.ChapterMods>;
 
 export function SetPackSource(arg1:string,arg2:string):Promise<models.InstanceReport>;
 

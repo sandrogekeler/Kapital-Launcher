@@ -22,6 +22,10 @@ export function GetAppVersion() {
   return window['go']['main']['App']['GetAppVersion']();
 }
 
+export function GetChapterMods(arg1) {
+  return window['go']['main']['App']['GetChapterMods'](arg1);
+}
+
 export function GetChapterSettings(arg1) {
   return window['go']['main']['App']['GetChapterSettings'](arg1);
 }
@@ -128,6 +132,10 @@ export function SaveChapterSettings(arg1, arg2) {
 
 export function SaveSettings(arg1) {
   return window['go']['main']['App']['SaveSettings'](arg1);
+}
+
+export function SetModsDisabled(arg1, arg2) {
+  return window['go']['main']['App']['SetModsDisabled'](arg1, arg2);
 }
 
 export function SetPackSource(arg1, arg2) {
