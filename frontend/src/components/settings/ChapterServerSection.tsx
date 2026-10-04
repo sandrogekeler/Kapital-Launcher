@@ -3,8 +3,9 @@ import type { AppSettings, Chapter } from '../../types'
 import { chosenLabel } from '../../lib/manifest'
 import { errMsg } from '../../lib/ipc'
 import { useSettingsStore } from '../../stores/useSettingsStore'
-import { Section } from '../ui/Section'
+import { Server } from '../../lib/icons'
 import { Segmented } from '../ui/Segmented'
+import { SettingsCard, SettingsSection } from '../ui/SettingsLayout'
 import { Toggle } from '../ui/Toggle'
 
 interface Props {
@@ -46,32 +47,36 @@ export function ChapterServerSection({ chapter }: Props) {
   const joining = settings.joinServers?.includes(chapter.id) ?? false
   const others = (settings.joinServers ?? []).filter((id) => id !== chapter.id)
   return (
-    <Section title="Server">
-      {server.addresses.length > 1 ? (
-        <Segmented
-          label="Address"
-          value={label}
-          options={server.addresses.map((a) => ({ value: a.label, label: a.label }))}
-          error={errors.address}
-          onChange={(next) =>
-            void save('address', {
-              serverChoices: { ...settings.serverChoices, [chapter.id]: next },
-            })
+    <SettingsSection title="Server" icon={Server}>
+      <SettingsCard>
+        {server.addresses.length > 1 ? (
+          <Segmented
+            inline
+            label="Address"
+            value={label}
+            options={server.addresses.map((a) => ({ value: a.label, label: a.label }))}
+            error={errors.address}
+            onChange={(next) =>
+              void save('address', {
+                serverChoices: { ...settings.serverChoices, [chapter.id]: next },
+              })
+            }
+          />
+        ) : (
+          <div className="flex items-center justify-between gap-6 text-sm">
+            <span className="text-fg font-medium">Address</span>
+            <span className="text-fg-muted">{label}</span>
+          </div>
+        )}
+        <Toggle
+          label="Join the server on Play"
+          checked={joining}
+          error={errors.join}
+          onChange={(on) =>
+            void save('join', { joinServers: on ? [...others, chapter.id] : others })
           }
         />
-      ) : (
-        <div className="flex flex-col gap-1.5">
-          <span className="text-fg-muted text-sm">Address</span>
-          <span className="text-fg text-sm">{label}</span>
-        </div>
-      )}
-      <Toggle
-        label="Join the server on Play"
-        checked={joining}
-        hint="Play connects to the chosen address as the game starts."
-        error={errors.join}
-        onChange={(on) => void save('join', { joinServers: on ? [...others, chapter.id] : others })}
-      />
-    </Section>
+      </SettingsCard>
+    </SettingsSection>
   )
 }

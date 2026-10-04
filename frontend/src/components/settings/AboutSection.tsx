@@ -4,9 +4,8 @@ import { DISCLAIMER } from '../../lib/disclaimer'
 import { errMsg, readOr } from '../../lib/ipc'
 import { CREDITS, PRISM_SOURCE } from '../../lib/licences'
 import type { Credit } from '../../lib/licences'
-import { PLACEHOLDER } from '../../lib/manifest'
-import { Fact } from '../ui/Fact'
-import { Section, SubHeading } from '../ui/Section'
+import { Info } from '../../lib/icons'
+import { SettingsCard, SettingsSection } from '../ui/SettingsLayout'
 import { TextLink } from '../ui/TextLink'
 
 /**
@@ -23,28 +22,32 @@ export function AboutSection() {
   }, [])
 
   return (
-    <Section title="About">
-      <Fact label="Version" value={version || PLACEHOLDER} />
-      <p className="text-fg-muted m-0 max-w-prose text-xs leading-normal select-text">
-        {DISCLAIMER}
-      </p>
-
-      <ul className="m-0 flex list-none flex-col gap-3 p-0">
+    <SettingsSection
+      title="About"
+      icon={Info}
+      aside={
+        <span className="flex gap-1.5">
+          Version
+          {version ? <span className="text-fg font-mono">{version}</span> : <span>Unknown</span>}
+        </span>
+      }
+    >
+      <SettingsCard label="Credits">
         {CREDITS.map((c) => (
           <CreditRow key={c.id} credit={c} />
         ))}
-      </ul>
-
-      <div className="flex flex-col gap-3">
-        <SubHeading>Prism Launcher</SubHeading>
-        <p className="text-fg-muted m-0 max-w-prose text-xs leading-normal select-text">
-          Prism Launcher is free software under the GPL-3.0 and is not part of Kapital Launcher.
-          When you ask for it, Kapital Launcher downloads an unmodified official release from
-          Prism's GitHub releases. Its source is at github.com/PrismLauncher/PrismLauncher.
-        </p>
-        <LinkButton url={PRISM_SOURCE}>Prism Launcher source</LinkButton>
-      </div>
-    </Section>
+        <div className="flex flex-col gap-2">
+          <span className="text-fg text-sm font-medium">Prism Launcher</span>
+          <p className="text-fg-muted m-0 text-xs leading-normal select-text">
+            Prism Launcher is free software under the GPL-3.0 and is not part of Kapital Launcher.
+            When you ask for it, Kapital Launcher downloads an unmodified official release from
+            Prism's GitHub releases. Its source is at github.com/PrismLauncher/PrismLauncher.
+          </p>
+          <LinkButton url={PRISM_SOURCE}>Prism Launcher source</LinkButton>
+        </div>
+      </SettingsCard>
+      <p className="text-fg-muted m-0 text-xs leading-normal select-text">{DISCLAIMER}</p>
+    </SettingsSection>
   )
 }
 
@@ -67,10 +70,10 @@ function CreditRow({ credit }: { credit: Credit }) {
   }
 
   return (
-    <li className="flex flex-col gap-1.5">
-      <div className="flex items-baseline justify-between gap-4">
-        <div className="flex flex-col">
-          <span className="text-fg text-sm">{credit.name}</span>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-fg text-sm font-medium">{credit.name}</span>
           <span className="text-fg-muted text-xs">
             {credit.role} · {credit.licence}
           </span>
@@ -92,7 +95,7 @@ function CreditRow({ credit }: { credit: Credit }) {
           </pre>
         )}
       </div>
-    </li>
+    </div>
   )
 }
 

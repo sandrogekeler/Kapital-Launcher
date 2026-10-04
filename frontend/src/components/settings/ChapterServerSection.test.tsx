@@ -39,9 +39,6 @@ describe('The Server section of a chapter settings page', () => {
     expect(screen.getByRole('radio', { name: 'Global' })).toBeChecked()
     expect(screen.getByRole('radio', { name: 'Germany' })).not.toBeChecked()
     expect(screen.getByRole('switch', { name: JOIN })).not.toBeChecked()
-    expect(
-      screen.getByText('Play connects to the chosen address as the game starts.'),
-    ).toBeInTheDocument()
   })
 
   it('shows the one address of a chapter as text, with the switch', () => {

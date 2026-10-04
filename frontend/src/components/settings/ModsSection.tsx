@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { Chapter, ModToggleState } from '../../types'
 import { errMsg } from '../../lib/ipc'
-import { ChevronRight } from '../../lib/icons'
+import { ChevronRight, Puzzle } from '../../lib/icons'
 import { filterMods, modLabel } from '../../lib/mods'
 import { formatBytes } from '../../lib/bytes'
 import { isActive, selectGame, useGameStore } from '../../stores/useGameStore'
@@ -9,7 +9,7 @@ import { useModStore } from '../../stores/useModStore'
 import { Icon } from '../ui/Icon'
 import { ErrorLine, Hint, WarningLine } from '../ui/Notes'
 import { Scrollable } from '../ui/Scrollable'
-import { SubHeading } from '../ui/Section'
+import { SettingsCard, SettingsSection } from '../ui/SettingsLayout'
 import { Toggle } from '../ui/Toggle'
 import { RunningHint } from './RunningHint'
 
@@ -62,10 +62,9 @@ export function ModsSection({ chapter }: Props) {
   if (unavailable) return null
   if (!view) {
     return readError ? (
-      <section aria-label="Mods" className="flex flex-col gap-3">
-        <SubHeading>Mods</SubHeading>
+      <SettingsSection title="Mods" icon={Puzzle}>
         <ErrorLine>{readError}</ErrorLine>
-      </section>
+      </SettingsSection>
     ) : null
   }
 
@@ -86,35 +85,30 @@ export function ModsSection({ chapter }: Props) {
       ? 'Not downloaded yet. The first Play fetches it, and it can be switched after that.'
       : t.jars.map(modLabel).join(', ')
 
+  const on = view.toggles.filter((t) => !t.disabled).length
   return (
-    <section aria-label="Mods" className="flex flex-col gap-4">
-      <SubHeading>Mods</SubHeading>
-      {view.toggles.length > 0 && (
-        <div className="flex flex-col gap-4">
-          {view.toggles.map((t) => (
-            <Toggle
-              key={t.jarPrefix}
-              label={t.name}
-              checked={!t.disabled}
-              hint={toggleHint(t)}
-              disabled={busy || t.jars.length === 0}
-              onChange={(on) => void set(t.jars, !on)}
-            />
-          ))}
-        </div>
-      )}
-      <Hint>Changes apply on the next Play. A disabled mod is not downloaded again.</Hint>
-      {playing && <WarningLine>Close the game to change mods.</WarningLine>}
-      {!playing && view.running && <RunningHint chapterName={chapter.name} />}
-      {error && <ErrorLine>{error}</ErrorLine>}
-
-      <div className="flex flex-col gap-3">
+    <SettingsSection
+      title="Mods"
+      icon={Puzzle}
+      aside={view.toggles.length > 0 ? `${on} of ${view.toggles.length} on` : undefined}
+    >
+      <SettingsCard>
+        {view.toggles.map((t) => (
+          <Toggle
+            key={t.jarPrefix}
+            label={t.name}
+            checked={!t.disabled}
+            hint={toggleHint(t)}
+            disabled={busy || t.jars.length === 0}
+            onChange={(on) => void set(t.jars, !on)}
+          />
+        ))}
         <button
           type="button"
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((o) => !o)}
-          className="text-fg-muted hover:text-fg duration-fast ease-standard flex w-fit cursor-pointer items-center gap-2 text-sm transition-colors"
+          className="text-fg-soft hover:text-fg hover:bg-hover duration-fast ease-standard flex w-full cursor-pointer items-center gap-2 text-left text-sm transition-colors first:rounded-t-lg last:rounded-b-lg"
         >
           <Icon
             icon={ChevronRight}
@@ -123,6 +117,13 @@ export function ModsSection({ chapter }: Props) {
           />
           <span>Advanced mod control</span>
         </button>
+      </SettingsCard>
+      <Hint>Changes apply on the next Play. A disabled mod is not downloaded again.</Hint>
+      {playing && <WarningLine>Close the game to change mods.</WarningLine>}
+      {!playing && view.running && <RunningHint chapterName={chapter.name} />}
+      {error && <ErrorLine>{error}</ErrorLine>}
+
+      <div className="flex flex-col gap-3">
         {open && (
           <div id={panelId} className="flex flex-col gap-3">
             {nothingYet ? (
@@ -178,6 +179,6 @@ export function ModsSection({ chapter }: Props) {
           </div>
         )}
       </div>
-    </section>
+    </SettingsSection>
   )
 }

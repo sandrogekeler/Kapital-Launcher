@@ -3,11 +3,12 @@ import type { Chapter, ChapterSettings } from '../../types'
 import { selectInstalled, useEngineStore } from '../../stores/useEngineStore'
 import { isActive, selectGame, useGameStore } from '../../stores/useGameStore'
 import { errMsg } from '../../lib/ipc'
-import { FolderOpen } from '../../lib/icons'
+import { FolderOpen, MemoryStick } from '../../lib/icons'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 import { ErrorLine } from '../ui/Notes'
 import { Page } from '../ui/Page'
+import { SettingsSection } from '../ui/SettingsLayout'
 import { ChapterServerSection } from './ChapterServerSection'
 import { ChapterSettingsForm } from './ChapterSettingsForm'
 
@@ -110,7 +111,7 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
   if (installed === false) {
     body = (
       <p className="text-fg-muted m-0 text-sm leading-normal">
-        {chapter.name} is not installed yet. Its memory and JVM preset are set on the instance
+        {chapter.name} is not installed yet. Its memory and Java arguments are set on the instance
         Install writes, so there is nothing to change until then.
       </p>
     )
@@ -148,6 +149,7 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
       title="Settings"
       onBack={onClose}
       ready={ready}
+      settings
       actions={
         <Button onClick={() => void onOpenFolder()} disabled={installed !== true}>
           <Icon icon={FolderOpen} size="sm" />
@@ -155,8 +157,16 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
         </Button>
       }
     >
-      {folderError && <ErrorLine>{folderError}</ErrorLine>}
-      {body}
+      {folderError && (
+        <div className="pb-6">
+          <ErrorLine>{folderError}</ErrorLine>
+        </div>
+      )}
+      {body && (
+        <SettingsSection title="Game" icon={MemoryStick}>
+          {body}
+        </SettingsSection>
+      )}
       <ChapterServerSection chapter={chapter} />
       {installed === true && (
         <Suspense fallback={null}>

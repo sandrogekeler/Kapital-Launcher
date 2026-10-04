@@ -19,9 +19,7 @@ describe('SupportSection', () => {
   it('says the copy worked on the button for a second, and then goes back', async () => {
     vi.mocked(App.CopyRedactedLog).mockResolvedValueOnce(214)
     render(<SupportSection />)
-    expect(
-      screen.getByText(/name,\s+folders and server addresses are masked first/),
-    ).toBeInTheDocument()
+    expect(screen.getByText('Log for a bug report')).toBeInTheDocument()
     vi.useFakeTimers()
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Copy log' }))

@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { errMsg } from '../../lib/ipc'
 import { CopyLogButton } from '../ui/CopyLogButton'
-import { Hint } from '../ui/Notes'
-import { Section } from '../ui/Section'
+import { LifeBuoy } from '../../lib/icons'
+import { SettingsCard, SettingsSection } from '../ui/SettingsLayout'
 import type { CopyResult } from '../ui/CopyLogButton'
 
 /**
@@ -31,14 +31,13 @@ export function SupportSection() {
   }
 
   return (
-    <Section title="Support">
-      <Hint>
-        Reporting a bug? Copy the end of the launcher's log to paste into the report. Your name,
-        folders and server addresses are masked first, and nothing is saved to disk.
-      </Hint>
-      <div className="flex items-center gap-3">
-        <CopyLogButton onClick={() => void copy()} result={result} disabled={busy} />
-      </div>
-    </Section>
+    <SettingsSection title="Support" icon={LifeBuoy}>
+      <SettingsCard>
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+          <span className="text-fg text-sm font-medium">Log for a bug report</span>
+          <CopyLogButton onClick={() => void copy()} result={result} disabled={busy} />
+        </div>
+      </SettingsCard>
+    </SettingsSection>
   )
 }

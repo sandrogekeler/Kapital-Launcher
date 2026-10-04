@@ -34,16 +34,15 @@ describe('settingsView', () => {
     expect(executablePlaceholder(found('path'))).toBe('C:\\Prism\\prismlauncher.exe')
   })
 
-  it('explains under the executable field where Prism came from', () => {
+  it('speaks under the executable field only when something is off', () => {
     expect(executableHint(DEFAULT_SETTINGS, null)).toContain('Looking')
     expect(executableHint(DEFAULT_SETTINGS, missing)).toContain('not found')
     expect(executableHint(withExe, missing)).toContain('Nothing runs')
-    expect(executableHint(DEFAULT_SETTINGS, found('standard-location'))).toContain(
-      'standard install',
-    )
-    expect(executableHint(withExe, found('settings'))).toContain('runs from this path')
     // A stale path on file: detection fell past it.
     expect(executableHint(withExe, found('managed'))).toContain('used instead')
+    // Found where the field or its placeholder says: nothing to add.
+    expect(executableHint(DEFAULT_SETTINGS, found('standard-location'))).toBeNull()
+    expect(executableHint(withExe, found('settings'))).toBeNull()
   })
 
   it('shows the resolved root and says when the managed Prism ignores it', () => {
@@ -51,11 +50,9 @@ describe('settingsView', () => {
     expect(
       rootPlaceholder({ root: 'C:\\data', dir: '', present: {}, packUrl: {}, sizeBytes: {} }),
     ).toBe('C:\\data')
-    expect(rootHint(DEFAULT_SETTINGS, found('managed'))).toContain('managed Prism')
-    expect(rootHint(DEFAULT_SETTINGS, found('path'))).toContain('default')
-    expect(rootHint({ ...DEFAULT_SETTINGS, prismRoot: 'D:\\p' }, found('path'))).toContain(
-      'data root',
-    )
+    expect(rootHint(found('managed'))).toContain('managed Prism')
+    expect(rootHint(found('path'))).toBeNull()
+    expect(rootHint(null)).toBeNull()
   })
 
   it('sets and clears one chapter in packOverrides', () => {

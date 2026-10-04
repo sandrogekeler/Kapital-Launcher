@@ -43,7 +43,8 @@ describe('SettingsPanel', () => {
   it('shows what detection resolved in the empty fields', () => {
     render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
     expect(screen.getByLabelText('Prism program')).toHaveAttribute('placeholder', engine.executable)
-    expect(screen.getByText(/standard install location/)).toBeInTheDocument()
+    // Found where the placeholder says: no line under the field.
+    expect(screen.queryByText(/standard install location/)).toBeNull()
     expect(screen.getByLabelText('Prism data folder')).toHaveAttribute(
       'placeholder',
       "Prism's own data folder",
@@ -241,7 +242,7 @@ describe('SettingsPanel', () => {
       expect(screen.queryByRole('switch', { name: 'Loading splash' })).not.toBeInTheDocument()
     })
 
-    it('shows its state and hint, and saves the choice', async () => {
+    it('shows its state and saves the choice', async () => {
       useSettingsStore.setState({
         settings: { ...DEFAULT_SETTINGS, loadingSplashAvailable: true, loadingSplashOn: true },
         loaded: true,
@@ -250,11 +251,6 @@ describe('SettingsPanel', () => {
       render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
       const box = screen.getByRole('switch', { name: 'Loading splash' })
       expect(box).toBeChecked()
-      expect(
-        screen.getByText(
-          "Shows a small loading card from Play until the game's own loading screen.",
-        ),
-      ).toBeInTheDocument()
 
       fireEvent.click(box)
       await waitFor(() =>

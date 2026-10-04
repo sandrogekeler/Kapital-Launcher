@@ -8,9 +8,10 @@ import {
 } from '../../lib/chapterSettings'
 import { Button } from '../ui/Button'
 import { ChoiceCards } from '../ui/ChoiceCards'
-import { ErrorLine, Hint, WarningLine } from '../ui/Notes'
+import { ErrorLine, WarningLine } from '../ui/Notes'
 import { RangeField } from '../ui/RangeField'
 import { SubHeading } from '../ui/Section'
+import { SettingsCard } from '../ui/SettingsLayout'
 import { StableLabel } from '../ui/StableLabel'
 import { RunningHint } from './RunningHint'
 
@@ -40,10 +41,9 @@ function memoryHint(info: ChapterSettingsInfo): string {
 
 /**
  * The editable part of a chapter's settings: memory, the Java preset, and Save
- * with whatever it has to say. The blocks are ten steps apart, what is in a
- * block three; Save sits under the last block at five, a step of its own. The
- * status beside Save wraps rather than overflows, and the button keeps its box
- * when it says Saving.
+ * with whatever it has to say, one row each of the Game card (issue 188). The status
+ * beside Save wraps rather than overflows, and the button keeps its box when it
+ * says Saving.
  */
 export function ChapterSettingsForm({
   chapter,
@@ -58,7 +58,7 @@ export function ChapterSettingsForm({
 }: Props) {
   const max = sliderMaxMb(info.machineMemoryMb)
   return (
-    <>
+    <SettingsCard>
       <RangeField
         label="Memory"
         valueLabel={memoryLabel(draft.maxMemoryMb)}
@@ -70,37 +70,31 @@ export function ChapterSettingsForm({
         hint={memoryHint(info)}
       />
 
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-3">
-          <SubHeading>Java arguments</SubHeading>
-          <ChoiceCards
-            label="Java arguments"
-            value={draft.jvm}
-            choices={['', ...info.presets].map((name) => ({
-              value: name,
-              title: presetLabel(name),
-            }))}
-            onChange={(jvm) => onDraft({ ...draft, jvm })}
-          />
-          <Hint>
-            A preset is a fixed set of arguments the launcher knows; nothing typed here reaches the
-            game.
-          </Hint>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Button onClick={onSave} disabled={!dirty || saving || playing}>
-            <StableLabel current={saving ? 'Saving' : 'Save'} labels={SAVE_LABELS} />
-          </Button>
-          {playing && (
-            <WarningLine>
-              {chapter.name} looks to be running. Close the game to change these.
-            </WarningLine>
-          )}
-          {!playing && info.running && <RunningHint chapterName={chapter.name} />}
-          {error && <ErrorLine>{error}</ErrorLine>}
-        </div>
+      <div className="flex flex-col gap-3">
+        <SubHeading>Java arguments</SubHeading>
+        <ChoiceCards
+          label="Java arguments"
+          value={draft.jvm}
+          choices={['', ...info.presets].map((name) => ({
+            value: name,
+            title: presetLabel(name),
+          }))}
+          onChange={(jvm) => onDraft({ ...draft, jvm })}
+        />
       </div>
-    </>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={onSave} disabled={!dirty || saving || playing}>
+          <StableLabel current={saving ? 'Saving' : 'Save'} labels={SAVE_LABELS} />
+        </Button>
+        {playing && (
+          <WarningLine>
+            {chapter.name} looks to be running. Close the game to change these.
+          </WarningLine>
+        )}
+        {!playing && info.running && <RunningHint chapterName={chapter.name} />}
+        {error && <ErrorLine>{error}</ErrorLine>}
+      </div>
+    </SettingsCard>
   )
 }
