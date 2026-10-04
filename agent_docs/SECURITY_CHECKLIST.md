@@ -26,7 +26,7 @@ summed). A different count is new surface to classify: add the method to this ta
 | `SetPackSource` | a chapter id and `published` or `dev` | the one `PreLaunchCommand` key of the chapter's own `instance.cfg`, between the manifest's pack URL and the loopback override from settings, only from the launcher's own template; refused while the game is active | S3.3, S4.6 |
 | `StopGame` | a chapter id | the pid of the Prism the launcher started, or of the game's Java found as its child, for a run the tracker follows: asked to close, then ended | S3.3, S3.9 |
 | `ShowPrismConsole` | a chapter id | the console window of the Prism the launcher started for that chapter, which the launcher's own hold hid: shown and given the foreground | S3.3, S3.7 |
-| `SaveSettings` | a whole `AppSettings` | the settings file, and the executable detection then runs | S3.5 |
+| `SaveSettings` | a whole `AppSettings`, including `serverChoices`: a chapter id to the label of one of its manifest addresses | the settings file, the executable detection then runs, and, for a chapter whose chosen address moved, one ping of the manifest's address for that label | S3.5, S6.1 |
 | `ChoosePrismExecutable`, `ChoosePrismRoot` | nothing | a native file or folder picker; the pick is returned, never saved here | S3.5 |
 | `OpenExternal` | a URL | the system browser, web URLs only | S3.4 |
 | `GetWikiPages` | nothing | one bounded GET of the wiki's lore export on the manifest's wiki host, cached in the app data dir | S2.3, S4.3 |
@@ -169,7 +169,15 @@ return what the player chose in the OS dialog; the frontend commits it through
 with a port, a path ending in `/pack.toml`, no user info, query or fragment,
 and the manifest's command-line characters. A settings file cannot point a
 pack at another machine.
-Verify: `settings_test.go`; S5.1, S5.2.
+A `serverChoices` entry (issue 151) is a chapter id and a *label*, never an
+address: `ValidateSettings` holds both to their shape and `App.SaveSettings`
+refuses a chapter the manifest does not have, a chapter with no server and a
+label that is not in that chapter's own list (`ValidateServerChoices`), so
+nothing typed on the settings screen reaches a ping or Prism's `--server`.
+`services.ServerAddress` turns a label into the manifest's address, falling
+back to the first when the label is missing or stale.
+Verify: `settings_test.go`, `serverchoice_test.go`,
+`TestSaveSettingsRefusesAnUnknownChapterOrLabelAndKeepsWhatWasSaved`; S5.1, S5.2.
 Probe: anything that would put third-party script in the WebView (a remote
 image or page, a manifest string rendered as HTML).
 
@@ -409,7 +417,9 @@ is unset and `wails build` does not pass `-devtools`.
 
 **S6.1 Only the manifest's addresses are pinged.**
 Holds when: `services.Ping` is reached only through `StatusService.Check`,
-which takes a `models.Chapter` from the validated manifest; the frontend
+which takes a `models.Chapter` from the validated manifest and the address
+`services.ServerAddress` resolves for it (the player's saved label, looked up
+in the chapter's own list, else its first address; issue 151); the frontend
 passes a chapter id, never an address. An address without a port may be
 redirected by that host's own `_minecraft._tcp` SRV record, and only to a
 target that passes `ParseServerAddress`; anything else falls back to the

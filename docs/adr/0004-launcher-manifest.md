@@ -35,3 +35,28 @@ of truth and the wiki's own text is reused.
   and is not made from this repo.
 - Signing the manifest is optional and deferred: the transport is https to
   the author's own host, and the manifest cannot express anything executable.
+
+## Amendment, 2026-10-04: a server names every address
+
+Frangfurd's server answers at two addresses, and the game's own server list
+carries both, so the manifest's one `server.address` could not say which a
+player uses (issue 151). The shape, still `version: 1` because the one shipped
+copy is the bundled file:
+
+- `server.address` is replaced by **`server.addresses`**, a list of
+  `{ label, address }`, at least one, the **first the default**. Replacing,
+  not adding beside, keeps one source of truth: a chapter with one address is
+  a list of one, and the wiki's emitter writes the same list whatever the
+  count. An older `address` field is refused like any field this build does
+  not know (`DisallowUnknownFields`).
+- Every address is held to the one `host[:port]` rule (`ParseServerAddress`) in
+  the schema and in `services.ValidateManifest`, in any position; a label is 1
+  to 24 letters, digits, spaces, dots and hyphens, and unique within the
+  chapter (case-insensitively). A manifest with a bad one is refused whole.
+- The player's choice is not in the manifest. It is a **label** saved per
+  chapter in the app's settings (`serverChoices`), checked against that
+  chapter's own list on save, and resolved by `services.ServerAddress`: the
+  chosen label's address, else the first when the choice is missing or no
+  longer listed. The ping, its ticker and Play's `--server` all use it, and
+  `LaunchArgs` still validates what reaches Prism. A manifest still names
+  things and runs nothing.
