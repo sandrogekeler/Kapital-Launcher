@@ -41,7 +41,7 @@ describe('MapPanel', () => {
     const pending = deferred<MapStatus>()
     vi.mocked(Bindings.CheckChapterMap).mockReturnValue(pending.promise as never)
     render(<MapPanel chapter={frangfurd} onClose={() => undefined} />)
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Frangfurd map')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/^Map$/)
     expect(screen.getByText('Reading.')).toBeInTheDocument()
     expect(screen.queryByTitle('Frangfurd map')).toBeNull()
     expect(screen.queryByText('Map could not be reached')).toBeNull()

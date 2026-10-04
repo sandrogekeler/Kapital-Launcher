@@ -52,7 +52,7 @@ export function MapPanel({ chapter, onClose }: Props) {
       fill
       ready={status !== null}
       label={`${chapter.name} map`}
-      title={`${chapter.name} map`}
+      title="Map"
       onBack={onClose}
       actions={
         url && (
