@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
 import { ArrowLeft } from '../../lib/icons'
 import { useEscapeClose } from '../../lib/useEscapeClose'
+import { CARD } from './card'
 import { IconButton } from './IconButton'
+import { Reveal } from './Reveal'
 import { Scrollable } from './Scrollable'
 
-/** The raised card every screen sits in; a column, so a page's body can take the height left. */
-export const CARD =
-  'bg-raised border-line flex min-h-0 grow flex-col overflow-hidden rounded-lg border'
+export { CARD }
 
 interface HeaderProps {
   title: string
@@ -29,24 +29,34 @@ export function PageHeader({ title, onBack, actions }: HeaderProps) {
 interface PageProps extends HeaderProps {
   /** The section's accessible name. */
   label: string
+  /**
+   * Whether the page's data has loaded. The body reveals when it has, and
+   * shows a faint line if the read takes a moment. A page with nothing to
+   * wait for leaves it out.
+   */
+  ready?: boolean
   children: ReactNode
 }
 
 /**
- * A page of the launcher (settings, a chapter's settings, a run report): the
- * chapter card's own frame and inset, so moving between a chapter and a page
- * changes what is in the card and not the card. The header stays at the top
- * while the body scrolls beneath it, with the app's own scrollbar. Escape
- * closes the page, as Back does.
+ * A page of the launcher (settings, a chapter's settings, a run report, the
+ * logs): the chapter card's own frame and inset, so moving between a chapter
+ * and a page changes what is in the card and not the card. The header stays
+ * at the top while the body scrolls beneath it, with the app's own scrollbar,
+ * and the body reveals once `ready`. Escape closes the page, as Back does.
  */
-export function Page({ label, title, onBack, actions, children }: PageProps) {
+export function Page({ label, title, onBack, actions, ready = true, children }: PageProps) {
   useEscapeClose(onBack)
   return (
     <div className="m-5 flex min-h-0 grow flex-col">
       <section aria-label={label} className={CARD}>
         <PageHeader title={title} onBack={onBack} actions={actions} />
         <Scrollable>
-          <div className="flex max-w-200 flex-col gap-10 px-14 pt-8 pb-16">{children}</div>
+          <div className="max-w-200 px-14 pt-8 pb-16">
+            <Reveal ready={ready} className="flex flex-col gap-10">
+              {children}
+            </Reveal>
+          </div>
         </Scrollable>
       </section>
     </div>

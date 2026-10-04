@@ -113,9 +113,7 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
         The instance could not be looked for. Set the Prism data folder in Settings.
       </p>
     )
-  } else if (!info || !draft) {
-    body = <p className="text-fg-muted m-0 text-sm">Reading the instance.</p>
-  } else {
+  } else if (info && draft) {
     body = (
       <ChapterSettingsForm
         chapter={chapter}
@@ -130,12 +128,17 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
       />
     )
   }
+  // Not installed and unknown are answers at once; only an installed
+  // chapter waits for its instance to be read, and the page reveals when it
+  // has been.
+  const ready = installed !== true || Boolean(info && draft)
 
   return (
     <Page
       label={`${chapter.name} settings`}
       title={`${chapter.name} settings`}
       onBack={onClose}
+      ready={ready}
       actions={
         <Button onClick={() => void onOpenFolder()} disabled={installed !== true}>
           <Icon icon={FolderOpen} size="sm" />

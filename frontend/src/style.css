@@ -195,6 +195,36 @@
   }
 }
 
+/* A page's content once its data has loaded (ui/Reveal): it rises a few px out
+   of a slight blur and fades in, once, subtler and snappier than the card's
+   slide. The distance, the blur and the duration are tokens. While the data is
+   on its way the page shows nothing for a short grace (the grace token), then
+   a faint line, so a slow read is not a blank page. With reduced motion the
+   content only fades, quickly. */
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--layout-reveal-rise));
+    filter: blur(var(--effect-reveal-blur));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@utility reveal {
+  animation: reveal-in var(--duration-reveal) var(--ease-standard) both;
+}
+@utility reveal-wait {
+  animation: card-fade-in var(--duration-fast) var(--ease-standard) var(--duration-grace) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: card-fade-in var(--duration-fast) ease-in-out both;
+  }
+}
+
 /* The lift of a filled button on hover (ui/Button): on top of the brighter
    fill, a soft glow in the button's own colour, the accent for Play, Install
    and Join, the danger colour for Stop. Never on a disabled button. The
