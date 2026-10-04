@@ -46,10 +46,35 @@ func (a *App) GetRunLogs(chapterID string) ([]models.RunLog, error) {
 	logs, err := services.ListRunLogs(dir)
 	if err != nil {
 		slog.Error("list run logs", "chapter", chapter.ID, "error", err)
-		return nil, fmt.Errorf("%s: %w", chapter.Name, err)
+		return nil, a.maskedError(chapter, err)
 	}
 	return logs, nil
 }
+
+// maskedError is a failure as the page shows it: an error from the file
+// system names the absolute game folder, which carries the player's home path,
+// so its text passes the redactor like the logs themselves.
+func (a *App) maskedError(chapter models.Chapter, err error) error {
+	redactor, rerr := a.redactor()
+	if rerr != nil {
+		return maskedErr{msg: chapter.Name + ": the logs could not be read", err: err}
+	}
+	return maskErr(chapter, redactor, err)
+}
+
+// maskErr keeps the error for errors.Is and shows only its masked text.
+func maskErr(chapter models.Chapter, redactor *services.Redactor, err error) error {
+	return maskedErr{msg: chapter.Name + ": " + redactor.Redact(err.Error()), err: err}
+}
+
+// maskedErr is an error whose message has passed the redactor.
+type maskedErr struct {
+	msg string
+	err error
+}
+
+func (e maskedErr) Error() string { return e.msg }
+func (e maskedErr) Unwrap() error { return e.err }
 
 // ReadRunLog returns one chunk of one of the files GetRunLogs listed, masked
 // by the redactor (home path, user and in-game names, server addresses, IPs)
@@ -74,7 +99,7 @@ func (a *App) ReadRunLog(chapterID, kind, name string, before int64) (models.Run
 	text, err := services.ReadRunLog(dir, kind, name, before, redactor)
 	if err != nil {
 		slog.Warn("read run log", "chapter", chapter.ID, "kind", kind, "error", err)
-		return models.RunLogText{}, fmt.Errorf("%s: %w", chapter.Name, err)
+		return models.RunLogText{}, maskErr(chapter, redactor, err)
 	}
 	slog.Info("run log read", "chapter", chapter.ID, "kind", kind, "lines", text.Lines, "earlier", text.Truncated)
 	return text, nil

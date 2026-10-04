@@ -565,7 +565,7 @@ func TestAChunkOfOneVeryLongLineIsKeptFromItsStart(t *testing.T) {
 
 func TestRunLogNameValidity(t *testing.T) {
 	ok := map[string][]string{
-		models.RunLogKindLog:   {"latest.log", "2026-10-03-1.log.gz", "debug-1.log.gz"},
+		models.RunLogKindLog:   {"latest.log", "2026-10-03-1.log.gz", "2026-10-03-12.log.gz"},
 		models.RunLogKindCrash: {"crash-2026-10-03_12.30.00-client.txt"},
 	}
 	for kind, list := range ok {
@@ -573,6 +573,12 @@ func TestRunLogNameValidity(t *testing.T) {
 			if !validRunLogName(kind, name) {
 				t.Errorf("%s %q should be valid", kind, name)
 			}
+		}
+	}
+	// NeoForge's debug log of the same run, and any other archive name, is not listed.
+	for _, name := range []string{"debug-1.log.gz", "debug.log", "2026-10-03.log.gz", "x-2026-10-03-1.log.gz"} {
+		if validRunLogName(models.RunLogKindLog, name) {
+			t.Errorf("%q is not a run's log", name)
 		}
 	}
 	if validRunLogName(models.RunLogKindLog, "crash-x.txt") || validRunLogName(models.RunLogKindCrash, "latest.log") {

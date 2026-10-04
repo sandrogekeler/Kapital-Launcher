@@ -67,16 +67,24 @@ func runLogFolder(kind string) string {
 	return ""
 }
 
+// datedRunLogName is the game's archive of one run's latest.log: the date and
+// the run's number that day, as log4j names it.
+var datedRunLogName = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}-\d+\.log\.gz$`)
+
 // validRunLogName is the one test of a name, used by the listing to choose what
 // to show and by the read to refuse what is not shown: a plain base name that
-// is latest.log or a *.log.gz for a log, and a *.txt for a crash report.
+// is latest.log or a dated archive of it for a log, and a *.txt for a crash
+// report. NeoForge also archives a debug-N.log.gz beside every run (seen on
+// the author's Frangfurd instance, 2026-10-04): it is the same run at debug
+// level, so it is left out, or every run would show twice and the crash mark's
+// window, which runs from the previous archive, would shrink to a second.
 func validRunLogName(kind, name string) bool {
 	if !plainRunLogName.MatchString(name) || strings.Contains(name, "..") {
 		return false
 	}
 	switch kind {
 	case models.RunLogKindLog:
-		return name == "latest.log" || strings.HasSuffix(name, ".log.gz")
+		return name == "latest.log" || datedRunLogName.MatchString(name)
 	case models.RunLogKindCrash:
 		return strings.HasSuffix(name, ".txt")
 	}

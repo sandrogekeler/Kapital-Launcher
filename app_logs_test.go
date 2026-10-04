@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -101,5 +102,22 @@ func TestReadRunLogRefusesWhatIsNotAListedName(t *testing.T) {
 	}
 	if _, err := app.ReadRunLog("frangfurd", "instance", "instance.cfg", 0); !errors.Is(err, services.ErrRunLogName) {
 		t.Errorf("a kind that is not log or crash: %v", err)
+	}
+}
+
+func TestALogsErrorShownToThePageIsMasked(t *testing.T) {
+	app := newTestApp(t)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("no home folder to mask")
+	}
+	chapter, _ := app.chapter("frangfurd")
+	cause := fmt.Errorf("open game folder: open %s: access denied", filepath.Join(home, "AppData", "x"))
+	got := app.maskedError(chapter, cause)
+	if strings.Contains(got.Error(), home) {
+		t.Fatalf("the home path reached the page: %q", got)
+	}
+	if !errors.Is(got, cause) {
+		t.Fatal("the masked error must still wrap its cause")
 	}
 }
