@@ -35,15 +35,17 @@ chapter's `map` (below): a playit tunnel serves BlueMap over http.
   `design/tokens.json`; that is how `[data-chapter]` finds its colour.
 - `instance.id` is the Prism instance folder name, `kapital-<id>` by convention
   (ADR-2), and is what `--launch` receives.
-- `server` is `null` or `{ addresses, joinOnLaunch, software }`. `addresses`
+- `server` is `null` or `{ addresses, software }`. `addresses`
   is a list of `{ label, address }`, at least one, the first the default
   (ADR-4, amendment). Each address is `host[:port]`, any of them pinged for
   the status line; the label is short, unique in the chapter and is what the
-  player's choice in settings is saved as, never the address. The one in use
+  player's choice in the chapter's settings is saved as, never the address. The one in use
   is `services.ServerAddress(chapter, settings.ServerChoices)`: use it, never
-  `Addresses[0]`. `joinOnLaunch: true` is what turns Play into Join and adds
-  `--server` to the launch; a modpack that merely has a server says `false`.
-  `software` is a fact for the panel.
+  `Addresses[0]`. Whether Play joins the server is not the manifest's to say:
+  `joinOnLaunch` is retired (ADR-4, second amendment), a manifest that carries
+  it is refused, and the player's switch (`settings.JoinServers`, on the
+  chapter's settings page) is what turns Play into Join and adds `--server` to
+  the launch (`services.JoinsServer`). `software` is a fact for the panel.
 - `pack.toggles` is optional: up to twelve `{ name, jarPrefix }`, the mods the
   chapter's settings offer as quick switches (issue 156). `jarPrefix` is the part
   of the jar's file name before its version, separator included
@@ -53,7 +55,7 @@ chapter's `map` (below): a playit tunnel serves BlueMap over http.
   `.pw.toml` in `kapital-packs`. It is a prefix and never a path or a pattern
   (`[A-Za-z0-9][A-Za-z0-9._+-]{2,63}`), names are unique, and no prefix starts
   another, so a jar is never two switches (`validateToggles`).
-- `map` is optional: a chapter's BlueMap web map (issue 161, ADR-4's second
+- `map` is optional: a chapter's BlueMap web map (issue 161, ADR-4's third
   amendment), `http` or `https` on `*.tun.ply.gg` with an explicit port, lowercase
   and bare (no user info, path, query or fragment); `services.checkMapURL` refuses
   anything else, and the rest of the manifest keeps the https rule. The build

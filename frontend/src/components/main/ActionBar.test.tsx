@@ -51,6 +51,7 @@ function bar(over: Partial<ComponentProps<typeof ActionBar>> = {}) {
       installed={true}
       devPack={undefined}
       serverChoice={undefined}
+      joinServer={false}
       instancePack={undefined}
       packState={undefined}
       game={undefined}
@@ -370,6 +371,15 @@ describe('ActionBar Stop', () => {
     bar({ launching: true })
     expect(stop()).toHaveClass('bg-danger')
     expect(stop()).toBeDisabled()
+  })
+
+  it('reads Play until the player turned on joining the server, then Join (issue 163)', () => {
+    bar()
+    expect(screen.getByRole('button', { name: `Play ${chapter.name}` })).toBeInTheDocument()
+    cleanup()
+    bar({ joinServer: true })
+    expect(screen.getByRole('button', { name: `Join ${chapter.name}` })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: `Play ${chapter.name}` })).toBeNull()
   })
 
   it('keeps Play in the accent', () => {

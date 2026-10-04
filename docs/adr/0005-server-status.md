@@ -27,9 +27,11 @@ user's IP only to the author's own servers.
   says what happened. The question the handoff asked is answered that way
   because the alternative hides a working pack behind a probe that can be
   wrong (a firewall, a restart in progress).
-- **Joining is a manifest choice**, `server.joinOnLaunch`: true for
-  Lichdenstein, whose Play is Join; false for Frangfurd, which is played as
-  a pack and joined from inside the game. The button's verb follows it.
+- **Joining was a manifest choice**, `server.joinOnLaunch`: true for
+  Lichdenstein, whose Play was Join; false for Frangfurd, which is played as
+  a pack and joined from inside the game. Superseded: it is the player's
+  switch on each chapter's settings page, off until turned on (ADR-4,
+  second amendment). The button's verb follows the switch.
 - The facts panel shows what the server itself reports (`version.name`)
   over what the manifest says it runs, once a ping has answered.
 

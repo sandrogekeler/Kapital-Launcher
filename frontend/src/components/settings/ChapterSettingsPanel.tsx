@@ -8,6 +8,7 @@ import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 import { ErrorLine } from '../ui/Notes'
 import { Page } from '../ui/Page'
+import { ChapterServerSection } from './ChapterServerSection'
 import { ChapterSettingsForm } from './ChapterSettingsForm'
 
 // The mods section lists the mods folder and has a search; like the pack source it loads when
@@ -36,7 +37,9 @@ interface Props {
  * (issue 126). Save writes both at once; the value shown after
  * is what Go read back from the file. Open folder (#85), in the page header,
  * shows the instance in the file manager; it is there to reach a crash report or a screenshot.
- * Mods (issue 156) come next: the chapter's quick switches and an advanced list of every mod,
+ * A chapter with a server gets the Server section next (issue 163), installed or not: its address
+ * and the switch for joining it on Play, both saved in the launcher's settings.
+ * Mods (issue 156) come after: the chapter's quick switches and an advanced list of every mod,
  * saved by Go in the launcher's settings and applied by the pre-launch sync. A chapter with a
  * local pack also gets the pack source section, which switches its instance between the
  * published pack and that one.
@@ -154,6 +157,7 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
     >
       {folderError && <ErrorLine>{folderError}</ErrorLine>}
       {body}
+      <ChapterServerSection chapter={chapter} />
       {installed === true && (
         <Suspense fallback={null}>
           <ModsSection chapter={chapter} />

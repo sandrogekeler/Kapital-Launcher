@@ -50,10 +50,8 @@ export interface ServerAddress {
 }
 
 export interface Server {
-  /** Every address, the first being the default; the player picks a label in settings. */
+  /** Every address, the first being the default; the player picks a label in the chapter's settings. */
   addresses: ServerAddress[]
-  /** Whether Play joins this server, or the chapter is played as a pack with a server nearby. */
-  joinOnLaunch: boolean
   software: string
 }
 
@@ -369,6 +367,11 @@ export interface AppSettings {
   packOverrides?: Record<string, string>
   /** Chapter id to the label of the server address the player picked (issue 151); absent is the first. */
   serverChoices?: Record<string, string>
+  /**
+   * The ids of the chapters whose server Play joins (issue 163): the switch on a chapter's
+   * settings page, off for every chapter until the player turns it on.
+   */
+  joinServers?: string[]
   /**
    * Chapter id to the jars switched off (issue 156). Go's own: GetSettings never fills it and a
    * save never changes it; the mods section reads and writes the list through GetChapterMods and

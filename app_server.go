@@ -23,10 +23,11 @@ func (a *App) serverAddress(chapter models.Chapter) string {
 }
 
 // joinAddress is what Play passes to Prism's --server: the player's chosen
-// address of the chapter's list when the manifest says Play joins, else "".
+// address of the chapter's list when the player turned the chapter's join
+// switch on (issue 163), else "": off for every chapter until they do.
 // LaunchArgs still validates it.
 func joinAddress(chapter models.Chapter, settings models.AppSettings) string {
-	if chapter.Server == nil || !chapter.Server.JoinOnLaunch {
+	if chapter.Server == nil || !services.JoinsServer(settings, chapter.ID) {
 		return ""
 	}
 	return services.ServerAddress(chapter, settings.ServerChoices)

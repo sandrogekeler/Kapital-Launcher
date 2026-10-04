@@ -132,6 +132,20 @@ func (s *SettingsService) load() (models.AppSettings, error) {
 		}
 		settings.DisabledMods[id] = kept
 	}
+	// The join switches are the app's too, and the file the player's: an id that
+	// is not chapter-shaped, or any past the cap, is dropped with a log line.
+	if len(settings.JoinServers) > 0 {
+		kept := make([]string, 0, len(settings.JoinServers))
+		for _, id := range settings.JoinServers {
+			if chapterIDPattern.MatchString(id) && len(kept) < maxJoinServers {
+				kept = append(kept, id)
+			}
+		}
+		if len(kept) != len(settings.JoinServers) {
+			slog.Warn("settings: join switches dropped", "dropped", len(settings.JoinServers)-len(kept))
+		}
+		settings.JoinServers = kept
+	}
 	return normalize(settings), nil
 }
 
@@ -183,6 +197,16 @@ func ValidateSettings(s models.AppSettings) error {
 			return fmt.Errorf("settings: server choice %q for %q is not a chapter and a label", label, id)
 		}
 	}
+	// Shape only as well: that a chapter has a server is the manifest's to say
+	// (ValidateJoinServers, run by App.SaveSettings).
+	if len(s.JoinServers) > maxJoinServers {
+		return fmt.Errorf("settings: join switches: more than %d chapters", maxJoinServers)
+	}
+	for _, id := range s.JoinServers {
+		if !chapterIDPattern.MatchString(id) {
+			return fmt.Errorf("settings: join switch for %q: not a chapter id", id)
+		}
+	}
 	// Shape only, as the server choices: that each name is in the instance's
 	// mods folder is checked where the list is written (ValidateDisabledMods).
 	for id, names := range s.DisabledMods {
@@ -232,6 +256,12 @@ func normalize(s models.AppSettings) models.AppSettings {
 	}
 	if len(s.ServerChoices) == 0 {
 		s.ServerChoices = nil
+	}
+	// Sorted and without repeats, so the file reads the same whatever order the
+	// switches were turned on in.
+	s.JoinServers = slices.Compact(slices.Sorted(slices.Values(s.JoinServers)))
+	if len(s.JoinServers) == 0 {
+		s.JoinServers = nil
 	}
 	// A chapter with nothing disabled has no entry.
 	var kept map[string][]string

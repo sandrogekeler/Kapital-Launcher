@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -129,22 +130,75 @@ func TestTheChosenAddressIsWhatThePingAndPlayUse(t *testing.T) {
 	if got := app.serverAddress(c); got != frangfurdGermany {
 		t.Fatalf("the ticker's address: %q", got)
 	}
-	// Frangfurd is played as a pack, so Play joins nothing; the chapter that
-	// joins on launch hands its (single) address to Prism's --server.
+	// The join switch is off until the player turns it on, so Play joins
+	// nothing; once it is on, the chosen address goes to Prism's --server.
 	if got := joinAddress(c, settings); got != "" {
-		t.Fatalf("a pack with a server is not joined: %q", got)
+		t.Fatalf("a server is not joined until the switch is on: %q", got)
 	}
-	joined := c
-	srv := *c.Server
-	srv.JoinOnLaunch = true
-	joined.Server = &srv
-	got := joinAddress(joined, settings)
+	args, err := services.LaunchArgs(models.LaunchRequest{InstanceID: "kapital-frangfurd", Server: joinAddress(c, settings)})
+	if err != nil || slices.Contains(args, "--server") {
+		t.Fatalf("a launch with the switch off carries no --server: %v %v", err, args)
+	}
+	settings.JoinServers = []string{"frangfurd"}
+	if err := app.SaveSettings(settings); err != nil {
+		t.Fatal(err)
+	}
+	settings, err = app.settings.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := joinAddress(c, settings)
 	if got != frangfurdGermany {
 		t.Fatalf("Play joins the chosen address: %q", got)
 	}
-	args, err := services.LaunchArgs(models.LaunchRequest{InstanceID: "kapital-frangfurd", Server: got})
-	if err != nil || args[len(args)-1] != frangfurdGermany {
+	args, err = services.LaunchArgs(models.LaunchRequest{InstanceID: "kapital-frangfurd", Server: got})
+	if err != nil || args[len(args)-1] != frangfurdGermany || args[len(args)-2] != "--server" {
 		t.Fatalf("%v %v", err, args)
+	}
+	// Another chapter's switch joins nothing here, and a chapter without a
+	// server cannot be joined whatever the file says.
+	if got := joinAddress(c, models.AppSettings{JoinServers: []string{"lichdenstein"}}); got != "" {
+		t.Fatalf("the switch is per chapter: %q", got)
+	}
+	if got := joinAddress(models.Chapter{ID: "frangfurd"}, settings); got != "" {
+		t.Fatalf("no server, nothing to join: %q", got)
+	}
+}
+
+func TestSaveSettingsRefusesAJoinSwitchForAChapterWithNoServerAndKeepsWhatWasSaved(t *testing.T) {
+	app := newTestApp(t)
+	if err := app.SaveSettings(models.AppSettings{Theme: "dark", JoinServers: []string{"frangfurd"}}); err != nil {
+		t.Fatal(err)
+	}
+	for name, ids := range map[string][]string{
+		"an unknown chapter":     {"atlantis"},
+		"a good id and a bad id": {"frangfurd", "atlantis"},
+		"a shape that is no id":  {"../x"},
+	} {
+		if err := app.SaveSettings(models.AppSettings{Theme: "dark", JoinServers: ids}); err == nil {
+			t.Errorf("%s must be refused", name)
+		}
+	}
+	got, err := app.GetSettings()
+	if err != nil || len(got.JoinServers) != 1 || got.JoinServers[0] != "frangfurd" {
+		t.Fatalf("a refused save changes nothing: %v %+v", err, got.JoinServers)
+	}
+}
+
+func TestGetSettingsDoesNotHandBackAStaleJoinSwitch(t *testing.T) {
+	app := newTestApp(t)
+	// A chapter the manifest no longer has, as an older manifest could have
+	// left on file.
+	if err := app.settings.Save(models.AppSettings{Theme: "dark", JoinServers: []string{"atlantis", "lichdenstein"}}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := app.GetSettings()
+	if err != nil || len(got.JoinServers) != 1 || got.JoinServers[0] != "lichdenstein" {
+		t.Fatalf("%v %+v", err, got.JoinServers)
+	}
+	// So the screen can save something else without being refused.
+	if err := app.SaveSettings(got); err != nil {
+		t.Fatal(err)
 	}
 }
 

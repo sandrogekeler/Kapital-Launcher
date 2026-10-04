@@ -189,7 +189,7 @@ side: the list lives in settings (`disabledMods`), is validated against the mods
 folder, applied at once, and refused while the game runs.
 
 The map check (`maps.go`, `app_map.go`, `CheckChapterMap`, issue 161, ADR-4's
-second amendment) is the one network call for a chapter's web map: a GET of the
+third amendment) is the one network call for a chapter's web map: a GET of the
 address the manifest names for the chapter (a `*.tun.ply.gg` tunnel with a port,
 the one http URL a manifest may carry), 5 s, no redirect followed, at most 4 KiB
 of the body read and dropped. Any HTTP status is reachable. It returns a

@@ -61,6 +61,33 @@ copy is the bundled file:
   `LaunchArgs` still validates what reaches Prism. A manifest still names
   things and runs nothing.
 
+## Amendment, 2026-10-04: joining is the player's switch, not the manifest's
+
+The manifest's `server.joinOnLaunch` said whether Play joined a chapter's
+server, which made Lichdenstein's button read "Join Lichdenstein" for every
+player whether or not they wanted to be dropped into a server (issue 163). It
+is **retired**, not kept as a default:
+
+- `joinOnLaunch` is removed from `models.Server`, the schema (the property and
+  its `required` entry), the bundled `data/launcher.json` and the TypeScript
+  types. A manifest that still carries it is refused whole like any field this
+  build does not know (`DisallowUnknownFields`), so the wiki's emitter must not
+  write it. Keeping it as the default for a player who never set the switch
+  would have let a manifest decide that a game starts by connecting to a
+  server, which is the one thing a manifest should not decide.
+- Whether Play joins is **the player's switch**, saved per chapter in the app's
+  settings as `joinServers`: the ids of the chapters whose server is joined.
+  Off for every chapter until turned on. The ids are checked against the
+  manifest on save (`ValidateJoinServers`: a chapter that has a server, never
+  an address) and pruned on read like `serverChoices`.
+- The switch lives with the address choice, on each chapter's own settings
+  page, which gains a Server section for a chapter with a server; the app's
+  Settings screen loses its Server section. The address joined is still the one
+  `services.ServerAddress` resolves, and `LaunchArgs` still validates what
+  reaches Prism's `--server`.
+- Play reads "Join <chapter>" only while the switch is on, and "Play <chapter>"
+  otherwise. Frangfurd and Luxemburg are no different from Lichdenstein now.
+
 ## Amendment, 2026-10-04: a chapter may name its web map
 
 A chapter's BlueMap web map opens from the hero, in a page of the launcher or in

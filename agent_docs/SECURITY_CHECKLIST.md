@@ -26,7 +26,7 @@ summed). A different count is new surface to classify: add the method to this ta
 | `SetPackSource` | a chapter id and `published` or `dev` | the one `PreLaunchCommand` key of the chapter's own `instance.cfg`, between the manifest's pack URL and the loopback override from settings, only from the launcher's own template; refused while the game is active | S3.3, S4.6 |
 | `StopGame` | a chapter id | the pid of the Prism the launcher started, or of the game's Java found as its child, for a run the tracker follows: asked to close, then ended | S3.3, S3.9 |
 | `ShowPrismConsole` | a chapter id | the console window of the Prism the launcher started for that chapter, which the launcher's own hold hid: shown and given the foreground | S3.3, S3.7 |
-| `SaveSettings` | a whole `AppSettings`, including `serverChoices`: a chapter id to the label of one of its manifest addresses | the settings file, the executable detection then runs, and, for a chapter whose chosen address moved, one ping of the manifest's address for that label | S3.5, S6.1 |
+| `SaveSettings` | a whole `AppSettings`, including `serverChoices`: a chapter id to the label of one of its manifest addresses, and `joinServers`: chapter ids of the manifest that have a server, validated against it | the settings file, the executable detection then runs, and, for a chapter whose chosen address moved, one ping of the manifest's address for that label; with a chapter in `joinServers`, Play passes that chapter's chosen manifest address to Prism's `--server`, checked again by `LaunchArgs` | S3.5, S6.1 |
 | `ChoosePrismExecutable`, `ChoosePrismRoot` | nothing | a native file or folder picker; the pick is returned, never saved here | S3.5 |
 | `OpenExternal` | a URL | the system browser, web URLs only | S3.4 |
 | `GetWikiPages` | nothing | one bounded GET of the wiki's lore export on the manifest's wiki host, cached in the app data dir | S2.3, S4.3 |
@@ -98,7 +98,7 @@ Verify: `TestParseManifestRefusesUnknownFields`; `TestValidateManifestRefuses`;
 excepted.**
 Holds when: `checkURL` runs on `wiki.baseUrl`, `pack.packwiz` and `pack.mrpack`,
 and `AllowedManifestHosts` is a short fixed list. The one exception is a
-chapter's optional `map` (issue 161, ADR-4's second amendment): a playit tunnel
+chapter's optional `map` (issue 161, ADR-4's third amendment): a playit tunnel
 serves BlueMap without TLS, so `checkMapURL` takes http or https on a host of
 labels under `tun.ply.gg`, with an explicit port from 1 to 65535, lowercase, and
 nothing after it but an optional slash (no user info, query, fragment or path).
@@ -195,8 +195,21 @@ label that is not in that chapter's own list (`ValidateServerChoices`), so
 nothing typed on the settings screen reaches a ping or Prism's `--server`.
 `services.ServerAddress` turns a label into the manifest's address, falling
 back to the first when the label is missing or stale.
-Verify: `settings_test.go`, `serverchoice_test.go`,
-`TestSaveSettingsRefusesAnUnknownChapterOrLabelAndKeepsWhatWasSaved`; S5.1, S5.2.
+A `joinServers` entry (issue 163) is a chapter id and nothing more: the
+player's switch for joining that chapter's server on Play, off for every chapter
+until turned on. `ValidateSettings` holds each id to a chapter's shape and a
+count cap, `App.SaveSettings` refuses an id that is not a chapter of the
+manifest with a server (`ValidateJoinServers`), `GetSettings` prunes a stale one
+(`PruneJoinServers`) and a settings file's malformed ones are dropped on load.
+The address Play joins is never in settings: `joinAddress` returns
+`services.ServerAddress` for a chapter in the list, else nothing, and
+`LaunchArgs` validates it as it does every value that reaches Prism. The
+manifest cannot turn joining on: `joinOnLaunch` is retired and a manifest that
+carries it is refused whole.
+Verify: `settings_test.go`, `serverchoice_test.go`, `joinservers_test.go`,
+`TestSaveSettingsRefusesAnUnknownChapterOrLabelAndKeepsWhatWasSaved`,
+`TestSaveSettingsRefusesAJoinSwitchForAChapterWithNoServerAndKeepsWhatWasSaved`,
+`TestParseManifestRefusesTheRetiredJoinOnLaunch`; S5.1, S5.2.
 Probe: anything that would put third-party script in the WebView (a remote
 image or page, a manifest string rendered as HTML).
 
