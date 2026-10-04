@@ -21,6 +21,8 @@ interface Props<T extends string> {
   value: T | null
   choices: readonly Choice<T>[]
   onChange: (value: T) => void
+  /** Two cards a row, for short choices side by side (the Java presets, issue 191); one otherwise. */
+  columns?: 1 | 2
 }
 
 const BLANK = '\u00a0'
@@ -36,7 +38,13 @@ const BLANK = '\u00a0'
  * A radio group: the arrow keys move between the cards, Enter or Space picks.
  * A disabled card cannot be focused or picked.
  */
-export function ChoiceCards<T extends string>({ label, value, choices, onChange }: Props<T>) {
+export function ChoiceCards<T extends string>({
+  label,
+  value,
+  choices,
+  onChange,
+  columns = 1,
+}: Props<T>) {
   const id = useId()
   const hasDetail = choices.some((c) => c.detail !== undefined)
   const hasNote = choices.some((c) => c.note !== undefined)
@@ -50,7 +58,7 @@ export function ChoiceCards<T extends string>({ label, value, choices, onChange 
       role="radiogroup"
       aria-label={label}
       onKeyDown={moveRadioFocus}
-      className="flex flex-col gap-2"
+      className={columns === 2 ? 'grid grid-cols-1 gap-2 @lg:grid-cols-2' : 'flex flex-col gap-2'}
     >
       {choices.map((c, i) => {
         const chosen = c.value === value

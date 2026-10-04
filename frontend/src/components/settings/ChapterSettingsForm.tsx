@@ -85,6 +85,7 @@ export function ChapterSettingsForm({
         <SubHeading>Java arguments</SubHeading>
         <ChoiceCards
           label="Java arguments"
+          columns={2}
           value={draft.jvm}
           choices={['', ...info.presets].map((name) => ({
             value: name,
