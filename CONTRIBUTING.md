@@ -26,6 +26,9 @@ label, so an issue may be retitled. That is housekeeping, not a judgement.
 
 ## Contributing code
 
+The project is GPL-3.0-only (`LICENSE`); a contribution is made under the
+same licence.
+
 Start from an issue. Setup and the dev loop are in the [README](README.md);
 conventions and the full command list are in
 [`agent_docs/CLAUDE.md`](agent_docs/CLAUDE.md). Run the gates before opening

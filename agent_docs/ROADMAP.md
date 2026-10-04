@@ -128,8 +128,8 @@ What is left:
       the first prerelease dispatch is still to run
 - [x] Installers: an NSIS setup for Windows and a disk image for macOS, and
       the bundle identifier (issue 177)
-- [ ] Code signing: SignPath Foundation for Windows once a licence and a first
-      release exist; Developer ID is not for the beta (issue 179, ADR-6
+- [ ] Code signing: SignPath Foundation for Windows, now that the licence
+      (GPL-3.0, 2026-10-04) and a first release exist; Developer ID is not for the beta (issue 179, ADR-6
       amendment)
 - [x] Create the labels in `.github/labels.yml` on the repository (`scripts/sync-labels.py`),
       done 2026-09-29

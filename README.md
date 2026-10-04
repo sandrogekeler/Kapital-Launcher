@@ -51,6 +51,14 @@ cd frontend && pnpm dev
 
 ## Licences and notices
 
+Kapital Launcher's source code is free software under the GNU General Public
+License, version 3 (GPL-3.0-only); the text is in `LICENSE`. Copyright 2026
+Alessandro Gekeler.
+
+The licence covers the code. The Kapitel Kapital and Kapital Launcher names,
+the logo and the chapter artwork in `frontend/src/assets/` are not under it
+and stay the author's: a fork needs its own name and art.
+
 Prism Launcher is GPL-3.0 and separately installed; this app calls its command
 line and ships none of its code. Fonts: Inter, Fraunces and JetBrains Mono,
 SIL OFL 1.1, licences in `frontend/src/assets/fonts/licences/`. Icons:
