@@ -206,6 +206,35 @@ describe('ChapterSettingsPanel', () => {
     expect(App.GetChapterSettings).not.toHaveBeenCalled()
   })
 
+  it('shows the Server section for a chapter that is not installed, and none for a chapter with no server', () => {
+    useEngineStore.setState({ instances: report(false) })
+    const { unmount } = render(
+      <ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />,
+    )
+    expect(screen.getByRole('heading', { name: 'Server' })).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Join the server on Play' })).toBeInTheDocument()
+    unmount()
+    render(
+      <ChapterSettingsPanel chapter={{ ...frangfurd, server: null }} onClose={() => undefined} />,
+    )
+    expect(screen.queryByRole('heading', { name: 'Server' })).toBeNull()
+  })
+
+  it('puts the Server section after the memory form and before the mods (issue 163)', async () => {
+    vi.mocked(App.GetChapterMods).mockResolvedValue({
+      chapterId: 'frangfurd',
+      running: false,
+      mods: [],
+      toggles: [],
+    } as never)
+    render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+    const memory = await screen.findByLabelText('Memory')
+    const server = screen.getByRole('heading', { name: 'Server' })
+    const mods = await screen.findByRole('heading', { name: 'Mods' })
+    expect(memory.compareDocumentPosition(server) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(server.compareDocumentPosition(mods) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   describe('reveal', () => {
     it('holds the form back, with a faint line, until the instance has been read, then reveals it', async () => {
       let finish: (v: ChapterSettingsInfo) => void = () => undefined

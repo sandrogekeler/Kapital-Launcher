@@ -87,9 +87,9 @@ export function chapterById(manifest: Manifest, id: string): Chapter | undefined
   return manifest.chapters.find((c) => c.id === id)
 }
 
-/** The verb on the Play button: a chapter that joins its server on launch is joined, the rest are played. */
-export const playLabel = (chapter: Chapter) =>
-  chapter.server?.joinOnLaunch ? `Join ${chapter.name}` : `Play ${chapter.name}`
+/** The verb on the Play button: Play, or Join when the player turned on joining the chapter's server (issue 163). */
+export const playLabel = (chapter: Chapter, join: boolean) =>
+  chapter.server && join ? `Join ${chapter.name}` : `Play ${chapter.name}`
 
 /** Whether the chapter's pack is hosted, so Install has something to install (#25). */
 export const isPublished = (chapter: Chapter) => chapter.pack.packwiz != null

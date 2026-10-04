@@ -36,8 +36,10 @@ interface Props {
   installed: boolean | undefined
   /** A local packwiz serve address from settings, which Install uses instead (#41). */
   devPack: string | undefined
-  /** The label of the server address the player picked in settings (issue 151); undefined is the first. */
+  /** The label of the server address the player picked in the chapter's settings (issue 151); undefined is the first. */
   serverChoice: string | undefined
+  /** Whether the player turned on joining the chapter's server on Play (issue 163): the button says Join. */
+  joinServer: boolean
   /** The pack URL the chapter's instance syncs from, when the launcher made it. */
   instancePack: string | undefined
   /** Whether the installed pack is its source's current one (#71). */
@@ -128,6 +130,7 @@ export function ActionBar({
   installed,
   devPack,
   serverChoice,
+  joinServer,
   instancePack,
   packState,
   game,
@@ -248,7 +251,7 @@ export function ActionBar({
         ) : (
           <Button variant="play" onClick={onPlay} disabled={installing || missing || working}>
             <Icon icon={Play} size="sm" className="fill-current" />
-            <span>{playLabel(chapter)}</span>
+            <span>{playLabel(chapter, joinServer)}</span>
           </Button>
         )}
         {missing && (

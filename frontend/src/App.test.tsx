@@ -174,11 +174,11 @@ describe('App', () => {
     expect(screen.getByText('NeoForge 1.21.1')).toBeInTheDocument()
   })
 
-  it('says Join for a server chapter and disables Play while Prism is missing', async () => {
+  it('says Play for a server chapter until its switch is on, and disables Play while Prism is missing', async () => {
     render(<App />)
     await screen.findByRole('heading', { level: 1 })
     switchTo(/02.*Lichdenstein/)
-    const play = screen.getByRole('button', { name: 'Join Lichdenstein' })
+    const play = screen.getByRole('button', { name: 'Play Lichdenstein' })
     expect(play).toBeDisabled()
     expect(screen.getByText('○ Prism not found')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Get Prism Launcher' })).toBeInTheDocument()
@@ -203,12 +203,55 @@ describe('App', () => {
     expect(screen.getByText(/2\/20 players/)).toBeInTheDocument()
     // The server's version is on the state line now; the facts are the pack's (#57).
     expect(screen.queryByText('Runs')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Join Lichdenstein' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Play Lichdenstein' })).toBeEnabled()
 
-    // Frangfurd has a server too, but is played as a pack.
+    // Frangfurd has a server too.
     switchTo(/03.*Frangfurd/)
     expect(screen.getByRole('main')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Check the server now' })).toBeInTheDocument()
+  })
+
+  it('reads Join for a chapter whose join switch is on in the launcher settings (issue 163)', async () => {
+    vi.mocked(Bindings.GetSettings).mockResolvedValue({
+      ...DEFAULT_SETTINGS,
+      joinServers: ['lichdenstein'],
+    })
+    render(<App />)
+    await screen.findByRole('heading', { level: 1 })
+    switchTo(/02.*Lichdenstein/)
+    expect(screen.getByRole('button', { name: 'Join Lichdenstein' })).toBeInTheDocument()
+    // The switch is per chapter.
+    switchTo(/03.*Frangfurd/)
+    expect(screen.getByRole('button', { name: 'Play Frangfurd' })).toBeInTheDocument()
+  })
+
+  it("turns Play into Join from the chapter's own settings page, and back (issue 163)", async () => {
+    render(<App />)
+    await screen.findByRole('heading', { level: 1 })
+    switchTo(/02.*Lichdenstein/)
+    expect(screen.getByRole('button', { name: 'Play Lichdenstein' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lichdenstein settings' }))
+    await screen.findByRole('region', { name: 'Lichdenstein settings' })
+    const join = await screen.findByRole('switch', { name: 'Join the server on Play' })
+    expect(join).not.toBeChecked()
+    fireEvent.click(join)
+    await waitFor(() =>
+      expect(Bindings.SaveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ joinServers: ['lichdenstein'] }),
+      ),
+    )
+    expect(screen.getByRole('switch', { name: 'Join the server on Play' })).toBeChecked()
+    // The chapter card behind the page follows the saved switch.
+    expect(
+      screen.getByRole('button', { name: 'Join Lichdenstein', hidden: true }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Join the server on Play' }))
+    await waitFor(() => expect(useSettingsStore.getState().settings.joinServers).toEqual([]))
+    expect(
+      screen.getByRole('button', { name: 'Play Lichdenstein', hidden: true }),
+    ).toBeInTheDocument()
   })
 
   it('shows an unsettled server address as pending, not as the placeholder host', async () => {

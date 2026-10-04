@@ -29,11 +29,16 @@ describe('bundled manifest', () => {
 })
 
 describe('labels', () => {
-  it('joins a server and plays a pack', () => {
+  it('plays a chapter, and joins its server once the player turned that on', () => {
     const [lux, lic, fra] = BUNDLED_MANIFEST.chapters
-    expect(playLabel(lux!)).toBe('Play Luxemburg')
-    expect(playLabel(lic!)).toBe('Join Lichdenstein')
-    expect(playLabel(fra!)).toBe('Play Frangfurd')
+    expect(playLabel(lux!, false)).toBe('Play Luxemburg')
+    expect(playLabel(lic!, false)).toBe('Play Lichdenstein')
+    expect(playLabel(fra!, false)).toBe('Play Frangfurd')
+    expect(playLabel(lux!, true)).toBe('Join Luxemburg')
+    expect(playLabel(lic!, true)).toBe('Join Lichdenstein')
+    expect(playLabel(fra!, true)).toBe('Join Frangfurd')
+    // A chapter with no server has nothing to join, whatever is saved.
+    expect(playLabel({ ...lux!, server: null }, true)).toBe('Play Luxemburg')
   })
 
   it('renders unknown facts as the placeholder marker', () => {
@@ -75,7 +80,6 @@ describe('labels', () => {
         { label: 'Global', address: 'global.example' },
         { label: 'Germany', address: 'de.example:25570' },
       ],
-      joinOnLaunch: false,
       software: 'Paper',
     }
     expect(chosenAddress(server, undefined)).toBe('global.example')

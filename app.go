@@ -379,6 +379,7 @@ func (a *App) GetSettings() (models.AppSettings, error) {
 	// A choice the manifest no longer lists is not handed back, so a save of
 	// something else cannot write it again.
 	settings.ServerChoices = services.PruneServerChoices(a.manifest.Chapters, settings.ServerChoices)
+	settings.JoinServers = services.PruneJoinServers(a.manifest.Chapters, settings.JoinServers)
 	// The disabled mods are the mods page's, through GetChapterMods; the screen
 	// holds no copy to send back (SaveSettings keeps what is stored).
 	settings.DisabledMods = nil
@@ -407,6 +408,10 @@ func (a *App) SaveSettings(settings models.AppSettings) error {
 	}
 	// A server choice is a label from the chapter's own list (issue 151).
 	if err := services.ValidateServerChoices(a.manifest.Chapters, settings.ServerChoices); err != nil {
+		return err
+	}
+	// A join switch is a chapter id of the manifest with a server (issue 163).
+	if err := services.ValidateJoinServers(a.manifest.Chapters, settings.JoinServers); err != nil {
 		return err
 	}
 	// The list of disabled mods is written only by SetModsDisabled, which checks

@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"kapital/backend/models"
@@ -120,3 +121,43 @@ func PruneServerChoices(chapters []models.Chapter, choices map[string]string) ma
 	}
 	return kept
 }
+
+// ValidateJoinServers refuses a save whose join switches name a chapter the
+// manifest does not have, or one with no server (issue 163). What is saved is a
+// chapter id and nothing that reaches Prism: the address joined is the
+// manifest's, chosen by ServerAddress, and LaunchArgs still validates it.
+func ValidateJoinServers(chapters []models.Chapter, ids []string) error {
+	for _, id := range ids {
+		found := false
+		for _, c := range chapters {
+			found = found || (c.ID == id && c.Server != nil)
+		}
+		if !found {
+			return fmt.Errorf("settings: join switch for %q: no such chapter with a server", id)
+		}
+	}
+	return nil
+}
+
+// PruneJoinServers drops the chapters the manifest no longer lists with a
+// server, so a stale id on file is never written back (and so refused) by a
+// save of something else.
+func PruneJoinServers(chapters []models.Chapter, ids []string) []string {
+	var kept []string
+	for _, id := range ids {
+		if ValidateJoinServers(chapters, []string{id}) == nil {
+			kept = append(kept, id)
+		}
+	}
+	return kept
+}
+
+// JoinsServer reports whether the player turned on joining the chapter's
+// server on Play. Off for every chapter until they do.
+func JoinsServer(settings models.AppSettings, chapterID string) bool {
+	return slices.Contains(settings.JoinServers, chapterID)
+}
+
+// maxJoinServers is how many chapters' switches a settings file may carry: far
+// more than the manifest has, so a hand-edited file cannot grow without end.
+const maxJoinServers = 64

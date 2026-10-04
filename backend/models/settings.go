@@ -27,6 +27,12 @@ type AppSettings struct {
 	// or Prism. A missing, unknown or stale label means the chapter's first
 	// address (services.ServerAddress).
 	ServerChoices map[string]string `json:"serverChoices,omitempty"`
+	// JoinServers lists the chapter ids whose server Play joins (issue 163): the
+	// player's switch on the chapter's settings page, off for every chapter
+	// until turned on. Chapter ids of the manifest that has a server, never an
+	// address; the address joined is the chapter's chosen one
+	// (services.ServerAddress). Kept sorted and without repeats.
+	JoinServers []string `json:"joinServers,omitempty"`
 	// DisabledMods maps a chapter id to the jar base names ("Mod-1.2.3.jar")
 	// the player has switched off in that chapter's instance (issue 156). Written
 	// only by SetModsDisabled, which checks each name against the instance's mods

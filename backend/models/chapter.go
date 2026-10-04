@@ -65,21 +65,20 @@ type Pack struct {
 }
 
 // Server is a chapter's server: the addresses it can be reached at, each with
-// a short label, the first being the default, and whether Play joins it. A
-// modpack with a server may still be played alone, so joining is a choice the
-// manifest states rather than a consequence of the field existing. Which
-// address a player uses is their saved choice of a label
-// (AppSettings.ServerChoices), resolved by services.ServerAddress.
+// a short label, the first being the default. A modpack with a server may still
+// be played alone, so whether Play joins it is the player's switch
+// (AppSettings.JoinServers), not the manifest's. Which address a player uses is
+// their saved choice of a label (AppSettings.ServerChoices), resolved by
+// services.ServerAddress.
 type Server struct {
-	Addresses    []ServerAddress `json:"addresses"`
-	JoinOnLaunch bool            `json:"joinOnLaunch"`
+	Addresses []ServerAddress `json:"addresses"`
 	// Software is what the server runs, for the facts panel: "Paper", "Vanilla".
 	Software string `json:"software"`
 }
 
 // ServerAddress is one way to reach a chapter's server: host[:port], pinged
-// for the status line and, when joinOnLaunch is true, passed to Prism's
-// --server, under a label the settings screen offers ("Global", "Germany").
+// for the status line and, when the player has the chapter's switch on, passed
+// to Prism's --server, under a label the settings screen offers ("Global", "Germany").
 type ServerAddress struct {
 	Label   string `json:"label"`
 	Address string `json:"address"`
