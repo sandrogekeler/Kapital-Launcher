@@ -102,7 +102,14 @@ export function SettingsPanel({ onClose, onShowChapter }: Props) {
   const common = { settings, errors, save }
 
   return (
-    <Page label="Settings" title="Settings" onBack={onClose} ready={loaded} settings>
+    <Page
+      label="Settings"
+      eyebrow="Launcher"
+      title="Settings"
+      onBack={onClose}
+      ready={loaded}
+      settings
+    >
       <PrismSection {...common} onError={fail} />
       <AppearanceSection {...common} />
       <SupportSection />
