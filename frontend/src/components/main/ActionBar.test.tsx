@@ -213,6 +213,54 @@ describe('ActionBar game line', () => {
     },
   )
 
+  it('shows the server refresh only while the server line is the one shown', () => {
+    bar({ status: online })
+    expect(screen.getByRole('button', { name: 'Check the server now' })).toBeInTheDocument()
+    cleanup()
+    // Not installed, a dev pack, and an install in progress are not about the server.
+    bar({ installed: false })
+    expect(screen.getByText('○ Not installed')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Check the server now' })).toBeNull()
+    cleanup()
+    bar({ installedNow: true })
+    expect(screen.getByText('● Installed')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Check the server now' })).toBeNull()
+  })
+
+  it('keeps the refresh button place when another line is shown, so the text does not step', () => {
+    bar({ installed: false })
+    const line = screen.getByText('○ Not installed').parentElement!
+    expect(line.nextElementSibling).toHaveAttribute('aria-hidden', 'true')
+    expect(line.nextElementSibling).toHaveClass('size-8')
+  })
+
+  it('keeps two lines in the state block while the engine is being checked', () => {
+    bar({ engine: null })
+    const state = screen.getByText('○ Checking engine')
+    expect(state.nextElementSibling?.textContent).toBe('\u00a0')
+  })
+
+  it('sets a status label in the UI face and its detail in the data it names', () => {
+    bar({ status: online })
+    expect(screen.getByText('● Server online')).toHaveClass('font-medium')
+    expect(screen.getByText('● Server online')).not.toHaveClass('font-mono')
+  })
+
+  it('gives the play button one width whatever it says', () => {
+    bar()
+    expect(play()).toHaveClass('min-w-(--layout-play-min)', 'justify-center')
+    cleanup()
+    bar({ game: game('running') })
+    expect(stop()).toHaveClass('min-w-(--layout-play-min)')
+  })
+
+  it('keeps the width of the longer label on the Prism button, Try again or Get Prism Launcher', () => {
+    bar({ engine: { found: false, executable: '', version: '', root: '', source: '' } })
+    const button = screen.getByRole('button', { name: 'Get Prism Launcher' })
+    expect(button).toHaveTextContent('Get Prism LauncherTry again')
+    expect(screen.getByText('Try again')).toHaveClass('invisible')
+  })
+
   it('shows the usual line once the game has closed', () => {
     bar({ game: game('closed') })
     expect(screen.queryByText(/The game/)).toBeNull()

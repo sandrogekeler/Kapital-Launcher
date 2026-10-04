@@ -104,6 +104,7 @@ export function ChapterView({ chapter, onOpenSettings }: Props) {
       />
       <Panels
         chapter={chapter}
+        installed={installed}
         sizeBytes={instanceSize}
         packState={packState}
         wikiPage={wikiPick}

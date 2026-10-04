@@ -1,6 +1,6 @@
 import type { Chapter } from '../../types'
 import { chapterArt, chapterTitleArt } from '../../lib/art'
-import { factValue, isPlaceholder, stateLabel } from '../../lib/manifest'
+import { knownFacts, stateLabel } from '../../lib/manifest'
 import { BookOpen, Pencil } from '../../lib/icons'
 import { Drift } from '../ui/Drift'
 import { IconButton } from '../ui/IconButton'
@@ -25,9 +25,10 @@ interface Props {
 export function Hero({ chapter, art: slideArt, onOpenWiki, onOpenSettings }: Props) {
   const art = slideArt ?? chapterArt(chapter.id)
   const title = chapterTitleArt(chapter.id)
-  const loader = isPlaceholder(chapter.pack.loader) ? '[Loader]' : chapter.pack.loader
-  const mc = isPlaceholder(chapter.pack.minecraft) ? '[MC version]' : chapter.pack.minecraft
-  const mods = chapter.pack.mods == null ? '[N] mods' : `${factValue(chapter.pack.mods)} mods`
+  // A fact nobody has settled has no chip: a placeholder in brackets is for the
+  // author, not the player.
+  const spec = knownFacts(chapter.pack.loader, chapter.pack.minecraft)
+  const mods = knownFacts(chapter.pack.mods)
 
   return (
     <section className="border-line relative flex max-h-(--layout-hero) min-h-0 grow flex-col justify-end overflow-hidden border-b px-14 py-11">
@@ -79,10 +80,8 @@ export function Hero({ chapter, art: slideArt, onOpenWiki, onOpenSettings }: Pro
         </h1>
         <p className="text-fg-soft m-0 text-lg leading-normal">{chapter.blurb}</p>
         <div className="flex flex-wrap gap-2">
-          <Pill>
-            {loader} {mc}
-          </Pill>
-          <Pill>{mods}</Pill>
+          {spec && <Pill>{spec}</Pill>}
+          {mods && <Pill>{mods} mods</Pill>}
           <Pill>{stateLabel(chapter.state)}</Pill>
         </div>
       </div>

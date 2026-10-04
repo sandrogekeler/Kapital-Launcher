@@ -8,6 +8,7 @@ import { FolderOpen } from '../../lib/icons'
 import { Button } from '../ui/Button'
 import { CopyLogButton } from '../ui/CopyLogButton'
 import { Icon } from '../ui/Icon'
+import { ErrorLine } from '../ui/Notes'
 import { RunReportParts } from '../run/RunReportParts'
 
 interface Props {
@@ -108,7 +109,7 @@ export function SplashCard({
       <div className="flex flex-col gap-3">
         <div className="flex items-end justify-between gap-6 px-8">
           <div className="flex min-w-0 flex-col gap-0.5">
-            <span className={`font-mono text-xs ${tone}`}>{stage}</span>
+            <span className={`font-ui text-xs font-medium ${tone}`}>{stage}</span>
             {detail && <span className="text-fg-muted text-xs">{detail}</span>}
           </div>
           {!failed && (
@@ -127,9 +128,9 @@ export function SplashCard({
           </div>
         )}
         {error && (
-          <p role="alert" className="text-danger m-0 px-8 text-xs select-text">
-            {error}
-          </p>
+          <div className="px-8">
+            <ErrorLine>{error}</ErrorLine>
+          </div>
         )}
         {failed ? (
           <div className="flex flex-wrap items-center gap-3 px-8 pb-6">

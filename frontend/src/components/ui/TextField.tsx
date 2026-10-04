@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
+import { ErrorLine, Hint } from './Notes'
 
 interface Props {
   label: string
@@ -56,7 +57,7 @@ export function TextField({
     }
   }
 
-  const line = error ?? hint
+  const lineId = `${id}-line`
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-fg-muted text-sm">
@@ -74,21 +75,14 @@ export function TextField({
           onBlur={commit}
           onKeyDown={onKeyDown}
           aria-invalid={error ? true : undefined}
-          aria-describedby={line ? `${id}-line` : undefined}
+          aria-describedby={error || hint ? lineId : undefined}
           className={`bg-sunken text-fg placeholder:text-fg-faint h-11 min-w-0 grow rounded-md border px-3 text-sm select-text ${
             error ? 'border-danger' : 'border-line-strong'
           } ${mono ? 'font-mono' : ''}`}
         />
         {trailing}
       </div>
-      {line && (
-        <span
-          id={`${id}-line`}
-          className={`text-xs leading-normal select-text ${error ? 'text-danger' : 'text-fg-faint'}`}
-        >
-          {line}
-        </span>
-      )}
+      {error ? <ErrorLine id={lineId}>{error}</ErrorLine> : hint && <Hint id={lineId}>{hint}</Hint>}
     </div>
   )
 }

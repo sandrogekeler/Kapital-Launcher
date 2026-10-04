@@ -237,3 +237,46 @@
 .art-pending-thumb {
   --art-pending-cell: var(--art-pending-cell-thumb);
 }
+
+/* A range input in the house look (ui/RangeField): a pill track in the sunken
+   ground with the line's edge, filled with the accent up to the value, and an
+   accent thumb that brightens as the buttons do. WebView2 is Chromium, so the
+   -webkit- parts are all there is. The fill share arrives as --range-fill, set
+   on the element; the sizes are the spacing scale and the radius token. */
+.range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: calc(var(--spacing) * 4.5);
+  background: transparent;
+  cursor: pointer;
+}
+.range::-webkit-slider-runnable-track {
+  box-sizing: border-box;
+  height: calc(var(--spacing) * 2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    to right,
+    var(--accent) var(--range-fill, 0%),
+    var(--bg-sunken) var(--range-fill, 0%)
+  );
+}
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: calc(var(--spacing) * 4.5);
+  height: calc(var(--spacing) * 4.5);
+  margin-top: calc((var(--spacing) * 2 - var(--spacing) * 4.5) / 2);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+}
+.range:hover::-webkit-slider-thumb {
+  filter: brightness(var(--effect-hover-brightness));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .range::-webkit-slider-thumb {
+    transition: filter var(--duration-fast) var(--ease-standard);
+  }
+}

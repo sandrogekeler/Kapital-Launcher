@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { errMsg } from '../../lib/ipc'
 import { CopyLogButton } from '../ui/CopyLogButton'
+import { Hint } from '../ui/Notes'
+import { Section } from '../ui/Section'
 import type { CopyResult } from '../ui/CopyLogButton'
 
 /**
@@ -29,15 +31,14 @@ export function SupportSection() {
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <h2 className="text-fg-faint m-0 text-xs font-medium">Support</h2>
-      <p className="text-fg-faint m-0 text-xs leading-normal">
+    <Section title="Support">
+      <Hint>
         Reporting a bug? Copy the end of the launcher's log to paste into the report. Your name,
         folders and server addresses are masked first, and nothing is saved to disk.
-      </p>
-      <div className="flex items-center gap-4">
+      </Hint>
+      <div className="flex items-center gap-3">
         <CopyLogButton onClick={() => void copy()} result={result} disabled={busy} />
       </div>
-    </div>
+    </Section>
   )
 }

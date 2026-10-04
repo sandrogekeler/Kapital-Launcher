@@ -3,6 +3,7 @@ import { megabytes } from '../../lib/prismInstall'
 import { Download } from '../../lib/icons'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
+import { TextLink } from '../ui/TextLink'
 
 interface Props {
   release: PrismRelease
@@ -24,7 +25,6 @@ export function GetPrism({
   onOpenReleasePage,
   onOpenPrismSite,
 }: Props) {
-  const link = 'text-accent cursor-pointer underline-offset-2 hover:underline'
   return (
     <div
       role="region"
@@ -46,12 +46,8 @@ export function GetPrism({
           <span>Download and set up</span>
         </Button>
         <Button onClick={onCancel}>Not now</Button>
-        <button type="button" className={link} onClick={onOpenReleasePage}>
-          What&apos;s in {release.version}
-        </button>
-        <button type="button" className={link} onClick={onOpenPrismSite}>
-          Prism&apos;s website
-        </button>
+        <TextLink onClick={onOpenReleasePage}>What&apos;s in {release.version}</TextLink>
+        <TextLink onClick={onOpenPrismSite}>Prism&apos;s website</TextLink>
       </div>
     </div>
   )

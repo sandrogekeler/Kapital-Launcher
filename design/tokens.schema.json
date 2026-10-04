@@ -168,7 +168,7 @@
     },
     "layout": {
       "type": "object",
-      "required": ["unit", "sidebar", "hero", "titlebar", "icon", "scrollbar", "slide", "drift", "title", "window", "splash"],
+      "required": ["unit", "sidebar", "hero", "titlebar", "icon", "scrollbar", "slide", "drift", "title", "playMin", "window", "splash"],
       "additionalProperties": false,
       "properties": {
         "unit": { "const": "px" },
@@ -193,6 +193,11 @@
           "type": "integer",
           "minimum": 1,
           "description": "The height of every chapter's title artwork in the hero, in px, so the three read as one size whatever their proportions (#77)."
+        },
+        "playMin": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The least width of the play button, in px, measured at the widest label it carries with the real fonts (Install Lichdenstein, 237px), so Play, Join, Install and Stop never change its width and the state line beside it never moves."
         },
         "scrollbar": {
           "type": "integer",

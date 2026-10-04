@@ -5,6 +5,9 @@ import { usePreviewStore } from '../../stores/usePreviewStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { errMsg } from '../../lib/ipc'
 import { Button } from '../ui/Button'
+import { ErrorLine, Hint } from '../ui/Notes'
+import { Segmented } from '../ui/Segmented'
+import { SubHeading } from '../ui/Section'
 
 interface Props {
   /** Called once a preview is on, with the chapter picked, so the screen under review is shown. */
@@ -17,9 +20,12 @@ interface Props {
  * Go pushes made-up state through the real paths, so the bar, the notices, the
  * card and the sidebar render their real copy. The list is Go's.
  *
- * A start brings the chapter up on the main screen, closing settings, because
- * the screen under review is not this one. Loaded on demand, like the pack
- * source section, to stay out of the entry bundle.
+ * A start brings the chapter up on its main screen, closing every page over
+ * it, because the screen under review is not this one. Loaded on demand, like the pack
+ * source section, to stay out of the entry bundle. The section is about 500px
+ * tall once Go's twelve situations are in; its root keeps that as a minimum, as
+ * SettingsPanel's fallback does while it loads, so Support and About below it
+ * stay where they are.
  */
 export function PreviewSection({ onStarted }: Props) {
   const chapters = useChapterStore((s) => s.manifest.chapters)
@@ -70,41 +76,25 @@ export function PreviewSection({ onStarted }: Props) {
   const forPrism = situations.filter((s) => s.scope === 'prism')
 
   return (
-    <div className="flex flex-col gap-4">
-      <h3 className="text-fg-muted m-0 text-sm font-medium">Preview</h3>
-      <p className="text-fg-faint m-0 text-xs leading-normal">
+    <div className="flex min-h-128 flex-col gap-3">
+      <SubHeading>Preview</SubHeading>
+      <Hint>
         Shows a screen that a run only has when something goes wrong, so it can be looked at. A
         preview is made up: it writes nothing, starts nothing and reaches no network, and a real
         launch ends it.
-      </p>
+      </Hint>
       {splashOn === false && (
-        <p className="text-fg-faint m-0 text-xs leading-normal">
+        <Hint>
           The loading splash is off here, so previews that have a card show the bar and the notice
           only.
-        </p>
+        </Hint>
       )}
-      <div className="flex flex-col gap-1.5">
-        <span className="text-fg-muted text-sm">Chapter</span>
-        <div
-          role="group"
-          aria-label="Chapter to preview"
-          className="bg-sunken border-line-strong inline-flex w-fit rounded-md border p-0.5"
-        >
-          {chapters.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              aria-pressed={c.id === chapterId}
-              onClick={() => setPicked(c.id)}
-              className={`duration-fast ease-standard h-9 cursor-pointer rounded-sm px-4 text-sm transition-colors ${
-                c.id === chapterId ? 'bg-raised text-fg' : 'text-fg-muted hover:text-fg'
-              }`}
-            >
-              {c.name}
-            </button>
-          ))}
-        </div>
-      </div>
+      <Segmented
+        label="Chapter"
+        value={chapterId}
+        options={chapters.map((c) => ({ value: c.id, label: c.name }))}
+        onChange={setPicked}
+      />
       <div role="group" aria-label="Chapter situations" className="flex flex-wrap gap-2">
         {forChapter.map(button)}
       </div>
@@ -116,11 +106,7 @@ export function PreviewSection({ onStarted }: Props) {
         <Button disabled={busy} onClick={() => void run(clear)}>
           Clear previews
         </Button>
-        {error && (
-          <span role="alert" className="text-danger text-xs select-text">
-            {error}
-          </span>
-        )}
+        {error && <ErrorLine>{error}</ErrorLine>}
       </div>
     </div>
   )

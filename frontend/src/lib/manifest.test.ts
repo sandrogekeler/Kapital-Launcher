@@ -8,7 +8,9 @@ import {
   isPlaceholderAddress,
   playLabel,
   sizeValue,
+  knownFacts,
   stateLabel,
+  unsetLabel,
 } from './manifest'
 import { CHAPTER_IDS } from '../styles/tokens'
 
@@ -64,6 +66,19 @@ describe('labels', () => {
       expect(isPlaceholderAddress(real), real).toBe(false)
       expect(addressValue(real)).toBe(real)
     }
+  })
+
+  it('says in words what an unsettled fact is: not installed, or unknown', () => {
+    expect(unsetLabel(false)).toBe('Not installed')
+    expect(unsetLabel(true)).toBe('Unknown')
+    expect(unsetLabel(undefined)).toBe('Unknown')
+  })
+
+  it('joins the facts that are settled and says nothing when none is', () => {
+    expect(knownFacts('NeoForge', '1.21.1')).toBe('NeoForge 1.21.1')
+    expect(knownFacts('[PLACEHOLDER]', '1.21.1')).toBe('1.21.1')
+    expect(knownFacts(96)).toBe('96')
+    expect(knownFacts('[PLACEHOLDER]', null, undefined)).toBeNull()
   })
 
   it('spells states as the reference does', () => {

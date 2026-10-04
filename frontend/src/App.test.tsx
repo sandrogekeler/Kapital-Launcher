@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { models } from '../wailsjs/go/models'
 import * as Bindings from '../wailsjs/go/main/App'
@@ -12,6 +12,7 @@ import { BUNDLED_MANIFEST } from './lib/manifest'
 import { SLIDE_INTERVAL_MS } from './lib/slides'
 
 vi.mock('../wailsjs/go/main/App')
+vi.mock('../wailsjs/runtime/runtime')
 
 /** The bundled manifest with Frangfurd's pack hosted, as #25 will make it. */
 function withFrangfurdHosted() {
@@ -77,6 +78,18 @@ function switchTo(name: RegExp) {
 }
 
 describe('App', () => {
+  // The pages are their own chunks, loaded when first asked for. Loading them
+  // once up front keeps a test that opens one from racing the first transform.
+  beforeAll(async () => {
+    await Promise.all([
+      import('./components/settings/SettingsPanel'),
+      import('./components/settings/ChapterSettingsPanel'),
+      import('./components/settings/PreviewSection'),
+      import('./components/settings/PackSourceSection'),
+      import('./components/main/RunReportPanel'),
+    ])
+  }, 60_000)
+
   beforeEach(() => {
     vi.clearAllMocks()
     useChapterStore.setState({
@@ -234,8 +247,11 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Install Luxemburg' })).toBeDisabled()
     expect(screen.queryByRole('button', { name: 'Play Luxemburg' })).not.toBeInTheDocument()
 
-    // The size fact waits for an instance to measure (#57).
-    expect(screen.getByText('Size').nextElementSibling).toHaveTextContent('[PLACEHOLDER]')
+    // The version and the size wait for an instance to measure (#57), and say
+    // so in words, not as the manifest's marker.
+    expect(screen.getByText('Size').nextElementSibling).toHaveTextContent('Not installed')
+    expect(screen.getByText('Version').nextElementSibling).toHaveTextContent('Not installed')
+    expect(screen.queryByText(/PLACEHOLDER/)).toBeNull()
 
     // Made in Prism by hand while the launcher was in the background.
     vi.mocked(Bindings.GetInstances).mockResolvedValue(
@@ -414,9 +430,41 @@ describe('App', () => {
   it('keeps the disclaimer the usage guidelines require to the settings screen', async () => {
     render(<App />)
     await screen.findByRole('heading', { level: 1 })
-    expect(screen.queryByText(/NOT AN OFFICIAL MINECRAFT PRODUCT/)).toBeNull()
+    expect(screen.queryByText(/Not an official Minecraft product/)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
-    expect(screen.getByText(/NOT AN OFFICIAL MINECRAFT PRODUCT/)).toBeInTheDocument()
+    expect(await screen.findByText(/Not an official Minecraft product/)).toBeInTheDocument()
+  })
+
+  it('lands a preview started in Settings on the chapter view, with its settings open beneath', async () => {
+    Object.assign(window, { go: {} })
+    try {
+      vi.mocked(Bindings.GetPreviewSituations).mockResolvedValue([
+        {
+          id: 'crashed',
+          label: 'Crashed, with a crash report',
+          scope: 'chapter',
+          card: true,
+          playsInstall: false,
+        },
+      ] as never)
+      vi.mocked(Bindings.StartPreview).mockResolvedValue({ cardSkipped: false })
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      fireEvent.click(screen.getByRole('button', { name: 'Luxemburg settings' }))
+      expect(await screen.findByRole('region', { name: 'Luxemburg settings' })).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
+      expect(await screen.findByRole('region', { name: 'Settings' })).toBeInTheDocument()
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Crashed, with a crash report' }))
+      await waitFor(() => expect(Bindings.StartPreview).toHaveBeenCalledOnce())
+      await waitFor(() => expect(screen.queryByRole('region', { name: 'Settings' })).toBeNull())
+      // Neither page is left underneath: the app is on the chapter itself.
+      expect(screen.queryByRole('region', { name: 'Luxemburg settings' })).toBeNull()
+      expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Luxemburg')
+      expect(screen.getByRole('button', { name: 'Luxemburg settings' })).toBeInTheDocument()
+    } finally {
+      Reflect.deleteProperty(window, 'go')
+    }
   })
 
   it('shows a wiki page of the open chapter and opens that page, else the teaser', async () => {

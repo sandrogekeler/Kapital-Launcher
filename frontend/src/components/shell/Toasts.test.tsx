@@ -64,6 +64,9 @@ describe('Toasts', () => {
     act(() => useGameStore.getState().receive(failed))
     expect(within(notices()).getByText('○ The game did not start')).toHaveClass('text-danger')
     expect(within(notices()).getByText('Prism stopped before the game')).toBeInTheDocument()
+    expect(notices().querySelector('svg.lucide-triangle-alert')).not.toBeNull()
+    // The title is a label, set in the UI face, not in the data face.
+    expect(within(notices()).getByText('○ The game did not start')).not.toHaveClass('font-mono')
     fireEvent.click(within(notices()).getByRole('button', { name: 'Details' }))
     expect(onOpenReport).toHaveBeenCalledExactlyOnceWith('frangfurd')
   })
@@ -115,6 +118,9 @@ describe('Toasts', () => {
     act(() => useGameStore.getState().receive({ ...failed, reason: 'stopped' }))
     expect(within(notices()).getByText('○ The game did not start')).toHaveClass('text-fg-muted')
     expect(within(notices()).queryByRole('button', { name: 'Details' })).toBeNull()
+    // A stop the player asked for is not a warning: a neutral mark, not the triangle.
+    expect(notices().querySelector('svg.lucide-info')).not.toBeNull()
+    expect(notices().querySelector('svg.lucide-triangle-alert')).toBeNull()
   })
 
   it('shows a refused stop', () => {

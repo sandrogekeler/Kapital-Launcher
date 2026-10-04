@@ -3,18 +3,12 @@ import type { Chapter, ChapterSettings } from '../../types'
 import { selectInstalled, useEngineStore } from '../../stores/useEngineStore'
 import { isActive, selectGame, useGameStore } from '../../stores/useGameStore'
 import { errMsg } from '../../lib/ipc'
-import {
-  MEMORY_STEP_MB,
-  MIN_MEMORY_MB,
-  memoryLabel,
-  presetLabel,
-  sliderMaxMb,
-} from '../../lib/chapterSettings'
-import { ArrowLeft, FolderOpen } from '../../lib/icons'
+import { FolderOpen } from '../../lib/icons'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
-import { IconButton } from '../ui/IconButton'
-import { RunningHint } from './RunningHint'
+import { ErrorLine } from '../ui/Notes'
+import { Page } from '../ui/Page'
+import { ChapterSettingsForm } from './ChapterSettingsForm'
 
 // Only a chapter with a local pack has anything to switch, so the section loads
 // when the panel asks for it and stays out of the launcher's bundle budget
@@ -36,8 +30,8 @@ interface Props {
  * `info.running` also holds a guess from the game log, which is a hint here and
  * is read again when the chapter's run ends and when the window regains focus
  * (issue 126). Save writes both at once; the value shown after
- * is what Go read back from the file. Open folder (#85) shows the instance in
- * the file manager; it is there to reach a crash report or a screenshot.
+ * is what Go read back from the file. Open folder (#85), in the page header,
+ * shows the instance in the file manager; it is there to reach a crash report or a screenshot.
  * A chapter with a local pack also gets the pack source section, which switches
  * its instance between the published pack and that one.
  */
@@ -75,14 +69,6 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
   useEffect(() => {
     if (info) setDraft(info.settings)
   }, [info])
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   const dirty =
     info !== undefined &&
@@ -130,94 +116,40 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
   } else if (!info || !draft) {
     body = <p className="text-fg-muted m-0 text-sm">Reading the instance.</p>
   } else {
-    const max = sliderMaxMb(info.machineMemoryMb)
     body = (
-      <>
-        <div className="flex flex-col gap-3">
-          <div className="flex items-baseline justify-between">
-            <label htmlFor="chapter-memory" className="text-fg-muted text-sm">
-              Memory
-            </label>
-            <span className="font-mono text-sm">{memoryLabel(draft.maxMemoryMb)}</span>
-          </div>
-          <input
-            id="chapter-memory"
-            type="range"
-            min={MIN_MEMORY_MB}
-            max={max}
-            step={MEMORY_STEP_MB}
-            value={Math.min(max, draft.maxMemoryMb)}
-            onChange={(e) => setDraft({ ...draft, maxMemoryMb: Number(e.target.value) })}
-            className="w-full accent-(--accent)"
-          />
-          <span className="text-fg-faint text-xs leading-normal">
-            The most the game may take, of{' '}
-            {info.machineMemoryMb > 0 ? memoryLabel(info.machineMemoryMb) : 'an unknown amount'} on
-            this machine. Prism would pick {memoryLabel(info.prismDefaultMb)}
-            {info.packMemoryMb > 0 && `; the pack recommends ${memoryLabel(info.packMemoryMb)}`}.
-          </span>
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <span className="text-fg-muted text-sm">Java arguments</span>
-          <div role="radiogroup" aria-label="Java arguments" className="flex flex-col gap-2">
-            {['', ...info.presets].map((name) => (
-              <label key={name} className="flex cursor-pointer items-center gap-2.5 text-sm">
-                <input
-                  type="radio"
-                  name="chapter-jvm"
-                  value={name}
-                  checked={draft.jvm === name}
-                  onChange={() => setDraft({ ...draft, jvm: name })}
-                  className="accent-(--accent)"
-                />
-                {presetLabel(name)}
-              </label>
-            ))}
-          </div>
-          <span className="text-fg-faint text-xs leading-normal">
-            A preset is a fixed set of arguments the launcher knows; nothing typed here reaches the
-            game.
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button onClick={() => void onSave()} disabled={!dirty || saving || playing}>
-            {saving ? 'Saving' : 'Save'}
-          </Button>
-          {playing && (
-            <span className="text-warning text-xs">
-              {chapter.name} looks to be running. Close the game to change these.
-            </span>
-          )}
-          {!playing && info.running && <RunningHint chapterName={chapter.name} />}
-          {error && <span className="text-danger text-xs select-text">{error}</span>}
-        </div>
-      </>
+      <ChapterSettingsForm
+        chapter={chapter}
+        info={info}
+        draft={draft}
+        onDraft={setDraft}
+        dirty={dirty}
+        saving={saving}
+        playing={playing}
+        error={error}
+        onSave={() => void onSave()}
+      />
     )
   }
 
   return (
-    <section aria-label={`${chapter.name} settings`} className="flex flex-col">
-      <div className="border-line flex items-center gap-3 border-b px-14 py-5">
-        <IconButton icon={ArrowLeft} title="Back" onClick={onClose} />
-        <h1 className="font-display m-0 text-2xl font-semibold">{chapter.name} settings</h1>
-      </div>
-      <div className="flex max-w-200 flex-col gap-10 px-14 pt-8 pb-16">
-        <div className="flex items-center gap-3">
-          <Button onClick={() => void onOpenFolder()} disabled={installed !== true}>
-            <Icon icon={FolderOpen} size="sm" />
-            <span>Open folder</span>
-          </Button>
-          {folderError && <span className="text-danger text-xs select-text">{folderError}</span>}
-        </div>
-        {body}
-        {installed === true && (
-          <Suspense fallback={null}>
-            <PackSourceSection chapter={chapter} />
-          </Suspense>
-        )}
-      </div>
-    </section>
+    <Page
+      label={`${chapter.name} settings`}
+      title={`${chapter.name} settings`}
+      onBack={onClose}
+      actions={
+        <Button onClick={() => void onOpenFolder()} disabled={installed !== true}>
+          <Icon icon={FolderOpen} size="sm" />
+          <span>Open folder</span>
+        </Button>
+      }
+    >
+      {folderError && <ErrorLine>{folderError}</ErrorLine>}
+      {body}
+      {installed === true && (
+        <Suspense fallback={null}>
+          <PackSourceSection chapter={chapter} />
+        </Suspense>
+      )}
+    </Page>
   )
 }

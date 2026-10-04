@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="bg-canvas flex h-full items-center justify-center">
           <div className="p-8 text-center font-mono">
             <div className="text-danger mb-3 text-sm">render error</div>
-            <div className="text-fg-faint max-w-md text-xs break-all select-text">
+            <div className="text-fg-muted max-w-md text-xs break-all select-text">
               {this.state.error.message}
             </div>
           </div>

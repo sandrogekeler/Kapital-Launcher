@@ -4,7 +4,10 @@ import { DISCLAIMER } from '../../lib/disclaimer'
 import { errMsg, readOr } from '../../lib/ipc'
 import { CREDITS, PRISM_SOURCE } from '../../lib/licences'
 import type { Credit } from '../../lib/licences'
+import { PLACEHOLDER } from '../../lib/manifest'
 import { Fact } from '../ui/Fact'
+import { Section, SubHeading } from '../ui/Section'
+import { TextLink } from '../ui/TextLink'
 
 /**
  * What the app is made of and what it owes (#87): its version, the disclaimer
@@ -20,10 +23,11 @@ export function AboutSection() {
   }, [])
 
   return (
-    <div className="flex flex-col gap-5">
-      <h2 className="text-fg-faint m-0 text-xs font-medium">About</h2>
-      <Fact label="Version" value={version || 'unknown'} />
-      <p className="text-fg-faint m-0 text-xs leading-normal select-text">{DISCLAIMER}</p>
+    <Section title="About">
+      <Fact label="Version" value={version || PLACEHOLDER} />
+      <p className="text-fg-muted m-0 max-w-prose text-xs leading-normal select-text">
+        {DISCLAIMER}
+      </p>
 
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {CREDITS.map((c) => (
@@ -31,16 +35,16 @@ export function AboutSection() {
         ))}
       </ul>
 
-      <div className="flex flex-col gap-1.5">
-        <span className="text-fg text-sm">Prism Launcher</span>
-        <p className="text-fg-muted m-0 text-xs leading-normal select-text">
+      <div className="flex flex-col gap-3">
+        <SubHeading>Prism Launcher</SubHeading>
+        <p className="text-fg-muted m-0 max-w-prose text-xs leading-normal select-text">
           Prism Launcher is free software under the GPL-3.0 and is not part of Kapital Launcher.
           When you ask for it, Kapital Launcher downloads an unmodified official release from
           Prism's GitHub releases. Its source is at github.com/PrismLauncher/PrismLauncher.
         </p>
         <LinkButton url={PRISM_SOURCE}>Prism Launcher source</LinkButton>
       </div>
-    </div>
+    </Section>
   )
 }
 
@@ -71,21 +75,20 @@ function CreditRow({ credit }: { credit: Credit }) {
             {credit.role} · {credit.licence}
           </span>
         </div>
-        <button
-          type="button"
+        <TextLink
+          size="xs"
           aria-expanded={open}
           aria-controls={panelId}
           aria-label={`${open ? 'Hide' : 'Show'} licence, ${credit.name}`}
           onClick={toggle}
-          className="text-accent duration-fast ease-standard cursor-pointer text-xs transition-[filter] hover:brightness-(--effect-hover-brightness)"
         >
           {open ? 'Hide licence' : 'Show licence'}
-        </button>
+        </TextLink>
       </div>
       <div id={panelId} hidden={!open}>
         {open && (
           <pre className="bg-sunken border-line text-fg-muted text-2xs m-0 max-h-80 overflow-auto rounded-md border p-4 font-mono leading-normal whitespace-pre-wrap select-text">
-            {error ?? text ?? 'Loading...'}
+            {error ?? text ?? 'Reading the licence.'}
           </pre>
         )}
       </div>
@@ -96,12 +99,12 @@ function CreditRow({ credit }: { credit: Credit }) {
 /** A link that opens in the system browser, through Go's http(s)-only check. */
 function LinkButton({ url, children }: { url: string; children: string }) {
   return (
-    <button
-      type="button"
+    <TextLink
+      size="xs"
+      className="w-fit"
       onClick={() => OpenExternal(url).catch((e) => console.warn('open link', errMsg(e)))}
-      className="text-accent duration-fast ease-standard w-fit cursor-pointer text-xs transition-[filter] hover:brightness-(--effect-hover-brightness)"
     >
       {children}
-    </button>
+    </TextLink>
   )
 }
