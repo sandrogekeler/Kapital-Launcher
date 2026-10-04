@@ -106,7 +106,7 @@ function SettingsNav({ entries }: { entries: readonly NavEntry[] }) {
     <nav
       ref={nav}
       aria-label="Sections"
-      className="bg-raised border-line sticky top-0 z-10 -mx-7 flex shrink-0 gap-1 overflow-x-auto border-b px-7 py-2.5 @2xl:top-7 @2xl:mx-0 @2xl:w-36 @2xl:flex-col @2xl:self-start @2xl:overflow-visible @2xl:border-b-0 @2xl:border-l @2xl:bg-transparent @2xl:py-0 @2xl:pr-0 @2xl:pl-3"
+      className="bg-raised border-line sticky top-0 z-10 -mx-7 flex shrink-0 gap-1 overflow-x-auto border-b px-7 py-2.5 @2xl:top-7 @2xl:mx-0 @2xl:w-max @2xl:min-w-36 @2xl:flex-col @2xl:self-start @2xl:overflow-visible @2xl:border-b-0 @2xl:border-l @2xl:bg-transparent @2xl:py-0 @2xl:pr-0 @2xl:pl-3"
     >
       <span
         ref={bar}
