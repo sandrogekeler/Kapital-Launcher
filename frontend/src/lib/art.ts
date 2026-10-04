@@ -46,3 +46,10 @@ const ICON: Record<string, string> = {
 }
 
 export const chapterIcon = (id: string): string | undefined => ICON[id]
+
+/** Every bundled picture: decoded once at startup so none pops in on a switch. */
+export const BUNDLED_ART: readonly string[] = [
+  ...Object.values(TITLE_ART),
+  ...Object.values(ICON),
+  ...Object.values(ART),
+]

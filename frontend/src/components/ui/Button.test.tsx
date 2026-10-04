@@ -37,7 +37,9 @@ describe('Button', () => {
     expect(play).not.toHaveClass('glow-danger')
     // The glow is one box-shadow, so the button's own transition carries it,
     // and reduced motion removes the transition and leaves the glow.
-    expect(play).toHaveClass('duration-fast', 'transition-[background-color,filter,box-shadow]')
+    // It eases over the reveal's duration, longer than a plain hover's, in and out.
+    expect(play).toHaveClass('duration-reveal', 'transition-[background-color,filter,box-shadow]')
+    expect(play).not.toHaveClass('duration-fast')
     expect(play).toHaveClass('motion-reduce:transition-none')
   })
 
@@ -46,8 +48,11 @@ describe('Button', () => {
       ['accent', '--accent'],
       ['danger', '--danger'],
     ] as const) {
-      expect(css.replace(/\s+/g, ' ')).toContain(
-        `@utility glow-${name} { &:hover:enabled { box-shadow: 0 0 var(--effect-glow-blur) color-mix(in srgb, var(${colour}) var(--effect-glow-strength), transparent); } }`,
+      const flat = css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ')
+      // At rest the same shadow, transparent: only its colour moves, so it
+      // fades out as smoothly as it fades in, without shrinking.
+      expect(flat).toContain(
+        `@utility glow-${name} { box-shadow: 0 0 var(--effect-glow-blur) transparent; &:hover:enabled { box-shadow: 0 0 var(--effect-glow-blur) color-mix(in srgb, var(${colour}) var(--effect-glow-strength), transparent); } }`,
       )
     }
   })
