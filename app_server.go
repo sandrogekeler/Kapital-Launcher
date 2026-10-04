@@ -33,10 +33,13 @@ func joinAddress(chapter models.Chapter, settings models.AppSettings) string {
 }
 
 // checkServer pings a chapter's chosen address now, stores the result and
-// emits it as a server:status event, so the line follows with no polling.
+// emits it as a server:status event, so the line follows with no polling. An
+// answer from an address the player has moved away from while it was out is
+// not emitted: the save that moved it pings the new one.
 func (a *App) checkServer(chapter models.Chapter) models.ServerStatus {
-	status := a.status.Check(a.context(), chapter, a.serverAddress(chapter))
-	if a.ctx != nil {
+	dialed := a.serverAddress(chapter)
+	status := a.status.Check(a.context(), chapter, dialed)
+	if a.ctx != nil && a.serverAddress(chapter) == dialed {
 		wailsrt.EventsEmit(a.ctx, services.EventServerStatus, status)
 	}
 	return status

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -77,5 +78,42 @@ func TestRunPingsOnlyServerChaptersAndStopsOnCancel(t *testing.T) {
 	}
 	if len(got) != 2 || got[0].ChapterID != "lichdenstein" || !got[0].Online || got[1].ChapterID != "frangfurd" || got[1].Online {
 		t.Fatalf("%+v", got)
+	}
+}
+
+func TestRunDropsAPingWhoseAddressChangedWhileItWasOut(t *testing.T) {
+	svc := fakeStatus(map[string]PingResult{"old.example": {Online: true}})
+	chapters := []models.Chapter{
+		{ID: "frangfurd", Server: server(addr("Global", "old.example"), addr("Germany", "new.example"))},
+	}
+	// The first ask dials the old address; by the time its answer is back the
+	// player has picked the other one, which every later ask returns.
+	var asked atomic.Int32
+	address := func(models.Chapter) string {
+		if asked.Add(1) == 1 {
+			return "old.example"
+		}
+		return "new.example"
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	var got []models.ServerStatus
+	done := make(chan struct{})
+	go func() {
+		svc.Run(ctx, chapters, address, func(s models.ServerStatus) { got = append(got, s) })
+		close(done)
+	}()
+	// The first tick has run once the address was asked twice.
+	deadline := time.After(5 * time.Second)
+	for asked.Load() < 2 {
+		select {
+		case <-deadline:
+			t.Fatal("the first tick did not finish")
+		case <-time.After(time.Millisecond):
+		}
+	}
+	cancel()
+	<-done
+	if len(got) != 0 {
+		t.Fatalf("the old address's answer was sent: %+v", got)
 	}
 }

@@ -92,7 +92,15 @@ func (s *StatusService) Run(ctx context.Context, chapters []models.Chapter, addr
 			if ctx.Err() != nil {
 				return
 			}
-			emit(s.Check(ctx, c, address(c)))
+			// A choice changed while the ping was out (issue 151) makes its
+			// answer stale: the save pings the new address itself, so this one
+			// is dropped rather than sent after it.
+			dialed := address(c)
+			status := s.Check(ctx, c, dialed)
+			if address(c) != dialed {
+				continue
+			}
+			emit(status)
 		}
 	}
 	tick()
