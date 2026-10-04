@@ -8,6 +8,7 @@ export namespace models {
 	    lastChapter: string;
 	    packOverrides?: Record<string, string>;
 	    serverChoices?: Record<string, string>;
+	    joinServers?: string[];
 	    disabledMods?: Record<string, Array<string>>;
 	    loadingSplash?: boolean;
 	    loadingSplashAvailable?: boolean;
@@ -27,6 +28,7 @@ export namespace models {
 	        this.lastChapter = source["lastChapter"];
 	        this.packOverrides = source["packOverrides"];
 	        this.serverChoices = source["serverChoices"];
+	        this.joinServers = source["joinServers"];
 	        this.disabledMods = source["disabledMods"];
 	        this.loadingSplash = source["loadingSplash"];
 	        this.loadingSplashAvailable = source["loadingSplashAvailable"];
@@ -80,7 +82,6 @@ export namespace models {
 	}
 	export class Server {
 	    addresses: ServerAddress[];
-	    joinOnLaunch: boolean;
 	    software: string;
 	
 	    static createFrom(source: any = {}) {
@@ -90,7 +91,6 @@ export namespace models {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.addresses = this.convertValues(source["addresses"], ServerAddress);
-	        this.joinOnLaunch = source["joinOnLaunch"];
 	        this.software = source["software"];
 	    }
 	

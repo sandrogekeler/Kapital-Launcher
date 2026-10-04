@@ -29,7 +29,6 @@
       },
       "server": {
         "addresses": [{ "label": "Main", "address": "stamina-exemplary.tun.ply.gg" }],
-        "joinOnLaunch": false,
         "software": "[PLACEHOLDER]"
       },
       "wiki": {
@@ -64,7 +63,6 @@
       },
       "server": {
         "addresses": [{ "label": "Main", "address": "stamina-berkshire.tun.ply.gg" }],
-        "joinOnLaunch": true,
         "software": "Paper"
       },
       "wiki": {
@@ -107,7 +105,6 @@
           { "label": "Global", "address": "female-specified.gl.joinmc.link" },
           { "label": "Germany", "address": "rails-enjoyed.tun.ply.gg" }
         ],
-        "joinOnLaunch": false,
         "software": "[PLACEHOLDER]"
       },
       "wiki": {

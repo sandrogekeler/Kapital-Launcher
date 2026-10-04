@@ -31,13 +31,13 @@ func TestBundledManifestIsValid(t *testing.T) {
 			t.Errorf("%s: instance id %q should carry the kapital- prefix (ADR-2)", c.ID, c.Instance.ID)
 		}
 	}
-	// The two server chapters, and how Play behaves on each (ADR-5).
+	// The chapters with a server; whether Play joins it is the player's switch.
 	lic, fra := m.Chapters[1], m.Chapters[2]
-	if lic.Server == nil || !lic.Server.JoinOnLaunch || lic.Server.Software != "Paper" {
-		t.Errorf("Lichdenstein is joined on launch and runs Paper: %+v", lic.Server)
+	if lic.Server == nil || lic.Server.Software != "Paper" {
+		t.Errorf("Lichdenstein has a server that runs Paper: %+v", lic.Server)
 	}
-	if fra.Server == nil || fra.Server.JoinOnLaunch {
-		t.Errorf("Frangfurd has a server but is played as a pack: %+v", fra.Server)
+	if fra.Server == nil {
+		t.Errorf("Frangfurd has a server: %+v", fra.Server)
 	}
 	// Frangfurd's two addresses, Global the default; Lichdenstein's one
 	// (issue 151).
@@ -47,8 +47,8 @@ func TestBundledManifestIsValid(t *testing.T) {
 	if got := lic.Server.Addresses; len(got) != 1 || got[0] != addr("Main", "stamina-berkshire.tun.ply.gg") {
 		t.Errorf("Lichdenstein's address: %+v", got)
 	}
-	if lux := m.Chapters[0].Server; lux == nil || lux.JoinOnLaunch || len(lux.Addresses) != 1 || lux.Addresses[0] != addr("Main", "stamina-exemplary.tun.ply.gg") {
-		t.Errorf("Luxemburg has one address and is played as a pack: %+v", lux)
+	if lux := m.Chapters[0].Server; lux == nil || len(lux.Addresses) != 1 || lux.Addresses[0] != addr("Main", "stamina-exemplary.tun.ply.gg") {
+		t.Errorf("Luxemburg has one address: %+v", lux)
 	}
 	if m.Chapters[0].Pack.Loader != "Forge" || m.Chapters[0].Pack.Minecraft != "1.19.2" {
 		t.Errorf("Luxemburg is Forge 1.19.2: %+v", m.Chapters[0].Pack)
@@ -173,5 +173,22 @@ func TestWikiURL(t *testing.T) {
 	want := "https://kapitel-kapital.pages.dev/wiki/locations/bellum-castle"
 	if got != want {
 		t.Fatalf("got %q want %q", got, want)
+	}
+}
+
+// joinOnLaunch was retired (ADR-4, second amendment): whether Play joins is the
+// player's switch, so a manifest that still says it is refused like any field
+// this build does not know, and the bundled one does not.
+func TestParseManifestRefusesTheRetiredJoinOnLaunch(t *testing.T) {
+	raw := string(bundledManifest(t))
+	if strings.Contains(raw, "joinOnLaunch") {
+		t.Fatal("the bundled manifest must not carry joinOnLaunch")
+	}
+	old := strings.Replace(raw, `"software": "Paper"`, `"joinOnLaunch": true, "software": "Paper"`, 1)
+	if old == raw {
+		t.Fatal("the test's anchor is gone from the bundled manifest")
+	}
+	if _, err := ParseManifest([]byte(old)); err == nil {
+		t.Fatal("a manifest with joinOnLaunch must be refused")
 	}
 }

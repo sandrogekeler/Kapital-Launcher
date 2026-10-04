@@ -143,6 +143,13 @@ describe('SettingsPanel', () => {
     expect(screen.getByRole('heading', { name: 'About' })).toBeInTheDocument()
   })
 
+  it('has no Server section: the address and the join switch are on each chapter page (issue 163)', () => {
+    render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
+    expect(screen.queryByRole('heading', { name: 'Server' })).toBeNull()
+    expect(screen.queryByRole('radiogroup', { name: /Server for/ })).toBeNull()
+    expect(screen.queryByRole('switch', { name: 'Join the server on Play' })).toBeNull()
+  })
+
   it('saves the theme on click, and the arrow keys only move between the options', async () => {
     render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
     expect(screen.getByRole('radio', { name: 'Dark' })).toBeChecked()

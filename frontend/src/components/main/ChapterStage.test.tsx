@@ -68,7 +68,7 @@ describe('ChapterStage', () => {
       />,
     )
     expect(leaving()).toHaveClass('card-out-down')
-    expect(document.querySelector('.card-in-down')).toHaveTextContent('Join Lichdenstein')
+    expect(document.querySelector('.card-in-down')).toHaveTextContent('Play Lichdenstein')
   })
 
   it('replaces the card without a slide when the window is hidden', () => {
@@ -163,7 +163,7 @@ describe('ChapterStage', () => {
       />,
     )
     expect(document.querySelectorAll('[inert]').length).toBe(1)
-    expect(leaving()).toHaveTextContent('Join Lichdenstein')
+    expect(leaving()).toHaveTextContent('Play Lichdenstein')
     expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Frangfurd')
   })
 })

@@ -180,7 +180,8 @@ one, the icon check on the PC is what is left), #35 (decided on 2026-10-01).
   the launcher stays active. The fix is `yieldActivationToApplication:` with
   the game's pid at the handover; the card does not know the pid yet. Not
   reproducible on the iMac (macOS 13).
-- **Server addresses and `joinOnLaunch`**: #33.
+- **Server addresses**: #33. (`joinOnLaunch` is retired: joining is the
+  player's switch on each chapter's settings page, issue 163, ADR-4.)
 - **Memory** for Lichdenstein is `null` in the manifest. Frangfurd's is 8 GB
   (decided 2026-09-30), written as the instance's maximum with a 512 MB
   minimum.
