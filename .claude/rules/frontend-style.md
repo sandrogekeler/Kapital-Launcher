@@ -40,6 +40,16 @@ does not use it). Layout: `w-(--layout-sidebar)`, `h-(--layout-hero)`,
 `h-(--layout-titlebar)`, `size-(--layout-icon-sm)` and `-md`. Effects:
 `hover:brightness-(--effect-hover-brightness)`, `scrim-hero`, `scrim-wash`.
 
+Motion utilities, in `style.css`, built from the motion tokens (`duration-fast`
+`-reveal` `-page` `-grace` `-slow` `-drift`, `effect.revealBlur`,
+`layout.revealRise`, `effect.glow`): `reveal` and `reveal-wait` (a page's body
+once loaded, and the faint line while it is not: `ui/Reveal`), `page-in-right`
+`page-out-right` `page-in-top` `page-out-top` (a page sliding over the chapter
+card: `main/PageLayer`), and `glow-accent` and `glow-danger` (a filled button's
+hover glow, never on a disabled one). Each has a reduced-motion fallback that
+only fades and still ends its animation, because a leaving page is unmounted
+by its `animationend`.
+
 Spacing is Tailwind's default 4px scale, which is what the reference was drawn
 on; `p-14` is 56px. Do not add a spacing token for a value the scale already has.
 

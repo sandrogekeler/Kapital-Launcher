@@ -225,6 +225,84 @@
   }
 }
 
+/* A page sliding over the chapter card (components/main/PageLayer): a chapter's
+   own pages come in from the right inside the card's frame, the app's settings
+   come down from the top over the card area, and each leaves the way it came.
+   The whole page is the travel, so the distance is its own size. They glide
+   like the card does, with the reveal's small blur and a fade. With reduced
+   motion they only fade, over the same duration, so the leaving page's
+   animationend still fires and it is still removed. */
+@keyframes page-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+    filter: blur(var(--effect-reveal-blur));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes page-out-right {
+  from {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+    filter: blur(var(--effect-reveal-blur));
+  }
+}
+@keyframes page-in-top {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+    filter: blur(var(--effect-reveal-blur));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes page-out-top {
+  from {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-100%);
+    filter: blur(var(--effect-reveal-blur));
+  }
+}
+@utility page-in-right {
+  animation: page-in-right var(--duration-page) var(--ease-glide) both;
+}
+@utility page-out-right {
+  animation: page-out-right var(--duration-page) var(--ease-glide) both;
+}
+@utility page-in-top {
+  animation: page-in-top var(--duration-page) var(--ease-glide) both;
+}
+@utility page-out-top {
+  animation: page-out-top var(--duration-page) var(--ease-glide) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-in-right,
+  .page-in-top {
+    animation: card-fade-in var(--duration-page) ease-in-out both;
+  }
+  .page-out-right,
+  .page-out-top {
+    animation: card-fade-out var(--duration-page) ease-in-out both;
+  }
+}
+
 /* The lift of a filled button on hover (ui/Button): on top of the brighter
    fill, a soft glow in the button's own colour, the accent for Play, Install
    and Join, the danger colour for Stop. Never on a disabled button. The

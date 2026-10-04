@@ -13,7 +13,8 @@ describe('Page', () => {
     )
     const page = screen.getByRole('region', { name: 'Things' })
     expect(page).toHaveClass('bg-raised', 'border-line', 'rounded-lg', 'overflow-hidden')
-    expect(page.parentElement).toHaveClass('m-5')
+    // The inset is the layer's, not the page's: the page is the card and nothing around it.
+    expect(page.parentElement).not.toHaveClass('m-5')
     const heading = screen.getByRole('heading', { level: 1, name: 'Things' })
     expect(heading).toHaveClass('font-display')
     // The header is outside the scrolling element, so it stays put.

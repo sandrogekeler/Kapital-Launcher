@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import type { Chapter } from '../../types'
-import { CARD } from '../ui/Page'
+import { CARD } from '../ui/card'
 import { ChapterView } from './ChapterView'
 
 interface Props {
@@ -9,6 +10,10 @@ interface Props {
   chapters: readonly Chapter[]
   onOpenSettings: (chapterId: string) => void
   onOpenLogs: (chapterId: string) => void
+  /** Whether a page covers the chapter, which leaves the view beneath it inert. */
+  covered?: boolean
+  /** The pages laid over the card, each a `PageLayer`. */
+  children?: ReactNode
 }
 
 type Direction = 'down' | 'up'
@@ -28,13 +33,23 @@ interface Outgoing {
  * in style.css; the distance and the blur are tokens.
  *
  * The stage clips the slide at the card's gap (`.card-stage`), so a moving
- * card never makes the main area scroll (issue 145).
+ * card never makes the main area scroll (issue 145). A page (settings, a
+ * chapter's settings, its logs, a run report) is laid over the card as a layer
+ * in the same stage; the card does not move for it, and while it is covered
+ * the card is inert and hidden from the accessibility tree.
  *
  * The previous chapter is remembered in state and compared during render,
  * React's pattern for state derived from a prop change, so the first render
  * shows the card still and every later change animates.
  */
-export function ChapterStage({ chapter, chapters, onOpenSettings, onOpenLogs }: Props) {
+export function ChapterStage({
+  chapter,
+  chapters,
+  onOpenSettings,
+  onOpenLogs,
+  covered = false,
+  children,
+}: Props) {
   const [shown, setShown] = useState(chapter)
   const [outgoing, setOutgoing] = useState<Outgoing | null>(null)
   if (shown.id !== chapter.id) {
@@ -52,7 +67,12 @@ export function ChapterStage({ chapter, chapters, onOpenSettings, onOpenLogs }: 
 
   return (
     <div className="card-stage relative m-5 flex min-h-0 grow flex-col">
-      <div key={chapter.id} className={`${CARD} ${entering}`}>
+      <div
+        key={chapter.id}
+        inert={covered}
+        aria-hidden={covered || undefined}
+        className={`${CARD} ${entering}`}
+      >
         <ChapterView chapter={chapter} onOpenSettings={onOpenSettings} onOpenLogs={onOpenLogs} />
       </div>
       {outgoing && (
@@ -70,6 +90,7 @@ export function ChapterStage({ chapter, chapters, onOpenSettings, onOpenLogs }: 
           />
         </div>
       )}
+      {children}
     </div>
   )
 }

@@ -98,6 +98,45 @@ describe('ChapterStage', () => {
     }
   })
 
+  it('leaves the card inert and hidden while a page covers it, and the page in the same stage', () => {
+    const { rerender, container } = render(
+      <ChapterStage chapter={luxemburg} chapters={chapters} onOpenSettings={noop} onOpenLogs={noop}>
+        <section aria-label="A page">Page</section>
+      </ChapterStage>,
+    )
+    const card = () => container.querySelector<HTMLElement>('.card-stage > div')!
+    expect(card()).not.toHaveAttribute('inert')
+    expect(card()).not.toHaveAttribute('aria-hidden')
+    rerender(
+      <ChapterStage
+        chapter={luxemburg}
+        chapters={chapters}
+        onOpenSettings={noop}
+        onOpenLogs={noop}
+        covered
+      >
+        <section aria-label="A page">Page</section>
+      </ChapterStage>,
+    )
+    expect(card()).toHaveAttribute('inert')
+    expect(card()).toHaveAttribute('aria-hidden', 'true')
+    // The card is what is covered, never moved, and the page is a sibling in the stage.
+    expect(card()).toHaveTextContent('Play Luxemburg')
+    expect(card().className).not.toMatch(/card-(in|out)/)
+    expect(screen.getByRole('region', { name: 'A page' }).parentElement).toBe(card().parentElement)
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull()
+    rerender(
+      <ChapterStage
+        chapter={luxemburg}
+        chapters={chapters}
+        onOpenSettings={noop}
+        onOpenLogs={noop}
+      />,
+    )
+    expect(card()).not.toHaveAttribute('inert')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Luxemburg')
+  })
+
   it('replaces a card still leaving when the selection moves again', () => {
     const { rerender } = render(
       <ChapterStage
