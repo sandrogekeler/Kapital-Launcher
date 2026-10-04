@@ -9,7 +9,7 @@ Two reaches matter: **network** (a manifest, a pack index, a download, a server
 ping response) and **bridge** (a bound method on `App`, callable by anything
 that runs in the WebView).
 
-Bound methods on 2026-10-04: **40** (`grep -c '^func (a \*App) [A-Z]' app.go app_*.go`,
+Bound methods on 2026-10-04: **41** (`grep -c '^func (a \*App) [A-Z]' app.go app_*.go`,
 summed). A different count is new surface to classify: add the method to this table.
 
 | Method | Takes from the bridge | Reaches | Item |
@@ -19,6 +19,7 @@ summed). A different count is new surface to classify: add the method to this ta
 | `RefreshEngine` | nothing | detection: runs the resolved Prism with `--version` | S3.1 |
 | `GetInstances` | nothing | the two reads in a Prism root, and the size walk of each present instance folder | S1.1 |
 | `GetPackStates` | nothing | one value of each instance's `packwiz.json`, and one bounded GET of each chapter's `pack.toml` on its allowlisted or loopback source | S1.1, S4.3 |
+| `GetChangelogs` | nothing | one bounded GET of each chapter's `changelog.json`, beside the `pack.toml` of the source `GetPackStates` uses (the instance's own pack URL, the loopback override or the manifest's), held to that source's URL rule, redirects included; the answer is parsed strictly and shown as plain text | S4.3, S4.7 |
 | `GetPrismRelease` | nothing | one bounded GET to Prism's fixed release URL | S4.5 |
 | `InstallPrism` | nothing | download, verify and unpack Prism's official build | S4.5 |
 | `InstallChapter` | a chapter id | the manifest's instance and pack URL: one instance folder written into the Prism root | S3.3, S4.6 |
@@ -522,6 +523,31 @@ Verify: `packinstance_test.go`; `TestWriteChapterSettingsTouchesOnlyItsKeys`,
 Probe: an instance folder the player made by hand with the same name; a jar
 that redirects off GitHub; a pack.toml naming two loaders; an instance whose
 pre-launch command was edited by hand (an extra flag, another jar, `echo`).
+
+**S4.7 A pack's changelog is read only from the pack's own host, and is text and nothing else.**
+Holds when: `GetChangelogs` takes nothing from the bridge; the URL is the pack
+URL `packSource` already vetted (S4.6, the same function `GetPackStates` uses)
+with its last segment `pack.toml` replaced by `changelog.json`, refused when
+the pack URL does not end in `/pack.toml` or carries user info, a query or a
+fragment, so the scheme, host and folder are the pack's own; `fetchFile` is the
+fetch `pack.toml` uses (user agent, five redirects each held to the pack's
+rule, 15 s, status 200, here a 64 KiB bound); a 404 is "no changelog" and any
+other failure is logged and "unknown", never an error to the player; and
+`ParseChangelog` refuses the whole file on an unknown field, a second JSON
+value, more than 50 entries, a version outside 1 to 32 of `[0-9A-Za-z.+-]`
+(or listed twice), a date that is not YYYY-MM-DD, not 1 to 10 lines per entry,
+or a line that is blank, over 200 characters or carries a control, format
+(bidirectional override) or separator character. React renders the lines as
+text, never markup, and the file names nothing the launcher opens, runs or
+fetches. Chapters are read at most three at a time.
+Verify: `changelog_test.go` (`TestChangelogURL*`, `TestParseChangelogRefuses`,
+`TestChangelog*` against a TLS test server: valid, 404, 500, oversized,
+malformed, unknown field, a redirect off the rule, a pack URL that is not a
+pack.toml, a local pack serve, the concurrency bound) and
+`app_changelog_test.go`.
+Probe: a changelog 65 KiB long; `"entries"` holding a `<script>` line, a
+right-to-left override or an ANSI escape; `changelog.json` redirecting to
+another host; a pack URL `.../pack.toml?x=../..`.
 
 ## S5. WebView
 

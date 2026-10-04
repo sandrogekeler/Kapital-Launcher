@@ -198,7 +198,19 @@ func (c *InstanceCreator) fetchVersions(ctx context.Context, packURL string, che
 // the rule the URL itself passed. The bytes are returned whole because the
 // pack state (#71) hashes them the way packwiz-installer does.
 func (c *InstanceCreator) fetchPackTOML(ctx context.Context, packURL string, check func(field, raw string) error) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, packURL, nil)
+	return c.fetchFile(ctx, "pack.toml", packURL, check, maxPackTOML)
+}
+
+// errNotFound is a file the host answered 404 for, which a caller may treat as
+// "there is none" where any other failure is "unknown".
+var errNotFound = errors.New("not found")
+
+// fetchFile is the one GET of a pack's own files (pack.toml, changelog.json):
+// a user agent, at most five redirects each held to the rule the URL passed,
+// the client's timeout, status 200, and at most limit bytes. what names the
+// file in errors; a 404 wraps errNotFound.
+func (c *InstanceCreator) fetchFile(ctx context.Context, what, rawURL string, check func(field, raw string) error, limit int) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -208,22 +220,25 @@ func (c *InstanceCreator) fetchPackTOML(ctx context.Context, packURL string, che
 		if len(via) >= 5 {
 			return errors.New("too many redirects")
 		}
-		return check("pack.toml redirect", req.URL.String())
+		return check(what+" redirect", req.URL.String())
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("fetch pack.toml: %w", err)
+		return nil, fmt.Errorf("fetch %s: %w", what, err)
 	}
 	defer resp.Body.Close() //nolint:errcheck // read-only response
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("fetch %s: %s: %w", what, resp.Status, errNotFound)
+	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("fetch pack.toml: %s", resp.Status)
+		return nil, fmt.Errorf("fetch %s: %s", what, resp.Status)
 	}
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, maxPackTOML+1))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, int64(limit)+1))
 	if err != nil {
-		return nil, fmt.Errorf("fetch pack.toml: %w", err)
+		return nil, fmt.Errorf("fetch %s: %w", what, err)
 	}
-	if len(raw) > maxPackTOML {
-		return nil, errors.New("fetch pack.toml: larger than the limit")
+	if len(raw) > limit {
+		return nil, fmt.Errorf("fetch %s: larger than the limit", what)
 	}
 	return raw, nil
 }

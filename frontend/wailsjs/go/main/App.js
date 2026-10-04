@@ -22,6 +22,10 @@ export function GetAppVersion() {
   return window['go']['main']['App']['GetAppVersion']();
 }
 
+export function GetChangelogs() {
+  return window['go']['main']['App']['GetChangelogs']();
+}
+
 export function GetChapterMods(arg1) {
   return window['go']['main']['App']['GetChapterMods'](arg1);
 }
