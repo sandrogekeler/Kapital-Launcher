@@ -56,12 +56,12 @@ describe('Panels', () => {
     expect(row('Loader')).not.toHaveClass('font-mono')
   })
 
-  it('reserves the wiki post two title lines and four text lines, with the link pinned below', () => {
+  it('gives the wiki post one title line and four reserved text lines, with the link pinned below', () => {
     const onOpenWiki = vi.fn()
     panels({ onOpenWiki })
     const title = screen.getByText(chapter.wiki.title)
     const line = screen.getByText(chapter.wiki.line)
-    expect(title).toHaveClass('line-clamp-2', 'min-h-[2lh]')
+    expect(title).toHaveClass('line-clamp-1')
     expect(line).toHaveClass('line-clamp-4', 'min-h-[4lh]')
     const link = screen.getByRole('button', { name: 'Read the history →' })
     expect(link).toHaveClass('mt-auto')

@@ -35,9 +35,13 @@ function PanelTitle({ children }: { children: string }) {
  * the action bar's state line with its ping.
  *
  * The row keeps one height whatever it holds, because the hero takes what the
- * panels leave: the wiki post reserves its two title lines and four text
- * lines with its link pinned under them, and the changelog shows only its
- * latest entries, each clamped, so it can never be the tallest column.
+ * panels leave: the wiki post's title is one line and its text reserves four,
+ * with its link pinned under them, and the changelog shows only its latest
+ * entries, each clamped, so it can never be the tallest column.
+ *
+ * The columns are equal, with the same padding on both sides of each divider,
+ * and the row's own inset makes the first column's text start on the card's
+ * gutter, the line the Play button and the hero's title stand on.
  */
 export function Panels({ chapter, installed, sizeBytes, packState, wikiPage, onOpenWiki }: Props) {
   const { pack } = chapter
@@ -52,8 +56,8 @@ export function Panels({ chapter, installed, sizeBytes, packState, wikiPage, onO
   ]
 
   return (
-    <section className="grid shrink-0 grid-cols-3">
-      <div className="border-line flex flex-col gap-3 border-r py-6 pr-7 pl-14">
+    <section className="grid shrink-0 grid-cols-3 px-7">
+      <div className="border-line flex flex-col gap-3 border-r px-7 py-6">
         <PanelTitle>Pack</PanelTitle>
         <div className="flex flex-col gap-3.5">
           {facts.map(([label, value, unsetText]) => (
@@ -87,7 +91,7 @@ export function Panels({ chapter, installed, sizeBytes, packState, wikiPage, onO
           )}
         </div>
       </div>
-      <div className="flex flex-col gap-3 py-6 pr-14 pl-7">
+      <div className="flex flex-col gap-3 px-7 py-6">
         <PanelTitle>From the wiki</PanelTitle>
         {/* The post drifts to the next with the hero's picture (issue 142). */}
         <Drift
@@ -95,10 +99,7 @@ export function Panels({ chapter, installed, sizeBytes, packState, wikiPage, onO
           className="relative flex grow flex-col"
           layer="flex grow flex-col gap-3"
         >
-          <p
-            className="font-display m-0 line-clamp-2 min-h-[2lh] text-lg leading-snug"
-            title={wiki.title}
-          >
+          <p className="font-display m-0 line-clamp-1 text-lg leading-snug" title={wiki.title}>
             {wiki.title}
           </p>
           <p className="text-fg-muted m-0 line-clamp-4 min-h-[4lh] text-sm leading-normal">
