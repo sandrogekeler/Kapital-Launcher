@@ -106,36 +106,8 @@ func ValidateManifest(m models.Manifest) error {
 		if !instanceIDPattern.MatchString(c.Instance.ID) {
 			return fmt.Errorf("%s: instance id %q could name a path", where, c.Instance.ID)
 		}
-		if !slices.Contains(packTypes, c.Pack.Type) {
-			return fmt.Errorf("%s: pack type %q is not one of %v", where, c.Pack.Type, packTypes)
-		}
-		if strings.TrimSpace(c.Pack.Loader) == "" || strings.TrimSpace(c.Pack.Minecraft) == "" {
-			return fmt.Errorf("%s: pack loader and minecraft must be set (use [PLACEHOLDER])", where)
-		}
-		if c.Pack.Packwiz != nil {
-			if err := checkURL(where+".pack.packwiz", *c.Pack.Packwiz); err != nil {
-				return err
-			}
-			if !commandSafeURL.MatchString(*c.Pack.Packwiz) {
-				return fmt.Errorf("%s: pack.packwiz %q carries a character a command line would read", where, *c.Pack.Packwiz)
-			}
-		}
-		if c.Pack.JVM != nil {
-			preset, ok := jvmPresets[*c.Pack.JVM]
-			if !ok {
-				return fmt.Errorf("%s: jvm preset %q is not one the launcher knows", where, *c.Pack.JVM)
-			}
-			if !minecraftAtLeast(c.Pack.Minecraft, preset.minMinecraft) {
-				return fmt.Errorf("%s: jvm preset %q needs Minecraft %s or later", where, *c.Pack.JVM, preset.minMinecraft)
-			}
-		}
-		if err := validateToggles(where, c.Pack.Toggles); err != nil {
+		if err := validatePack(where, c.Pack); err != nil {
 			return err
-		}
-		if c.Pack.Mrpack != nil {
-			if err := checkURL(where+".pack.mrpack", *c.Pack.Mrpack); err != nil {
-				return err
-			}
 		}
 		if err := validateServer(where, c.Server); err != nil {
 			return err
@@ -150,6 +122,45 @@ func ValidateManifest(m models.Manifest) error {
 		}
 		if !wikiPathPattern.MatchString(c.Wiki.Path) {
 			return fmt.Errorf("%s: wiki path %q must be absolute and carry no whitespace", where, c.Wiki.Path)
+		}
+	}
+	return nil
+}
+
+// validatePack holds a chapter's pack to its rules: a known type, a loader and
+// a game version, the packwiz URL on the allowlist and safe for the pre-launch
+// command line, a JVM preset the launcher knows and the game version allows,
+// the quick mod switches, and the mrpack URL.
+func validatePack(where string, pack models.Pack) error {
+	if !slices.Contains(packTypes, pack.Type) {
+		return fmt.Errorf("%s: pack type %q is not one of %v", where, pack.Type, packTypes)
+	}
+	if strings.TrimSpace(pack.Loader) == "" || strings.TrimSpace(pack.Minecraft) == "" {
+		return fmt.Errorf("%s: pack loader and minecraft must be set (use [PLACEHOLDER])", where)
+	}
+	if pack.Packwiz != nil {
+		if err := checkURL(where+".pack.packwiz", *pack.Packwiz); err != nil {
+			return err
+		}
+		if !commandSafeURL.MatchString(*pack.Packwiz) {
+			return fmt.Errorf("%s: pack.packwiz %q carries a character a command line would read", where, *pack.Packwiz)
+		}
+	}
+	if pack.JVM != nil {
+		preset, ok := jvmPresets[*pack.JVM]
+		if !ok {
+			return fmt.Errorf("%s: jvm preset %q is not one the launcher knows", where, *pack.JVM)
+		}
+		if !minecraftAtLeast(pack.Minecraft, preset.minMinecraft) {
+			return fmt.Errorf("%s: jvm preset %q needs Minecraft %s or later", where, *pack.JVM, preset.minMinecraft)
+		}
+	}
+	if err := validateToggles(where, pack.Toggles); err != nil {
+		return err
+	}
+	if pack.Mrpack != nil {
+		if err := checkURL(where+".pack.mrpack", *pack.Mrpack); err != nil {
+			return err
 		}
 	}
 	return nil
