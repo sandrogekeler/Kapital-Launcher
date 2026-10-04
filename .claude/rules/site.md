@@ -8,10 +8,12 @@ paths:
 `site/README.md` covers the page, its links and the Cloudflare setup, and
 `docs/adr/0009-download-site.md` records why it is built this way. The rules:
 
-- **No script on the page.** The CSP in `public/_headers` is `default-src
-  'none'` with styles, images and fonts from the site itself. Adding a script,
-  an inline style, a data: URI or a remote asset means changing that policy
-  on purpose, in the same change. The launcher window on the page cycles
+- **One script, and it only picks the OS.** `src/detect.js` checks the
+  download popup's Windows or macOS radio and does nothing else: no network,
+  no storage. The CSP in `public/_headers` is `default-src 'none'` with
+  scripts, styles, images and fonts from the site itself. Adding a second
+  script, an inline script or style, a data: URI or a remote asset means
+  changing that policy on purpose, in the same change. The launcher window on the page cycles
   through its chapters on CSS animations alone (`src/showcase.css`), and its
   icons are lucide's paths inlined as SVG markup, which the policy allows.
 - **The app's tokens and base styles, not the site's.** `src/style.css`
@@ -27,6 +29,9 @@ paths:
   ChapterButton, EngineCard, ChapterStage, Hero, ActionBar, Panels, Button,
   Pill, Fact) and the chapter facts of `data/launcher.json`. A change to one
   of those is a change to the site's copy, in the same pull request.
-- **Links are data.** Download and GitHub live in `links.json`, the wiki in
-  `data/launcher.json`. Never write a URL for one of the three buttons into
-  `index.html`; the build fills them and rejects anything but https.
+- **Links are data.** `links.json` holds `release` (a tag, or `null`) and
+  GitHub, the wiki is in `data/launcher.json`. Never write a URL for the
+  buttons or the popup's downloads into `index.html`; the build derives the
+  installer and release notes URLs from the tag and fills them, and rejects a
+  tag that is not `vX.Y.Z` or `vX.Y.Z-alpha.N`/`-beta.N` and anything but
+  https.

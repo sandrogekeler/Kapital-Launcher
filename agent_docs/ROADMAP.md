@@ -137,7 +137,7 @@ A static page separate from the wiki, with Download, GitHub and Wiki buttons
 (ADR-9). Runs alongside the milestones; it waits on milestone 7 for a real
 download.
 
-- [x] `site/`: one page on the app's tokens, no script, links as data, a
+- [x] `site/`: one page on the app's tokens, links as data, a
       strict CSP; built in CI
 - [x] The launcher window on the page, cycling through the three chapters on
       CSS animations, done 2026-10-01
@@ -146,7 +146,10 @@ download.
       build watch paths are #29
 - [x] GitHub link: the repository is public since 2026-09-30 (`site/links.json`,
       2026-10-02)
-- [ ] Download link, once the release workflow publishes a release
+- [x] Download popup that picks the operating system, one small script
+      (issue 178, 2026-10-04); built, waiting for a release tag
+- [ ] Set `release` in `site/links.json`, once the release workflow publishes
+      a release
 - [ ] A custom domain, if one is wanted
 
 ## Out of scope, and why

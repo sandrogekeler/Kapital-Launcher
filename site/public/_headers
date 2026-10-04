@@ -1,9 +1,10 @@
 # Response headers for every file the site serves, applied by Cloudflare Pages
 # (https://developers.cloudflare.com/pages/configuration/headers/).
-# The page runs no script and loads nothing from another origin, so the policy
-# allows its own styles, images and fonts and nothing else.
+# The page runs one script, its own src/detect.js (it only picks the OS in the
+# download popup), and loads nothing from another origin, so the policy allows
+# its own scripts, styles, images and fonts and nothing else. No inline script.
 /*
-  Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
 

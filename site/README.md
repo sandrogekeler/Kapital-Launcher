@@ -2,7 +2,8 @@
 
 One static page: what the launcher is, the Download, GitHub and Wiki buttons,
 and under them the launcher window itself, cycling through its three
-chapters. It is separate from the Kapitel Kapital wiki and runs no script.
+chapters. It is separate from the Kapitel Kapital wiki and runs one small
+script, which only picks the operating system in the download popup.
 The decision record is `docs/adr/0009-download-site.md`.
 
 ## Where the look comes from
@@ -54,21 +55,48 @@ chapter facts, is a change to this page in the same pull request.
 
 | Button | Source | When `null` |
 |---|---|---|
-| Download | `links.json` `download` | Shows "Download · coming soon", not a link |
+| Download | `links.json` `release`, a tag | Shows "Download · coming soon", no popup |
 | GitHub | `links.json` `github` | Left out |
 | Wiki | `data/launcher.json` `wiki.baseUrl` | Never null; the build fails |
 
 `vite.config.js` fills them in at build time and refuses anything that is not
-https. Download stays `null` until there is a release to point at; GitHub
-was set on 2026-10-02, the repository being public. When the release exists,
-set:
+https. `release` is a tag such as `v0.1.0-beta.1`, checked against
+`^v\d+\.\d+\.\d+(-(alpha|beta)\.\d+)?$`; from it and the `github` link the
+build derives the two installers and the release notes:
+
+- `<github>/releases/download/<tag>/Kapital-Launcher-<tag>-windows-amd64-setup.exe`
+- `<github>/releases/download/<tag>/Kapital-Launcher-<tag>-macos-universal.dmg`
+- `<github>/releases/tag/<tag>`
+
+The tag is bumped by hand for each release, because `releases/latest/download/`
+skips prereleases. It stays `null` until there is a release to point at; GitHub
+was set on 2026-10-02, the repository being public. When a release exists, set:
 
 ```json
 {
-  "download": "https://github.com/sandrogekeler/Kapital-Launcher/releases/latest",
+  "release": "v0.1.0-beta.1",
   "github": "https://github.com/sandrogekeler/Kapital-Launcher"
 }
 ```
+
+## The download popup
+
+With a release set, Download is a button that opens a native popover
+(`popovertarget`), no script needed: a heading, a Windows or macOS switch, the
+one download for the chosen system, a line on what to expect, a note that the
+beta is not code-signed yet with a link to the release notes, and a close
+button. The switch is a fieldset of two radios and CSS `:has()`, so it works
+without script. Windows is checked by default.
+
+`src/detect.js` is the page's one script, loaded as a module and emitted by
+Vite as a file under `assets/`. It checks the radio for the visitor's system
+(`navigator.userAgentData?.platform`, then `navigator.platform`, then the user
+agent) and does nothing else: no network, no storage. iPhone, iPad, Android and
+Linux are neither, and keep Windows checked. With `release` set to `null`, the
+build leaves the popup out of the page.
+
+The CSP in `public/_headers` allows it with `script-src 'self'` and nothing
+more, so an inline script would be blocked.
 
 ## Commands
 
