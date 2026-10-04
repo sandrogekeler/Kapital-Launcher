@@ -10,6 +10,10 @@ import { ErrorLine } from '../ui/Notes'
 import { Page } from '../ui/Page'
 import { ChapterSettingsForm } from './ChapterSettingsForm'
 
+// The mods section lists the mods folder and has a search; like the pack source it loads when
+// the panel asks for it, so its store and its list stay out of the launcher's bundle.
+const ModsSection = lazy(() => import('./ModsSection').then((m) => ({ default: m.ModsSection })))
+
 // Only a chapter with a local pack has anything to switch, so the section loads
 // when the panel asks for it and stays out of the launcher's bundle budget
 // (scripts/check-bundle-size.mjs), as the run report does.
@@ -32,8 +36,10 @@ interface Props {
  * (issue 126). Save writes both at once; the value shown after
  * is what Go read back from the file. Open folder (#85), in the page header,
  * shows the instance in the file manager; it is there to reach a crash report or a screenshot.
- * A chapter with a local pack also gets the pack source section, which switches
- * its instance between the published pack and that one.
+ * Mods (issue 156) come next: the chapter's quick switches and an advanced list of every mod,
+ * saved by Go in the launcher's settings and applied by the pre-launch sync. A chapter with a
+ * local pack also gets the pack source section, which switches its instance between the
+ * published pack and that one.
  */
 export function ChapterSettingsPanel({ chapter, onClose }: Props) {
   const installed = useEngineStore(selectInstalled(chapter.id))
@@ -147,6 +153,7 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
       {body}
       {installed === true && (
         <Suspense fallback={null}>
+          <ModsSection chapter={chapter} />
           <PackSourceSection chapter={chapter} />
         </Suspense>
       )}
