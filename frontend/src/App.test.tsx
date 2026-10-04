@@ -523,7 +523,14 @@ describe('App', () => {
       expect(await screen.findByRole('region', { name: 'Settings' })).toBeInTheDocument()
 
       fireEvent.click(screen.getByRole('button', { name: 'Developer' }))
-      fireEvent.click(await screen.findByRole('button', { name: 'Crashed, with a crash report' }))
+      // The previews are a lazy chunk; under a full run its first load can take past a second.
+      fireEvent.click(
+        await screen.findByRole(
+          'button',
+          { name: 'Crashed, with a crash report' },
+          { timeout: 5000 },
+        ),
+      )
       await waitFor(() => expect(Bindings.StartPreview).toHaveBeenCalledOnce())
       await waitFor(() => expect(screen.queryByRole('region', { name: 'Settings' })).toBeNull())
       // Neither page is left underneath: the app is on the chapter itself.
@@ -533,7 +540,8 @@ describe('App', () => {
     } finally {
       Reflect.deleteProperty(window, 'go')
     }
-  })
+    // Two pages and a lazy chunk: under the coverage run this outlasts the default five seconds.
+  }, 15_000)
 
   it('shows a wiki page of the open chapter and opens that page, else the teaser', async () => {
     vi.mocked(Bindings.GetWikiPages).mockResolvedValue([

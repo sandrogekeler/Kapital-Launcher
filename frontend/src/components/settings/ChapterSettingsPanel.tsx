@@ -28,6 +28,9 @@ interface Props {
   onClose: () => void
 }
 
+const sameSettings = (a: ChapterSettings, b: ChapterSettings) =>
+  a.maxMemoryMb === b.maxMemoryMb && a.jvm === b.jvm
+
 /**
  * A chapter's own settings (#36): how much memory its game may take and
  * which JVM preset it runs with. Both live in the instance's instance.cfg,
@@ -53,6 +56,7 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
   const openFolder = useEngineStore((s) => s.openInstanceFolder)
   const [draft, setDraft] = useState<ChapterSettings | null>(null)
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [folderError, setFolderError] = useState<string | null>(null)
   const playing = useGameStore((s) => isActive(selectGame(chapter.id)(s)?.phase))
@@ -75,22 +79,38 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
   }, [installed, chapter.id, load])
-  // The draft follows what Go holds: on first read and after every save.
+  // The draft follows what Go holds: on first read, after every save, and whenever a re-read
+  // finds the file changed (Prism's own window can write the same keys, issue 189). An unsaved
+  // draft survives only a re-read that finds the file as it was.
+  const base = useRef<ChapterSettings | null>(null)
   useEffect(() => {
-    if (info) setDraft(info.settings)
+    if (!info) return
+    const was = base.current
+    base.current = info.settings
+    setDraft((d) => {
+      const unsaved = d !== null && was !== null && !sameSettings(d, was)
+      const fileAsItWas = was !== null && sameSettings(info.settings, was)
+      return unsaved && fileAsItWas ? d : info.settings
+    })
   }, [info])
 
-  const dirty =
-    info !== undefined &&
-    draft !== null &&
-    (draft.maxMemoryMb !== info.settings.maxMemoryMb || draft.jvm !== info.settings.jvm)
+  const dirty = info !== undefined && draft !== null && !sameSettings(draft, info.settings)
 
+  const onDraft = (next: ChapterSettings) => {
+    setSaved(false)
+    setDraft(next)
+  }
+  const onRevert = () => {
+    if (info) onDraft(info.settings)
+    setError(null)
+  }
   const onSave = async () => {
     if (!draft) return
     setSaving(true)
     setError(null)
     try {
       await save(chapter.id, draft)
+      setSaved(true)
     } catch (e) {
       setError(errMsg(e))
     } finally {
@@ -129,12 +149,14 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
         chapter={chapter}
         info={info}
         draft={draft}
-        onDraft={setDraft}
+        onDraft={onDraft}
         dirty={dirty}
         saving={saving}
+        saved={saved}
         playing={playing}
         error={error}
         onSave={() => void onSave()}
+        onRevert={onRevert}
       />
     )
   }
