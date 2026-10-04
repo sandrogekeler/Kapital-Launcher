@@ -9,7 +9,7 @@ Two reaches matter: **network** (a manifest, a pack index, a download, a server
 ping response) and **bridge** (a bound method on `App`, callable by anything
 that runs in the WebView).
 
-Bound methods on 2026-10-04: **42** (`grep -c '^func (a \*App) [A-Z]' app.go app_*.go`,
+Bound methods on 2026-10-04: **43** (`grep -c '^func (a \*App) [A-Z]' app.go app_*.go`,
 summed). A different count is new surface to classify: add the method to this table.
 
 | Method | Takes from the bridge | Reaches | Item |
@@ -27,11 +27,12 @@ summed). A different count is new surface to classify: add the method to this ta
 | `SetPackSource` | a chapter id and `published` or `dev` | the one `PreLaunchCommand` key of the chapter's own `instance.cfg`, between the manifest's pack URL and the loopback override from settings, only from the launcher's own template; refused while the game is active | S3.3, S4.6 |
 | `StopGame` | a chapter id | the pid of the Prism the launcher started, or of the game's Java found as its child, for a run the tracker follows: asked to close, then ended | S3.3, S3.9 |
 | `ShowPrismConsole` | a chapter id | the console window of the Prism the launcher started for that chapter, which the launcher's own hold hid: shown and given the foreground | S3.3, S3.7 |
-| `SaveSettings` | a whole `AppSettings`, including `serverChoices`: a chapter id to the label of one of its manifest addresses, and `joinServers`: chapter ids of the manifest that have a server, validated against it | the settings file, the executable detection then runs, and, for a chapter whose chosen address moved, one ping of the manifest's address for that label; with a chapter in `joinServers`, Play passes that chapter's chosen manifest address to Prism's `--server`, checked again by `LaunchArgs` | S3.5, S6.1 |
+| `SaveSettings` | a whole `AppSettings`, including `serverChoices`: a chapter id to the label of one of its manifest addresses, and `joinServers`: chapter ids of the manifest that have a server, validated against it, and `wikiPictures`, nil or 0, 5, 10 or 20, anything else refused | the settings file, the executable detection then runs, and, for a chapter whose chosen address moved, one ping of the manifest's address for that label; with a chapter in `joinServers`, Play passes that chapter's chosen manifest address to Prism's `--server`, checked again by `LaunchArgs` | S3.5, S6.1 |
 | `ChoosePrismExecutable`, `ChoosePrismRoot` | nothing | a native file or folder picker; the pick is returned, never saved here | S3.5 |
 | `OpenExternal` | a URL | the system browser, web URLs only | S3.4 |
 | `GetWikiPages` | nothing | one bounded GET of the wiki's lore export on the manifest's wiki host, cached in the app data dir | S2.3, S4.3 |
-| `GetWikiShots` | nothing | the screenshots the lore export lists: one bounded GET each on the manifest's wiki host, kept only when the bytes are WebP, PNG or JPEG, cached in the app data dir and served at `/wiki-art/` | S2.3, S4.3 |
+| `GetWikiShots` | nothing | of the screenshots and page pictures the lore export lists, the number `wikiPictures` names per chapter, drawn by the local date: one bounded GET each of the drawn only, on the manifest's wiki host, kept only when the bytes are WebP, PNG or JPEG, cached in the app data dir and served at `/wiki-art/`; the rest of the cache is removed | S2.3, S4.3 |
+| `GetWikiArtStats` | nothing | the mean size of the files in the wiki-art cache and the pool sizes of the cached export, in memory; no request beyond the export `GetWikiPages` already makes | S2.3 |
 | `OpenWikiPage` | a URL | the system browser, only for a URL `GetWikiPages` returned | S3.3 |
 | `GetChapterSettings` | a chapter id | four keys of the chapter's own `instance.cfg` | S1.1, S3.3 |
 | `SaveChapterSettings` | a chapter id and a `ChapterSettings` | five keys rewritten in the chapter's own `instance.cfg`, held to the preset list and the machine's memory | S3.2, S3.3, S4.6 |
@@ -119,19 +120,33 @@ only, 15 s and 4 MiB, no redirects, and `parseWikiExport` keeps a page only
 when its URL is a plain `/wiki/...` path (joined onto that same base), its
 title and excerpt are non-empty text and it names an era; the cached copy is
 parsed the same way, and the manifest's teaser is the fallback.
-The export's screenshots (#141) are the first remote pictures. `parseWikiShots`
+The export's pictures (#141, issue 172) are the first remote pictures: its
+screenshots, and the pictures its pages embed (`pages[].images`). `parseWikiShots`
 keeps an entry only when its URL is `/screenshots/<world>/<file>` of plain
-characters with an image extension and no dot segment, and `fetchArt` gets each
-from that same base (15 s, 4 MiB, no redirects, `If-Modified-Since` when cached)
-and keeps it only when its own bytes sniff as WebP, PNG or JPEG, whatever the
-server or the name says. The page never loads a remote image: Go serves the
-cache at `/wiki-art/<world>/<file>` through the asset server's middleware, GET
-and HEAD only, a name the same shape allows, re-sniffed, with `nosniff`, so the
-CSP's `img-src 'self'` is unchanged. A file the export no longer lists is
-removed from the cache on a start that reached the wiki.
+characters with an image extension and no dot segment, and a world named `pages`
+is refused; `parseWikiPictures` keeps a page picture only when its path is
+`/vault/images/<file>` with `[a-z0-9][A-Za-z0-9._-]*\.(webp|png|jpe?g)`, no
+separator and no `..`, of a page the panel lists (not an index, the timeline or
+a stub), at most 1000 of them, and drops an `images` that is not a list. A
+chapter's pool is its era's screenshots and pages' pictures, and the launcher
+draws only the number `AppSettings.WikiPictures` names (default 10, 0 is all)
+from it, seeded by the local date and the chapter id, so a few dozen files are
+downloaded and never the whole vault unless the player chose All. `fetchArt` gets
+each drawn picture from the manifest's base (15 s, 4 MiB, no redirects,
+`If-Modified-Since` when cached) and keeps it only when its own bytes sniff as
+WebP, PNG or JPEG, whatever the server or the name says. The page never loads a
+remote image: Go serves the cache at `/wiki-art/<world>/<file>` and
+`/wiki-art/pages/<file>` through the asset server's middleware, GET and HEAD only,
+a name one of the two shapes allows and `path.Clean` leaves as it is, read through
+an `os.Root` on the cache folder, re-sniffed, with `nosniff`, so the CSP's
+`img-src 'self'` is unchanged. A file that was not drawn is removed from the cache
+on a start that reached the wiki; from the cached export nothing is fetched or
+pruned and only cached pictures are drawn.
 Verify: `TestParseWikiShotsKeepsOnlyPlainImagePathsOfAnEra`,
 `TestWikiShotsDownloadCheckCacheAndRevalidate`, `TestWikiArtMiddlewareServesOnlyCachedPictures`,
-`TestWikiShotsRefuseAnOversizedPicture`,
+`TestWikiShotsRefuseAnOversizedPicture`, `TestParseWikiPicturesKeepsOnlyPlainVaultImagesOfListablePages`,
+`TestShotsDrawTheNumberPerChapterAndDownloadOnlyThose`,
+`TestArtMiddlewareServesPagePicturesAndRefusesTraversal`, `TestWikiPicturesSettingIsHeldToTheChoices`,
 `TestParseWikiExportKeepsOnlyPagesThePanelMayShow`,
 `TestWikiPagesRefuseAnOversizedOrRedirectedExport`, `TestOpenWikiPageRefusesAnUnlistedURL`.
 

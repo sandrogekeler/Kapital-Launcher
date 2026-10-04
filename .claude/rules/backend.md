@@ -197,6 +197,31 @@ of the body read and dropped. Any HTTP status is reachable. It returns a
 frames the map only when it did (SECURITY_CHECKLIST S5.4). `CheckMap` holds the
 address to the manifest's rule again, so a caller cannot widen it.
 
+The wiki art (`wikiart.go`, `wikidraw.go`, `GetWikiShots` and `GetWikiArtStats`,
+#141 and issue 172) is the one place that downloads pictures. The wiki's lore
+export lists screenshots (`screenshots[]`) and each page's pictures
+(`pages[].images`, `/vault/images/<file>`; an older wiki build has none, which
+leaves the screenshots alone). A chapter's pool is its era's screenshots plus its
+era's pages' pictures; `drawPictures` takes up to the player's number of them
+(`AppSettings.WikiPictures`: 5, 10 or 20, 10 when unset, 0 for all), in rounds
+over the pages (a screenshot is grouped with the page it shows, one with none
+alone): each round a random order of the pages that have pictures left and a
+random one of each, so no page gives a second before every page has given one.
+The random source is seeded by the local date and the chapter id (`seedKey`): the
+set holds through a day and is another on the next, and `Shots` draws again when
+its number or the date differs from the last call (the settings page calls
+`GetWikiShots` after a save). Only the drawn are downloaded, through `fetchArt`'s
+checks (the manifest's wiki host, WebP, PNG or JPEG by sniffing, 4 MiB, no
+redirect), into `wiki-art/<world>/<file>` for a screenshot and `wiki-art/pages/<file>`
+for a page picture (`pages` is no world a screenshot may name, so names cannot
+collide). A cached picture drawn again is kept and asked about once per start, and
+`pruneArt` removes every other file when the wiki was reached; from the cached
+export (offline) the pool is what is already cached and nothing is pruned. The
+route `/wiki-art/` (`ArtMiddleware`, `artRoute`) answers GET and HEAD for the two
+name shapes only, reading through an `os.Root`. `GetWikiArtStats` gives the
+cache's mean picture size (100 KB while it is empty) and each era's pool size, for
+the settings screen's estimate.
+
 ## Data shapes
 
 Live in `backend/models/`, JSON tags in `camelCase`, and Wails generates the
