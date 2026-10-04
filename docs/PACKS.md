@@ -17,7 +17,7 @@ Each part names the real system doing the work, so the technical record in
 | **Prism Launcher** | The engine: Microsoft sign-in, Java, the mod loader, the game | Owns the instances and starts the game |
 | **packwiz-installer** | packwiz's companion, two small Java programs placed in an instance | Runs inside Prism before every start and brings the instance in line with the pack |
 | **Kapital Launcher** | This app | Finds Prism, writes the instance, presses Prism's buttons, shows what is going on |
-| **The manifest** | `data/launcher.json`, built into the app | The chapter list: names, art, server address, and for each chapter the address of its published pack and the version shown under the title |
+| **The manifest** | `data/launcher.json`, built into the app | The chapter list: names, art, the server's addresses, and for each chapter the address of its published pack and the version shown under the title |
 
 ## A pack is a recipe, not a bundle
 

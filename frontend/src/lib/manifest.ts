@@ -1,5 +1,5 @@
 import bundled from '../../../data/launcher.json'
-import type { Chapter, Manifest } from '../types'
+import type { Chapter, Manifest, Server } from '../types'
 
 /**
  * The manifest built into this version, the same file main.go embeds. It is
@@ -24,6 +24,29 @@ export function isPlaceholderAddress(address: string | null | undefined): boolea
   if (address == null || address === PLACEHOLDER) return true
   const host = address.trim().replace(/:\d+$/, '').replace(/\.$/, '').toLowerCase()
   return host === 'invalid' || host.endsWith('.invalid')
+}
+
+/**
+ * The address a chapter's server is reached at: the one the saved choice (a
+ * label) names, else the first, as Go's services.ServerAddress resolves it
+ * (issue 151). Used only to tell a placeholder from a real address: the
+ * address itself is never shown.
+ */
+export function chosenAddress(
+  server: Server | null | undefined,
+  choice: string | undefined,
+): string | undefined {
+  const list = server?.addresses ?? []
+  return (list.find((a) => a.label === choice) ?? list[0])?.address
+}
+
+/** The label of the address in use: the saved choice when the manifest lists it, else the first. */
+export function chosenLabel(
+  server: Server | null | undefined,
+  choice: string | undefined,
+): string | undefined {
+  const list = server?.addresses ?? []
+  return (list.find((a) => a.label === choice) ?? list[0])?.label
 }
 
 /** A server address formatted for a fact row: the placeholder marker when unsettled. */

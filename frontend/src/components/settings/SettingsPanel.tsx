@@ -23,6 +23,7 @@ import { Section, SubHeading } from '../ui/Section'
 import { Segmented } from '../ui/Segmented'
 import { TextField } from '../ui/TextField'
 import { Toggle } from '../ui/Toggle'
+import { ServerSection } from './ServerSection'
 import { SupportSection } from './SupportSection'
 
 // The previews are a developer's tool, so the section loads when the settings
@@ -39,7 +40,7 @@ interface Props {
 }
 
 /** A field name, for filing its error; the pack fields are keyed by chapter. */
-type Field = keyof AppSettings | `pack:${string}`
+type Field = keyof AppSettings | `pack:${string}` | `server:${string}`
 
 /** What each section needs of the screen: the settings, a save and the errors it filed. */
 interface SectionProps {
@@ -86,6 +87,7 @@ export function SettingsPanel({ onClose, onShowChapter }: Props) {
     <Page label="Settings" title="Settings" onBack={onClose}>
       <PrismSection {...common} onError={fail} />
       <AppearanceSection {...common} />
+      <ServerSection {...common} chapters={chapters} />
       <DeveloperSection {...common} chapters={chapters} onShowChapter={onShowChapter} />
       <SupportSection />
       <AboutSection />

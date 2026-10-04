@@ -31,8 +31,15 @@ export interface Chapter {
   changelog: ChangelogEntry[]
 }
 
-export interface Server {
+/** One way to reach a chapter's server, under the label settings offers (issue 151). */
+export interface ServerAddress {
+  label: string
   address: string
+}
+
+export interface Server {
+  /** Every address, the first being the default; the player picks a label in settings. */
+  addresses: ServerAddress[]
   /** Whether Play joins this server, or the chapter is played as a pack with a server nearby. */
   joinOnLaunch: boolean
   software: string
@@ -269,6 +276,8 @@ export interface AppSettings {
   lastChapter: string
   /** Chapter id to a local packwiz serve address (#41), edited on the settings screen (#5). */
   packOverrides?: Record<string, string>
+  /** Chapter id to the label of the server address the player picked (issue 151); absent is the first. */
+  serverChoices?: Record<string, string>
   /** The player's choice for the loading splash (#43, #97); absent is the default: on for Windows, off for macOS, unavailable elsewhere. */
   loadingSplash?: boolean
   /** Whether the splash can run on this OS at all (Windows and macOS). Derived by GetSettings, never saved. */

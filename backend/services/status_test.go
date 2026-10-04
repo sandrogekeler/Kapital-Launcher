@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -27,20 +28,20 @@ func TestCheckFoldsAPingIntoAStatus(t *testing.T) {
 	svc := fakeStatus(map[string]PingResult{
 		"up.example:25565": {Online: true, Players: 2, MaxPlayers: 10, Version: "Paper 1.20.6", MOTD: "hi", Latency: 42 * time.Millisecond},
 	})
-	up := models.Chapter{ID: "lichdenstein", Server: &models.Server{Address: "up.example:25565"}}
-	down := models.Chapter{ID: "frangfurd", Server: &models.Server{Address: "down.example"}}
+	up := models.Chapter{ID: "lichdenstein", Server: server(addr("Main", "up.example:25565"))}
+	down := models.Chapter{ID: "frangfurd", Server: server(addr("Main", "down.example"))}
 	none := models.Chapter{ID: "luxemburg"}
 
-	got := svc.Check(context.Background(), up)
+	got := svc.Check(context.Background(), up, "up.example:25565")
 	want := models.ServerStatus{ChapterID: "lichdenstein", Checked: true, Online: true, Players: 2, Max: 10,
 		Version: "Paper 1.20.6", MOTD: "hi", LatencyMs: 42, CheckedAt: "2026-09-28T12:00:00Z"}
 	if got != want {
 		t.Fatalf("got %+v want %+v", got, want)
 	}
-	if got := svc.Check(context.Background(), down); got.Online || !got.Checked || got.ChapterID != "frangfurd" {
+	if got := svc.Check(context.Background(), down, "down.example"); got.Online || !got.Checked || got.ChapterID != "frangfurd" {
 		t.Fatalf("an unreachable server is checked and offline: %+v", got)
 	}
-	if got := svc.Check(context.Background(), none); got.Online || !got.Checked {
+	if got := svc.Check(context.Background(), none, ""); got.Online || !got.Checked {
 		t.Fatalf("a chapter without a server is checked and offline: %+v", got)
 	}
 	if svc.Latest("lichdenstein") != want {
@@ -55,14 +56,14 @@ func TestRunPingsOnlyServerChaptersAndStopsOnCancel(t *testing.T) {
 	svc := fakeStatus(map[string]PingResult{"up.example": {Online: true}})
 	chapters := []models.Chapter{
 		{ID: "luxemburg"},
-		{ID: "lichdenstein", Server: &models.Server{Address: "up.example"}},
-		{ID: "frangfurd", Server: &models.Server{Address: "down.example"}},
+		{ID: "lichdenstein", Server: server(addr("Main", "up.example"))},
+		{ID: "frangfurd", Server: server(addr("Global", "down.example"), addr("Germany", "up.example"))},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	var got []models.ServerStatus
 	done := make(chan struct{})
 	go func() {
-		svc.Run(ctx, chapters, func(s models.ServerStatus) {
+		svc.Run(ctx, chapters, func(c models.Chapter) string { return ServerAddress(c, nil) }, func(s models.ServerStatus) {
 			got = append(got, s)
 			if len(got) == 2 {
 				cancel()
@@ -77,5 +78,42 @@ func TestRunPingsOnlyServerChaptersAndStopsOnCancel(t *testing.T) {
 	}
 	if len(got) != 2 || got[0].ChapterID != "lichdenstein" || !got[0].Online || got[1].ChapterID != "frangfurd" || got[1].Online {
 		t.Fatalf("%+v", got)
+	}
+}
+
+func TestRunDropsAPingWhoseAddressChangedWhileItWasOut(t *testing.T) {
+	svc := fakeStatus(map[string]PingResult{"old.example": {Online: true}})
+	chapters := []models.Chapter{
+		{ID: "frangfurd", Server: server(addr("Global", "old.example"), addr("Germany", "new.example"))},
+	}
+	// The first ask dials the old address; by the time its answer is back the
+	// player has picked the other one, which every later ask returns.
+	var asked atomic.Int32
+	address := func(models.Chapter) string {
+		if asked.Add(1) == 1 {
+			return "old.example"
+		}
+		return "new.example"
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	var got []models.ServerStatus
+	done := make(chan struct{})
+	go func() {
+		svc.Run(ctx, chapters, address, func(s models.ServerStatus) { got = append(got, s) })
+		close(done)
+	}()
+	// The first tick has run once the address was asked twice.
+	deadline := time.After(5 * time.Second)
+	for asked.Load() < 2 {
+		select {
+		case <-deadline:
+			t.Fatal("the first tick did not finish")
+		case <-time.After(time.Millisecond):
+		}
+	}
+	cancel()
+	<-done
+	if len(got) != 0 {
+		t.Fatalf("the old address's answer was sent: %+v", got)
 	}
 }

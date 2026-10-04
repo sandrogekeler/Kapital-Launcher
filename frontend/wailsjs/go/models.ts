@@ -7,6 +7,7 @@ export namespace models {
 	    profileName: string;
 	    lastChapter: string;
 	    packOverrides?: Record<string, string>;
+	    serverChoices?: Record<string, string>;
 	    loadingSplash?: boolean;
 	    loadingSplashAvailable?: boolean;
 	    loadingSplashOn?: boolean;
@@ -24,6 +25,7 @@ export namespace models {
 	        this.profileName = source["profileName"];
 	        this.lastChapter = source["lastChapter"];
 	        this.packOverrides = source["packOverrides"];
+	        this.serverChoices = source["serverChoices"];
 	        this.loadingSplash = source["loadingSplash"];
 	        this.loadingSplashAvailable = source["loadingSplashAvailable"];
 	        this.loadingSplashOn = source["loadingSplashOn"];
@@ -60,8 +62,22 @@ export namespace models {
 	        this.path = source["path"];
 	    }
 	}
-	export class Server {
+	export class ServerAddress {
+	    label: string;
 	    address: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ServerAddress(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.label = source["label"];
+	        this.address = source["address"];
+	    }
+	}
+	export class Server {
+	    addresses: ServerAddress[];
 	    joinOnLaunch: boolean;
 	    software: string;
 	
@@ -71,10 +87,28 @@ export namespace models {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.address = source["address"];
+	        this.addresses = this.convertValues(source["addresses"], ServerAddress);
 	        this.joinOnLaunch = source["joinOnLaunch"];
 	        this.software = source["software"];
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class Pack {
 	    type: string;
@@ -474,6 +508,7 @@ export namespace models {
 		    return a;
 		}
 	}
+	
 	
 	export class ServerStatus {
 	    chapterId: string;

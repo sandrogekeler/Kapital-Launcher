@@ -14,7 +14,8 @@ user's IP only to the author's own servers.
 
 - **Every chapter with a `server` is pinged**, by Go, once a minute while the
   app is open and on demand (opening the chapter, the refresh control). The
-  manifest's `server.address` is the only address ever asked;
+  manifest's `server.addresses` are the only addresses ever asked, the one
+  the player's saved label picks, else the first (ADR-4, amendment);
   `services.Ping` takes nothing else, sends a handshake with protocol `-1`
   and an empty status request, and reads one bounded response.
 - **Results are events.** `StatusService.Run` emits `server:status` with the

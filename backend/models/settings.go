@@ -21,6 +21,12 @@ type AppSettings struct {
 	// setting, edited under Developer on the settings screen (#5); loopback
 	// only (services.CheckLocalPackURL).
 	PackOverrides map[string]string `json:"packOverrides,omitempty"`
+	// ServerChoices maps a chapter id to the label of the manifest address its
+	// server is reached at (issue 151). A label from the chapter's own list,
+	// never an address: nothing typed on the settings screen reaches a ping
+	// or Prism. A missing, unknown or stale label means the chapter's first
+	// address (services.ServerAddress).
+	ServerChoices map[string]string `json:"serverChoices,omitempty"`
 	// LoadingSplash shows a loading card, a window of its own, while a game
 	// starts, and on Windows holds the game's window until its resource reload
 	// begins (#43, #45, #97). Nil means the default: on for Windows, off for

@@ -17,28 +17,24 @@ const base: ServerStatus = {
 describe('serverLine', () => {
   it('says an unsettled address is pending, whatever the ping said', () => {
     const pending: [string, string] = ['○ No server yet', 'Address pending']
-    expect(serverLine(undefined, 'placeholder.invalid')).toEqual(pending)
-    expect(serverLine({ ...base, online: false }, 'placeholder.invalid')).toEqual(pending)
-    expect(serverLine(base, 'lichdenstein.invalid:25565')).toEqual(pending)
+    expect(serverLine(undefined, true)).toEqual(pending)
+    expect(serverLine({ ...base, online: false }, true)).toEqual(pending)
+    expect(serverLine(base, true)).toEqual(pending)
   })
 
-  it('says checking before the first ping', () => {
-    expect(serverLine(undefined, 'play.example')).toEqual(['○ Checking server', 'play.example'])
-    expect(serverLine({ ...base, checked: false }, 'play.example')[0]).toBe('○ Checking server')
+  it('says checking before the first ping, with a second row kept for the bar', () => {
+    expect(serverLine(undefined, false)).toEqual(['○ Checking server', ''])
+    expect(serverLine({ ...base, checked: false }, false)).toEqual(['○ Checking server', ''])
   })
 
-  it('says online with players and latency', () => {
-    expect(serverLine(base, 'play.example:25565')).toEqual([
-      '● Server online',
-      'play.example:25565 · 4/20 players · 37 ms',
-    ])
+  it('says online with players and latency, and no address', () => {
+    expect(serverLine(base, false)).toEqual(['● Server online', '4/20 players · 37 ms'])
   })
 
-  it('says offline with the time of the last check', () => {
-    const [state, meta] = serverLine({ ...base, online: false }, 'play.example')
+  it('says offline with the time of the last check, and no address', () => {
+    const [state, meta] = serverLine({ ...base, online: false }, false)
     expect(state).toBe('○ Server offline')
-    expect(meta.startsWith('play.example · as of ')).toBe(true)
-    expect(meta.endsWith(clock(base.checkedAt))).toBe(true)
+    expect(meta).toBe(`as of ${clock(base.checkedAt)}`)
   })
 
   it('clock falls back on an unreadable timestamp', () => {

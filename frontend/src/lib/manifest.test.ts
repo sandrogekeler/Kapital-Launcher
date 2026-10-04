@@ -3,6 +3,8 @@ import {
   BUNDLED_MANIFEST,
   addressValue,
   chapterById,
+  chosenAddress,
+  chosenLabel,
   factValue,
   isPlaceholder,
   isPlaceholderAddress,
@@ -66,6 +68,25 @@ describe('labels', () => {
       expect(isPlaceholderAddress(real), real).toBe(false)
       expect(addressValue(real)).toBe(real)
     }
+  })
+
+  it('resolves the address in use like Go does: the saved label, else the first', () => {
+    const server = {
+      addresses: [
+        { label: 'Global', address: 'global.example' },
+        { label: 'Germany', address: 'de.example:25570' },
+      ],
+      joinOnLaunch: false,
+      software: 'Paper',
+    }
+    expect(chosenAddress(server, undefined)).toBe('global.example')
+    expect(chosenAddress(server, 'Germany')).toBe('de.example:25570')
+    expect(chosenAddress(server, 'Asia')).toBe('global.example')
+    expect(chosenAddress(server, 'de.example:25570')).toBe('global.example')
+    expect(chosenLabel(server, 'Germany')).toBe('Germany')
+    expect(chosenLabel(server, 'Asia')).toBe('Global')
+    expect(chosenAddress(null, 'Germany')).toBeUndefined()
+    expect(chosenLabel(undefined, undefined)).toBeUndefined()
   })
 
   it('says in words what an unsettled fact is: not installed, or unknown', () => {

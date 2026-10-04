@@ -16,12 +16,8 @@ func (a *App) redactor() (*services.Redactor, error) {
 	if err != nil {
 		return nil, err
 	}
-	servers := make([]string, 0, len(a.manifest.Chapters))
-	for _, c := range a.manifest.Chapters {
-		if c.Server != nil {
-			servers = append(servers, c.Server.Address)
-		}
-	}
+	// Every address, whichever one the player chose.
+	servers := services.ServerAddresses(a.manifest.Chapters)
 	return services.NewRedactor(a.home, settings.ProfileName, servers, a.osUser), nil
 }
 

@@ -60,7 +60,9 @@ function withLichdensteinAt(address: string) {
   return {
     ...BUNDLED_MANIFEST,
     chapters: BUNDLED_MANIFEST.chapters.map((c) =>
-      c.id === 'lichdenstein' && c.server ? { ...c, server: { ...c.server, address } } : c,
+      c.id === 'lichdenstein' && c.server
+        ? { ...c, server: { ...c.server, addresses: [{ label: 'Main', address }] } }
+        : c,
     ),
   }
 }

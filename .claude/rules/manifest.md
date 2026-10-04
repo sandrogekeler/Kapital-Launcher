@@ -34,10 +34,15 @@ deliberate edit to that list with a reason in the commit.
   `design/tokens.json`; that is how `[data-chapter]` finds its colour.
 - `instance.id` is the Prism instance folder name, `kapital-<id>` by convention
   (ADR-2), and is what `--launch` receives.
-- `server` is `null` or `{ address, joinOnLaunch, software }`. The address is
-  `host[:port]`, pinged for the status line. `joinOnLaunch: true` is what
-  turns Play into Join and adds `--server` to the launch; a modpack that
-  merely has a server says `false`. `software` is a fact for the panel.
+- `server` is `null` or `{ addresses, joinOnLaunch, software }`. `addresses`
+  is a list of `{ label, address }`, at least one, the first the default
+  (ADR-4, amendment). Each address is `host[:port]`, any of them pinged for
+  the status line; the label is short, unique in the chapter and is what the
+  player's choice in settings is saved as, never the address. The one in use
+  is `services.ServerAddress(chapter, settings.ServerChoices)`: use it, never
+  `Addresses[0]`. `joinOnLaunch: true` is what turns Play into Join and adds
+  `--server` to the launch; a modpack that merely has a server says `false`.
+  `software` is a fact for the panel.
 - `state` is `released`, `development` or `planned`.
 - An unsettled fact is `"[PLACEHOLDER]"` for a string and `null` for a number or
   URL. The UI renders both faint; do not invent a value to fill a slot.

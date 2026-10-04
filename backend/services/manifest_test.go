@@ -39,6 +39,14 @@ func TestBundledManifestIsValid(t *testing.T) {
 	if fra.Server == nil || fra.Server.JoinOnLaunch {
 		t.Errorf("Frangfurd has a server but is played as a pack: %+v", fra.Server)
 	}
+	// Frangfurd's two addresses, Global the default; Lichdenstein's one is
+	// still the placeholder (issue 151).
+	if got := fra.Server.Addresses; len(got) != 2 || got[0] != addr("Global", "female-specified.gl.joinmc.link") || got[1] != addr("Germany", "rails-enjoyed.tun.ply.gg") {
+		t.Errorf("Frangfurd's addresses: %+v", got)
+	}
+	if got := lic.Server.Addresses; len(got) != 1 || got[0] != addr("Main", "placeholder.invalid") {
+		t.Errorf("Lichdenstein's address: %+v", got)
+	}
 	if m.Chapters[0].Pack.Loader != "Forge" || m.Chapters[0].Pack.Minecraft != "1.19.2" {
 		t.Errorf("Luxemburg is Forge 1.19.2: %+v", m.Chapters[0].Pack)
 	}
@@ -64,6 +72,14 @@ func validManifest() models.Manifest {
 	}
 }
 
+func addr(label, address string) models.ServerAddress {
+	return models.ServerAddress{Label: label, Address: address}
+}
+
+func server(addresses ...models.ServerAddress) *models.Server {
+	return &models.Server{Addresses: addresses}
+}
+
 func TestValidateManifestRefuses(t *testing.T) {
 	str := func(s string) *string { return &s }
 	cases := map[string]func(m *models.Manifest){
@@ -76,15 +92,32 @@ func TestValidateManifestRefuses(t *testing.T) {
 		"duplicate id": func(m *models.Manifest) {
 			m.Chapters = append(m.Chapters, m.Chapters[0])
 		},
-		"path-like instance id":     func(m *models.Manifest) { m.Chapters[0].Instance.ID = "../other" },
-		"dot instance id":           func(m *models.Manifest) { m.Chapters[0].Instance.ID = "." },
-		"bad state":                 func(m *models.Manifest) { m.Chapters[0].State = "beta" },
-		"bad pack type":             func(m *models.Manifest) { m.Chapters[0].Pack.Type = "shaders" },
-		"empty loader":              func(m *models.Manifest) { m.Chapters[0].Pack.Loader = " " },
-		"http packwiz":              func(m *models.Manifest) { m.Chapters[0].Pack.Packwiz = str("http://github.com/x/pack.toml") },
-		"mrpack off allowlist":      func(m *models.Manifest) { m.Chapters[0].Pack.Mrpack = str("https://files.example/p.mrpack") },
-		"bad server address":        func(m *models.Manifest) { m.Chapters[0].Server = &models.Server{Address: "play.example:99999"} },
-		"server with scheme":        func(m *models.Manifest) { m.Chapters[0].Server = &models.Server{Address: "https://play.example"} },
+		"path-like instance id": func(m *models.Manifest) { m.Chapters[0].Instance.ID = "../other" },
+		"dot instance id":       func(m *models.Manifest) { m.Chapters[0].Instance.ID = "." },
+		"bad state":             func(m *models.Manifest) { m.Chapters[0].State = "beta" },
+		"bad pack type":         func(m *models.Manifest) { m.Chapters[0].Pack.Type = "shaders" },
+		"empty loader":          func(m *models.Manifest) { m.Chapters[0].Pack.Loader = " " },
+		"http packwiz":          func(m *models.Manifest) { m.Chapters[0].Pack.Packwiz = str("http://github.com/x/pack.toml") },
+		"mrpack off allowlist":  func(m *models.Manifest) { m.Chapters[0].Pack.Mrpack = str("https://files.example/p.mrpack") },
+		"bad server address":    func(m *models.Manifest) { m.Chapters[0].Server = server(addr("Main", "play.example:99999")) },
+		"server with scheme":    func(m *models.Manifest) { m.Chapters[0].Server = server(addr("Main", "https://play.example")) },
+		"bad second address": func(m *models.Manifest) {
+			m.Chapters[0].Server = server(addr("A", "a.example"), addr("B", "b.example/x"))
+		},
+		"bad third address": func(m *models.Manifest) {
+			m.Chapters[0].Server = server(addr("A", "a.example"), addr("B", "b.example"), addr("C", "-x -y"))
+		},
+		"server with no addresses": func(m *models.Manifest) { m.Chapters[0].Server = server() },
+		"empty label":              func(m *models.Manifest) { m.Chapters[0].Server = server(addr("", "a.example")) },
+		"blank label":              func(m *models.Manifest) { m.Chapters[0].Server = server(addr("  ", "a.example")) },
+		"label with a symbol":      func(m *models.Manifest) { m.Chapters[0].Server = server(addr("A;B", "a.example")) },
+		"label too long":           func(m *models.Manifest) { m.Chapters[0].Server = server(addr(strings.Repeat("a", 25), "a.example")) },
+		"duplicate label": func(m *models.Manifest) {
+			m.Chapters[0].Server = server(addr("A", "a.example"), addr("A", "b.example"))
+		},
+		"duplicate label by case": func(m *models.Manifest) {
+			m.Chapters[0].Server = server(addr("A", "a.example"), addr("a", "b.example"))
+		},
 		"relative wiki path":        func(m *models.Manifest) { m.Chapters[0].Wiki.Path = "wiki/x" },
 		"control character in name": func(m *models.Manifest) { m.Chapters[0].Name = "Lux\nemburg" },
 		"packwiz with a $": func(m *models.Manifest) {
@@ -115,7 +148,7 @@ func TestValidateManifestAccepts(t *testing.T) {
 	m := validManifest()
 	pw := "https://raw.githubusercontent.com/sandrogekeler/packs/main/frangfurd/pack.toml"
 	m.Chapters[0].Pack.Packwiz = &pw
-	m.Chapters[0].Server = &models.Server{Address: "play.kapitel-kapital.example:25565"}
+	m.Chapters[0].Server = server(addr("Global", "play.kapitel-kapital.example:25565"), addr("Germany", "de.kapitel-kapital.example"))
 	zgc := "zgc"
 	m.Chapters[0].Pack.Minecraft, m.Chapters[0].Pack.JVM = "1.21.1", &zgc
 	if err := ValidateManifest(m); err != nil {
