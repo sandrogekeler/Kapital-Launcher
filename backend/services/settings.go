@@ -146,6 +146,12 @@ func (s *SettingsService) load() (models.AppSettings, error) {
 		}
 		settings.JoinServers = kept
 	}
+	// The picture count is the player's to edit in the file as well: one that is
+	// no choice is dropped for the default, so it never blocks a write.
+	if n := settings.WikiPictures; n != nil && !slices.Contains(WikiPictureChoices, *n) {
+		slog.Warn("settings: pictures per chapter dropped", "value", *n)
+		settings.WikiPictures = nil
+	}
 	return normalize(settings), nil
 }
 
@@ -181,6 +187,9 @@ func ValidateSettings(s models.AppSettings) error {
 	}
 	if s.MapIn != "" && !slices.Contains(mapIns, s.MapIn) {
 		return fmt.Errorf("settings: map location %q is not one of %v", s.MapIn, mapIns)
+	}
+	if s.WikiPictures != nil && !slices.Contains(WikiPictureChoices, *s.WikiPictures) {
+		return fmt.Errorf("settings: %d pictures per chapter is not one of %v (0 is all)", *s.WikiPictures, WikiPictureChoices)
 	}
 	if strings.HasPrefix(strings.TrimSpace(s.ProfileName), "-") {
 		return fmt.Errorf("settings: profile name %q could be read as an option", s.ProfileName)

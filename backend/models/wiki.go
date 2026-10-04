@@ -22,8 +22,9 @@ type WikiPage struct {
 	Related []string `json:"related"`
 }
 
-// WikiShot is one of the wiki's screenshots, downloaded and cached by the
-// launcher (#141), for the chapter art and the post that goes with it.
+// WikiShot is one of the wiki's pictures, a screenshot (#141) or a picture a
+// page embeds (issue 172), downloaded and cached by the launcher, for the
+// chapter art and the post that goes with it.
 type WikiShot struct {
 	// Era is the wiki's era id the picture belongs to, the chapter's name.
 	Era string `json:"era"`
@@ -32,4 +33,15 @@ type WikiShot struct {
 	Src string `json:"src"`
 	// Subject is the id of the page the picture shows, "" when none.
 	Subject string `json:"subject"`
+}
+
+// WikiArtStats is what the settings screen needs to say how much room a number
+// of wiki pictures per chapter takes (issue 172).
+type WikiArtStats struct {
+	// AvgBytes is the mean size of the pictures in the cache, a default of about
+	// 100 KB while it holds none.
+	AvgBytes int64 `json:"avgBytes"`
+	// Pools is how many pictures each chapter can draw from, by the wiki's era
+	// id (the chapter's name); empty when the wiki's export could not be read.
+	Pools map[string]int `json:"pools"`
 }

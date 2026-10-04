@@ -82,6 +82,10 @@ export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }
 
+export function GetWikiArtStats() {
+  return window['go']['main']['App']['GetWikiArtStats']();
+}
+
 export function GetWikiPages() {
   return window['go']['main']['App']['GetWikiPages']();
 }

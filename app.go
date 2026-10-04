@@ -114,7 +114,7 @@ func NewApp(dataDir string, manifest []byte, dist fs.FS) (*App, error) {
 		managed:        managed,
 		status:         services.NewStatusService(),
 		creator:        services.NewInstanceCreator(dataDir),
-		wiki:           services.NewWikiService(dataDir, m.Wiki.BaseURL),
+		wiki:           services.NewWikiService(dataDir, m.Wiki.BaseURL).ForChapters(m.Chapters),
 		openFolder:     services.OpenFolder,
 		frontendErrors: services.NewFrontendErrorLog(),
 		previewStep:    previewInstallStep,
@@ -577,12 +577,27 @@ func (a *App) GetWikiPages() ([]models.WikiPage, error) {
 	return a.wiki.Pages(a.context())
 }
 
-// GetWikiShots returns the wiki's screenshots for the chapter art (#141):
-// listed by the lore export, downloaded from the wiki host once per start and
+// GetWikiShots returns the wiki's pictures for the chapter art (#141, issue
+// 172): of each chapter's pool, the screenshots and the pictures of its pages
+// the lore export lists, the number the settings name, drawn again once a day or
+// when that number changes. Only the drawn are downloaded from the wiki host and
 // cached, each served to the page at its Src. It waits for the downloads; an
 // error means the export itself could not be had, and the bundled art stays.
 func (a *App) GetWikiShots() ([]models.WikiShot, error) {
-	return a.wiki.Shots(a.context())
+	count := services.DefaultWikiPictures
+	if settings, err := a.settings.Load(); err != nil {
+		slog.Warn("wiki pictures: settings", "error", err)
+	} else {
+		count = services.WikiPictures(settings)
+	}
+	return a.wiki.Shots(a.context(), count)
+}
+
+// GetWikiArtStats returns the cache's average picture size and each chapter's
+// pool, for the settings screen's estimate of the room a number of pictures
+// takes (issue 172). With no export to read the pools are empty.
+func (a *App) GetWikiArtStats() (models.WikiArtStats, error) {
+	return a.wiki.ArtStats(a.context()), nil
 }
 
 // assetMiddleware serves the cached wiki art ahead of the embedded build
