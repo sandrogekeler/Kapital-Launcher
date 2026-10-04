@@ -15,7 +15,6 @@ export type { LucideIcon } from 'lucide-react'
 export {
   ArrowDown,
   ArrowLeft,
-  BookOpen,
   Check,
   ChevronRight,
   ChevronDown,
@@ -25,6 +24,8 @@ export {
   Folder,
   FolderOpen,
   Info,
+  // lucide's `Map`, renamed: a bare `Map` would shadow the global one.
+  Map as MapIcon,
   Minus,
   Pencil,
   Play,

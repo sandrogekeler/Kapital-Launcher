@@ -19,6 +19,10 @@ import { Panels } from './Panels'
 
 const PRISM_SITE = 'https://prismlauncher.org'
 
+/** Hands an address to the system browser through Go's checks; a refusal is logged. */
+const openLink = (url: string, what: string) =>
+  OpenExternal(url).catch((e) => console.warn(what, errMsg(e)))
+
 /**
  * One chapter's view: the hero, the action bar and the panels, reading the
  * chapter's own slice of each store. It takes the chapter rather than the
@@ -29,9 +33,10 @@ interface Props {
   chapter: Chapter
   onOpenSettings: (chapterId: string) => void
   onOpenLogs: (chapterId: string) => void
+  onOpenMap: (chapterId: string) => void
 }
 
-export function ChapterView({ chapter, onOpenSettings, onOpenLogs }: Props) {
+export function ChapterView({ chapter, onOpenSettings, onOpenLogs, onOpenMap }: Props) {
   const slide = useChapterStore(selectSlide(chapter.id))
   const wikiPick = slide?.page
   // The slideshow off shows the bundled art; the post still follows the slide.
@@ -57,6 +62,7 @@ export function ChapterView({ chapter, onOpenSettings, onOpenLogs }: Props) {
   const checking = useServerStore((s) => s.checking)
   const checkServer = useServerStore((s) => s.check)
 
+  const mapIn = useSettingsStore((s) => s.settings.mapIn)
   const devPack = useSettingsStore((s) => s.settings.packOverrides?.[chapter.id])
   const serverChoice = useSettingsStore((s) => s.settings.serverChoices?.[chapter.id])
 
@@ -66,21 +72,22 @@ export function ChapterView({ chapter, onOpenSettings, onOpenLogs }: Props) {
     (wikiPick ? OpenWikiPage(wikiPick.url) : OpenChapterWiki(chapter.id)).catch((e) =>
       console.warn('open wiki', errMsg(e)),
     )
-  const openPrismSite = () =>
-    OpenExternal(PRISM_SITE).catch((e) => console.warn('open prism site', errMsg(e)))
-  const openReleasePage = () =>
-    OpenExternal(release?.page || PRISM_SITE).catch((e) =>
-      console.warn('open prism release', errMsg(e)),
-    )
+  // The map opens where settings say (issue 161). In the browser it goes
+  // through the same OpenExternal checks as every link; a chapter with no map
+  // has nothing to hand the browser, so it opens the page, which says so.
+  const openMap = () =>
+    mapIn === 'browser' && chapter.map ? openLink(chapter.map, 'open map') : onOpenMap(chapter.id)
+  const openPrismSite = () => openLink(PRISM_SITE, 'open prism site')
+  const openReleasePage = () => openLink(release?.page || PRISM_SITE, 'open prism release')
 
   return (
     <>
       <Hero
         chapter={chapter}
         art={staticArt ? undefined : slide?.art}
-        onOpenWiki={openWiki}
         onOpenSettings={() => onOpenSettings(chapter.id)}
         onOpenLogs={() => onOpenLogs(chapter.id)}
+        onOpenMap={openMap}
         version={packVersion(packState, chapter.pack.version)}
       />
       <ActionBar

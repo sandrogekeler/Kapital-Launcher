@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import type {
   Chapter,
   EngineInfo,
@@ -26,7 +26,12 @@ import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 import { StableLabel } from '../ui/StableLabel'
-import { GetPrism } from './GetPrism'
+
+// The approval card is shown only after the player asks to get Prism, so it
+// loads then and stays out of the launcher's first paint and its bundle budget
+// (scripts/check-bundle-size.mjs), which the map tool's icon and address took
+// the last of (issue 161).
+const GetPrism = lazy(() => import('./GetPrism').then((m) => ({ default: m.GetPrism })))
 
 interface Props {
   chapter: Chapter
@@ -293,16 +298,18 @@ export function ActionBar({
         </div>
       </div>
       {missing && offering && release && !working && (
-        <GetPrism
-          release={release}
-          onConfirm={() => {
-            setOffering(false)
-            onGetPrism()
-          }}
-          onCancel={() => setOffering(false)}
-          onOpenReleasePage={onOpenReleasePage}
-          onOpenPrismSite={onOpenPrismSite}
-        />
+        <Suspense fallback={null}>
+          <GetPrism
+            release={release}
+            onConfirm={() => {
+              setOffering(false)
+              onGetPrism()
+            }}
+            onCancel={() => setOffering(false)}
+            onOpenReleasePage={onOpenReleasePage}
+            onOpenPrismSite={onOpenPrismSite}
+          />
+        </Suspense>
       )}
     </section>
   )

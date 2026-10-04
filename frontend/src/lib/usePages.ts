@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import { usePageSlot } from './usePageSlot'
 
-/** A page over a chapter: its own settings, its logs, or the report of its latest run. */
+/** A page over a chapter: its own settings, its logs, its map, or the report of its latest run. */
 export interface ChapterPageSpec {
-  kind: 'settings' | 'logs' | 'report'
+  kind: 'settings' | 'logs' | 'map' | 'report'
   chapterId: string
 }
 
@@ -11,11 +11,12 @@ export interface ChapterPageSpec {
  * The pages laid over the chapter card, and what opens and closes them.
  *
  * The app's settings (the gear in the header) come down over the card area; a
- * chapter's own pages, its settings (the pen), its logs and its run report
- * (Details, on the corner's notice of a game that ended badly), come in from
- * the right inside the card. Each closes with Back and Escape, and a chapter's
- * pages close with the chapter they belong to: the effects fire on the
- * selection, including the restore at startup, when nothing is open anyway.
+ * chapter's own pages, its settings (the pen), its logs, its map (issue 161)
+ * and its run report (Details, on the corner's notice of a game that ended
+ * badly), come in from the right inside the card. Each closes with Back and
+ * Escape, and a chapter's pages close with the chapter they belong to: the
+ * effects fire on the selection, including the restore at startup, when
+ * nothing is open anyway.
  *
  * The notice can be another chapter's, so opening its report selects that
  * chapter too. Every page closes when a chapter is brought up, the chapter's
@@ -61,5 +62,6 @@ export function usePages(selectedId: string, select: (chapterId: string) => void
     },
     openChapterSettings: showPage('settings'),
     openLogs: showPage('logs'),
+    openMap: showPage('map'),
   }
 }
