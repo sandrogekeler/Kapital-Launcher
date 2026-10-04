@@ -14,7 +14,7 @@ describe('gameLine', () => {
   it('names each phase of a start in order', () => {
     expect(gameLine(at('starting'), 'Frangfurd')).toEqual([
       '◐ Starting',
-      'Prism is getting Frangfurd ready',
+      'Getting Frangfurd ready',
       'text-accent',
     ])
     expect(gameLine(at('mods'), 'Frangfurd')).toEqual([

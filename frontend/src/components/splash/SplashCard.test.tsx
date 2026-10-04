@@ -59,7 +59,7 @@ describe('SplashCard', () => {
   )
 
   it.each<[GamePhase, string, string]>([
-    ['starting', '◐ Starting', `Prism is getting ${chapter.name} ready`],
+    ['starting', '◐ Starting', `Getting ${chapter.name} ready`],
     ['mods', '◐ Loading mods', 'The game has started'],
     ['window', '◐ Loading mods', 'The game window is running'],
     ['resources', '◐ Loading resources', 'Almost there'],
