@@ -9,8 +9,11 @@
       its own bundle ('self'). 'unsafe-inline' on styles only, for Tailwind's
       runtime-free output and the accent custom property React sets. No
       remote images yet: when the manifest is fetched from the site (ADR-4),
-      img-src grows by that one host and nothing else. In dev, vite.config.ts
-      strips this tag; see there for why.
+      img-src grows by that one host and nothing else. frame-src is 'none' here
+      and the build fills it with exactly the map origins data/launcher.json
+      names (issue 161, vite.config.ts), which is what lets the map page frame
+      a chapter's BlueMap and nothing else. In dev, vite.config.ts strips this
+      tag; see there for why.
     -->
     <meta
       http-equiv="Content-Security-Policy"

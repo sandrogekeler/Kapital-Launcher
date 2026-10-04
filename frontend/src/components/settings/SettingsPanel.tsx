@@ -5,6 +5,7 @@ import { useEngineStore } from '../../stores/useEngineStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { errMsg, hasWailsBridge } from '../../lib/ipc'
 import {
+  MAP_IN_OPTIONS,
   THEME_OPTIONS,
   executableHint,
   executablePlaceholder,
@@ -171,6 +172,19 @@ function AppearanceSection({ settings, errors, save }: SectionProps) {
         error={errors.staticArt}
         onChange={(on) => void save('staticArt', { staticArt: !on })}
       />
+      <div className="flex flex-col gap-1.5">
+        <Segmented
+          label="Open the map"
+          value={settings.mapIn === 'browser' ? 'browser' : 'app'}
+          options={MAP_IN_OPTIONS}
+          error={errors.mapIn}
+          onChange={(mapIn) => void save('mapIn', { mapIn })}
+        />
+        <Hint>
+          Where the map tool in a chapter's hero shows the map: in a page over the chapter, or in
+          your default browser.
+        </Hint>
+      </div>
       {/* Go says where the splash can run at all (#43); elsewhere there is
           nothing to choose. The effective value is derived, so the save
           carries it along for the switch to follow at once. */}

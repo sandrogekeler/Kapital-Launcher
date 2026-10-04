@@ -18,8 +18,8 @@ import { usePages } from './lib/usePages'
 // The pages that slide over the chapter card are opened on demand, so they
 // load when asked for and stay out of the launcher's first paint and its
 // bundle budget (scripts/check-bundle-size.mjs): the settings, and a chapter's
-// own pages (components/main/ChapterPage), its settings, its logs and the run
-// report, opened rarely, from Details beside a game that went wrong.
+// own pages (components/main/ChapterPage), its settings, its logs, its map and
+// the run report, opened rarely, from Details beside a game that went wrong.
 const SettingsPanel = lazy(() =>
   import('./components/settings/SettingsPanel').then((m) => ({ default: m.SettingsPanel })),
 )
@@ -170,6 +170,7 @@ export default function App() {
             chapters={chapters}
             onOpenSettings={pages.openChapterSettings}
             onOpenLogs={pages.openLogs}
+            onOpenMap={pages.openMap}
             covered={pages.covered}
           >
             {chapterPage.slot && openedChapter && (

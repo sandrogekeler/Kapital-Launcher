@@ -14,6 +14,7 @@ export namespace models {
 	    loadingSplashAvailable?: boolean;
 	    loadingSplashOn?: boolean;
 	    staticArt?: boolean;
+	    mapIn?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -34,6 +35,7 @@ export namespace models {
 	        this.loadingSplashAvailable = source["loadingSplashAvailable"];
 	        this.loadingSplashOn = source["loadingSplashOn"];
 	        this.staticArt = source["staticArt"];
+	        this.mapIn = source["mapIn"];
 	    }
 	}
 	export class ChangelogEntry {
@@ -199,6 +201,7 @@ export namespace models {
 	    server?: Server;
 	    wiki: WikiTeaser;
 	    changelog: ChangelogEntry[];
+	    map?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Chapter(source);
@@ -218,6 +221,7 @@ export namespace models {
 	        this.server = this.convertValues(source["server"], Server);
 	        this.wiki = this.convertValues(source["wiki"], WikiTeaser);
 	        this.changelog = this.convertValues(source["changelog"], ChangelogEntry);
+	        this.map = source["map"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -478,6 +482,22 @@ export namespace models {
 		    }
 		    return a;
 		}
+	}
+	export class MapStatus {
+	    url: string;
+	    reachable: boolean;
+	    reason: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new MapStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.url = source["url"];
+	        this.reachable = source["reachable"];
+	        this.reason = source["reason"];
+	    }
 	}
 	
 	

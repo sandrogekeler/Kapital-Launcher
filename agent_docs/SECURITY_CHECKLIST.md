@@ -9,7 +9,7 @@ Two reaches matter: **network** (a manifest, a pack index, a download, a server
 ping response) and **bridge** (a bound method on `App`, callable by anything
 that runs in the WebView).
 
-Bound methods on 2026-10-04: **40** (`grep -c '^func (a \*App) [A-Z]' app.go app_*.go`,
+Bound methods on 2026-10-04: **41** (`grep -c '^func (a \*App) [A-Z]' app.go app_*.go`,
 summed). A different count is new surface to classify: add the method to this table.
 
 | Method | Takes from the bridge | Reaches | Item |
@@ -40,6 +40,7 @@ summed). A different count is new surface to classify: add the method to this ta
 | `SetModsDisabled` | a chapter id and a list of jar base names | the settings file (the chapter's `disabledMods`), then renames of `x.jar` and `x.jar.disabled` in that `mods` folder only, each name a plain jar name present in the folder; refused while the game runs and under a developer preview | S3.3, S3.11 |
 | `WatchLiveLog` | a chapter id | the same chunk of `logs/latest.log` as `ReadRunLog` (at most 256 KiB, redacted), and a follower of that one file in that game folder, which emits what is appended as `log:live` events (at most 64 KiB each, redacted); one follower at a time, ended by the app's shutdown; nothing written | S3.3, S3.10, S7.5 |
 | `StopLiveLog` | a chapter id | the follower of that chapter's log, ended; nothing else | S3.3, S3.10 |
+| `CheckChapterMap` | a chapter id | one GET (5 s, no redirect followed, body dropped after 4 KiB) of the address the manifest names as that chapter's `map`, a playit tunnel with a port; nothing is kept, and a chapter with no map makes no request | S2.2, S5.4 |
 | `GetPreviewSituations` | nothing | the fixed list of developer previews, in memory | none |
 | `StartPreview`, `ClearPreviews` | a chapter id and a situation name, which must be one of the fixed list (`services.PreviewSituations`) | state and copy only: a synthetic `game:state`, the real loading card with a made-up report, synthetic pack, instance, engine and release answers, and a made-up Prism install that never reaches the installer. No file, process, URL or network request; a real launch, game event or write to the chapter ends the preview | S3.3, S3.8, S4.5 |
 
@@ -93,11 +94,19 @@ reads there (`$`, quotes, spaces, a backslash, `#`).
 Verify: `TestParseManifestRefusesUnknownFields`; `TestValidateManifestRefuses`;
 `TestRenderInstanceConfigRefuses`; read `design/launcher.schema.json`.
 
-**S2.2 Every manifest URL is https on an allowlisted host.**
+**S2.2 Every manifest URL is https on an allowlisted host, a chapter's map
+excepted.**
 Holds when: `checkURL` runs on `wiki.baseUrl`, `pack.packwiz` and `pack.mrpack`,
-and `AllowedManifestHosts` is a short fixed list.
-Verify: `TestValidateManifestRefuses`.
-Probe: a URL with credentials, an `http://` scheme, a lookalike host.
+and `AllowedManifestHosts` is a short fixed list. The one exception is a
+chapter's optional `map` (issue 161, ADR-4's third amendment): a playit tunnel
+serves BlueMap without TLS, so `checkMapURL` takes http or https on a host of
+labels under `tun.ply.gg`, with an explicit port from 1 to 65535, lowercase, and
+nothing after it but an optional slash (no user info, query, fragment or path).
+Anything else is refused whole, and the exception reaches no other field.
+Verify: `TestValidateManifestRefuses`, `TestChapterMapAcceptsOnlyATunnelWithAPort`,
+`TestParseManifestRefusesABadMapAndAcceptsNoneOrNull`.
+Probe: a URL with credentials, an `http://` scheme off the tunnel family, a
+lookalike host (`x.tun.ply.gg.evil.example`), a missing port, `javascript:`.
 
 **S2.3 A remote manifest is fetched, verified and cached, never executed.**
 Not yet built (milestone 5). Holds when: fetched over https from the site only,
@@ -529,15 +538,61 @@ pre-launch command was edited by hand (an extra flag, another jar, `echo`).
 Holds when: `frontend/index.html` and `frontend/splash.html` (the loading card's
 page, S3.8) each carry the meta tag with `script-src 'self'`,
 `frame-src 'none'`, `object-src 'none'`, and `vite.config.ts` strips it in
-dev only.
+dev only. The one change a build makes is `index.html`'s `frame-src` (issue
+161, S5.4): the `mapFrameSrc` plugin writes into it exactly the origins of the
+chapters' `map` addresses in `data/launcher.json` (`scheme://host:port`, the
+shape `checkMapURL` enforces, a manifest that breaks it fails the build), and
+leaves `'none'` when there is none. `splash.html` frames nothing and keeps
+`'none'`.
 Verify: read the files; `grep -c Content-Security-Policy frontend/dist/index.html`
-and the same for `splash.html` after a build are 1.
+and the same for `splash.html` after a build are 1; `pnpm check-csp` (part of
+the suite) reads the built output back and fails unless `index.html`'s
+`frame-src` is the manifest's map origins and nothing wider, no other
+directive carries an `http` source or a `*`, and `splash.html` says `'none'`.
 
 **S5.2 No raw HTML sinks.**
 Verify: `grep -rn 'dangerouslySetInnerHTML\|innerHTML' frontend/src` is empty.
 
 **S5.3 Release builds have no inspector.** Wails' `Debug.OpenInspectorOnStartup`
 is unset and `wails build` does not pass `-devtools`.
+
+**S5.4 A framed map can show a page and do nothing else.**
+The map page (issue 161) frames a chapter's BlueMap, a web page on the
+server's own playit tunnel over plain http, inside the app's page. What is
+allowed in is exactly one origin per map the bundled manifest names: the
+policy's `frame-src` (S5.1), and `CheckChapterMap`'s check that the address
+answers at all (S2.2 holds the address to the tunnel rule; the check follows no
+redirect, reads at most 4 KiB, keeps and logs nothing of the body, and the
+frame is shown only when something answered). What it can do once there:
+- It cannot call a binding. Wails v2.16's `processMessage`
+  (`internal/frontend/desktop/windows/frontend.go`) accepts a message only when
+  both the top document's origin and the sending frame's origin are the app's
+  own (`validBindingOrigin`); `BindingsAllowedOrigins` is unset in `main.go` and
+  stays so. A page in a frame is on another origin, so its messages are dropped.
+- It cannot take the launcher over. The `<iframe>` is sandboxed to
+  `allow-scripts allow-same-origin` (BlueMap needs scripts and its own
+  origin's storage): no top navigation, no popups, no forms, no pointer lock,
+  and `referrerpolicy="no-referrer"`. Its origin is not the app's, so
+  `allow-same-origin` gives it its own origin's storage and nothing of the app's.
+- It is not trusted with anything: the address is the manifest's, never one the
+  bridge sends (`CheckChapterMap` takes a chapter id), and "Open in browser"
+  goes through `OpenExternal` and S3.4.
+Verify: `TestCheckChapterMapAsksOnlyAboutTheManifestsAddress`,
+`TestCheckMapAsksOnlyAboutAManifestShapedAddress`,
+`TestProbeMapDoesNotFollowARedirect`, `TestProbeMapDropsTheBodyAfterAFewKiB`,
+`pnpm check-csp`, `MapPanel.test.tsx` ("frames it sandboxed to scripts and its
+own storage, with no referrer"); `grep -n BindingsAllowedOrigins main.go` is
+empty.
+Probe: a manifest whose map is `http://evil.example:80` or
+`javascript:alert(1)` is refused whole; a map page that sends
+`window.parent.postMessage` or calls `window.chrome.webview.postMessage` is
+ignored by Wails.
+`[verify]` on macOS (WKWebView): that Wails there gives the same guarantee for a
+message from a frame (`internal/frontend/desktop/darwin/frontend.go` checks the
+message's own source against the same validator, not the top document's too, so
+the sender frame is what holds it), and that an http frame loads inside the
+app's page (`wails://wails`) at all, since WKWebView may block it as mixed
+content. The Windows side is the author's to open on the PC, in both modes.
 
 ## S6. The server ping
 
@@ -646,3 +701,5 @@ Verify: Security, Code scanning on the repository lists both tools.
 - S2.3, S4.2 to S4.4: not built yet; the items are written so the code meets
   them when it is.
 - S5.3: verify the inspector setting against the first `wails build` output.
+- S5.4: verify on macOS that a framed map cannot call a binding and that an
+  http frame loads in the app's page there.

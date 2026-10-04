@@ -10,6 +10,7 @@ interface Props {
   chapters: readonly Chapter[]
   onOpenSettings: (chapterId: string) => void
   onOpenLogs: (chapterId: string) => void
+  onOpenMap: (chapterId: string) => void
   /** Whether a page covers the chapter, which leaves the view beneath it inert. */
   covered?: boolean
   /** The pages laid over the card, each a `PageLayer`. */
@@ -47,6 +48,7 @@ export function ChapterStage({
   chapters,
   onOpenSettings,
   onOpenLogs,
+  onOpenMap,
   covered = false,
   children,
 }: Props) {
@@ -73,7 +75,12 @@ export function ChapterStage({
         aria-hidden={covered || undefined}
         className={`${CARD} ${entering}`}
       >
-        <ChapterView chapter={chapter} onOpenSettings={onOpenSettings} onOpenLogs={onOpenLogs} />
+        <ChapterView
+          chapter={chapter}
+          onOpenSettings={onOpenSettings}
+          onOpenLogs={onOpenLogs}
+          onOpenMap={onOpenMap}
+        />
       </div>
       {outgoing && (
         <div
@@ -87,6 +94,7 @@ export function ChapterStage({
             chapter={outgoing.chapter}
             onOpenSettings={onOpenSettings}
             onOpenLogs={onOpenLogs}
+            onOpenMap={onOpenMap}
           />
         </div>
       )}

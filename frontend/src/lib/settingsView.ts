@@ -1,4 +1,4 @@
-import type { AppSettings, EngineInfo, InstanceReport, Theme } from '../types'
+import type { AppSettings, EngineInfo, InstanceReport, MapIn, Theme } from '../types'
 
 /**
  * What the settings screen says about each field: the value detection
@@ -12,6 +12,12 @@ export const THEME_OPTIONS: readonly { value: Theme; label: string }[] = [
   { value: 'dark', label: 'Dark' },
   { value: 'light', label: 'Light' },
   { value: 'system', label: 'System' },
+]
+
+/** Where the map opens, in the order the control shows them (issue 161). */
+export const MAP_IN_OPTIONS: readonly { value: MapIn; label: string }[] = [
+  { value: 'app', label: 'In the launcher' },
+  { value: 'browser', label: 'In the browser' },
 ]
 
 /** `EngineInfo.source` as a phrase: how the Prism in use was found. */

@@ -22,6 +22,22 @@ const SettingsFileName = "settings.json"
 
 var themes = []string{"dark", "light", "system"}
 
+// Where the hero's map tool opens a chapter's map (AppSettings.MapIn).
+const (
+	MapInApp     = "app"
+	MapInBrowser = "browser"
+)
+
+var mapIns = []string{MapInApp, MapInBrowser}
+
+// MapIn is where the map opens: the stored choice, "app" when there is none.
+func MapIn(s models.AppSettings) string {
+	if s.MapIn == MapInBrowser {
+		return MapInBrowser
+	}
+	return MapInApp
+}
+
 // DataDir is where the app keeps its own files: os.UserConfigDir()/KapitalLauncher,
 // falling back to a folder under the home dir, then the working directory, so
 // the app always has somewhere to write. Never Prism's directory: the launcher
@@ -162,6 +178,9 @@ func ValidateSettings(s models.AppSettings) error {
 	}
 	if exe := strings.TrimSpace(s.PrismExecutable); exe != "" && !filepath.IsAbs(exe) {
 		return fmt.Errorf("settings: prism executable %q must be an absolute path", exe)
+	}
+	if s.MapIn != "" && !slices.Contains(mapIns, s.MapIn) {
+		return fmt.Errorf("settings: map location %q is not one of %v", s.MapIn, mapIns)
 	}
 	if strings.HasPrefix(strings.TrimSpace(s.ProfileName), "-") {
 		return fmt.Errorf("settings: profile name %q could be read as an option", s.ProfileName)

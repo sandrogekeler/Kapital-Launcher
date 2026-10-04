@@ -103,6 +103,7 @@ describe('App', () => {
       import('./components/settings/PreviewSection'),
       import('./components/settings/PackSourceSection'),
       import('./components/main/RunReportPanel'),
+      import('./components/main/GetPrism'),
       import('./components/main/ChapterPage'),
       import('./components/logs/LogsPanel'),
     ])
@@ -426,7 +427,7 @@ describe('App', () => {
     await screen.findByText('Kapital Launcher can get it for you')
 
     fireEvent.click(screen.getByRole('button', { name: 'Get Prism Launcher' }))
-    const card = screen.getByRole('region', { name: 'Get Prism Launcher' })
+    const card = await screen.findByRole('region', { name: 'Get Prism Launcher' })
     expect(card).toHaveTextContent('Prism Launcher 11.1.1 (19.5 MB)')
     expect(card).toHaveTextContent('sign in with Microsoft')
     fireEvent.click(within(card).getByRole('button', { name: /What.s in 11.1.1/ }))
@@ -438,7 +439,7 @@ describe('App', () => {
     let finish!: () => void
     vi.mocked(Bindings.InstallPrism).mockReturnValue(new Promise<void>((r) => (finish = r)))
     fireEvent.click(screen.getByRole('button', { name: 'Get Prism Launcher' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Download and set up' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Download and set up' }))
     expect(Bindings.InstallPrism).toHaveBeenCalledOnce()
     expect(await screen.findByText('◐ Getting Prism · 0%')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Play Luxemburg' })).toBeDisabled()
@@ -691,6 +692,107 @@ describe('App', () => {
     } finally {
       Reflect.deleteProperty(window, 'go')
     }
+  })
+
+  describe("a chapter's map (issue 161)", () => {
+    const MAP = 'http://spiral-reminders.tun.ply.gg:1111'
+    const reachable = { url: MAP, reachable: true, reason: '' }
+    beforeEach(() => void Object.assign(window, { go: {} }))
+    afterEach(() => void Reflect.deleteProperty(window, 'go'))
+
+    it('opens from the map tool in the hero as a page over the chapter, framing the map once Go says it answers', async () => {
+      vi.mocked(Bindings.CheckChapterMap).mockResolvedValue(reachable as never)
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      // The wiki's book is gone from the hero; the map is in its place.
+      expect(screen.queryByRole('button', { name: 'Read the history on the wiki' })).toBeNull()
+      switchTo(/03.*Frangfurd/)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Map of Frangfurd' }))
+      const page = await screen.findByRole('region', { name: 'Frangfurd map' })
+      expect(page.parentElement).toHaveClass('page-in-right')
+      const frame = await within(page).findByTitle('Frangfurd map')
+      expect(frame).toHaveAttribute('src', MAP)
+      expect(Bindings.CheckChapterMap).toHaveBeenCalledExactlyOnceWith('frangfurd')
+      expect(Bindings.OpenExternal).not.toHaveBeenCalled()
+
+      fireEvent.click(within(page).getByRole('button', { name: 'Back' }))
+      expect(screen.queryByRole('region', { name: 'Frangfurd map' })).toBeNull()
+      expect(screen.getByRole('button', { name: 'Map of Frangfurd' })).toBeInTheDocument()
+    })
+
+    it('closes when another chapter is picked', async () => {
+      vi.mocked(Bindings.CheckChapterMap).mockResolvedValue(reachable as never)
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      switchTo(/03.*Frangfurd/)
+      fireEvent.click(screen.getByRole('button', { name: 'Map of Frangfurd' }))
+      await screen.findByRole('region', { name: 'Frangfurd map' })
+      switchTo(/01.*Luxemburg/)
+      expect(screen.queryByRole('region', { name: 'Frangfurd map' })).toBeNull()
+    })
+
+    it("opens a chapter that has no map on a page that says so, and doesn't try the browser for it", async () => {
+      vi.mocked(Bindings.CheckChapterMap).mockResolvedValue({
+        url: '',
+        reachable: false,
+        reason: 'no map',
+      } as never)
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      fireEvent.click(screen.getByRole('button', { name: 'Map of Luxemburg' }))
+      const page = await screen.findByRole('region', { name: 'Luxemburg map' })
+      expect(await within(page).findByText('Map could not be reached')).toBeVisible()
+      expect(within(page).getByText('There is no map for Luxemburg yet.')).toBeInTheDocument()
+      expect(within(page).getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+      expect(Bindings.OpenExternal).not.toHaveBeenCalled()
+    })
+
+    describe('with the browser chosen in settings', () => {
+      beforeEach(() => {
+        vi.mocked(Bindings.GetSettings).mockResolvedValue({ ...DEFAULT_SETTINGS, mapIn: 'browser' })
+      })
+
+      it("hands the chapter's map to the system browser and opens no page", async () => {
+        render(<App />)
+        await screen.findByRole('heading', { level: 1 })
+        await waitFor(() => expect(useSettingsStore.getState().settings.mapIn).toBe('browser'))
+        switchTo(/03.*Frangfurd/)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Map of Frangfurd' }))
+        expect(Bindings.OpenExternal).toHaveBeenCalledExactlyOnceWith(MAP)
+        expect(screen.queryByRole('region', { name: 'Frangfurd map' })).toBeNull()
+        expect(Bindings.CheckChapterMap).not.toHaveBeenCalled()
+      })
+
+      it('opens the page for a chapter with no map, so the player sees why', async () => {
+        vi.mocked(Bindings.CheckChapterMap).mockResolvedValue({
+          url: '',
+          reachable: false,
+          reason: 'no map',
+        } as never)
+        render(<App />)
+        await screen.findByRole('heading', { level: 1 })
+        await waitFor(() => expect(useSettingsStore.getState().settings.mapIn).toBe('browser'))
+
+        fireEvent.click(screen.getByRole('button', { name: 'Map of Luxemburg' }))
+        const page = await screen.findByRole('region', { name: 'Luxemburg map' })
+        expect(await within(page).findByText('Map could not be reached')).toBeVisible()
+        expect(Bindings.OpenExternal).not.toHaveBeenCalled()
+      })
+
+      it('says nothing on screen when the browser refuses, and logs it', async () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+        vi.mocked(Bindings.OpenExternal).mockRejectedValue('no default browser')
+        render(<App />)
+        await screen.findByRole('heading', { level: 1 })
+        await waitFor(() => expect(useSettingsStore.getState().settings.mapIn).toBe('browser'))
+        switchTo(/03.*Frangfurd/)
+        fireEvent.click(screen.getByRole('button', { name: 'Map of Frangfurd' }))
+        await waitFor(() => expect(warn).toHaveBeenCalledWith('open map', 'no default browser'))
+        warn.mockRestore()
+      })
+    })
   })
 
   it('closes the run report when another chapter is picked', async () => {

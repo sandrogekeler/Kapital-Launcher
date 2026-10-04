@@ -12,9 +12,9 @@ function hero(pack: Partial<typeof chapter.pack>, version: string | null = '1.0.
   return render(
     <Hero
       chapter={{ ...chapter, pack: { ...chapter.pack, ...pack } }}
-      onOpenWiki={noop}
       onOpenSettings={noop}
       onOpenLogs={noop}
+      onOpenMap={noop}
       version={version}
     />,
   )
@@ -23,16 +23,16 @@ function hero(pack: Partial<typeof chapter.pack>, version: string | null = '1.0.
 describe('Hero tools', () => {
   afterEach(cleanup)
 
-  it('has the settings pen, the logs console and the wiki book, each doing its own thing', () => {
-    const onOpenWiki = vi.fn()
+  it('has the settings pen, the logs console and the map, each doing its own thing', () => {
+    const onOpenMap = vi.fn()
     const onOpenSettings = vi.fn()
     const onOpenLogs = vi.fn()
     render(
       <Hero
         chapter={chapter}
-        onOpenWiki={onOpenWiki}
         onOpenSettings={onOpenSettings}
         onOpenLogs={onOpenLogs}
+        onOpenMap={onOpenMap}
         version="1.0.1"
       />,
     )
@@ -44,14 +44,18 @@ describe('Hero tools', () => {
       expect(button).not.toHaveClass('rounded-md')
     }
     fireEvent.click(screen.getByRole('button', { name: `Logs for ${chapter.name}` }))
-    expect([onOpenWiki, onOpenSettings, onOpenLogs].map((f) => f.mock.calls.length)).toEqual([
+    expect([onOpenMap, onOpenSettings, onOpenLogs].map((f) => f.mock.calls.length)).toEqual([
       0, 0, 1,
     ])
     fireEvent.click(screen.getByRole('button', { name: `${chapter.name} settings` }))
-    fireEvent.click(screen.getByRole('button', { name: 'Read the history on the wiki' }))
-    expect([onOpenWiki, onOpenSettings, onOpenLogs].map((f) => f.mock.calls.length)).toEqual([
+    // The map takes the wiki book's place in the group (issue 161); the wiki
+    // link lives in the panels below.
+    fireEvent.click(screen.getByRole('button', { name: `Map of ${chapter.name}` }))
+    expect([onOpenMap, onOpenSettings, onOpenLogs].map((f) => f.mock.calls.length)).toEqual([
       1, 1, 1,
     ])
+    expect(screen.queryByRole('button', { name: 'Read the history on the wiki' })).toBeNull()
+    expect(group.querySelectorAll('button')).toHaveLength(3)
   })
 })
 
