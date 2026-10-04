@@ -51,6 +51,8 @@ type App struct {
 	runCtx context.Context
 	// openFolder shows a folder in the file manager; a test swaps it.
 	openFolder func(string) error
+	// showInPrism opens an instance's window in Prism (issue 190); a test swaps it.
+	showInPrism func(engine models.EngineInfo, instanceID, root string) error
 	// emit, when set, takes the game:state events in place of the window; a
 	// test sets it. emitInstall does the same for prism:install.
 	emit        func(models.GameState)
@@ -117,6 +119,9 @@ func NewApp(dataDir string, manifest []byte, dist fs.FS) (*App, error) {
 		wiki:           services.NewWikiService(dataDir, m.Wiki.BaseURL).ForChapters(m.Chapters),
 		openFolder:     services.OpenFolder,
 		frontendErrors: services.NewFrontendErrorLog(),
+		showInPrism: func(engine models.EngineInfo, instanceID, root string) error {
+			return prism.Show(context.Background(), engine, instanceID, root)
+		},
 		previewStep:    previewInstallStep,
 		live:           services.NewLiveLog(),
 	}
@@ -566,6 +571,31 @@ func (a *App) OpenInstanceFolder(chapterID string) error {
 		slog.Error("open instance folder", "chapter", chapter.ID, "error", err)
 		return fmt.Errorf("could not open the %s folder: %w", chapter.Name, err)
 	}
+	return nil
+}
+
+// ShowInstanceInPrism opens a chapter's instance in Prism's own window (issue
+// 190), with Prism's `--show`. The instance is the one chapterInstance
+// resolves, so the caller names a chapter and never an id or a path. A game of
+// the chapter that is starting or running is left alone: the Prism started now
+// would hand the request to the run's own Prism, whose windows the launcher may
+// be holding. A Prism left over on the last run's console is closed first, as
+// Play does, for the same reason.
+func (a *App) ShowInstanceInPrism(chapterID string) error {
+	chapter, _, err := a.chapterInstance(chapterID)
+	if err != nil {
+		return err
+	}
+	if a.games.Active(chapter.ID) {
+		return fmt.Errorf("%s is running: close the game to open it in Prism", chapter.Name)
+	}
+	a.games.CloseConsole(chapter.ID)
+	engine := a.realEngine()
+	if err := a.showInPrism(engine, chapter.Instance.ID, engine.Root); err != nil {
+		slog.Error("show instance in prism", "chapter", chapter.ID, "error", err)
+		return fmt.Errorf("could not open %s in Prism: %w", chapter.Name, err)
+	}
+	slog.Info("opened in prism", "chapter", chapter.ID)
 	return nil
 }
 

@@ -11,6 +11,8 @@ interface Props {
   disabled?: boolean
   /** Announces a change of the button's own label, for one that says how it went. */
   live?: boolean
+  /** A tooltip, for what the label cannot say: what the action leaves behind. */
+  title?: string
 }
 
 // The filled variants lift on hover: brighter, and a soft glow in their own colour (style.css),
@@ -24,12 +26,13 @@ const VARIANT = {
   ghost: 'duration-fast border-line-strong hover:bg-hover h-11 border px-4.5 text-base',
 } as const
 
-export function Button({ children, onClick, variant = 'ghost', disabled, live }: Props) {
+export function Button({ children, onClick, variant = 'ghost', disabled, live, title }: Props) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      title={title}
       aria-live={live ? 'polite' : undefined}
       className={`${VARIANT[variant]} ease-standard inline-flex cursor-pointer items-center gap-2 rounded-md font-semibold transition-[background-color,filter,box-shadow] disabled:cursor-default disabled:opacity-50 motion-reduce:transition-none`}
     >

@@ -335,6 +335,45 @@ func TestOpenInstanceFolderOpensOnlyAnInstalledChaptersFolder(t *testing.T) {
 	}
 }
 
+// Open in Prism (issue 190) names the chapter's own instance id and the
+// engine's root, and refuses a chapter that is not installed or unknown.
+func TestShowInstanceInPrismOpensOnlyAnInstalledChaptersInstance(t *testing.T) {
+	app := newTestApp(t)
+	type call struct{ id, root string }
+	var calls []call
+	app.showInPrism = func(_ models.EngineInfo, id, root string) error {
+		calls = append(calls, call{id, root})
+		return nil
+	}
+	root := t.TempDir()
+	if err := app.SaveSettings(models.AppSettings{Theme: "dark", PrismRoot: root}); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.ShowInstanceInPrism("atlantis"); err == nil {
+		t.Fatal("unknown chapter")
+	}
+	if err := app.ShowInstanceInPrism("frangfurd"); err == nil || !strings.Contains(err.Error(), "not installed") {
+		t.Fatalf("no instance yet: %v", err)
+	}
+	inst := filepath.Join(root, "instances", "kapital-frangfurd")
+	if err := os.MkdirAll(inst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(inst, "instance.cfg"), []byte("[General]\nname=Frangfurd\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.ShowInstanceInPrism("frangfurd"); err != nil {
+		t.Fatal(err)
+	}
+	if len(calls) != 1 || calls[0].id != "kapital-frangfurd" || calls[0].root != app.realEngine().Root {
+		t.Fatalf("calls %v", calls)
+	}
+	app.showInPrism = func(models.EngineInfo, string, string) error { return errors.New("no prism") }
+	if err := app.ShowInstanceInPrism("frangfurd"); err == nil || !strings.Contains(err.Error(), "Frangfurd") {
+		t.Fatalf("the failure names the chapter: %v", err)
+	}
+}
+
 // The bridge may only open a wiki page the app itself listed (#58).
 func TestOpenWikiPageRefusesAnUnlistedURL(t *testing.T) {
 	app := newTestApp(t)

@@ -3,7 +3,7 @@ import type { Chapter, ChapterSettings } from '../../types'
 import { selectInstalled, useEngineStore } from '../../stores/useEngineStore'
 import { isActive, selectGame, useGameStore } from '../../stores/useGameStore'
 import { errMsg } from '../../lib/ipc'
-import { FolderOpen, MemoryStick } from '../../lib/icons'
+import { FolderOpen, MemoryStick, Triangle } from '../../lib/icons'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 import { ErrorLine } from '../ui/Notes'
@@ -54,6 +54,7 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
   const load = useEngineStore((s) => s.loadChapterSettings)
   const save = useEngineStore((s) => s.saveChapterSettings)
   const openFolder = useEngineStore((s) => s.openInstanceFolder)
+  const showInPrism = useEngineStore((s) => s.showInPrism)
   const [draft, setDraft] = useState<ChapterSettings | null>(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -118,10 +119,11 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
     }
   }
 
-  const onOpenFolder = async () => {
+  // The header's two actions share one line for what went wrong.
+  const runHeader = async (act: (chapterId: string) => Promise<void>) => {
     setFolderError(null)
     try {
-      await openFolder(chapter.id)
+      await act(chapter.id)
     } catch (e) {
       setFolderError(errMsg(e))
     }
@@ -173,10 +175,22 @@ export function ChapterSettingsPanel({ chapter, onClose }: Props) {
       ready={ready}
       settings
       actions={
-        <Button onClick={() => void onOpenFolder()} disabled={installed !== true}>
-          <Icon icon={FolderOpen} size="sm" />
-          <span>Open folder</span>
-        </Button>
+        <>
+          <Button onClick={() => void runHeader(openFolder)} disabled={installed !== true}>
+            <Icon icon={FolderOpen} size="sm" />
+            <span>Open folder</span>
+          </Button>
+          {/* Prism's --show opens the instance's window (issue 190). Mods changed there are put
+              back by the next Play's sync, which the tooltip says. */}
+          <Button
+            onClick={() => void runHeader(showInPrism)}
+            disabled={installed !== true || playing}
+            title="Opens this instance's window in Prism. Mods changed there are put back on the next Play."
+          >
+            <Icon icon={Triangle} size="sm" />
+            <span>Open in Prism</span>
+          </Button>
+        </>
       }
     >
       {folderError && (

@@ -26,6 +26,7 @@ summed). A different count is new surface to classify: add the method to this ta
 | `LaunchChapter`, `OpenChapterWiki`, `GetServerStatus` | a chapter id | the manifest's instance, URL or address for it; before a launch, the one `PreLaunchCommand` key of the chapter's own `instance.cfg`, only from the launcher's earlier template | S3.3, S3.7, S4.6, S6.1 |
 | `SetPackSource` | a chapter id and `published` or `dev` | the one `PreLaunchCommand` key of the chapter's own `instance.cfg`, between the manifest's pack URL and the loopback override from settings, only from the launcher's own template; refused while the game is active | S3.3, S4.6 |
 | `StopGame` | a chapter id | the pid of the Prism the launcher started, or of the game's Java found as its child, for a run the tracker follows: asked to close, then ended | S3.3, S3.9 |
+| `ShowInstanceInPrism` | a chapter id | Prism started with `[--dir <root>] --show <the chapter's manifest instance id>` for an installed chapter whose game is not active, after a Prism left on that chapter's last console is closed as Play closes it; the started Prism is not followed | S3.1, S3.2, S3.3 |
 | `ShowPrismConsole` | a chapter id | the console window of the Prism the launcher started for that chapter, which the launcher's own hold hid: shown and given the foreground | S3.3, S3.7 |
 | `SaveSettings` | a whole `AppSettings`, including `serverChoices`: a chapter id to the label of one of its manifest addresses, and `joinServers`: chapter ids of the manifest that have a server, validated against it, and `wikiPictures`, nil or 0, 5, 10 or 20, anything else refused | the settings file, the executable detection then runs, and, for a chapter whose chosen address moved, one ping of the manifest's address for that label; with a chapter in `joinServers`, Play passes that chapter's chosen manifest address to Prism's `--server`, checked again by `LaunchArgs` | S3.5, S6.1 |
 | `ChoosePrismExecutable`, `ChoosePrismRoot` | nothing | a native file or folder picker; the pick is returned, never saved here | S3.5 |
@@ -153,8 +154,8 @@ Verify: `TestParseWikiShotsKeepsOnlyPlainImagePathsOfAnEra`,
 ## S3. Paths and processes
 
 **S3.1 Prism is run with an argument array.**
-Holds when: the `exec.Command`s in the tree are Prism's (launch, `--version`,
-`flatpak info`), all with argument arrays built from validated values, plus
+Holds when: the `exec.Command`s in the tree are Prism's (launch, `--show`,
+`--version`, `flatpak info`), all with argument arrays built from validated values, plus
 `/usr/bin/codesign --verify` on macOS with a fixed argument list (S4.5) and
 `/usr/bin/open` on macOS with one argument, the absolute path of a chapter's
 instance folder (S3.6), plus the one the pre-launch sync starts, the `INST_JAVA`
@@ -167,8 +168,10 @@ Verify: the `shell never sees a command string` invariant in `.claude/suite.json
 **S3.2 Every argument is validated.**
 Holds when: `LaunchArgs` refuses an instance id that is not a plain folder
 name, a server that is not `host[:port]`, a profile starting with `-`, and a
-relative root.
-Verify: `TestLaunchArgsRefusesAnythingThatIsNotAPlainValue`.
+relative root. `ShowArgs` (Open in Prism, issue 190) builds `[--dir <root>]
+--show <id>` through the same check of the id and the root.
+Verify: `TestLaunchArgsRefusesAnythingThatIsNotAPlainValue`,
+`TestShowArgsOpensTheInstanceWindowAndNothingElse`.
 Probe: `--dir` as an instance id; a newline in a profile name.
 
 **S3.3 Bridge-supplied ids resolve through the manifest.**
