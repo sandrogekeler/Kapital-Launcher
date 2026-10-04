@@ -153,8 +153,8 @@ download.
       2026-10-02)
 - [x] Download popup that picks the operating system, one small script
       (issue 178, 2026-10-04); built, waiting for a release tag
-- [ ] Set `release` in `site/links.json`, once the release workflow publishes
-      a release
+- [x] `release` in `site/links.json` is `v1.0.0-beta.1`, the first release
+      (2026-10-04)
 - [ ] A custom domain, if one is wanted
 
 ## Out of scope, and why
