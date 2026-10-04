@@ -58,7 +58,7 @@ export function AccountPanel({ onClose }: Props) {
       ready={loaded}
       settings
     >
-      <div className="bg-raised-2 border-line mb-10 flex items-center gap-5 rounded-lg border p-5">
+      <div className="bg-raised-2 border-line flex items-center gap-5 rounded-lg border p-5">
         <span className="bg-accent-wash border-accent-edge text-accent font-display flex size-16 shrink-0 items-center justify-center rounded-md border text-2xl font-semibold">
           {profileInitials(name) || 'KK'}
         </span>

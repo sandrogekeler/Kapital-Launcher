@@ -7,14 +7,11 @@ export interface ChapterPageSpec {
   chapterId: string
 }
 
-/** A page of the launcher's own, over the card: the settings (the gear) or the account (issue 192). */
-export type AppPage = 'settings' | 'account'
-
 /**
  * The pages laid over the chapter card, and what opens and closes them.
  *
- * The app's settings (the gear in the header) and the account (the tile at the
- * foot of the sidebar, issue 192) come down over the card area, one at a time; a
+ * The app's settings (the gear in the header) come down over the card area and
+ * the account (the tile at the foot of the sidebar, issue 192) comes up over it; a
  * chapter's own pages, its settings (the pen), its logs, its map (issue 161)
  * and its run report (Details, on the corner's notice of a game that ended
  * badly), come in from the right inside the card. Each closes with Back and
@@ -27,17 +24,23 @@ export type AppPage = 'settings' | 'account'
  * settings and report included: selecting the chapter that is already open
  * changes no selection, so the effects would leave them where they were (a
  * preview started from Settings landed on the chapter's settings). The
- * settings and a chapter's page are never open together: opening one closes
- * the other. Closing keeps a page until it has slid out (`usePageSlot`).
+ * settings, the account and a chapter's page are each a slot of their own and
+ * never open together: opening one closes the others, which slide out while it
+ * slides in. Closing keeps a page until it has slid out (`usePageSlot`).
  */
 export function usePages(selectedId: string, select: (chapterId: string) => void) {
-  const settings = usePageSlot<AppPage>()
+  const settings = usePageSlot<true>()
+  const account = usePageSlot<true>()
   const chapterPage = usePageSlot<ChapterPageSpec>()
   const { hide: hideSettings, show: showSettings } = settings
+  const { hide: hideAccount, show: showAccount } = account
   const { hide: hideChapterPage, show: showChapterPage } = chapterPage
   const openPage = chapterPage.slot?.page
 
-  useEffect(() => hideSettings(), [selectedId, hideSettings])
+  useEffect(() => {
+    hideSettings()
+    hideAccount()
+  }, [selectedId, hideSettings, hideAccount])
   useEffect(() => {
     if (openPage?.chapterId !== selectedId) hideChapterPage()
   }, [openPage, selectedId, hideChapterPage])
@@ -45,23 +48,29 @@ export function usePages(selectedId: string, select: (chapterId: string) => void
   const showChapter = (chapterId: string) => {
     select(chapterId)
     hideSettings()
+    hideAccount()
     hideChapterPage()
   }
   const showPage = (kind: ChapterPageSpec['kind']) => (chapterId: string) =>
     showChapterPage({ kind, chapterId })
-  // The gear and the account tile each close their own page, and open theirs over the other.
-  const toggle = (page: AppPage) => {
-    if (settings.slot?.open && settings.slot.page === page) return hideSettings()
-    hideChapterPage()
-    showSettings(page)
-  }
 
   return {
     settings,
+    account,
     chapterPage,
-    covered: !!(settings.slot?.open || chapterPage.slot?.open),
-    toggleSettings: () => toggle('settings'),
-    toggleAccount: () => toggle('account'),
+    covered: !!(settings.slot?.open || account.slot?.open || chapterPage.slot?.open),
+    toggleSettings: () => {
+      if (settings.slot?.open) return hideSettings()
+      hideAccount()
+      hideChapterPage()
+      showSettings(true)
+    },
+    toggleAccount: () => {
+      if (account.slot?.open) return hideAccount()
+      hideSettings()
+      hideChapterPage()
+      showAccount(true)
+    },
     showChapter,
     openReport: (chapterId: string) => {
       showChapter(chapterId)

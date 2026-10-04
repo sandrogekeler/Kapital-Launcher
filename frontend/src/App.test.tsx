@@ -1015,13 +1015,16 @@ describe('App', () => {
       render(<App />)
       await screen.findByRole('heading', { level: 1 })
       fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
-      await screen.findByRole('region', { name: 'Settings' })
+      const settingsPage = await screen.findByRole('region', { name: 'Settings' })
 
       const tile = screen.getByRole('button', { name: /^Account, / })
       expect(tile).toHaveAttribute('aria-pressed', 'false')
       fireEvent.click(tile)
+      // The settings slide out up while the account slides in, as from a chapter's page.
+      expect(sliding('page-out-top')).toContainElement(settingsPage)
       const account = await screen.findByRole('region', { name: 'Account' }, { timeout: 5000 })
-      expect(screen.queryByRole('region', { name: 'Settings' })).toBeNull()
+      endAnimation(sliding('page-out-top')!)
+      expect(settingsPage).not.toBeInTheDocument()
       expect(tile).toHaveAttribute('aria-pressed', 'true')
 
       // It comes up from the bottom, above the tile, and goes back down.
