@@ -14,6 +14,7 @@
     "test:coverage": "vitest run --coverage",
     "check-tokens": "node scripts/check-token-classes.mjs",
     "check-bundle": "node scripts/check-bundle-size.mjs",
+    "check-csp": "node scripts/check-csp.mjs",
     "gen:tokens": "node scripts/gen-tokens.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

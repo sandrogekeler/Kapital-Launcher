@@ -44,6 +44,9 @@ jobs:
       # A token-named class that compiles to nothing falls back to a Tailwind
       # default and looks fine in review. Needs the build above.
       - run: pnpm check-tokens
+      # The built index.html's frame-src is the manifest's map origins and
+      # nothing wider (issue 161). Needs the build above.
+      - run: pnpm check-csp
 
   # The download site (site/). It imports the app's generated tokens.css, fonts
   # and screenshots, so a change on the app side can break it; the build also

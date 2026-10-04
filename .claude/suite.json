@@ -37,6 +37,11 @@
         "cwd": "frontend"
       },
       {
+        "name": "content security policy",
+        "run": "pnpm check-csp",
+        "cwd": "frontend"
+      },
+      {
         "name": "token classes",
         "run": "pnpm check-tokens",
         "cwd": "frontend"
