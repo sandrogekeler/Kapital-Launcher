@@ -8,13 +8,14 @@ vi.mock('../../../wailsjs/go/main/App')
 const chapter = BUNDLED_MANIFEST.chapters[2]!
 const noop = () => undefined
 
-function hero(pack: Partial<typeof chapter.pack>) {
+function hero(pack: Partial<typeof chapter.pack>, version: string | null = '1.0.1') {
   return render(
     <Hero
       chapter={{ ...chapter, pack: { ...chapter.pack, ...pack } }}
       onOpenWiki={noop}
       onOpenSettings={noop}
       onOpenLogs={noop}
+      version={version}
     />,
   )
 }
@@ -32,8 +33,16 @@ describe('Hero tools', () => {
         onOpenWiki={onOpenWiki}
         onOpenSettings={onOpenSettings}
         onOpenLogs={onOpenLogs}
+        version="1.0.1"
       />,
     )
+    // One group: square cells, the group's frame rounds the outer corners.
+    const group = screen.getByRole('group', { name: `${chapter.name} tools` })
+    expect(group).toHaveClass('overflow-hidden', 'rounded-md')
+    expect(group).not.toHaveClass('gap-1')
+    for (const button of Array.from(group.querySelectorAll('button'))) {
+      expect(button).not.toHaveClass('rounded-md')
+    }
     fireEvent.click(screen.getByRole('button', { name: `Logs for ${chapter.name}` }))
     expect([onOpenWiki, onOpenSettings, onOpenLogs].map((f) => f.mock.calls.length)).toEqual([
       0, 0, 1,
@@ -59,8 +68,17 @@ describe('Hero pills', () => {
     hero({ loader: '[PLACEHOLDER]', minecraft: '[PLACEHOLDER]', mods: null })
     expect(screen.queryByText(/\[/)).toBeNull()
     expect(screen.queryByText(/mods/)).toBeNull()
-    // The chapter's state is still there.
-    expect(screen.getByText(/Released|In development|Planned/)).toBeInTheDocument()
+    // The pack's version is still there, in place of the old state pill.
+    expect(screen.getByText('Version 1.0.1')).toBeInTheDocument()
+    expect(screen.queryByText(/Released|In development|Planned/)).toBeNull()
+  })
+
+  it('leaves the version pill out when nobody knows the version yet', () => {
+    hero({}, null)
+    expect(screen.queryByText(/^Version/)).toBeNull()
+    cleanup()
+    hero({}, '[PLACEHOLDER]')
+    expect(screen.queryByText(/^Version/)).toBeNull()
   })
 
   it('shows the half that is settled', () => {

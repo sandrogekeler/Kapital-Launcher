@@ -96,7 +96,3 @@ export const isPublished = (chapter: Chapter) => chapter.pack.packwiz != null
 
 /** The verb on the button when the chapter's instance is missing. */
 export const installLabel = (chapter: Chapter) => `Install ${chapter.name}`
-
-/** The one-word pill for the chapter's state, as the reference writes it. */
-export const stateLabel = (state: string) =>
-  ({ released: 'Released', development: 'In development', planned: 'Planned' })[state] ?? state

@@ -39,9 +39,10 @@ function PanelTitle({ children }: { children: string }) {
  * with its link pinned under them, and the changelog shows only its latest
  * entries, each clamped, so it can never be the tallest column.
  *
- * The columns are equal, with the same padding on both sides of each divider,
- * and the row's own inset makes the first column's text start on the card's
- * gutter, the line the Play button and the hero's title stand on.
+ * The columns are equal, and each has the same 28 px on every side: the first
+ * column's text starts as far from the card's edge as the others' from their
+ * divider, and the space under the row matches its sides (the author, issue
+ * 162, to see how it looks; the Play button and the hero keep their gutter).
  */
 export function Panels({ chapter, installed, sizeBytes, packState, wikiPage, onOpenWiki }: Props) {
   const { pack } = chapter
@@ -56,8 +57,8 @@ export function Panels({ chapter, installed, sizeBytes, packState, wikiPage, onO
   ]
 
   return (
-    <section className="grid shrink-0 grid-cols-3 px-7">
-      <div className="border-line flex flex-col gap-3 border-r px-7 py-6">
+    <section className="grid shrink-0 grid-cols-3">
+      <div className="border-line flex flex-col gap-3 border-r p-7">
         <PanelTitle>Pack</PanelTitle>
         <div className="flex flex-col gap-3.5">
           {facts.map(([label, value, unsetText]) => (
@@ -71,7 +72,7 @@ export function Panels({ chapter, installed, sizeBytes, packState, wikiPage, onO
           ))}
         </div>
       </div>
-      <div className="border-line flex flex-col gap-3 border-r px-7 py-6">
+      <div className="border-line flex flex-col gap-3 border-r p-7">
         <PanelTitle>Changelog</PanelTitle>
         <div className="flex flex-col gap-3">
           {chapter.changelog.length === 0 ? (
@@ -91,7 +92,7 @@ export function Panels({ chapter, installed, sizeBytes, packState, wikiPage, onO
           )}
         </div>
       </div>
-      <div className="flex flex-col gap-3 px-7 py-6">
+      <div className="flex flex-col gap-3 p-7">
         <PanelTitle>From the wiki</PanelTitle>
         {/* The post drifts to the next with the hero's picture (issue 142). */}
         <Drift

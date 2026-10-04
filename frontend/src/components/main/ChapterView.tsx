@@ -12,6 +12,7 @@ import { selectStatus, useServerStore } from '../../stores/useServerStore'
 import { selectGame, useGameStore } from '../../stores/useGameStore'
 import { OpenChapterWiki, OpenExternal, OpenWikiPage } from '../../../wailsjs/go/main/App'
 import { errMsg } from '../../lib/ipc'
+import { packVersion } from '../../lib/packState'
 import { Hero } from './Hero'
 import { ActionBar } from './ActionBar'
 import { Panels } from './Panels'
@@ -80,6 +81,7 @@ export function ChapterView({ chapter, onOpenSettings, onOpenLogs }: Props) {
         onOpenWiki={openWiki}
         onOpenSettings={() => onOpenSettings(chapter.id)}
         onOpenLogs={() => onOpenLogs(chapter.id)}
+        version={packVersion(packState, chapter.pack.version)}
       />
       <ActionBar
         chapter={chapter}

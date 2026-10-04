@@ -16,7 +16,7 @@ interface HeaderProps {
 /** The header every page shares: Back, the title in the display face, and an optional action. */
 export function PageHeader({ title, onBack, actions }: HeaderProps) {
   return (
-    <div className="border-line flex shrink-0 items-center gap-3 border-b px-14 py-5">
+    <div className="border-line flex shrink-0 items-center gap-3 border-b px-7 py-5">
       <IconButton icon={ArrowLeft} title="Back" onClick={onBack} />
       <h1 className="font-display m-0 text-2xl font-semibold">{title}</h1>
       {actions && <div className="ml-auto flex items-center gap-3">{actions}</div>}
@@ -55,14 +55,14 @@ export function Page({ label, title, onBack, actions, ready = true, fill, childr
     <section aria-label={label} className={CARD}>
       <PageHeader title={title} onBack={onBack} actions={actions} />
       {fill ? (
-        <div className="flex min-h-0 grow flex-col px-14 pt-8 pb-10">
+        <div className="flex min-h-0 grow flex-col p-7">
           <Reveal ready={ready} className="flex min-h-0 grow flex-col gap-3">
             {children}
           </Reveal>
         </div>
       ) : (
         <Scrollable>
-          <div className="max-w-200 px-14 pt-8 pb-16">
+          <div className="max-w-200 p-7">
             <Reveal ready={ready} className="flex flex-col gap-10">
               {children}
             </Reveal>

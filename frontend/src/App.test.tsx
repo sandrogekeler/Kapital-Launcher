@@ -533,7 +533,8 @@ describe('App', () => {
     expect(await screen.findByRole('button', { name: 'Play Luxemburg' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: 'Update and play' })).toBeNull()
     expect(screen.getByText('● Updated')).toBeInTheDocument()
-    expect(screen.getByText('Version 4.2')).toBeInTheDocument()
+    // The bar's pack line and the hero's version pill (issue 162) both name it.
+    expect(screen.getAllByText('Version 4.2')).toHaveLength(2)
     expect(screen.getByText('Version').nextElementSibling).toHaveTextContent('older than 4.2')
     fireEvent.click(screen.getByRole('button', { name: 'Play Luxemburg' }))
     await waitFor(() => expect(Bindings.LaunchChapter).toHaveBeenCalledWith('luxemburg'))
@@ -548,7 +549,8 @@ describe('App', () => {
     )
     expect(screen.getByRole('button', { name: 'Play Luxemburg' })).toBeInTheDocument()
     expect(screen.getByText('● Updated')).toBeInTheDocument()
-    expect(screen.getByText('Version 4.2')).toBeInTheDocument()
+    // The bar's pack line and the hero's version pill (issue 162) both name it.
+    expect(screen.getAllByText('Version 4.2')).toHaveLength(2)
   })
 
   it('opens the run report from Details on the notice of a game that crashed, and closes it', async () => {

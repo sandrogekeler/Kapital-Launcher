@@ -1,6 +1,6 @@
 import type { Chapter } from '../../types'
 import { chapterArt, chapterTitleArt } from '../../lib/art'
-import { knownFacts, stateLabel } from '../../lib/manifest'
+import { isPlaceholder, knownFacts } from '../../lib/manifest'
 import { BookOpen, Pencil, SquareTerminal } from '../../lib/icons'
 import { Drift } from '../ui/Drift'
 import { IconButton } from '../ui/IconButton'
@@ -15,6 +15,8 @@ interface Props {
   onOpenSettings: () => void
   /** Opens the chapter's logs and crash reports (issue 155). */
   onOpenLogs: () => void
+  /** The pack's version, as the pack line names it (issue 162); null when nobody knows it yet. */
+  version: string | null
 }
 
 /**
@@ -24,7 +26,14 @@ interface Props {
  * action bar and the panels, up to the layout token, so the card fits the
  * window without scrolling (#68).
  */
-export function Hero({ chapter, art: slideArt, onOpenWiki, onOpenSettings, onOpenLogs }: Props) {
+export function Hero({
+  chapter,
+  art: slideArt,
+  onOpenWiki,
+  onOpenSettings,
+  onOpenLogs,
+  version,
+}: Props) {
   const art = slideArt ?? chapterArt(chapter.id)
   const title = chapterTitleArt(chapter.id)
   // A fact nobody has settled has no chip: a placeholder in brackets is for the
@@ -55,11 +64,32 @@ export function Hero({ chapter, art: slideArt, onOpenWiki, onOpenSettings, onOpe
         </>
       )}
 
-      {/* A wash behind the tools, so they read on bright art too (#77). */}
-      <div className="bg-sunken/55 absolute top-5 right-6 flex gap-1 rounded-md backdrop-blur-sm">
-        <IconButton icon={Pencil} title={`${chapter.name} settings`} onClick={onOpenSettings} />
-        <IconButton icon={SquareTerminal} title={`Logs for ${chapter.name}`} onClick={onOpenLogs} />
-        <IconButton icon={BookOpen} title="Read the history on the wiki" onClick={onOpenWiki} />
+      {/* A wash behind the tools, so they read on bright art too (#77). They
+          are one group (issue 162): each cell's hover fills it edge to edge,
+          with no gap between cells, and only the group's outer corners round. */}
+      <div
+        role="group"
+        aria-label={`${chapter.name} tools`}
+        className="bg-sunken/55 absolute top-5 right-6 flex overflow-hidden rounded-md backdrop-blur-sm"
+      >
+        <IconButton
+          grouped
+          icon={Pencil}
+          title={`${chapter.name} settings`}
+          onClick={onOpenSettings}
+        />
+        <IconButton
+          grouped
+          icon={SquareTerminal}
+          title={`Logs for ${chapter.name}`}
+          onClick={onOpenLogs}
+        />
+        <IconButton
+          grouped
+          icon={BookOpen}
+          title="Read the history on the wiki"
+          onClick={onOpenWiki}
+        />
       </div>
 
       <div className="relative flex max-w-140 flex-col gap-3.5">
@@ -85,7 +115,7 @@ export function Hero({ chapter, art: slideArt, onOpenWiki, onOpenSettings, onOpe
         <div className="flex flex-wrap gap-2">
           {spec && <Pill>{spec}</Pill>}
           {mods && <Pill>{mods} mods</Pill>}
-          <Pill>{stateLabel(chapter.state)}</Pill>
+          {version && !isPlaceholder(version) && <Pill>Version {version}</Pill>}
         </div>
       </div>
     </section>

@@ -11,7 +11,6 @@ import {
   playLabel,
   sizeValue,
   knownFacts,
-  stateLabel,
   unsetLabel,
 } from './manifest'
 import { CHAPTER_IDS } from '../styles/tokens'
@@ -100,11 +99,6 @@ describe('labels', () => {
     expect(knownFacts('[PLACEHOLDER]', '1.21.1')).toBe('1.21.1')
     expect(knownFacts(96)).toBe('96')
     expect(knownFacts('[PLACEHOLDER]', null, undefined)).toBeNull()
-  })
-
-  it('spells states as the reference does', () => {
-    expect(stateLabel('development')).toBe('In development')
-    expect(stateLabel('odd')).toBe('odd')
   })
 })
 
