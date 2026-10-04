@@ -277,6 +277,30 @@ export interface PackState {
   version: string
 }
 
+/**
+ * One release in a pack's own changelog file (issue 164), shaped for the panel:
+ * the summary is the entry's first line, the details are all of them.
+ */
+export interface PackChangelogEntry {
+  version: string
+  /** YYYY-MM-DD. */
+  date: string
+  summary: string
+  details: string
+}
+
+/**
+ * What a chapter's pack source publishes as its changelog, newest first.
+ * Unchecked is a file that could not be read; checked with no entries is a
+ * pack that publishes none. Either way there are no entries, and the
+ * manifest's changelog stands in.
+ */
+export interface PackChangelog {
+  chapterId: string
+  checked: boolean
+  entries: PackChangelogEntry[]
+}
+
 /** One situation the Developer section can fake (#124). The list is Go's, fixed there. */
 export interface PreviewSituation {
   id: string

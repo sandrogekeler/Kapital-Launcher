@@ -46,6 +46,7 @@ export function ChapterView({ chapter, onOpenSettings, onOpenLogs }: Props) {
   const instancePack = useEngineStore(selectInstancePack(chapter.id))
   const instanceSize = useEngineStore(selectInstanceSize(chapter.id))
   const packState = useEngineStore(selectPackState(chapter.id))
+  const changelog = useEngineStore((s) => s.changelogs[chapter.id])
   const launch = useEngineStore((s) => s.launch)
   const installing = useEngineStore((s) => s.installing)
   const installedNow = useEngineStore((s) => s.installedNow)
@@ -115,6 +116,7 @@ export function ChapterView({ chapter, onOpenSettings, onOpenLogs }: Props) {
         installed={installed}
         sizeBytes={instanceSize}
         packState={packState}
+        changelog={changelog}
         wikiPage={wikiPick}
         onOpenWiki={openWiki}
       />
