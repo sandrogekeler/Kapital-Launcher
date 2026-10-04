@@ -122,8 +122,8 @@ func NewApp(dataDir string, manifest []byte, dist fs.FS) (*App, error) {
 		showInPrism: func(engine models.EngineInfo, instanceID, root string) error {
 			return prism.Show(context.Background(), engine, instanceID, root)
 		},
-		previewStep:    previewInstallStep,
-		live:           services.NewLiveLog(),
+		previewStep: previewInstallStep,
+		live:        services.NewLiveLog(),
 	}
 	a.syncCopy = services.NewSyncCopy(dataDir, Version)
 	a.creator.UseSyncCopy(a.syncExe)
