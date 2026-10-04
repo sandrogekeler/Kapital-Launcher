@@ -126,7 +126,7 @@ function SettingsNav({ entries }: { entries: readonly NavEntry[] }) {
             }
             className={`duration-fast ease-standard flex shrink-0 cursor-pointer items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-sm whitespace-nowrap transition-colors ${
               on
-                ? 'bg-raised-2 text-fg font-medium'
+                ? 'bg-raised-2 text-fg'
                 : 'text-fg-muted hover:text-fg hover:bg-raised-2'
             }`}
           >
