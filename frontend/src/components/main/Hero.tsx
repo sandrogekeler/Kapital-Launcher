@@ -5,6 +5,7 @@ import { MapIcon, Pencil, SquareTerminal } from '../../lib/icons'
 import { Drift } from '../ui/Drift'
 import { IconButton } from '../ui/IconButton'
 import { Pill } from '../ui/Pill'
+import { useLoadedImage } from '../../lib/useLoadedImage'
 
 interface Props {
   chapter: Chapter
@@ -35,7 +36,9 @@ export function Hero({
   onOpenMap,
   version,
 }: Props) {
-  const art = slideArt ?? chapterArt(chapter.id)
+  // The slide's picture once it has loaded, the chapter's own until then: the
+  // drift to a new picture starts only when that picture can be drawn.
+  const art = useLoadedImage(slideArt ?? chapterArt(chapter.id), chapterArt(chapter.id))
   const title = chapterTitleArt(chapter.id)
   // A fact nobody has settled has no chip: a placeholder in brackets is for the
   // author, not the player.
@@ -43,7 +46,7 @@ export function Hero({
   const mods = knownFacts(chapter.pack.mods)
 
   return (
-    <section className="border-line relative flex max-h-(--layout-hero) min-h-0 grow flex-col justify-end overflow-hidden border-b px-14 py-11">
+    <section className="border-line relative flex max-h-(--layout-hero) min-h-0 grow flex-col justify-end overflow-hidden border-b px-7 py-11">
       {art ? (
         <>
           <Drift id={art} className="absolute inset-0" layer="absolute inset-0">
@@ -59,7 +62,7 @@ export function Hero({
       ) : (
         <>
           <div className="art-pending absolute inset-0" aria-hidden />
-          <div className="text-accent text-2xs tracking-label absolute top-6 left-14 font-mono">
+          <div className="text-accent text-2xs tracking-label absolute top-6 left-7 font-mono">
             [ {chapter.name.toUpperCase()} SCREENSHOT ]
           </div>
         </>
@@ -71,7 +74,7 @@ export function Hero({
       <div
         role="group"
         aria-label={`${chapter.name} tools`}
-        className="bg-sunken/55 absolute top-5 right-6 flex overflow-hidden rounded-md backdrop-blur-sm"
+        className="bg-sunken/55 absolute top-7 right-7 flex overflow-hidden rounded-md backdrop-blur-sm"
       >
         <IconButton
           grouped
@@ -100,6 +103,8 @@ export function Hero({
             <img
               src={title}
               alt={chapter.name}
+              // Decoded at startup (preloadImages): drawn with the card, not after it.
+              decoding="sync"
               className="block h-(--layout-title) w-auto max-w-full"
               draggable={false}
             />

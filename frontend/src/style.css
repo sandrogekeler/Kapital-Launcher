@@ -309,12 +309,16 @@
    radius and the strength are tokens; the button's transition (and its
    removal with reduced motion) is its own. */
 @utility glow-accent {
+  /* The glow is always there at full size and only its colour fades, in and
+     out alike: a shadow that also shrank to nothing on the way out read as cut. */
+  box-shadow: 0 0 var(--effect-glow-blur) transparent;
   &:hover:enabled {
     box-shadow: 0 0 var(--effect-glow-blur)
       color-mix(in srgb, var(--accent) var(--effect-glow-strength), transparent);
   }
 }
 @utility glow-danger {
+  box-shadow: 0 0 var(--effect-glow-blur) transparent;
   &:hover:enabled {
     box-shadow: 0 0 var(--effect-glow-blur)
       color-mix(in srgb, var(--danger) var(--effect-glow-strength), transparent);
