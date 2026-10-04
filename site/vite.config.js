@@ -58,6 +58,7 @@ function fillRelease(html, release) {
     .replaceAll('<!--release:start-->', '')
     .replaceAll('<!--release:end-->', '')
     .replace(/%(WINDOWS_URL|MACOS_URL|NOTES_URL)%/g, (_, key) => escapeAttr(release[key]))
+    .replaceAll('%TAG%', escapeAttr(release.tag))
   if (/%[A-Z_]+_URL%/.test(out)) throw new Error('site: an unfilled release placeholder is left')
   return out
 }

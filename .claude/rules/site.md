@@ -18,7 +18,8 @@ paths:
   icons are lucide's paths inlined as SVG markup, which the policy allows.
 - **The app's tokens and base styles, not the site's.** `src/style.css`
   imports `frontend/src/styles/tokens.css` and `frontend/src/styles/base.css`
-  (faces, base rules, scrims), then `src/showcase.css`, the one thing the
+  (faces, base rules, scrims), then `src/popup.css` (the download popup's opening, closing and panel
+  fade, on the motion tokens) and `src/showcase.css`, the one thing the
   page draws that the app does not: the window's cycle, built from the app's
   motion tokens. A token change moves the app and the site together. The
   frontend style rules apply here: token utilities only, no literal colour,

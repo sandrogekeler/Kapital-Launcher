@@ -36,31 +36,40 @@
          button with no script. The OS switch is two radios and :has() in the
          group classes, so it works without script too; src/detect.js only
          checks the radio for the visitor's OS. %TAG% and the URLs are filled
-         in by vite.config.js from links.json. -->
+         in by vite.config.js from links.json. Its opening, closing and panel
+         fade are src/popup.css; the icons are lucide's x and download. -->
     <div
       id="download"
       popover
       aria-labelledby="download-title"
-      class="bg-raised text-fg border-line m-auto w-[min(calc(100vw-2rem),26rem)] rounded-lg border p-0 shadow-2xl backdrop:scrim-wash"
+      class="bg-raised text-fg border-line-strong m-auto w-[min(calc(100vw-2rem),30rem)] rounded-lg border p-0 shadow-2xl backdrop:scrim-wash"
     >
-      <div class="group/dl flex flex-col gap-5 p-6">
+      <div class="group/dl flex flex-col gap-6 p-8">
         <div class="flex items-start justify-between gap-4">
-          <h2 id="download-title" class="m-0 text-xl font-semibold">
-            Download Kapital Launcher
-          </h2>
+          <div class="flex flex-col gap-2">
+            <p class="text-fg-muted m-0 font-mono text-xs tracking-eyebrow uppercase">
+              %TAG%
+            </p>
+            <h2 id="download-title" class="font-display m-0 text-2xl leading-tight font-semibold">
+              Get Kapital Launcher
+            </h2>
+          </div>
           <button
             type="button"
             popovertarget="download"
             popovertargetaction="hide"
-            class="border-line-strong hover:bg-hover text-fg duration-fast ease-standard inline-flex h-9 shrink-0 cursor-pointer items-center rounded-md border bg-transparent px-3 font-[inherit] text-sm font-semibold transition-[background-color]"
+            aria-label="Close"
+            class="text-fg-muted hover:bg-hover hover:text-fg duration-fast ease-standard -mt-2 -mr-2 inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent transition-[background-color,color]"
           >
-            Close
+            <svg class="size-(--layout-icon-md)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
           </button>
         </div>
 
-        <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
-          <legend class="text-fg-muted mb-2 p-0 text-sm">Your system</legend>
-          <div class="flex gap-2">
+        <fieldset class="m-0 flex flex-col border-0 p-0">
+          <legend class="text-fg-muted mb-3 p-0 text-xs tracking-label uppercase">
+            Your system
+          </legend>
+          <div class="flex gap-3">
             <div class="relative flex-1">
               <input
                 type="radio"
@@ -72,9 +81,11 @@
               />
               <label
                 for="os-windows"
-                class="border-line-strong text-fg-soft hover:bg-hover peer-checked:bg-hover peer-checked:text-fg peer-checked:border-accent peer-focus-visible:outline-(length:--focus-ring-width) peer-focus-visible:outline-fg flex h-11 cursor-pointer items-center justify-center rounded-md border text-base font-semibold"
-                >Windows</label
+                class="border-line-strong text-fg-soft hover:bg-hover hover:text-fg peer-checked:bg-hover peer-checked:text-fg peer-checked:border-accent peer-focus-visible:outline-(length:--focus-ring-width) peer-focus-visible:outline-fg peer-focus-visible:outline-offset-(--focus-ring-offset) duration-fast ease-standard flex cursor-pointer flex-col gap-1 rounded-lg border px-4 py-3.5 transition-[background-color,border-color,color]"
               >
+                <span class="text-md font-semibold">Windows</span>
+                <span class="text-fg-muted text-xs">Windows 11</span>
+              </label>
             </div>
             <div class="relative flex-1">
               <input
@@ -86,45 +97,50 @@
               />
               <label
                 for="os-macos"
-                class="border-line-strong text-fg-soft hover:bg-hover peer-checked:bg-hover peer-checked:text-fg peer-checked:border-accent peer-focus-visible:outline-(length:--focus-ring-width) peer-focus-visible:outline-fg flex h-11 cursor-pointer items-center justify-center rounded-md border text-base font-semibold"
-                >macOS</label
+                class="border-line-strong text-fg-soft hover:bg-hover hover:text-fg peer-checked:bg-hover peer-checked:text-fg peer-checked:border-accent peer-focus-visible:outline-(length:--focus-ring-width) peer-focus-visible:outline-fg peer-focus-visible:outline-offset-(--focus-ring-offset) duration-fast ease-standard flex cursor-pointer flex-col gap-1 rounded-lg border px-4 py-3.5 transition-[background-color,border-color,color]"
               >
+                <span class="text-md font-semibold">macOS</span>
+                <span class="text-fg-muted text-xs">12 or later</span>
+              </label>
             </div>
           </div>
         </fieldset>
 
-        <div class="group-has-[#os-macos:checked]/dl:hidden flex flex-col gap-3">
+        <div class="download-panel group-has-[#os-macos:checked]/dl:hidden flex flex-col gap-3">
           <a
             href="%WINDOWS_URL%"
-            class="showcase-accent bg-accent text-canvas duration-fast ease-standard inline-flex h-13 items-center justify-center rounded-md px-7.5 text-md font-semibold tracking-control no-underline transition-[filter] hover:brightness-(--effect-hover-brightness)"
-            >Download for Windows</a
+            class="showcase-accent bg-accent text-canvas duration-fast ease-standard inline-flex h-13 items-center justify-center gap-2.5 rounded-lg px-7.5 text-md font-semibold tracking-control no-underline transition-[filter] hover:brightness-(--effect-hover-brightness)"
           >
-          <p class="text-fg-soft m-0 text-sm">
-            For Windows 11. The setup installs the WebView2 runtime if it is
-            missing.
+            <svg class="size-(--layout-icon-md)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /></svg>
+            Download for Windows
+          </a>
+          <p class="text-fg-soft m-0 text-sm leading-normal">
+            The setup installs for you alone, with no administrator prompt, and adds the WebView2 runtime if it is missing.
           </p>
         </div>
 
-        <div class="group-not-has-[#os-macos:checked]/dl:hidden flex flex-col gap-3">
+        <div class="download-panel group-not-has-[#os-macos:checked]/dl:hidden flex flex-col gap-3">
           <a
             href="%MACOS_URL%"
-            class="showcase-accent bg-accent text-canvas duration-fast ease-standard inline-flex h-13 items-center justify-center rounded-md px-7.5 text-md font-semibold tracking-control no-underline transition-[filter] hover:brightness-(--effect-hover-brightness)"
-            >Download for macOS</a
+            class="showcase-accent bg-accent text-canvas duration-fast ease-standard inline-flex h-13 items-center justify-center gap-2.5 rounded-lg px-7.5 text-md font-semibold tracking-control no-underline transition-[filter] hover:brightness-(--effect-hover-brightness)"
           >
-          <p class="text-fg-soft m-0 text-sm">
-            For macOS 12 or later, on Apple Silicon and Intel. Open the disk
-            image and drag Kapital Launcher to Applications.
+            <svg class="size-(--layout-icon-md)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /></svg>
+            Download for macOS
+          </a>
+          <p class="text-fg-soft m-0 text-sm leading-normal">
+            One disk image for Apple Silicon and Intel. Open it and drag Kapital Launcher to Applications.
           </p>
         </div>
 
-        <p class="text-fg-muted m-0 text-sm">
-          This beta is not code-signed yet. The
+        <p class="bg-sunken border-line text-fg-muted m-0 rounded-md border px-4 py-3 text-xs leading-normal">
+          This beta is not code-signed yet, so Windows and macOS warn before
+          the first run. The
           <a
             href="%NOTES_URL%"
             class="text-accent underline-offset-2 hover:underline"
             >release notes</a
           >
-          have the SmartScreen and Gatekeeper steps.
+          have the steps past SmartScreen and Gatekeeper.
         </p>
       </div>
     </div>

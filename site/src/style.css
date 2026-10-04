@@ -11,3 +11,6 @@
 /* The one thing the page draws that the app does not: the launcher window
    cycling through its chapters, on the app's own motion tokens. */
 @import "./showcase.css";
+
+/* The download popup's opening, closing and panel fade, on the same tokens. */
+@import "./popup.css";

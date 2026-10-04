@@ -95,6 +95,13 @@ agent) and does nothing else: no network, no storage. iPhone, iPad, Android and
 Linux are neither, and keep Windows checked. With `release` set to `null`, the
 build leaves the popup out of the page.
 
+Its heading is in the display face, like the wiki's; the tag sits above it,
+filled in at build time. It opens and closes with the app's reveal (a short
+rise out of a slight blur) while the page dims and softens behind it, and the
+other system's panel fades in when the switch moves: `src/popup.css`, on the
+motion tokens, with no script. A browser without `@starting-style` shows and
+hides it plainly, and reduced motion turns the transitions off.
+
 The CSP in `public/_headers` allows it with `script-src 'self'` and nothing
 more, so an inline script would be blocked.
 
