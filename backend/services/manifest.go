@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -139,6 +140,11 @@ func ValidateManifest(m models.Manifest) error {
 		if err := validateServer(where, c.Server); err != nil {
 			return err
 		}
+		if c.Map != nil {
+			if err := checkMapURL(where+".map", *c.Map); err != nil {
+				return err
+			}
+		}
 		if strings.TrimSpace(c.Wiki.Title) == "" || strings.TrimSpace(c.Wiki.Line) == "" {
 			return fmt.Errorf("%s: wiki teaser is incomplete", where)
 		}
@@ -206,6 +212,43 @@ func checkURL(field, raw string) error {
 		return fmt.Errorf("manifest: %s: host %q is not on the allowlist", field, host)
 	}
 	return nil
+}
+
+// mapURLPattern is the whole of what a chapter's map address may look like
+// (issue 161, ADR-4's second amendment): http or https, a host of one or more
+// DNS labels under tun.ply.gg (a playit tunnel), an explicit port, and nothing
+// after it but an optional slash. Lowercase only, so the origin the CSP is
+// built from (frontend/vite.config.ts) is the one the page loads. No user
+// info, query, fragment, backslash or space can match.
+var mapURLPattern = regexp.MustCompile(`^(https?)://((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+tun\.ply\.gg):([1-9][0-9]{0,4})/?$`)
+
+// checkMapURL is the one place a manifest URL may be http: a chapter's map. A
+// playit tunnel serves BlueMap without TLS, so https on the allowlist cannot
+// hold, and the exception is bounded to the tunnel family with a port; every
+// other manifest URL still goes through checkURL. The map is only opened in the
+// system browser, framed in the app's page (the CSP allows exactly the
+// bundled manifest's map origins) and asked whether it answers: nothing from it
+// reaches a file, a process or a binding (SECURITY_CHECKLIST S5.4).
+func checkMapURL(field, raw string) error {
+	m := mapURLPattern.FindStringSubmatch(raw)
+	if m == nil {
+		return fmt.Errorf("manifest: %s: %q is not http or https on a *.tun.ply.gg tunnel with a port", field, raw)
+	}
+	if port, _ := strconv.Atoi(m[3]); port > 65535 { //nolint:errcheck // the pattern admits digits only
+		return fmt.Errorf("manifest: %s: %q names a port above 65535", field, raw)
+	}
+	return nil
+}
+
+// MapOrigin is the scheme, host and port of a map address that passed
+// checkMapURL, the form a Content-Security-Policy source takes, or "" for an
+// address that did not.
+func MapOrigin(raw string) string {
+	m := mapURLPattern.FindStringSubmatch(raw)
+	if m == nil || checkMapURL("map", raw) != nil {
+		return ""
+	}
+	return m[1] + "://" + m[2] + ":" + m[3]
 }
 
 // loopbackHosts are the only hosts a local pack override may name (#41).

@@ -60,3 +60,36 @@ copy is the bundled file:
   longer listed. The ping, its ticker and Play's `--server` all use it, and
   `LaunchArgs` still validates what reaches Prism. A manifest still names
   things and runs nothing.
+
+## Amendment, 2026-10-04: a chapter may name its web map
+
+A chapter's BlueMap web map opens from the hero, in a page of the launcher or in
+the system browser (issue 161). The shape, still `version: 1`:
+
+- **`map`** is an optional URL per chapter. Frangfurd's is
+  `http://spiral-reminders.tun.ply.gg:1111`; Luxemburg and Lichdenstein have
+  none yet. A chapter without one opens the map page anyway, which says "Map
+  could not be reached". It is in the schema, `models.Chapter.Map` and
+  `services.ValidateManifest` together, and in the frontend's `Chapter` type.
+- **It is the one manifest URL that may be http.** A playit tunnel serves
+  BlueMap without TLS, so the https-on-the-allowlist rule cannot hold for it.
+  The exception is bounded to what the tunnel needs and no more: scheme `http`
+  or `https`, a host of labels under `tun.ply.gg`, an explicit port from 1 to
+  65535, lowercase, and nothing after the port but an optional slash. User info,
+  a query, a fragment, a path, a bare `tun.ply.gg`, an IP address and every
+  other host are refused, and the manifest with them (`checkMapURL`). The
+  exception reaches no other field: `wiki.baseUrl`, `pack.packwiz` and
+  `pack.mrpack` stay https on `AllowedManifestHosts`. A map that is not an
+  address is not a map: `"map": ""` is refused, and a field left out or `null`
+  is none.
+- **What the app does with it** is three things and no more. It asks Go whether
+  the address answers (`CheckChapterMap`, one bounded GET, no redirect
+  followed, nothing kept), because an iframe cannot tell a server that is down.
+  It frames the address in a sandboxed `<iframe>`, only when it answered, and
+  only because the build wrote exactly that origin into `index.html`'s
+  `frame-src` (`vite.config.ts`, held by `pnpm check-csp`). And it hands it to
+  the system browser through `OpenExternal`. The framed page cannot call the
+  backend: Wails accepts a binding message only from the app's own origin, for
+  the top document and the sending frame alike (SECURITY_CHECKLIST S5.4).
+- The settings choose where it opens (`mapIn`: "In the launcher", the default,
+  or "In the browser"), saved with the other settings and checked in Go.

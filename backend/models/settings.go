@@ -51,6 +51,10 @@ type AppSettings struct {
 	// bundled picture, and the wiki's screenshots do not cycle. False, the
 	// default, cycles them.
 	StaticArt bool `json:"staticArt,omitempty"`
+	// MapIn is where a chapter's map opens from the hero (issue 161): "app"
+	// inside the launcher, in a page over the chapter, or "browser" in the
+	// system browser. Empty means "app" (services.MapIn).
+	MapIn string `json:"mapIn,omitempty"`
 }
 
 // DefaultSettings is a fresh install. Kept as a function so callers cannot

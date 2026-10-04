@@ -26,7 +26,8 @@ are built in Go from a template and the manifest contributes
 only the `pack.toml` URL.
 
 Every URL is https on a host in `AllowedManifestHosts`. Adding a host is a
-deliberate edit to that list with a reason in the commit.
+deliberate edit to that list with a reason in the commit. The one exception is a
+chapter's `map` (below): a playit tunnel serves BlueMap over http.
 
 ## Chapters
 
@@ -52,6 +53,13 @@ deliberate edit to that list with a reason in the commit.
   `.pw.toml` in `kapital-packs`. It is a prefix and never a path or a pattern
   (`[A-Za-z0-9][A-Za-z0-9._+-]{2,63}`), names are unique, and no prefix starts
   another, so a jar is never two switches (`validateToggles`).
+- `map` is optional: a chapter's BlueMap web map (issue 161, ADR-4's second
+  amendment), `http` or `https` on `*.tun.ply.gg` with an explicit port, lowercase
+  and bare (no user info, path, query or fragment); `services.checkMapURL` refuses
+  anything else, and the rest of the manifest keeps the https rule. The build
+  copies exactly these origins into `index.html`'s `frame-src`
+  (`vite.config.ts`, `pnpm check-csp`), so a new map address is a build away from
+  being framed. A chapter with none leaves the field out.
 - `state` is `released`, `development` or `planned`.
 - An unsettled fact is `"[PLACEHOLDER]"` for a string and `null` for a number or
   URL. The UI renders both faint; do not invent a value to fill a slot.

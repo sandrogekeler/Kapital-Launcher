@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -52,6 +53,13 @@ func TestBundledManifestIsValid(t *testing.T) {
 	}
 	if m.Chapters[0].Pack.Loader != "Forge" || m.Chapters[0].Pack.Minecraft != "1.19.2" {
 		t.Errorf("Luxemburg is Forge 1.19.2: %+v", m.Chapters[0].Pack)
+	}
+	// Only Frangfurd has a map so far (issue 161).
+	if m.Chapters[0].Map != nil || lic.Map != nil {
+		t.Errorf("Luxemburg and Lichdenstein have no map yet: %v %v", m.Chapters[0].Map, lic.Map)
+	}
+	if fra.Map == nil || *fra.Map != "http://spiral-reminders.tun.ply.gg:1111" {
+		t.Errorf("Frangfurd's map: %v", fra.Map)
 	}
 	if fra.Pack.JVM == nil || *fra.Pack.JVM != "zgc" {
 		t.Errorf("Frangfurd runs ZGC, which Distant Horizons asks for: %v", fra.Pack.JVM)
@@ -156,6 +164,108 @@ func TestValidateManifestAccepts(t *testing.T) {
 	m.Chapters[0].Pack.Minecraft, m.Chapters[0].Pack.JVM = "1.21.1", &zgc
 	if err := ValidateManifest(m); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// A chapter's map (issue 161) is the one manifest URL that may be http, on a
+// playit tunnel with a port and nothing else.
+func TestChapterMapAcceptsOnlyATunnelWithAPort(t *testing.T) {
+	good := map[string]string{
+		"the bundled one":   "http://spiral-reminders.tun.ply.gg:1111",
+		"a trailing slash":  "http://spiral-reminders.tun.ply.gg:1111/",
+		"https on a tunnel": "https://spiral-reminders.tun.ply.gg:8100",
+		"a nested label":    "http://a.b-c.tun.ply.gg:65535",
+	}
+	for name, raw := range good {
+		m := validManifest()
+		m.Chapters[0].Map = &raw
+		if err := ValidateManifest(m); err != nil {
+			t.Errorf("%s: %s refused: %v", name, raw, err)
+		}
+	}
+	bad := map[string]string{
+		"no port":                  "http://spiral-reminders.tun.ply.gg",
+		"no port, a slash":         "http://spiral-reminders.tun.ply.gg/",
+		"port zero":                "http://spiral-reminders.tun.ply.gg:0",
+		"a leading zero":           "http://spiral-reminders.tun.ply.gg:01111",
+		"port too high":            "http://spiral-reminders.tun.ply.gg:65536",
+		"another host":             "http://evil.example:1111",
+		"the tunnel domain itself": "http://tun.ply.gg:1111",
+		"a lookalike suffix":       "http://spiral.tun.ply.gg.evil.example:1111",
+		"a lookalike prefix":       "http://tun.ply.gg.evil.example:1111",
+		"no dot before tun":        "http://xtun.ply.gg:1111",
+		"an ip address":            "http://127.0.0.1:1111",
+		"localhost":                "http://localhost:1111",
+		"user info":                "http://me@spiral-reminders.tun.ply.gg:1111",
+		"credentials":              "http://me:pw@spiral-reminders.tun.ply.gg:1111",
+		"a host smuggled as info":  "http://spiral-reminders.tun.ply.gg:1111@evil.example",
+		"a query":                  "http://spiral-reminders.tun.ply.gg:1111/?a=1",
+		"an empty query":           "http://spiral-reminders.tun.ply.gg:1111?",
+		"a fragment":               "http://spiral-reminders.tun.ply.gg:1111/#x",
+		"a path":                   "http://spiral-reminders.tun.ply.gg:1111/map",
+		"a backslash":              `http://spiral-reminders.tun.ply.gg:1111\@evil.example`,
+		"a space":                  "http://spiral-reminders.tun.ply.gg:1111 /",
+		"uppercase":                "http://Spiral-Reminders.tun.ply.gg:1111",
+		"javascript":               "javascript:alert(1)",
+		"a data url":               "data:text/html,<p>x</p>",
+		"ftp":                      "ftp://spiral-reminders.tun.ply.gg:1111",
+		"file":                     "file:///C:/Windows",
+		"empty":                    "",
+		"https off the tunnels":    "https://kapitel-kapital.pages.dev:443",
+		"the wiki host":            "https://kapitel-kapital.pages.dev/",
+	}
+	for name, raw := range bad {
+		m := validManifest()
+		m.Chapters[0].Map = &raw
+		if err := ValidateManifest(m); err == nil {
+			t.Errorf("%s: %q was accepted", name, raw)
+		}
+	}
+	// Every other URL keeps the old rule: http on a tunnel is no pack.
+	m := validManifest()
+	pw := "http://spiral-reminders.tun.ply.gg:1111/pack.toml"
+	m.Chapters[0].Pack.Packwiz = &pw
+	if err := ValidateManifest(m); err == nil {
+		t.Error("the exception reached pack.packwiz")
+	}
+}
+
+func TestParseManifestRefusesABadMapAndAcceptsNoneOrNull(t *testing.T) {
+	doc := func(mapField string) []byte {
+		m := validManifest()
+		data, err := json.Marshal(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if mapField == "" {
+			return data
+		}
+		return []byte(strings.Replace(string(data), `"changelog":null`, `"changelog":null,`+mapField, 1))
+	}
+	for _, field := range []string{"", `"map":null`, `"map":"http://a.tun.ply.gg:1"`} {
+		if _, err := ParseManifest(doc(field)); err != nil {
+			t.Errorf("%q: %v", field, err)
+		}
+	}
+	for _, field := range []string{`"map":""`, `"map":"http://evil.example:1"`, `"map":5`} {
+		if _, err := ParseManifest(doc(field)); err == nil {
+			t.Errorf("%q was accepted", field)
+		}
+	}
+}
+
+func TestMapOrigin(t *testing.T) {
+	for raw, want := range map[string]string{
+		"http://spiral-reminders.tun.ply.gg:1111":  "http://spiral-reminders.tun.ply.gg:1111",
+		"http://spiral-reminders.tun.ply.gg:1111/": "http://spiral-reminders.tun.ply.gg:1111",
+		"https://a.tun.ply.gg:8100":                "https://a.tun.ply.gg:8100",
+		"http://evil.example:1111":                 "",
+		"http://a.tun.ply.gg:70000":                "",
+		"":                                         "",
+	} {
+		if got := MapOrigin(raw); got != want {
+			t.Errorf("MapOrigin(%q) = %q, want %q", raw, got, want)
+		}
 	}
 }
 
