@@ -55,7 +55,8 @@
         "jvm": "zgc",
         "version": "1.0.0",
         "packwiz": "https://kapital-packs.alessandrogekeler.workers.dev/lichdenstein/pack.toml",
-        "mrpack": null
+        "mrpack": null,
+        "toggles": [{ "name": "Distant Horizons", "jarPrefix": "DistantHorizons-" }]
       },
       "server": {
         "addresses": [{ "label": "Main", "address": "placeholder.invalid" }],
@@ -89,7 +90,13 @@
         "jvm": "zgc",
         "version": "1.0.1",
         "packwiz": "https://kapital-packs.alessandrogekeler.workers.dev/frangfurd/pack.toml",
-        "mrpack": null
+        "mrpack": null,
+        "toggles": [
+          { "name": "Distant Horizons", "jarPrefix": "DistantHorizons-" },
+          { "name": "Colorwheel", "jarPrefix": "colorwheel-neoforge-" },
+          { "name": "Colorwheel Patcher", "jarPrefix": "colorwheel_patcher-neoforge-" },
+          { "name": "Create Better FPS", "jarPrefix": "createbetterfps-" }
+        ]
       },
       "server": {
         "addresses": [

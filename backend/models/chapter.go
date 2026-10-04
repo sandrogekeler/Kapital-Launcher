@@ -58,6 +58,10 @@ type Pack struct {
 	// JVM names one of the launcher's own JVM presets (services.jvmPresets),
 	// never arguments: a manifest cannot put text on Java's command line.
 	JVM *string `json:"jvm"`
+	// Toggles are the mods a player may switch off from the chapter's settings
+	// as a quick choice (issue 156). Optional: a pack that names none has only
+	// the advanced list.
+	Toggles []ModToggle `json:"toggles,omitempty"`
 }
 
 // Server is a chapter's server: the addresses it can be reached at, each with
