@@ -83,7 +83,7 @@ const CONFIRM_STOP: readonly (GameState['phase'] | undefined)[] = [
   'stopping',
 ]
 
-/** How long "Stop the game?" waits for its second click. */
+/** How long "Confirm" waits for its second click. */
 const CONFIRM_MS = 5000
 
 /**
@@ -108,9 +108,11 @@ const CONFIRM_MS = 5000
  * sits beside Play, right after the hand-over to Prism, and Play and Install
  * wait. Play becomes Stop, so a start that stalls or a game that has died
  * can be ended at once: one click while the start is only getting ready, and
- * once the game has a window the first click asks "Stop the game?" for five
- * seconds. Stop waits, disabled, while the hand-over to Prism has not returned. The server's status stays on the right throughout, so it is still
- * there when the player is launching. A game that has ended says nothing
+ * once the game has a window the first click asks "Confirm" for five
+ * seconds. Stop and Confirm are red, the danger colour, where Play is the
+ * accent. Stop waits, disabled, while the hand-over to Prism has not returned.
+ * The server's status stays on the right throughout, so it is still there
+ * when the player is launching. A game that has ended says nothing
  * here: a crash, a start that failed or a refused launch is a notice in the
  * corner (`shell/Toasts`), so the bar keeps its shape and the server's line
  * comes back.
@@ -229,9 +231,9 @@ export function ActionBar({
     <section className="border-line flex flex-col gap-3 border-b px-14 py-5">
       <div className="flex items-center gap-3">
         {playing || launching ? (
-          <Button variant="play" onClick={clickStop} disabled={launching}>
+          <Button variant="stop" onClick={clickStop} disabled={launching}>
             <Icon icon={Square} size="sm" className="fill-current" />
-            <span>{needsConfirm && confirming ? 'Stop the game?' : 'Stop'}</span>
+            <span>{needsConfirm && confirming ? 'Confirm' : 'Stop'}</span>
           </Button>
         ) : needsInstall ? (
           <Button

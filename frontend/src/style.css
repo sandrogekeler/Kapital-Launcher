@@ -195,6 +195,24 @@
   }
 }
 
+/* The lift of a filled button on hover (ui/Button): on top of the brighter
+   fill, a soft glow in the button's own colour, the accent for Play, Install
+   and Join, the danger colour for Stop. Never on a disabled button. The
+   radius and the strength are tokens; the button's transition (and its
+   removal with reduced motion) is its own. */
+@utility glow-accent {
+  &:hover:enabled {
+    box-shadow: 0 0 var(--effect-glow-blur)
+      color-mix(in srgb, var(--accent) var(--effect-glow-strength), transparent);
+  }
+}
+@utility glow-danger {
+  &:hover:enabled {
+    box-shadow: 0 0 var(--effect-glow-blur)
+      color-mix(in srgb, var(--danger) var(--effect-glow-strength), transparent);
+  }
+}
+
 /* The loading card's bar when there is no history to size it by (#43): a soft
    band of the accent sweeping across the track. Reduced motion keeps it still
    and solid. The duration is the slow token, four times over. */
