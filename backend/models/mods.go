@@ -10,6 +10,10 @@ package models
 type ModToggle struct {
 	Name      string `json:"name"`
 	JarPrefix string `json:"jarPrefix"`
+	// Requires is the jarPrefix of another toggle of the chapter that this mod
+	// needs to load (Colorwheel needs Iris): with that one off, this one is off
+	// too and cannot be turned on. Empty for a mod that needs none of them.
+	Requires string `json:"requires,omitempty"`
 }
 
 // ModFile is one jar in an instance's mods folder as the settings page lists it.
@@ -28,6 +32,10 @@ type ModFile struct {
 type ModToggleState struct {
 	Name      string `json:"name"`
 	JarPrefix string `json:"jarPrefix"`
+	Requires  string `json:"requires,omitempty"`
+	// Blocked is true when a toggle this one requires, directly or through
+	// another, is off: the switch cannot be turned on until that one is.
+	Blocked bool `json:"blocked"`
 	// Jars are the base names of the jars the toggle matches now; none before
 	// the pack's first sync.
 	Jars []string `json:"jars"`

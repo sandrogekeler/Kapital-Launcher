@@ -201,6 +201,8 @@ export interface Pack {
 export interface ModToggle {
   name: string
   jarPrefix: string
+  /** The jarPrefix of another toggle this mod needs to load; off with it, and locked while it is. */
+  requires?: string | null
 }
 
 /** One page of the wiki, from its lore export (#58); eras are chapter names. */
@@ -380,6 +382,8 @@ export interface ModToggleState extends ModToggle {
   jars: string[]
   /** True when it matches at least one jar and every one of them is switched off. */
   disabled: boolean
+  /** A toggle it requires, directly or through another, is off: it cannot be turned on now. */
+  blocked: boolean
 }
 
 /** A chapter's mods as the settings page shows them: the folder, and the quick toggles in it. */

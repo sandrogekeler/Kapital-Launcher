@@ -55,6 +55,10 @@ chapter's `map` (below): a playit tunnel serves BlueMap over http.
   `.pw.toml` in `kapital-packs`. It is a prefix and never a path or a pattern
   (`[A-Za-z0-9][A-Za-z0-9._+-]{2,63}`), names are unique, and no prefix starts
   another, so a jar is never two switches (`validateToggles`).
+  A toggle may name another of the chapter's by its prefix in `requires` (Colorwheel
+  requires Iris, as its `neoforge.mods.toml` says): with that one off, Go turns this one
+  off too (`WithRequiredOff`, on every `SetModsDisabled`) and the page locks it. The
+  chain must end, which `validateToggles` checks.
 - `map` is optional: a chapter's BlueMap web map (issue 161, ADR-4's third
   amendment), `http` or `https` on `*.tun.ply.gg` with an explicit port, lowercase
   and bare (no user info, path, query or fragment); `services.checkMapURL` refuses

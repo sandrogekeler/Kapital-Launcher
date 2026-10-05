@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import type { ReactNode } from 'react'
 import { ErrorLine, Hint } from './Notes'
 
 interface Props {
@@ -12,6 +13,10 @@ interface Props {
   disabled?: boolean
   /** Called with the new state on a click; the caller saves it. */
   onChange: (checked: boolean) => void
+  /** A small tag after the label, such as why the switch is locked. */
+  badge?: ReactNode
+  /** The whole row is greyed: the switch cannot apply now (a mod whose requirement is off). */
+  muted?: boolean
 }
 
 /**
@@ -22,7 +27,7 @@ interface Props {
  * control's name, so it stays in the foreground colour, and clicking it
  * toggles the switch.
  */
-export function Toggle({ label, checked, hint, error, disabled, onChange }: Props) {
+export function Toggle({ label, checked, hint, error, disabled, onChange, badge, muted }: Props) {
   const id = useId()
   const lineId = `${id}-line`
   const track = checked ? 'bg-accent border-accent' : 'bg-sunken border-line-strong'
@@ -32,9 +37,10 @@ export function Toggle({ label, checked, hint, error, disabled, onChange }: Prop
       <div className="flex min-w-0 flex-col gap-1">
         <label
           htmlFor={id}
-          className={`text-fg w-fit text-sm font-medium ${disabled ? 'cursor-default' : 'cursor-pointer'}`}
+          className={`flex w-fit items-center gap-2 text-sm font-medium ${muted ? 'text-fg-faint' : 'text-fg'} ${disabled ? 'cursor-default' : 'cursor-pointer'}`}
         >
           {label}
+          {badge}
         </label>
         {error ? (
           <ErrorLine id={lineId}>{error}</ErrorLine>

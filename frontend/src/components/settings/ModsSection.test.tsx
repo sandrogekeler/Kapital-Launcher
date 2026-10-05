@@ -29,14 +29,22 @@ const view = (off: string[] = [], running = false): ChapterMods => ({
       jarPrefix: 'DistantHorizons-',
       jars: [dh],
       disabled: off.includes(dh),
+      blocked: false,
     },
     {
       name: 'Colorwheel',
       jarPrefix: 'colorwheel-neoforge-',
       jars: [cw],
       disabled: off.includes(cw),
+      blocked: false,
     },
-    { name: 'Create Better FPS', jarPrefix: 'createbetterfps-', jars: [], disabled: false },
+    {
+      name: 'Create Better FPS',
+      jarPrefix: 'createbetterfps-',
+      jars: [],
+      disabled: false,
+      blocked: false,
+    },
   ],
 })
 const phaseOf = (phase: GamePhase) => ({
@@ -65,10 +73,10 @@ describe('ModsSection', () => {
     render(<ModsSection chapter={frangfurd} />)
     expect(await screen.findByRole('switch', { name: 'Distant Horizons' })).not.toBeChecked()
     expect(screen.getByRole('switch', { name: 'Colorwheel' })).toBeChecked()
-    // The file each one is, so a player sees what is being switched.
-    expect(screen.getByRole('switch', { name: 'Distant Horizons' })).toHaveAccessibleDescription(
-      'DistantHorizons-3.3.3-1.21.1-fabric-neoforge',
-    )
+    // No file name under a switch that can be used.
+    expect(
+      screen.getByRole('switch', { name: 'Distant Horizons' }),
+    ).not.toHaveAccessibleDescription()
     // A mod the pack has not downloaded yet cannot be switched, and says why.
     const better = screen.getByRole('switch', { name: 'Create Better FPS' })
     expect(better).toBeDisabled()
@@ -77,6 +85,29 @@ describe('ModsSection', () => {
       screen.getByText('Changes apply on the next Play. A disabled mod is not downloaded again.'),
     ).toBeInTheDocument()
     expect(App.GetChapterMods).toHaveBeenCalledWith('frangfurd')
+  })
+
+  it('greys out and locks a mod whose requirement is off, and says which (Colorwheel needs Iris)', async () => {
+    const base = view([cw])
+    vi.mocked(App.GetChapterMods).mockResolvedValue({
+      ...base,
+      toggles: [
+        {
+          name: 'Iris',
+          jarPrefix: 'iris-neoforge-',
+          jars: ['iris-neoforge-1.8.14.jar'],
+          disabled: true,
+          blocked: false,
+        },
+        { ...base.toggles[1]!, requires: 'iris-neoforge-', blocked: true },
+      ],
+    } as never)
+    render(<ModsSection chapter={frangfurd} />)
+    const colorwheel = await screen.findByRole('switch', { name: /Colorwheel/ })
+    expect(colorwheel).toBeDisabled()
+    expect(colorwheel).not.toBeChecked()
+    expect(screen.getByText('Needs Iris')).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Iris' })).toBeEnabled()
   })
 
   it('switches a mod off with the whole list Go keeps, and shows what Go answers', async () => {
