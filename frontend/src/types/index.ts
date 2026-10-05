@@ -391,11 +391,23 @@ export interface ChapterMods {
   running: boolean
 }
 
+/** What Prism has counted for one installed chapter (issue 192): seconds played, and the last start. */
+export interface PlayTime {
+  chapterId: string
+  totalSeconds: number
+  /** Milliseconds since the epoch; 0 when the game was never started. */
+  lastLaunchMs: number
+}
+
 export interface AppSettings {
   theme: Theme | string
   prismExecutable: string
   prismRoot: string
   profileName: string
+  /** Play without a Microsoft account (issue 192): Prism's --offline with `offlineName` in place of --profile. */
+  offline: boolean
+  /** The player name passed with --offline: 3 to 16 letters, digits or _; required while `offline` is on. */
+  offlineName: string
   lastChapter: string
   /** Chapter id to a local packwiz serve address (#41), edited on the settings screen (#5). */
   packOverrides?: Record<string, string>
