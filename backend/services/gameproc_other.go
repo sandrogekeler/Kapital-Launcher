@@ -18,5 +18,6 @@ func systemGameOS() gameOS {
 		},
 		terminate: func(int, bool) error { return errGameProcUnsupported },
 		askClose:  func(int) error { return errGameProcUnsupported },
+		image:     func(int) (string, bool) { return "", false },
 	}
 }

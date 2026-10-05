@@ -448,3 +448,59 @@ them, which is one more read inside a chapter's own instance.
   install or a game run ends. Never on a timer.
 - **What does not change.** Nothing is written into the instance, no other file
   of a resources pack is opened, and no account data is touched.
+
+## Thirteenth amendment, 2026-10-05
+
+A change the launcher writes to an instance's `instance.cfg` is lost when a Prism
+that has the instance loaded is running: that Prism later saves its own copy over
+the file (issue 209). Every key the amendments above let the launcher write is
+subject to it: memory, the JVM preset and custom arguments, the pre-launch
+command.
+
+- **What Prism does.** It keeps each instance's settings in memory and writes the
+  whole file at a settings save, at a launch and on exit (`Saving INI settings`
+  in its `PrismLauncher-0.log`). A key the launcher wrote in between is
+  overwritten with the old value it holds.
+- **Two cases seen on 2026-10-05.** The pre-launch upgrade: Luxemburg was opened
+  with Open in Prism, then Play; the launcher logged `pre-launch command updated`,
+  the launch went to the open Prism, which saved from memory at the launch and
+  brought the old packwiz command back, so the mod switches did nothing. And the
+  pack source switch (#120): Frangfurd was switched back from the dev pack to the
+  published one while the Prism of a failed start was alive on its console; the
+  next Play closed that Prism, which saved its copy on the way out, and the dev
+  URL came back. The pack source lives only in that key, so nothing put it back.
+- **The rule, decided with the author: close our own, refuse others.** Before a
+  write to `instance.cfg` from the player's own request (`SaveChapterSettings`,
+  `SetPackSource`; one guard, `refuseIfPrismOpen`), the Prism the launcher started
+  for that chapter, the one on the console record (ADR-12 amendments), is closed
+  with Stop's routine and its exit waited for (`prismEndWait` after an ended one);
+  if it is still alive the write is refused with a plain sentence. Then, if any
+  other Prism that runs from the engine's executable is open, the write is
+  refused with "Prism is open; close it first, or the change is lost when Prism
+  saves". Nothing the launcher did not start is ended: it is only detected.
+  `SetModsDisabled` renames jars and writes no `instance.cfg`, so it is not
+  guarded.
+- **At Play.** `LaunchChapter` closes the chapter's leftover Prism first (issue
+  211), synchronously, so it has exited before `updatePreLaunch` runs. The
+  pre-launch rewrite is not a request the player made and refuses nothing: when
+  another Prism is open it is skipped, with a log line that says Prism is open,
+  and the next Play with Prism closed does it. The launch itself goes ahead.
+- **What is read to tell an open Prism.** The tracker's process lookup gave
+  pid, parent pid and name. A process is another Prism when its name is the base
+  name of the engine's executable (compared without regard to case) and its image
+  path is that executable's, both resolved through links. The image path is read
+  only for processes with Prism's name: on Windows through
+  `QueryFullProcessImageNameW` on a handle with
+  `PROCESS_QUERY_LIMITED_INFORMATION`, which a process of the same user grants
+  whether or not it is elevated; on macOS as the first string of
+  `kern.procargs2`, the executable path before the arguments, which are not read
+  (`[verify]`, no Mac to test on). A process of that name whose path cannot be
+  read counts as open. Why not the name alone: it would refuse while an unrelated
+  Prism of another install is open, which cannot overwrite this root's files, and
+  the player could not make the message true. Why not the data root: it is the
+  `--dir` argument on a command line, and no process's command line is read
+  (S3.9). The executable's path is the narrowest test left, and the one it
+  over-refuses on, a second Prism from the same executable on another root, is
+  rare and fails safe, with a message the player can act on.
+- **Where it cannot be told.** An OS with no process lookup, or an empty
+  executable path, gives no answer and the write goes ahead as before.

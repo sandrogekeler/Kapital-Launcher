@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -37,7 +38,12 @@ func (a *App) syncExe() string {
 // build. It refuses nothing: a failure or a command that is not the launcher's
 // own is logged, never the command itself, and the launch goes on. An instance
 // whose game looks to be running is left alone, as a settings save is (ADR-2,
-// second amendment); Prism could be writing the file.
+// second amendment); Prism could be writing the file. So is one while a Prism
+// is open (issue 209, thirteenth amendment): it has the old command in memory
+// and writes it back at the launch this Play hands it, so the rewrite is kept
+// for a later Play. The launcher's own leftover Prism was closed by
+// LaunchChapter before this ran, and one that would not close shows here as an
+// open one.
 func (a *App) updatePreLaunch(chapterID, instanceDir string) {
 	if instanceDir == "" {
 		return
@@ -46,6 +52,12 @@ func (a *App) updatePreLaunch(chapterID, instanceDir string) {
 		// A game that closed less than a minute ago looks the same; the next
 		// Play catches up.
 		slog.Info("pre-launch command left as it is", "chapter", chapterID, "reason", "the game looks to be running")
+		return
+	}
+	if open, err := a.otherPrismOpen(chapterID, a.realEngine().Executable); err != nil {
+		slog.Info("pre-launch command: could not tell whether Prism is open", "chapter", chapterID, "error", err)
+	} else if open {
+		slog.Info("pre-launch command left as it is", "chapter", chapterID, "reason", "Prism is open")
 		return
 	}
 	result, err := services.RewritePreLaunchCommand(filepath.Join(instanceDir, "instance.cfg"), a.syncExe())
@@ -141,6 +153,57 @@ func (a *App) refuseIfRunning(chapter models.Chapter, instanceDir string) error 
 		return fmt.Errorf("%s's game log changed less than a minute ago: if the game is closed, try again in a moment", chapter.Name)
 	}
 	return nil
+}
+
+// refuseIfPrismOpen is the second guard of a write to instance.cfg, after
+// refuseIfRunning (issue 209, ADR-2 thirteenth amendment): Prism keeps the
+// file's settings in memory and writes them all back at a launch, on a save and
+// on exit, so a key written while a Prism has the instance loaded comes back as it
+// was. The Prism the launcher started for the chapter is closed first, with
+// Stop's routine, and waited for; one that is still there refuses. Then any
+// other Prism running from the engine's executable refuses, telling the player
+// to close it: the launcher never ends a process it did not start. Where the
+// processes cannot be listed the write goes on as it did before.
+func (a *App) refuseIfPrismOpen(chapter models.Chapter, exe string) error {
+	if !a.ownPrismGone(chapter.ID) {
+		return fmt.Errorf("The Prism opened for %s did not close when asked; close it first, or the change is lost when Prism saves", chapter.Name)
+	}
+	open, err := a.otherPrismOpen(chapter.ID, exe)
+	if err != nil {
+		slog.Info("could not tell whether Prism is open", "chapter", chapter.ID, "error", err)
+		return nil
+	}
+	if open {
+		return errPrismOpen
+	}
+	return nil
+}
+
+// errPrismOpen is what a write refused for an open Prism says.
+var errPrismOpen = errors.New("Prism is open; close it first, or the change is lost when Prism saves")
+
+// ownPrismGone closes the Prism the launcher started for the chapter if it is
+// still alive after its run, and says whether it is gone.
+func (a *App) ownPrismGone(chapterID string) bool {
+	switch {
+	case a.closeOwnPrism != nil:
+		return a.closeOwnPrism(chapterID)
+	case a.games != nil:
+		return a.games.CloseOwnPrism(chapterID)
+	}
+	return true
+}
+
+// otherPrismOpen says whether a Prism other than the chapter's own is running
+// from the engine's executable. An error means it could not be told.
+func (a *App) otherPrismOpen(chapterID, exe string) (bool, error) {
+	switch {
+	case a.prismOpenElsewhere != nil:
+		return a.prismOpenElsewhere(chapterID, exe)
+	case a.games != nil:
+		return a.games.OtherPrismOpen(chapterID, exe)
+	}
+	return false, nil
 }
 
 func errGameActive(chapter models.Chapter) error {

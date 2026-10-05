@@ -72,6 +72,10 @@ type gameOS struct {
 	// askClose asks a Prism to close: WM_CLOSE to its visible top-level
 	// windows on Windows, SIGTERM on macOS. An error means nothing took it.
 	askClose func(pid int) error
+	// image is the path of the executable a process runs, false when it cannot
+	// be read. Only OtherPrismOpen asks, and only about processes that carry
+	// Prism's name (gametracker_prismopen.go); nil reads none.
+	image func(pid int) (string, bool)
 }
 
 // PrismProcess is the Prism the launcher started: its pid, and a channel that
