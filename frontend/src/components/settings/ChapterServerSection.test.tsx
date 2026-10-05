@@ -140,4 +140,14 @@ describe('The Server section of a chapter settings page', () => {
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
     expect(screen.getByRole('switch', { name: JOIN })).toBeChecked()
   })
+
+  it('holds a place for the Distant Horizons world data where the pack has it (issue 136)', () => {
+    render(<ChapterServerSection chapter={frangfurd} />)
+    expect(screen.getByText('World data')).toBeInTheDocument()
+    expect(screen.getByText('Not available yet')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Download' })).toBeDisabled()
+    cleanup()
+    render(<ChapterServerSection chapter={luxemburg} />)
+    expect(screen.queryByText('World data')).toBeNull()
+  })
 })
