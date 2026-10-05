@@ -5,6 +5,7 @@ import { profileInitials, profileNameProblem } from '../../lib/profileName'
 import { useEngineStore } from '../../stores/useEngineStore'
 import { usePlayerStore } from '../../stores/usePlayerStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
+import type { PlayerProfile } from '../../types'
 import { OpenExternal } from '../../../wailsjs/go/main/App'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
@@ -13,9 +14,9 @@ import { ErrorLine } from '../ui/Notes'
 import { Page } from '../ui/Page'
 import { SettingsCard, SettingsSection } from '../ui/SettingsLayout'
 import { TextField } from '../ui/TextField'
+import { TextLink } from '../ui/TextLink'
 import { Toggle } from '../ui/Toggle'
 import { PlayTimeSection } from './PlayTimeSection'
-import { TextLink } from '../ui/TextLink'
 
 /** Mojang's own page for changing a skin; the launcher never touches the account. */
 const EDIT_SKIN_URL = 'https://www.minecraft.net/msaprofile/mygames/editskin'
@@ -39,85 +40,59 @@ interface Props {
  * face and gains the UUID, and the field says whether Mojang knows the name. Offline, or for a
  * name Mojang does not know, the tile keeps the initials and an unreachable Mojang says nothing.
  *
- * Play offline (Prism's `--offline`) swaps the profile for a player name
- * of the launcher's own, and the play time section shows what Prism has counted per chapter.
+ * Play offline (Prism's `--offline`) swaps the profile for a player name of the launcher's own,
+ * and the play time section shows what Prism has counted per chapter.
  */
 export function AccountPanel({ onClose }: Props) {
   const profile = useSettingsStore((s) => s.settings.profileName)
   const offline = useSettingsStore((s) => s.settings.offline)
-  const offlineName = useSettingsStore((s) => s.settings.offlineName)
-  const update = useSettingsStore((s) => s.update)
   const loaded = useSettingsStore((s) => s.loaded)
-  const openPrism = useEngineStore((s) => s.openPrism)
-  const [error, setError] = useState<string | null>(null)
-  const [prismError, setPrismError] = useState<string | null>(null)
   const player = usePlayerStore((s) => s.profile)
   const checkPlayer = usePlayerStore((s) => s.check)
-  const copyUuid = usePlayerStore((s) => s.copyUuid)
   const clearPlayer = usePlayerStore((s) => s.clear)
-  const [cardError, setCardError] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
-  const copiedTimer = useRef<number | undefined>(undefined)
-  // The face that failed to load, so a broken picture falls back to the initials.
-  const [brokenFace, setBrokenFace] = useState<string | null>(null)
 
   // The saved name changes only on a commit (the field keeps its draft to itself), so this
   // asks Mojang when the page opens and after each save.
   useEffect(() => {
     if (loaded) void checkPlayer(profile.trim())
   }, [loaded, profile, checkPlayer])
-  useEffect(
-    () => () => {
-      window.clearTimeout(copiedTimer.current)
-      clearPlayer()
-    },
-    [clearPlayer],
-  )
-  const [offlineError, setOfflineError] = useState<string | null>(null)
-  // The switch is on but no name exists to save it with yet: Go refuses an empty name, so the
-  // field shows first and the pair saves when a name is committed.
-  const [offlinePending, setOfflinePending] = useState(false)
+  useEffect(() => () => clearPlayer(), [clearPlayer])
 
-  const save = async (profileName: string) => {
-    try {
-      await update({ profileName })
-      setError(null)
-    } catch (e) {
-      setError(errMsg(e))
-    }
-  }
-  const saveOffline = async (patch: { offline?: boolean; offlineName?: string }) => {
-    try {
-      await update(patch)
-      setOfflineError(null)
-      setOfflinePending(false)
-    } catch (e) {
-      setOfflineError(errMsg(e))
-    }
-  }
-  const onOfflineSwitch = (on: boolean) => {
-    if (!on) {
-      setOfflinePending(false)
-      void saveOffline({ offline: false })
-      return
-    }
-    // The name to start from: the one kept from last time, else the profile name if it is one
-    // Minecraft allows.
-    const start = offlineName.trim() || (profileNameProblem(profile) ? '' : profile.trim())
-    if (start === '') {
-      setOfflinePending(true)
-      return
-    }
-    void saveOffline({ offline: true, offlineName: start })
-  }
-  const onOpenPrism = async () => {
-    setPrismError(null)
-    try {
-      await openPrism()
-    } catch (e) {
-      setPrismError(errMsg(e))
-    }
-  }
+  const found = player?.status === 'found' ? player : null
+  return (
+    <Page
+      label="Account"
+      eyebrow="Launcher"
+      title="Account"
+      onBack={onClose}
+      ready={loaded}
+      settings
+    >
+      <ProfileCard name={profile.trim()} offline={offline} found={found} />
+      <ProfileSection player={player} />
+      <PlayTimeSection />
+      <SignInSection />
+    </Page>
+  )
+}
+
+/** The card at the top: the skin's face or the initials, the name, the UUID and Change skin. */
+function ProfileCard({
+  name,
+  offline,
+  found,
+}: {
+  name: string
+  offline: boolean
+  found: PlayerProfile | null
+}) {
+  const copyUuid = usePlayerStore((s) => s.copyUuid)
+  const [cardError, setCardError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const copiedTimer = useRef<number | undefined>(undefined)
+  // The face that failed to load, so a broken picture falls back to the initials.
+  const [brokenFace, setBrokenFace] = useState<string | null>(null)
+  useEffect(() => () => window.clearTimeout(copiedTimer.current), [])
 
   const onCopy = async () => {
     setCardError(null)
@@ -135,19 +110,9 @@ export function AccountPanel({ onClose }: Props) {
     OpenExternal(EDIT_SKIN_URL).catch((e) => setCardError(errMsg(e)))
   }
 
-  const name = profile.trim()
-  const found = player?.status === 'found' ? player : null
   const face = found?.faceSrc && found.faceSrc !== brokenFace ? found.faceSrc : null
-  const offlineShown = offline || offlinePending
   return (
-    <Page
-      label="Account"
-      eyebrow="Launcher"
-      title="Account"
-      onBack={onClose}
-      ready={loaded}
-      settings
-    >
+    <>
       <div className="bg-raised-2 border-line flex items-center gap-5 rounded-lg border p-5">
         {face ? (
           <img
@@ -187,68 +152,130 @@ export function AccountPanel({ onClose }: Props) {
         </div>
       </div>
       {cardError && <ErrorLine>{cardError}</ErrorLine>}
+    </>
+  )
+}
 
-      <SettingsSection title="Profile" icon={UserRound}>
-        <SettingsCard>
-          <div className="flex flex-col gap-2">
-            <TextField
-              label="Profile name"
-              value={profile}
-              placeholder="Prism's default account"
-              hint={profileNameProblem(profile)}
-              error={error}
-              onCommit={(v) => void save(v)}
-            />
-            {player?.status === 'found' && (
-              <p
-                role="status"
-                className="text-accent m-0 flex items-center gap-1.5 text-xs leading-normal"
-              >
-                <Icon icon={Check} size="sm" />
-                <span>Found on Mojang</span>
-              </p>
-            )}
-            {player?.status === 'not_found' && (
-              <ErrorLine>No Minecraft profile has this name</ErrorLine>
-            )}
-          </div>
-          <Toggle
-            label="Play offline"
-            checked={offlineShown}
-            hint={offlineShown ? 'Online servers refuse an offline player.' : undefined}
-            error={offlineError}
-            onChange={onOfflineSwitch}
+/** The profile name with what Mojang says of it, and Play offline with its own name. */
+function ProfileSection({ player }: { player: PlayerProfile | null }) {
+  const profile = useSettingsStore((s) => s.settings.profileName)
+  const offline = useSettingsStore((s) => s.settings.offline)
+  const offlineName = useSettingsStore((s) => s.settings.offlineName)
+  const update = useSettingsStore((s) => s.update)
+  const [error, setError] = useState<string | null>(null)
+  const [offlineError, setOfflineError] = useState<string | null>(null)
+  // The switch is on but no name exists to save it with yet: Go refuses an empty name, so the
+  // field shows first and the pair saves when a name is committed.
+  const [offlinePending, setOfflinePending] = useState(false)
+
+  const save = async (profileName: string) => {
+    try {
+      await update({ profileName })
+      setError(null)
+    } catch (e) {
+      setError(errMsg(e))
+    }
+  }
+  const saveOffline = async (patch: { offline?: boolean; offlineName?: string }) => {
+    try {
+      await update(patch)
+      setOfflineError(null)
+      setOfflinePending(false)
+    } catch (e) {
+      setOfflineError(errMsg(e))
+    }
+  }
+  const onOfflineSwitch = (on: boolean) => {
+    if (!on) {
+      setOfflinePending(false)
+      void saveOffline({ offline: false })
+      return
+    }
+    // The name to start from: the one kept from last time, else the profile name if it is one
+    // Minecraft allows.
+    const start = offlineName.trim() || (profileNameProblem(profile) ? '' : profile.trim())
+    if (start === '') {
+      setOfflinePending(true)
+      return
+    }
+    void saveOffline({ offline: true, offlineName: start })
+  }
+
+  const offlineShown = offline || offlinePending
+  return (
+    <SettingsSection title="Profile" icon={UserRound}>
+      <SettingsCard>
+        <div className="flex flex-col gap-2">
+          <TextField
+            label="Profile name"
+            value={profile}
+            placeholder="Prism's default account"
+            hint={profileNameProblem(profile)}
+            error={error}
+            onCommit={(v) => void save(v)}
           />
-          {offlineShown && (
-            <TextField
-              label="Offline name"
-              value={offlineName}
-              placeholder={name || 'Your Minecraft name'}
-              hint={profileNameProblem(offlineName)}
-              onCommit={(v) => void saveOffline({ offlineName: v, offline: true })}
-            />
+          {player?.status === 'found' && (
+            <p
+              role="status"
+              className="text-accent m-0 flex items-center gap-1.5 text-xs leading-normal"
+            >
+              <Icon icon={Check} size="sm" />
+              <span>Found on Mojang</span>
+            </p>
           )}
-        </SettingsCard>
-      </SettingsSection>
+          {player?.status === 'not_found' && (
+            <ErrorLine>No Minecraft profile has this name</ErrorLine>
+          )}
+        </div>
+        <Toggle
+          label="Play offline"
+          checked={offlineShown}
+          hint={offlineShown ? 'Online servers refuse an offline player.' : undefined}
+          error={offlineError}
+          onChange={onOfflineSwitch}
+        />
+        {offlineShown && (
+          <TextField
+            label="Offline name"
+            value={offlineName}
+            placeholder={profile.trim() || 'Your Minecraft name'}
+            hint={profileNameProblem(offlineName)}
+            onCommit={(v) => void saveOffline({ offlineName: v, offline: true })}
+          />
+        )}
+      </SettingsCard>
+    </SettingsSection>
+  )
+}
 
-      <PlayTimeSection />
-
-      <SettingsSection title="Sign-in" icon={KeyRound}>
-        <SettingsCard>
-          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-            <span className="text-fg text-sm font-medium">Add or switch accounts</span>
-            <Button onClick={() => void onOpenPrism()}>
-              <span>Open Prism</span>
-              <Icon icon={ExternalLink} size="sm" className="text-fg-faint" />
-            </Button>
-          </div>
-        </SettingsCard>
-        {prismError && <ErrorLine>{prismError}</ErrorLine>}
-        <p className="text-fg-muted m-0 text-xs leading-normal">
-          Microsoft sign-in happens in Prism. Kapital Launcher only passes the profile name on and
-          never sees the account.
-        </p>
-      </SettingsSection>
-    </Page>
+/** Open Prism, where accounts are added and switched, and what the launcher never sees. */
+function SignInSection() {
+  const openPrism = useEngineStore((s) => s.openPrism)
+  const [prismError, setPrismError] = useState<string | null>(null)
+  const onOpenPrism = async () => {
+    setPrismError(null)
+    try {
+      await openPrism()
+    } catch (e) {
+      setPrismError(errMsg(e))
+    }
+  }
+  return (
+    <SettingsSection title="Sign-in" icon={KeyRound}>
+      <SettingsCard>
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+          <span className="text-fg text-sm font-medium">Add or switch accounts</span>
+          <Button onClick={() => void onOpenPrism()}>
+            <span>Open Prism</span>
+            <Icon icon={ExternalLink} size="sm" className="text-fg-faint" />
+          </Button>
+        </div>
+      </SettingsCard>
+      {prismError && <ErrorLine>{prismError}</ErrorLine>}
+      <p className="text-fg-muted m-0 text-xs leading-normal">
+        Microsoft sign-in happens in Prism. Kapital Launcher only passes the profile name on and
+        never sees the account.
+      </p>
+    </SettingsSection>
   )
 }
