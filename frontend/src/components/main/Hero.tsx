@@ -2,8 +2,10 @@ import { Suspense, lazy } from 'react'
 import type { Chapter } from '../../types'
 import { chapterArt, chapterTitleArt } from '../../lib/art'
 import { isPlaceholder, knownFacts } from '../../lib/manifest'
-import { MapIcon, Pencil, SquareTerminal } from '../../lib/icons'
+import { LoaderCircle, MapIcon, Pencil, SquareTerminal } from '../../lib/icons'
+import { panoramaStart, usePanoramaReady } from '../../lib/panorama'
 import { Drift } from '../ui/Drift'
+import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 import { Pill } from '../ui/Pill'
 import { useLoadedImage } from '../../lib/useLoadedImage'
@@ -54,6 +56,9 @@ export function Hero({
   // drift to a new picture starts only when that picture can be drawn.
   const art = useLoadedImage(slideArt ?? chapterArt(chapter.id), chapterArt(chapter.id))
   const title = chapterTitleArt(chapter.id)
+  // The faces are decoded in the background first (lib/panorama), so a chapter switch never
+  // waits on megabytes of PNG; the picture under it stays, with a word that the cube is coming.
+  const panoramaReady = usePanoramaReady(panorama?.length === 6 ? panorama : undefined)
   // A fact nobody has settled has no chip: a placeholder in brackets is for the
   // author, not the player.
   const spec = knownFacts(chapter.pack.loader, chapter.pack.minecraft)
@@ -71,12 +76,25 @@ export function Hero({
               draggable={false}
             />
           </Drift>
-          {panorama && panorama.length === 6 && (
+          {panorama && panorama.length === 6 && panoramaReady && (
             <Suspense fallback={null}>
-              <PanoramaCube key={panorama[0]} faces={panorama} />
+              <PanoramaCube key={panorama[0]} faces={panorama} start={panoramaStart(chapter.id)} />
             </Suspense>
           )}
           <div className="scrim-hero absolute inset-0" aria-hidden />
+          {panorama && panorama.length === 6 && !panoramaReady && (
+            <span
+              role="status"
+              className="text-fg-muted text-2xs absolute right-7 bottom-4 flex items-center gap-2"
+            >
+              <Icon
+                icon={LoaderCircle}
+                size="sm"
+                className="animate-spin motion-reduce:animate-none"
+              />
+              Loading panorama…
+            </span>
+          )}
         </>
       ) : (
         <>

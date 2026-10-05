@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { Hero } from './Hero'
 import { BUNDLED_MANIFEST } from '../../lib/manifest'
 
@@ -106,6 +106,24 @@ describe('Hero panorama (issue 195)', () => {
         version="1.0.1"
       />,
     )
+
+  it('says the panorama is loading until its faces are decoded, and draws no cube meanwhile', async () => {
+    const real = HTMLImageElement.prototype.decode
+    let release: () => void = () => undefined
+    const decoded = new Promise<void>((resolve) => (release = resolve))
+    HTMLImageElement.prototype.decode = () => decoded
+    try {
+      const other = faces.map((f) => `${f}?v=slow`)
+      const { container } = show(other)
+      expect(await screen.findByRole('status')).toHaveTextContent('Loading panorama…')
+      expect(container.querySelector('.panorama')).toBeNull()
+      await act(async () => release())
+      await vi.waitFor(() => expect(container.querySelector('.panorama')).not.toBeNull())
+      expect(screen.queryByText('Loading panorama…')).toBeNull()
+    } finally {
+      HTMLImageElement.prototype.decode = real
+    }
+  })
 
   it("draws the cube over the chapter's own picture and under the same scrim", async () => {
     const { container } = show(faces)

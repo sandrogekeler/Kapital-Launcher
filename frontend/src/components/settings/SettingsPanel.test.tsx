@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import { DEFAULT_SETTINGS, useSettingsStore } from '../../stores/useSettingsStore'
 import { useArtStatsStore } from '../../stores/useArtStatsStore'
@@ -342,19 +342,26 @@ describe('SettingsPanel previews', () => {
         ),
       )
       expect(screen.getByRole('radio', { name: 'Panorama' })).toBeChecked()
-      expect(screen.getByText(/A chapter without one shows its own picture/)).toBeInTheDocument()
+      expect(screen.getByText("The pack's title screen.")).toBeInTheDocument()
     })
 
-    it('has pictures per chapter only for the slideshow', () => {
+    it('greys out pictures per chapter, in its place, unless the slideshow is chosen', () => {
       for (const heroArt of ['default', 'panorama']) {
         useSettingsStore.setState({ settings: { ...DEFAULT_SETTINGS, heroArt } })
         const { unmount } = show()
         expect(
           screen.getByRole('radio', { name: heroArt === 'default' ? 'Default' : 'Panorama' }),
         ).toBeChecked()
-        expect(screen.queryByRole('radiogroup', { name: 'Pictures per chapter' })).toBeNull()
+        const pictures = screen.getByRole('radiogroup', { name: 'Pictures per chapter' })
+        expect(pictures).toHaveAttribute('aria-disabled', 'true')
+        for (const radio of within(pictures).getAllByRole('radio')) expect(radio).toBeDisabled()
         unmount()
       }
+      useSettingsStore.setState({ settings: { ...DEFAULT_SETTINGS, heroArt: 'slideshow' } })
+      show()
+      expect(screen.getByRole('radiogroup', { name: 'Pictures per chapter' })).not.toHaveAttribute(
+        'aria-disabled',
+      )
     })
 
     it('shows a rejection under the control and keeps the old choice', async () => {

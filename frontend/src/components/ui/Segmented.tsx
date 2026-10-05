@@ -21,6 +21,8 @@ interface Props<T extends string> {
    * Toggle sits. Otherwise the label is above the pill.
    */
   inline?: boolean
+  /** Shown but not usable now, greyed out: a choice another setting makes moot. */
+  disabled?: boolean
 }
 
 /**
@@ -36,6 +38,7 @@ export function Segmented<T extends string>({
   error,
   hint,
   inline,
+  disabled = false,
 }: Props<T>) {
   const id = useId()
   const lineId = `${id}-line`
@@ -49,10 +52,11 @@ export function Segmented<T extends string>({
       role="radiogroup"
       aria-labelledby={id}
       aria-describedby={error || hint ? lineId : undefined}
+      aria-disabled={disabled || undefined}
       onKeyDown={moveRadioFocus}
       className={`bg-sunken border-line-strong inline-flex w-fit shrink-0 items-stretch rounded-md border p-0.5 ${
         inline ? 'h-9' : 'h-11'
-      }`}
+      } ${disabled ? 'opacity-50' : ''}`}
     >
       {options.map((o) => {
         const selected = o.value === value
@@ -62,10 +66,11 @@ export function Segmented<T extends string>({
             type="button"
             role="radio"
             aria-checked={selected}
-            tabIndex={selected ? 0 : -1}
+            tabIndex={selected && !disabled ? 0 : -1}
+            disabled={disabled}
             onClick={() => onChange(o.value)}
-            className={`duration-fast ease-standard cursor-pointer rounded-sm px-3.5 text-sm whitespace-nowrap transition-colors ${
-              selected ? 'bg-hover text-fg font-medium' : 'text-fg-muted hover:text-fg'
+            className={`duration-fast ease-standard cursor-pointer rounded-sm px-3.5 text-sm whitespace-nowrap transition-colors disabled:cursor-default ${
+              selected ? 'bg-hover text-fg font-medium' : 'text-fg-muted enabled:hover:text-fg'
             }`}
           >
             {o.label}
@@ -79,7 +84,7 @@ export function Segmented<T extends string>({
     return (
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
         <div className="flex min-w-0 flex-col gap-1">
-          <span id={id} className="text-fg text-sm font-medium">
+          <span id={id} className={`text-sm font-medium ${disabled ? 'text-fg-faint' : 'text-fg'}`}>
             {label}
           </span>
           {line}
