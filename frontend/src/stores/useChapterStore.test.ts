@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as App from '../../wailsjs/go/main/App'
 import { models } from '../../wailsjs/go/models'
-import { selectChapter, selectWikiPick, useChapterStore } from './useChapterStore'
+import { selectChapter, selectPanorama, selectWikiPick, useChapterStore } from './useChapterStore'
 import { BUNDLED_MANIFEST } from '../lib/manifest'
 import type { WikiPage, WikiShot } from '../types'
 
@@ -16,8 +16,10 @@ describe('useChapterStore', () => {
       wikiPages: [],
       wikiShots: [],
       slides: {},
+      panoramas: {},
     })
     vi.mocked(App.GetManifest).mockReset()
+    vi.mocked(App.GetPanoramas).mockReset()
     vi.mocked(App.GetWikiPages).mockReset()
     vi.mocked(App.GetWikiShots).mockReset()
   })
@@ -183,6 +185,41 @@ describe('useChapterStore', () => {
       await useChapterStore.getState().loadWikiShots()
       expect(useChapterStore.getState().wikiShots).toEqual([])
       expect(useChapterStore.getState().slides.luxemburg).toBeUndefined()
+    })
+  })
+  describe('panoramas (issue 195)', () => {
+    const faces = (id: string) =>
+      Array.from({ length: 6 }, (_, n) => `/panorama/${id}/panorama_${n}.png`)
+
+    it('files the faces of each chapter that has a panorama under its id, and leaves the rest out', async () => {
+      vi.mocked(App.GetPanoramas).mockResolvedValue([
+        { chapterId: 'frangfurd', faces: faces('frangfurd') },
+      ])
+      await useChapterStore.getState().loadPanoramas()
+      const s = useChapterStore.getState()
+      expect(selectPanorama('frangfurd')(s)).toEqual(faces('frangfurd'))
+      expect(selectPanorama('luxemburg')(s)).toBeUndefined()
+    })
+
+    it('drops an entry that is not six faces, and an answer that is not a list', async () => {
+      vi.mocked(App.GetPanoramas).mockResolvedValue([
+        { chapterId: 'frangfurd', faces: faces('frangfurd').slice(0, 4) },
+        { chapterId: 'luxemburg', faces: faces('luxemburg') },
+      ])
+      await useChapterStore.getState().loadPanoramas()
+      expect(Object.keys(useChapterStore.getState().panoramas)).toEqual(['luxemburg'])
+      vi.mocked(App.GetPanoramas).mockResolvedValue(null as never)
+      await useChapterStore.getState().loadPanoramas()
+      expect(useChapterStore.getState().panoramas).toEqual({})
+    })
+
+    it('has none without a bridge, where each hero keeps its own picture', async () => {
+      useChapterStore.setState({ panoramas: { luxemburg: faces('luxemburg') } })
+      vi.mocked(App.GetPanoramas).mockImplementation(() => {
+        throw new TypeError('window.go is undefined')
+      })
+      await useChapterStore.getState().loadPanoramas()
+      expect(useChapterStore.getState().panoramas).toEqual({})
     })
   })
 })

@@ -62,6 +62,10 @@ export function GetPackStates() {
   return window['go']['main']['App']['GetPackStates']();
 }
 
+export function GetPanoramas() {
+  return window['go']['main']['App']['GetPanoramas']();
+}
+
 export function GetPlayTime() {
   return window['go']['main']['App']['GetPlayTime']();
 }

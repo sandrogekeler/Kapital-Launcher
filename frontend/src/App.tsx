@@ -9,11 +9,12 @@ import { selectCanRotate, selectChapter, useChapterStore } from './stores/useCha
 import { useEngineStore } from './stores/useEngineStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { useServerStore } from './stores/useServerStore'
-import { useGameStore } from './stores/useGameStore'
+import { isActive, useGameStore } from './stores/useGameStore'
 import { Environment } from '../wailsjs/runtime/runtime'
 import { errMsg, readOr } from './lib/ipc'
 import { SLIDE_INTERVAL_MS } from './lib/slides'
 import { usePages } from './lib/usePages'
+import { heroArtOf } from './lib/heroArt'
 
 // The pages that slide over the chapter card are opened on demand, so they
 // load when asked for and stay out of the launcher's first paint and its
@@ -40,12 +41,14 @@ export default function App() {
   const loadWikiShots = useChapterStore((s) => s.loadWikiShots)
   const advanceSlide = useChapterStore((s) => s.advance)
   const canRotate = useChapterStore(selectCanRotate)
-  const staticArt = useSettingsStore((s) => s.settings.staticArt ?? false)
+  const loadPanoramas = useChapterStore((s) => s.loadPanoramas)
+  const heroArt = useSettingsStore((s) => heroArtOf(s.settings))
 
   const engine = useEngineStore((s) => s.engine)
   const loadEngine = useEngineStore((s) => s.load)
   const loadInstances = useEngineStore((s) => s.loadInstances)
   const loadRelease = useEngineStore((s) => s.loadRelease)
+  const installedNow = useEngineStore((s) => s.installedNow)
   const listenInstall = useEngineStore((s) => s.listenInstall)
 
   const listenServers = useServerStore((s) => s.listen)
@@ -53,6 +56,7 @@ export default function App() {
 
   const listenGame = useGameStore((s) => s.listen)
   const loadGames = useGameStore((s) => s.load)
+  const gameActive = useGameStore((s) => Object.values(s.states).some((g) => isActive(g.phase)))
 
   const theme = useSettingsStore((s) => s.settings.theme)
   const loadSettings = useSettingsStore((s) => s.load)
@@ -83,10 +87,11 @@ export default function App() {
 
   // The open chapter's slide moves on every minute (issue 142): a timer for
   // what is on screen, not a poll of anything Go holds. It runs only while the
-  // window is in view, starts over on every switch, and not at all with the
-  // slideshow off or with nothing to move on to.
+  // window is in view, starts over on every switch, and not at all unless the
+  // slideshow is what the hero shows, or with nothing to move on to.
+  const slideshow = heroArt === 'slideshow'
   useEffect(() => {
-    if (staticArt || !canRotate) return
+    if (!slideshow || !canRotate) return
     let timer: number | undefined
     const stop = () => {
       window.clearInterval(timer)
@@ -103,7 +108,7 @@ export default function App() {
       stop()
       document.removeEventListener('visibilitychange', start)
     }
-  }, [staticArt, canRotate, selectedId, advanceSlide])
+  }, [slideshow, canRotate, selectedId, advanceSlide])
 
   // An instance appears when the user imports one in Prism, which happens in
   // another window. Coming back is the moment to look again; a focus event,
@@ -113,6 +118,20 @@ export default function App() {
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
   }, [loadInstances])
+
+  // The panoramas are the resources packs in the instances, which change in
+  // other windows (Prism, the game) and when an install finishes. They are read
+  // only while the panorama is the hero's picture: when it is chosen, when the
+  // window is focused again, and when an install or a game run has ended (a game
+  // running leaves them alone). A focus event or one of those, never a timer.
+  const panoramaChosen = heroArt === 'panorama'
+  useEffect(() => {
+    if (!panoramaChosen || gameActive) return
+    void loadPanoramas()
+    const onFocus = () => void loadPanoramas()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [panoramaChosen, gameActive, installedNow, loadPanoramas])
 
   // Prism install progress arrives as events too; one listener for the app.
   useEffect(() => listenInstall(), [listenInstall])

@@ -30,6 +30,24 @@ const (
 
 var mapIns = []string{MapInApp, MapInBrowser}
 
+// What the hero shows behind the chapter (AppSettings.HeroArt, issue 195).
+const (
+	HeroArtSlideshow = "slideshow"
+	HeroArtDefault   = "default"
+	HeroArtPanorama  = "panorama"
+)
+
+var heroArts = []string{HeroArtSlideshow, HeroArtDefault, HeroArtPanorama}
+
+// HeroArt is what the hero shows: the stored choice, the slideshow when there
+// is none or it is not one of the three.
+func HeroArt(s models.AppSettings) string {
+	if slices.Contains(heroArts, s.HeroArt) {
+		return s.HeroArt
+	}
+	return HeroArtSlideshow
+}
+
 // MapIn is where the map opens: the stored choice, "app" when there is none.
 func MapIn(s models.AppSettings) string {
 	if s.MapIn == MapInBrowser {
@@ -146,6 +164,13 @@ func (s *SettingsService) load() (models.AppSettings, error) {
 		}
 		settings.JoinServers = kept
 	}
+	// A heroArt that is no choice is dropped for the default, as the picture
+	// count is, so it never blocks a write. The older staticArt switch is
+	// migrated by normalize.
+	if settings.HeroArt != "" && !slices.Contains(heroArts, settings.HeroArt) {
+		slog.Warn("settings: hero picture dropped", "value", settings.HeroArt)
+		settings.HeroArt = ""
+	}
 	// The picture count is the player's to edit in the file as well: one that is
 	// no choice is dropped for the default, so it never blocks a write.
 	if n := settings.WikiPictures; n != nil && !slices.Contains(WikiPictureChoices, *n) {
@@ -184,6 +209,9 @@ func ValidateSettings(s models.AppSettings) error {
 	}
 	if exe := strings.TrimSpace(s.PrismExecutable); exe != "" && !filepath.IsAbs(exe) {
 		return fmt.Errorf("settings: prism executable %q must be an absolute path", exe)
+	}
+	if s.HeroArt != "" && !slices.Contains(heroArts, s.HeroArt) {
+		return fmt.Errorf("settings: hero picture %q is not one of %v", s.HeroArt, heroArts)
 	}
 	if s.MapIn != "" && !slices.Contains(mapIns, s.MapIn) {
 		return fmt.Errorf("settings: map location %q is not one of %v", s.MapIn, mapIns)
@@ -260,6 +288,13 @@ func normalize(s models.AppSettings) models.AppSettings {
 	s.ProfileName = strings.TrimSpace(s.ProfileName)
 	s.OfflineName = strings.TrimSpace(s.OfflineName)
 	s.LastChapter = strings.TrimSpace(s.LastChapter)
+	// The hero's picture choice replaced the older staticArt switch (issue 195):
+	// a file with the switch on and no choice of the new kind means "default".
+	// The old key is read and then cleared, so a save writes heroArt alone.
+	if s.HeroArt == "" && s.StaticArt {
+		s.HeroArt = HeroArtDefault
+	}
+	s.StaticArt = false
 	// What the app derives for the screen is not the player's to set.
 	s.LoadingSplashAvailable, s.LoadingSplashOn = false, false
 	if len(s.PackOverrides) > 0 {

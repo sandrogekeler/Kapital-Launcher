@@ -1,5 +1,5 @@
 import type { Chapter } from '../../types'
-import { selectSlide, useChapterStore } from '../../stores/useChapterStore'
+import { selectPanorama, selectSlide, useChapterStore } from '../../stores/useChapterStore'
 import {
   selectInstalled,
   selectInstancePack,
@@ -13,6 +13,7 @@ import { selectGame, useGameStore } from '../../stores/useGameStore'
 import { OpenChapterWiki, OpenExternal, OpenWikiPage } from '../../../wailsjs/go/main/App'
 import { errMsg } from '../../lib/ipc'
 import { packVersion } from '../../lib/packState'
+import { heroArtOf } from '../../lib/heroArt'
 import { Hero } from './Hero'
 import { ActionBar } from './ActionBar'
 import { Panels } from './Panels'
@@ -39,8 +40,11 @@ interface Props {
 export function ChapterView({ chapter, onOpenSettings, onOpenLogs, onOpenMap }: Props) {
   const slide = useChapterStore(selectSlide(chapter.id))
   const wikiPick = slide?.page
-  // The slideshow off shows the bundled art; the post still follows the slide.
-  const staticArt = useSettingsStore((s) => s.settings.staticArt ?? false)
+  // Only the slideshow shows the slide's picture, and only the panorama shows the
+  // cube; the other choices keep the chapter's own picture, and a chapter with no
+  // panorama read yet (or none at all) falls back to it. The post still follows the slide.
+  const heroArt = useSettingsStore((s) => heroArtOf(s.settings))
+  const panorama = useChapterStore(selectPanorama(chapter.id))
 
   const engine = useEngineStore((s) => s.engine)
   const launching = useEngineStore((s) => s.launching)
@@ -86,7 +90,8 @@ export function ChapterView({ chapter, onOpenSettings, onOpenLogs, onOpenMap }: 
     <>
       <Hero
         chapter={chapter}
-        art={staticArt ? undefined : slide?.art}
+        art={heroArt === 'slideshow' ? slide?.art : undefined}
+        panorama={heroArt === 'panorama' ? panorama : undefined}
         onOpenSettings={() => onOpenSettings(chapter.id)}
         onOpenLogs={() => onOpenLogs(chapter.id)}
         onOpenMap={openMap}

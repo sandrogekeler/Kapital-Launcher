@@ -132,6 +132,13 @@ export interface WikiShot {
   subject: string
 }
 
+/** A chapter's title-screen panorama (issue 195): the faces Go cached, served at these paths. */
+export interface Panorama {
+  chapterId: string
+  /** Six paths in the game's order: front, right, back, left, top, bottom. */
+  faces: string[]
+}
+
 /** What the settings screen needs to estimate the room the wiki pictures take (issue 172). */
 export interface WikiArtStats {
   /** The mean size of the pictures in the cache, about 100 KB while it holds none. */
@@ -341,13 +348,18 @@ export interface AppSettings {
   loadingSplashAvailable?: boolean
   /** Whether the next Play shows the splash: the effective value of loadingSplash on this OS. Derived, never saved. */
   loadingSplashOn?: boolean
-  /** The slideshow off (issue 142): each chapter shows its own bundled picture, with no timer. Absent is on. */
+  /** What the hero shows (issue 195): the wiki's pictures cycling, the chapter's own picture, or its turning panorama. Absent is the slideshow. */
+  heroArt?: HeroArt | string
+  /** The older switch for the slideshow off (issue 142). Go reads it once and turns it into heroArt; nothing here sets or reads it. */
   staticArt?: boolean
   /** How many wiki pictures each chapter's slideshow has (issue 172): 5, 10 or 20, 0 for all. Absent is 10. */
   wikiPictures?: number
   /** Where the hero's map tool opens a chapter's map (issue 161). Absent is the launcher's own page. */
   mapIn?: MapIn | string
 }
+
+/** What the hero shows behind a chapter: the slideshow, the chapter's own picture, or its panorama. */
+export type HeroArt = 'slideshow' | 'default' | 'panorama'
 
 /** Where a chapter's map opens: a page in the launcher, or the system browser. */
 export type MapIn = 'app' | 'browser'

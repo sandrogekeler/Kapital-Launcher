@@ -16,7 +16,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
-import { emitRevealValues } from './lib/emit-reveal.mjs'
+import { emitEffects, emitLayout } from './lib/emit-effects.mjs'
 
 const SOURCE = new URL('../../design/tokens.json', import.meta.url)
 const CSS_OUT = new URL('../src/styles/tokens.css', import.meta.url)
@@ -244,52 +244,6 @@ function emitThemeValues(src, push) {
   for (const [name, points] of Object.entries(src.motion.easing)) {
     push(`  --ease-${name}: cubic-bezier(${points.join(', ')});`)
   }
-  push(`}`)
-}
-
-function emitLayout(src, push) {
-  push(`/* Layout geometry is not a Tailwind namespace. Read it with the var()`)
-  push(`   shorthand, w-(--layout-sidebar), or from style.css. */`)
-  push(`:root {`)
-  const { unit } = src.layout
-  for (const k of ['sidebar', 'hero', 'titlebar', 'scrollbar', 'slide', 'drift', 'title']) {
-    push(`  --layout-${k}: ${src.layout[k]}${unit};`)
-  }
-  push(`  --layout-play-min: ${src.layout.playMin}${unit};`)
-  push(`  --layout-icon-sm: ${src.layout.icon.sm}${src.layout.unit};`)
-  push(`  --layout-icon-md: ${src.layout.icon.md}${src.layout.unit};`)
-  push(`  --layout-splash-width: ${src.layout.splash.width}${src.layout.unit};`)
-  push(`  --layout-splash-height: ${src.layout.splash.height}${src.layout.unit};`)
-  push(`  --layout-window-width: ${src.layout.window.width}${src.layout.unit};`)
-  push(`  --layout-window-height: ${src.layout.window.height}${src.layout.unit};`)
-  push(`}`)
-}
-
-function emitEffects(src, push) {
-  const { hoverBrightness, focusRing, scrim, accent, artPending, motionBlur, tileBlur, tileTint } =
-    src.effect
-  push(`/* Effects: values a utility cannot name on its own. Read by the shared`)
-  push(`   styles/base.css and by brightness-(--effect-hover-brightness). */`)
-  push(`:root {`)
-  push(`  --effect-hover-brightness: ${hoverBrightness};`)
-  push(`  --focus-ring-width: ${focusRing.width}px;`)
-  push(`  --focus-ring-offset: ${focusRing.offset}px;`)
-  push(`  --scrim-edge: ${scrim.edge}${scrim.unit};`)
-  push(`  --scrim-mid: ${scrim.mid}${scrim.unit};`)
-  push(`  --scrim-mid-at: ${scrim.midAt}${scrim.unit};`)
-  push(`  --scrim-far: ${scrim.far}${scrim.unit};`)
-  push(`  --scrim-wash: ${scrim.wash}${scrim.unit};`)
-  push(`  --scrim-tile: ${scrim.tile}${scrim.unit};`)
-  push(`  --accent-wash-mix: ${accent.wash}${accent.unit};`)
-  push(`  --accent-edge-mix: ${accent.edge}${accent.unit};`)
-  push(`  --art-pending-tint: ${artPending.tint}%;`)
-  push(`  --art-pending-line: ${artPending.line}%;`)
-  push(`  --art-pending-cell: ${artPending.cell}px;`)
-  push(`  --art-pending-cell-thumb: ${artPending.cellThumb}px;`)
-  push(`  --effect-motion-blur: ${motionBlur}px;`)
-  push(`  --effect-tile-blur: ${tileBlur}px;`)
-  push(`  --effect-tile-tint: ${tileTint}%;`)
-  emitRevealValues(src, push)
   push(`}`)
 }
 

@@ -41,6 +41,7 @@ type App struct {
 	// runs (issue 156); nil in a test that has no use for it.
 	syncCopy       *services.SyncCopy
 	wiki           *services.WikiService
+	panoramas      *services.PanoramaService
 	mojang         *services.MojangService
 	games          *services.GameTracker
 	splash         *services.SplashCard
@@ -120,6 +121,7 @@ func NewApp(dataDir string, manifest []byte, dist fs.FS) (*App, error) {
 		status:         services.NewStatusService(),
 		creator:        services.NewInstanceCreator(dataDir),
 		wiki:           services.NewWikiService(dataDir, m.Wiki.BaseURL).ForChapters(m.Chapters),
+		panoramas:      services.NewPanoramaService(dataDir),
 		mojang:         services.NewMojangService(dataDir),
 		openFolder:     services.OpenFolder,
 		frontendErrors: services.NewFrontendErrorLog(),
@@ -653,11 +655,11 @@ func (a *App) GetWikiArtStats() (models.WikiArtStats, error) {
 	return a.wiki.ArtStats(a.context()), nil
 }
 
-// assetMiddleware serves the cached wiki art and the player's cached face ahead
-// of the embedded build (main.go's AssetServer). Unexported, so Wails does not
-// bind it.
+// assetMiddleware serves the cached wiki art, the cached panoramas and the
+// player's cached face ahead of the embedded build (main.go's AssetServer).
+// Unexported, so Wails does not bind it.
 func (a *App) assetMiddleware(next http.Handler) http.Handler {
-	return a.wiki.ArtMiddleware(a.mojang.FaceMiddleware(next))
+	return a.panoramas.Middleware(a.wiki.ArtMiddleware(a.mojang.FaceMiddleware(next)))
 }
 
 // OpenWikiPage opens one of the pages GetWikiPages returned in the system

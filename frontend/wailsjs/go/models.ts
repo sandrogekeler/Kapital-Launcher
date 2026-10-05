@@ -15,6 +15,7 @@ export namespace models {
 	    loadingSplash?: boolean;
 	    loadingSplashAvailable?: boolean;
 	    loadingSplashOn?: boolean;
+	    heroArt?: string;
 	    staticArt?: boolean;
 	    wikiPictures?: number;
 	    mapIn?: string;
@@ -39,6 +40,7 @@ export namespace models {
 	        this.loadingSplash = source["loadingSplash"];
 	        this.loadingSplashAvailable = source["loadingSplashAvailable"];
 	        this.loadingSplashOn = source["loadingSplashOn"];
+	        this.heroArt = source["heroArt"];
 	        this.staticArt = source["staticArt"];
 	        this.wikiPictures = source["wikiPictures"];
 	        this.mapIn = source["mapIn"];
@@ -588,6 +590,20 @@ export namespace models {
 	        this.checked = source["checked"];
 	        this.upToDate = source["upToDate"];
 	        this.version = source["version"];
+	    }
+	}
+	export class Panorama {
+	    chapterId: string;
+	    faces: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Panorama(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.chapterId = source["chapterId"];
+	        this.faces = source["faces"];
 	    }
 	}
 	export class PhaseTime {

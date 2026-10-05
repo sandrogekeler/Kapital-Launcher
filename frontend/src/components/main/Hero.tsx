@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react'
 import type { Chapter } from '../../types'
 import { chapterArt, chapterTitleArt } from '../../lib/art'
 import { isPlaceholder, knownFacts } from '../../lib/manifest'
@@ -7,10 +8,21 @@ import { IconButton } from '../ui/IconButton'
 import { Pill } from '../ui/Pill'
 import { useLoadedImage } from '../../lib/useLoadedImage'
 
+// The turning cube is drawn only when the panorama is the chosen picture, so
+// its code loads then and stays out of the launcher's first paint and its bundle
+// budget (scripts/check-bundle-size.mjs).
+const PanoramaCube = lazy(() => import('./PanoramaCube').then((m) => ({ default: m.PanoramaCube })))
+
 interface Props {
   chapter: Chapter
   /** The slide's picture (issue 142); undefined shows the bundled art. */
   art?: string
+  /**
+   * The chapter's title-screen panorama (issue 195), six faces in the game's order, drawn as a
+   * turning cube over the picture; undefined, as before it has loaded or where the chapter has
+   * none, leaves the picture alone.
+   */
+  panorama?: readonly string[]
   /** Opens the chapter's own settings: memory and JVM preset (#36). */
   onOpenSettings: () => void
   /** Opens the chapter's logs and crash reports (issue 155). */
@@ -24,13 +36,15 @@ interface Props {
 /**
  * The chapter's picture, name and blurb. Art is the slide's picture from the
  * wiki, which drifts to the next one in place (issue 142), else the bundled
- * screenshot, else the accent grid. The hero takes whatever height the card has left above the
+ * screenshot, else the accent grid. With a panorama (issue 195) a turning cube
+ * covers the picture once its faces have loaded, under the same scrim. The hero takes whatever height the card has left above the
  * action bar and the panels, up to the layout token, so the card fits the
  * window without scrolling (#68).
  */
 export function Hero({
   chapter,
   art: slideArt,
+  panorama,
   onOpenSettings,
   onOpenLogs,
   onOpenMap,
@@ -57,6 +71,11 @@ export function Hero({
               draggable={false}
             />
           </Drift>
+          {panorama && panorama.length === 6 && (
+            <Suspense fallback={null}>
+              <PanoramaCube key={panorama[0]} faces={panorama} />
+            </Suspense>
+          )}
           <div className="scrim-hero absolute inset-0" aria-hidden />
         </>
       ) : (

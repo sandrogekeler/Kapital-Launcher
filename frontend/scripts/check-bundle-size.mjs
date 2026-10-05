@@ -52,7 +52,11 @@ import { ensureFreshDist } from './lib/dist-freshness.mjs'
 // follow-up): the sidebar's tile says Offline from the first paint, the settings
 // carry the offline pair, and the mod store knows which switches are locked.
 // Measured just over 89.2 KB, from 89.1 KB before them.
-const BUDGET_KB = 89.3
+// 89.8 since the hero panorama (2026-10-05, issue 195): the hero's choice of picture
+// (lib/heroArt), the panoramas the chapter store reads and the cube's lazy import
+// run from the first paint. The cube itself loads only when the panorama is chosen.
+// Measured 89.7 KB, from 89.3 KB before it.
+const BUDGET_KB = 89.8
 
 const DIST_ASSETS = await ensureFreshDist()
 const DIST = path.dirname(DIST_ASSETS)

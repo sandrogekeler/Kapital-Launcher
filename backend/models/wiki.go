@@ -35,6 +35,17 @@ type WikiShot struct {
 	Subject string `json:"subject"`
 }
 
+// Panorama is a chapter's title-screen panorama (issue 195), read from the
+// resources pack in the chapter's own instance and cached by the launcher.
+type Panorama struct {
+	// ChapterID is the manifest's chapter the six faces belong to.
+	ChapterID string `json:"chapterId"`
+	// Faces are the six pictures in the game's order (0 front, 1 right, 2 back,
+	// 3 left, 4 top, 5 bottom), each the launcher's own /panorama/ path, served
+	// from the cache.
+	Faces [6]string `json:"faces"`
+}
+
 // WikiArtStats is what the settings screen needs to say how much room a number
 // of wiki pictures per chapter takes (issue 172).
 type WikiArtStats struct {

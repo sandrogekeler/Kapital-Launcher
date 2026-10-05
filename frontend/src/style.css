@@ -404,6 +404,86 @@
   --art-pending-cell: var(--art-pending-cell-thumb);
 }
 
+/* The hero's panorama (issue 195, components/main/PanoramaCube): the six faces
+   of a chapter's title-screen background as a cube the camera sits inside, which
+   turns slowly about the vertical axis with the camera tilted a little down, as
+   the game's menu does. The scene fills the hero, which is the size container, so
+   the cube follows the hero's size in container units.
+   - The eye is at the cube's centre: CSS puts it at the perspective distance in
+     front of the scene, so the cube is moved that far forward (--panorama-reach).
+     A face then lies one reach away and the horizontal field of view is
+     --panorama-fov whatever the hero's size.
+   - A face's edge is two reaches, drawn a little larger (--panorama-bleed) so no
+     seam shows between two faces.
+   - The faces are the game's own order: 0 front, 1 right, 2 back, 3 left, 4 top,
+     5 bottom. A positive turn about the vertical axis brings the right face to
+     the front, so the view pans right through 0, 1, 2, 3 and the loop is seamless.
+   - The tilt is outside the turn, so the horizon stays level as it turns. */
+.panorama {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  container-type: size;
+}
+.panorama-scene {
+  --panorama-reach: calc(50cqw / tan(var(--panorama-fov) / 2));
+  --panorama-edge: calc(var(--panorama-reach) * 2);
+  position: absolute;
+  inset: 0;
+  perspective: var(--panorama-reach);
+}
+.panorama-cube {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  transform: translateZ(var(--panorama-reach)) rotateX(calc(-1 * var(--panorama-tilt)))
+    rotateY(0deg);
+  animation: panorama-turn var(--duration-panorama) linear infinite;
+  will-change: transform;
+}
+@keyframes panorama-turn {
+  from {
+    transform: translateZ(var(--panorama-reach)) rotateX(calc(-1 * var(--panorama-tilt)))
+      rotateY(0deg);
+  }
+  to {
+    transform: translateZ(var(--panorama-reach)) rotateX(calc(-1 * var(--panorama-tilt)))
+      rotateY(360deg);
+  }
+}
+.panorama-face {
+  --panorama-size: calc(var(--panorama-edge) * (1 + var(--panorama-bleed)));
+  --panorama-back: calc(var(--panorama-edge) / -2);
+  position: absolute;
+  top: calc(var(--panorama-size) / -2);
+  left: calc(var(--panorama-size) / -2);
+  width: var(--panorama-size);
+  height: var(--panorama-size);
+  max-width: none;
+  user-select: none;
+}
+.panorama-face[data-face='0'] {
+  transform: translateZ(var(--panorama-back));
+}
+.panorama-face[data-face='1'] {
+  transform: rotateY(-90deg) translateZ(var(--panorama-back));
+}
+.panorama-face[data-face='2'] {
+  transform: rotateY(180deg) translateZ(var(--panorama-back));
+}
+.panorama-face[data-face='3'] {
+  transform: rotateY(90deg) translateZ(var(--panorama-back));
+}
+.panorama-face[data-face='4'] {
+  transform: rotateX(-90deg) translateZ(var(--panorama-back));
+}
+.panorama-face[data-face='5'] {
+  transform: rotateX(90deg) translateZ(var(--panorama-back));
+}
+
 /* A range input in the house look (ui/RangeField): a pill track in the sunken
    ground with the line's edge, filled with the accent up to the value, and an
    accent thumb that brightens as the buttons do. WebView2 is Chromium, so the

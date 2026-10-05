@@ -313,6 +313,59 @@ describe('SettingsPanel previews', () => {
     Reflect.deleteProperty(window, 'go')
   })
 
+  describe('hero picture (issue 195)', () => {
+    beforeEach(() => {
+      vi.mocked(App.GetWikiArtStats).mockResolvedValue({ avgBytes: 102_400, pools: {} })
+      vi.mocked(App.GetWikiShots).mockResolvedValue([])
+    })
+    const show = () =>
+      render(<SettingsPanel onClose={() => undefined} onShowChapter={() => undefined} />)
+    const options = () =>
+      Array.from(
+        screen.getByRole('radiogroup', { name: 'Hero picture' }).querySelectorAll('[role=radio]'),
+      ).map((r) => r.textContent)
+
+    it('offers Slideshow, Default and Panorama, with the slideshow chosen by default, and no switch left', () => {
+      show()
+      expect(options()).toEqual(['Slideshow', 'Default', 'Panorama'])
+      expect(screen.getByRole('radio', { name: 'Slideshow' })).toBeChecked()
+      expect(screen.queryByRole('switch', { name: 'Picture slideshow' })).toBeNull()
+      expect(screen.getByRole('radiogroup', { name: 'Pictures per chapter' })).toBeInTheDocument()
+    })
+
+    it('saves the choice as heroArt', async () => {
+      show()
+      fireEvent.click(screen.getByRole('radio', { name: 'Panorama' }))
+      await waitFor(() =>
+        expect(App.SaveSettings).toHaveBeenCalledWith(
+          expect.objectContaining({ heroArt: 'panorama' }),
+        ),
+      )
+      expect(screen.getByRole('radio', { name: 'Panorama' })).toBeChecked()
+      expect(screen.getByText(/A chapter without one shows its own picture/)).toBeInTheDocument()
+    })
+
+    it('has pictures per chapter only for the slideshow', () => {
+      for (const heroArt of ['default', 'panorama']) {
+        useSettingsStore.setState({ settings: { ...DEFAULT_SETTINGS, heroArt } })
+        const { unmount } = show()
+        expect(
+          screen.getByRole('radio', { name: heroArt === 'default' ? 'Default' : 'Panorama' }),
+        ).toBeChecked()
+        expect(screen.queryByRole('radiogroup', { name: 'Pictures per chapter' })).toBeNull()
+        unmount()
+      }
+    })
+
+    it('shows a rejection under the control and keeps the old choice', async () => {
+      vi.mocked(App.SaveSettings).mockRejectedValueOnce('settings: hero picture "x"')
+      show()
+      fireEvent.click(screen.getByRole('radio', { name: 'Default' }))
+      await screen.findByText(/hero picture "x"/)
+      expect(screen.getByRole('radio', { name: 'Slideshow' })).toBeChecked()
+    })
+  })
+
   describe('pictures per chapter (issue 172)', () => {
     const stats = { avgBytes: 102_400, pools: { Luxemburg: 60, Frangfurd: 73, Lichdenstein: 4 } }
     beforeEach(() => {

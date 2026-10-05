@@ -9,7 +9,7 @@ Two reaches matter: **network** (a manifest, a pack index, a download, a server
 ping response) and **bridge** (a bound method on `App`, callable by anything
 that runs in the WebView).
 
-Bound methods on 2026-10-05: **48** (`grep -c '^func (a \*App) [A-Z]' app.go app_*.go`,
+Bound methods on 2026-10-05: **49** (`grep -c '^func (a \*App) [A-Z]' app.go app_*.go`,
 summed). A different count is new surface to classify: add the method to this table.
 
 | Method | Takes from the bridge | Reaches | Item |
@@ -35,6 +35,7 @@ summed). A different count is new surface to classify: add the method to this ta
 | `GetWikiPages` | nothing | one bounded GET of the wiki's lore export on the manifest's wiki host, cached in the app data dir | S2.3, S4.3 |
 | `GetWikiShots` | nothing | of the screenshots and page pictures the lore export lists, the number `wikiPictures` names per chapter, drawn by the local date: one bounded GET each of the drawn only, on the manifest's wiki host, kept only when the bytes are WebP, PNG or JPEG, cached in the app data dir and served at `/wiki-art/`; the rest of the cache is removed | S2.3, S4.3 |
 | `GetWikiArtStats` | nothing | the mean size of the files in the wiki-art cache and the pool sizes of the cached export, in memory; no request beyond the export `GetWikiPages` already makes | S2.3 |
+| `GetPanoramas` | nothing | per manifest chapter whose instance is present: the names in its game folder's `resourcepacks/`, then six files at one fixed path inside the first entry (a folder or `.zip`, name containing "resource") that holds them, each under 4 MiB, decoded as a PNG, square and of one size, and copied into the app data dir's `panorama/` and served at `/panorama/`; a zip's central directory only; nothing is written to the instance | S1.1 |
 | `OpenWikiPage` | a URL | the system browser, only for a URL `GetWikiPages` returned | S3.3 |
 | `GetChapterSettings` | a chapter id | four keys of the chapter's own `instance.cfg` | S1.1, S3.3 |
 | `GetPlayTime` | nothing | two keys, `totalTimePlayed` and `lastLaunchTime`, of the own `instance.cfg` of each installed manifest chapter, through `scanINIKeys`; nothing else of the file is read or logged | S1.1, S3.3 |
@@ -68,6 +69,14 @@ manifest instance id and, when present, scanned the same way for the one key
 never listed; a chapter's own instance folder, when present, is walked for
 its size on disk (#57), and that walk takes names and sizes from the
 directory entries, opens nothing, follows no symlink and stops at a ceiling.
+A chapter's panorama (issue 195, ADR-2 twelfth amendment) is the one read beyond
+those: the `resourcepacks/` folder of the chapter's own instance game folder is
+listed by name only, and in the first sorted entry whose name contains "resource"
+(a folder, or a `.zip` whose central directory alone is read) exactly six files at
+`assets/minecraft/textures/gui/title/background/panorama_0.png` to `panorama_5.png`
+are opened, through an `os.Root`, each under 4 MiB and decoded as a PNG; nothing
+else in a resource pack is opened. The copies are served at `/panorama/<chapter>/panorama_<n>.png`
+for GET and HEAD of that name shape only, through an `os.Root` on the cache.
 The pack state (#71) reads one value of the instance's `packwiz.json`, the
 synced `pack.toml`'s hash; the file list in it is dropped unread.
 The chapter's settings (#36) read four keys of that same `instance.cfg`
@@ -83,7 +92,11 @@ value that is not a non-negative integer reads as 0, and neither is logged.
 Verify: `grep -rn 'accounts\|token\|refresh' --include=*.go . | grep -v _test`;
 `grep -rn 'p.open(\|os.Open\|ReadFile' backend/services/instances.go` shows two opens,
 both through `scanINIKey`; `TestScanINIKeyKeepsOnlyThatKey`;
-`TestInstancesSumTheInstanceFolderSize`.
+`TestInstancesSumTheInstanceFolderSize`; `TestPanoramaFromAFolderPackIsCachedAndAddressed`,
+`TestPanoramaFromAZipPackReadsTheSixEntries`, `TestPanoramaPicksTheFirstSortedPackWithAResourceName`,
+`TestPanoramaRefusesWhatIsNotSixSquarePNGsOfOneSize`, `TestPanoramaZipRefusesAnOversizeEntry`,
+`TestPanoramaPackThatIsASymlinkOutOfTheFolderIsNotFollowed`, `TestPanoramaRouteName`,
+`TestPanoramaMiddlewareServesTheCachedFacesOnly`.
 Probe: a setting that points `PrismRoot` at a folder. Does anything read more
 than those two files, and more than one key from each? Does the size walk
 ever open a file or leave the instance folder?

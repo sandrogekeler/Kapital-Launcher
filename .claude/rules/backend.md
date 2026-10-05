@@ -232,6 +232,18 @@ name shapes only, reading through an `os.Root`. `GetWikiArtStats` gives the
 cache's mean picture size (100 KB while it is empty) and each era's pool size, for
 the settings screen's estimate.
 
+The panoramas (`panorama.go`, `app_panorama.go`, `GetPanoramas`, issue 195, ADR-2
+twelfth amendment) are the other read of a chapter's instance for a picture: the
+names in `<game folder>/resourcepacks/` (a folder or a `.zip` whose name contains
+"resource", the first sorted that holds all six faces), then six files at the
+vanilla `assets/minecraft/textures/gui/title/background/panorama_N.png` path
+through an `os.Root` (a zip's central directory only), each under 4 MiB, decoded
+as a PNG, square and of one size. Copies are cached in `panorama/<chapter id>/`
+keyed by the pack's name, sizes and times, and the route `/panorama/`
+(`PanoramaService.Middleware`) serves them for GET and HEAD of the exact name shape
+through an `os.Root`, ahead of the wiki art's route. The page asks on focus and
+after an install or a run, only while the panorama is the chosen picture.
+
 The player's profile (`mojang.go`, `app_mojang.go`, `GetPlayerProfile` and
 `CopyPlayerUUID`, issue 193, ADR-13) is the one lookup that sends something about
 the player off the machine: the profile name to `api.mojang.com`, then the UUID
