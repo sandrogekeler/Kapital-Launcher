@@ -58,6 +58,10 @@ export function GetPackStates() {
   return window['go']['main']['App']['GetPackStates']();
 }
 
+export function GetPlayTime() {
+  return window['go']['main']['App']['GetPlayTime']();
+}
+
 export function GetPreviewSituations() {
   return window['go']['main']['App']['GetPreviewSituations']();
 }
