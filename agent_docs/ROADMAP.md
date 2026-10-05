@@ -138,7 +138,8 @@ What is left:
 
 ## Download site
 
-A static page separate from the wiki, with Download, GitHub and Wiki buttons
+A static page separate from the wiki, with Download and GitHub buttons (the
+Wiki button was dropped on 2026-10-06)
 (ADR-9). Runs alongside the milestones; it waits on milestone 7 for a real
 download.
 

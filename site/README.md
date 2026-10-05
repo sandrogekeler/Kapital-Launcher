@@ -1,6 +1,6 @@
 # Download site
 
-One static page: what the launcher is, the Download, GitHub and Wiki buttons,
+One static page: what the launcher is, the Download and GitHub buttons,
 and under them the launcher window itself, cycling through its three
 chapters. It is separate from the Kapitel Kapital wiki and runs one small
 script, which only picks the operating system in the download popup.
@@ -57,7 +57,6 @@ chapter facts, is a change to this page in the same pull request.
 |---|---|---|
 | Download | `links.json` `release`, a tag | Shows "Download · coming soon", no popup |
 | GitHub | `links.json` `github` | Left out |
-| Wiki | `data/launcher.json` `wiki.baseUrl` | Never null; the build fails |
 
 `vite.config.js` fills them in at build time and refuses anything that is not
 https. `release` is a tag such as `v1.0.0-beta.1`, checked against
