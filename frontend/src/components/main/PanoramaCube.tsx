@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
+import { recallTurn, rememberTurn, startFace } from '../../lib/panorama'
 import { useReducedMotion } from '../../lib/useReducedMotion'
 
 interface Props {
   /** The six faces in the game's order: front, right, back, left, top, bottom. */
   faces: readonly string[]
+  /** Where the turn starts, in degrees (lib/panorama): something worth seeing first. */
+  start?: number
 }
 
 /**
@@ -16,9 +19,29 @@ interface Props {
  * Loaded lazily by the hero when the panorama is the chosen picture, so a
  * player who does not choose it never downloads the code.
  */
-export function PanoramaCube({ faces }: Props) {
+export function PanoramaCube({ faces, start = 0 }: Props) {
   const reduced = useReducedMotion()
-  const shown = reduced ? faces.slice(0, 1) : faces
+  const still = startFace(start)
+  const shown = reduced ? faces.slice(still, still + 1) : faces
+  // The start angle is the chapter's, so it reaches the CSS as a custom property set on the
+  // element, as RangeField sets its fill, and never through style.
+  const cube = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    cube.current?.style.setProperty('--panorama-start', `${start}deg`)
+  }, [start])
+  // The turn pauses when the chapter is left and goes on from there when it comes back: the
+  // CSS animation's time is kept by the first face's address and set again on the next mount.
+  const id = faces[0] ?? ''
+  useLayoutEffect(() => {
+    const turn = cube.current?.getAnimations?.()[0]
+    if (!turn) return
+    const at = recallTurn(id)
+    if (at !== undefined) turn.currentTime = at
+    return () => {
+      const now = turn.currentTime
+      if (typeof now === 'number') rememberTurn(id, now)
+    }
+  }, [id])
   const [loaded, setLoaded] = useState(0)
   const ready = loaded >= shown.length
   const fade = `transition-opacity duration-slow ease-standard ${ready ? 'opacity-100' : 'opacity-0'}`
@@ -37,7 +60,7 @@ export function PanoramaCube({ faces }: Props) {
   return (
     <div className={`panorama ${fade}`} aria-hidden>
       <div className="panorama-scene">
-        <div className="panorama-cube">
+        <div ref={cube} className="panorama-cube">
           {shown.map((src, face) => (
             <img
               key={face}

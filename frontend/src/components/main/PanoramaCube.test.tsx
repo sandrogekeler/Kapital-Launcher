@@ -76,8 +76,9 @@ describe('PanoramaCube', () => {
       'rotateX(90deg) translateZ(var(--panorama-back))',
     ])
     const turn = /@keyframes panorama-turn \{\s*from \{([^}]*)\}\s*to \{([^}]*)\}/.exec(css)!
-    expect(turn[1]).toContain('rotateY(0deg)')
-    expect(turn[2]).toContain('rotateY(360deg)')
+    // One whole turn from the chapter's start angle (lib/panorama).
+    expect(turn[1]).toContain('rotateY(var(--panorama-start, 0deg))')
+    expect(turn[2]).toContain('rotateY(calc(var(--panorama-start, 0deg) + 360deg))')
     // The tilt is outside the turn, down, so the horizon stays level.
     expect(turn[1]).toMatch(/rotateX\(calc\(-1 \* var\(--panorama-tilt\)\)\)\s*rotateY/)
   })
@@ -86,5 +87,24 @@ describe('PanoramaCube', () => {
     expect(css).toMatch(/animation: panorama-turn var\(--duration-panorama\) linear infinite/)
     expect(css).toContain('--panorama-reach: calc(50cqw / tan(var(--panorama-fov) / 2))')
     expect(css).toContain('(1 + var(--panorama-bleed))')
+  })
+
+  it('goes on from where its turn was when its chapter comes back, instead of starting over', () => {
+    const turn = { currentTime: 0 as number | null }
+    const real = HTMLElement.prototype.getAnimations
+    HTMLElement.prototype.getAnimations = function () {
+      return this.classList.contains('panorama-cube') ? [turn as unknown as Animation] : []
+    }
+    try {
+      const faces = Array.from({ length: 6 }, (_, n) => `/panorama/frangfurd/panorama_${n}.png?v=t`)
+      const first = render(<PanoramaCube faces={faces} />)
+      turn.currentTime = 42_000
+      first.unmount()
+      turn.currentTime = 0
+      render(<PanoramaCube faces={faces} />)
+      expect(turn.currentTime).toBe(42_000)
+    } finally {
+      HTMLElement.prototype.getAnimations = real
+    }
   })
 })

@@ -56,7 +56,11 @@ import { ensureFreshDist } from './lib/dist-freshness.mjs'
 // (lib/heroArt), the panoramas the chapter store reads and the cube's lazy import
 // run from the first paint. The cube itself loads only when the panorama is chosen.
 // Measured 89.7 KB, from 89.3 KB before it.
-const BUDGET_KB = 89.8
+// 90.1 since the panorama decodes before it draws (2026-10-05): the hero decodes a
+// panorama's faces in the background and says it is loading meanwhile, so a chapter
+// switch never waits on them (lib/panorama, the spinner glyph). Both run from the
+// first paint. Measured 90.0 KB, from 89.7 KB before it.
+const BUDGET_KB = 90.1
 
 const DIST_ASSETS = await ensureFreshDist()
 const DIST = path.dirname(DIST_ASSETS)

@@ -116,7 +116,7 @@ export function ModsSection({ chapter }: Props) {
             badge={
               t.blocked && (
                 <span className="border-warning text-warning rounded-pill text-2xs border px-2 font-normal">
-                  Needs {waitsFor(t) ?? 'another mod'}
+                  {waitsFor(t) ?? 'Another mod'} required
                 </span>
               )
             }

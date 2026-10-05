@@ -20,7 +20,7 @@ export function heroArtHint(choice: HeroArt): string {
     case 'default':
       return "Each chapter's own picture."
     case 'panorama':
-      return "The pack's title screen, turning slowly. A chapter without one shows its own picture."
+      return "The pack's title screen."
     default:
       return 'Pictures from the wiki, changing every minute.'
   }

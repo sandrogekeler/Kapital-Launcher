@@ -440,18 +440,18 @@
   height: 0;
   transform-style: preserve-3d;
   transform: translateZ(var(--panorama-reach)) rotateX(calc(-1 * var(--panorama-tilt)))
-    rotateY(0deg);
+    rotateY(var(--panorama-start, 0deg));
   animation: panorama-turn var(--duration-panorama) linear infinite;
   will-change: transform;
 }
 @keyframes panorama-turn {
   from {
     transform: translateZ(var(--panorama-reach)) rotateX(calc(-1 * var(--panorama-tilt)))
-      rotateY(0deg);
+      rotateY(var(--panorama-start, 0deg));
   }
   to {
     transform: translateZ(var(--panorama-reach)) rotateX(calc(-1 * var(--panorama-tilt)))
-      rotateY(360deg);
+      rotateY(calc(var(--panorama-start, 0deg) + 360deg));
   }
 }
 .panorama-face {

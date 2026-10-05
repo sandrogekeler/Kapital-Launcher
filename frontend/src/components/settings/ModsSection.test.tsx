@@ -87,7 +87,7 @@ describe('ModsSection', () => {
     expect(App.GetChapterMods).toHaveBeenCalledWith('frangfurd')
   })
 
-  it('greys out and locks a mod whose requirement is off, and says which (Colorwheel needs Iris)', async () => {
+  it('greys out and locks a mod whose requirement is off, and says which (Iris required)', async () => {
     const base = view([cw])
     vi.mocked(App.GetChapterMods).mockResolvedValue({
       ...base,
@@ -106,7 +106,7 @@ describe('ModsSection', () => {
     const colorwheel = await screen.findByRole('switch', { name: /Colorwheel/ })
     expect(colorwheel).toBeDisabled()
     expect(colorwheel).not.toBeChecked()
-    expect(screen.getByText('Needs Iris')).toBeInTheDocument()
+    expect(screen.getByText('Iris required')).toBeInTheDocument()
     expect(screen.getByRole('switch', { name: 'Iris' })).toBeEnabled()
   })
 

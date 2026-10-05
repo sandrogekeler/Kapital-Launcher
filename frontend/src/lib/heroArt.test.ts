@@ -19,8 +19,12 @@ describe('the hero picture choice (issue 195)', () => {
     expect(heroArtOf({ heroArt: '' })).toBe('slideshow')
   })
 
-  it('says what each choice is, with no em dash, and warns that a chapter may have no panorama', () => {
-    for (const { value } of HERO_ART_OPTIONS) expect(heroArtHint(value)).not.toMatch(/—/)
-    expect(heroArtHint('panorama')).toMatch(/without one shows its own picture/)
+  it('says what each choice is in one short line, with no em dash', () => {
+    for (const { value } of HERO_ART_OPTIONS) {
+      expect(heroArtHint(value)).not.toMatch(/—/)
+      // One line at the row's width, so the rows do not move as the choice changes.
+      expect(heroArtHint(value).length).toBeLessThanOrEqual(48)
+    }
+    expect(heroArtHint('panorama')).toBe("The pack's title screen.")
   })
 })

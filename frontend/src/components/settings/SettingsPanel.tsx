@@ -205,20 +205,19 @@ function AppearanceSection({ settings, errors, save }: SectionProps) {
           error={errors.heroArt}
           onChange={(heroArt) => void save('heroArt', { heroArt })}
         />
-        {/* Only the slideshow has pictures to count; the other two choices show
-            one picture per chapter, so the control is left out rather than dead. */}
-        {heroArt === 'slideshow' && (
-          /* What the choice weighs on disk is not something the label can say. */
-          <Segmented
-            inline
-            label="Pictures per chapter"
-            value={choiceOf(count)}
-            options={WIKI_PICTURES_OPTIONS}
-            hint={picturesHint(count, chapters, artStats)}
-            error={errors.wikiPictures}
-            onChange={(choice) => void save('wikiPictures', { wikiPictures: numberOf(choice) })}
-          />
-        )}
+        {/* Only the slideshow has pictures to count: with the other two the control stays in
+            its place, greyed out, so the rows do not move as the choice changes. What the
+            choice weighs on disk is not something the label can say. */}
+        <Segmented
+          inline
+          label="Pictures per chapter"
+          value={choiceOf(count)}
+          options={WIKI_PICTURES_OPTIONS}
+          hint={picturesHint(count, chapters, artStats)}
+          error={errors.wikiPictures}
+          disabled={heroArt !== 'slideshow'}
+          onChange={(choice) => void save('wikiPictures', { wikiPictures: numberOf(choice) })}
+        />
         <Segmented
           inline
           label="Open the map"
