@@ -136,7 +136,8 @@ export function RunReportPanel({ chapter, onClose }: Props) {
   return (
     <Page
       label={`${chapter.name} run report`}
-      title={`${chapter.name} run report`}
+      eyebrow={chapter.name}
+      title="Run report"
       onBack={onClose}
       ready={loaded}
     >

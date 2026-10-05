@@ -52,6 +52,7 @@ export function MapPanel({ chapter, onClose }: Props) {
       fill
       ready={status !== null}
       label={`${chapter.name} map`}
+      eyebrow={chapter.name}
       title="Map"
       onBack={onClose}
       actions={
