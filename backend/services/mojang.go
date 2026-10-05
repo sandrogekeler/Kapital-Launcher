@@ -49,10 +49,13 @@ const (
 	// mojangTimeout bounds each request, the connection included.
 	mojangTimeout = 8 * time.Second
 
-	mojangAPIBase      = "https://api.mojang.com"
-	mojangSessionBase  = "https://sessionserver.mojang.com"
-	mojangTexturesBase = "https://textures.minecraft.net"
+	// The three hosts ADR-13 names, and the https bases built from them.
+	mojangAPIHost      = "api.mojang.com"
+	mojangSessionHost  = "sessionserver.mojang.com"
 	mojangTexturesHost = "textures.minecraft.net"
+	mojangAPIBase      = "https://" + mojangAPIHost
+	mojangSessionBase  = "https://" + mojangSessionHost
+	mojangTexturesBase = "https://" + mojangTexturesHost
 
 	// Bounds on what is read (S4.3). A profile answer is under 300 bytes, a
 	// session profile a little over 1 KiB, a skin 1 to 10 KiB.

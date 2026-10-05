@@ -83,6 +83,7 @@ export function LogsPanel({ chapter, onClose }: Props) {
       fill
       ready={installed !== true || listError !== null || unavailable || logs !== null}
       label={`${chapter.name} logs`}
+      eyebrow={chapter.name}
       title="Logs"
       onBack={onClose}
       actions={

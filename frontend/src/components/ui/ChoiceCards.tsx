@@ -47,7 +47,9 @@ export function ChoiceCards<T extends string>({
 }: Props<T>) {
   const id = useId()
   const hasDetail = choices.some((c) => c.detail !== undefined)
-  const hasNote = choices.some((c) => c.note !== undefined)
+  // A note line is kept on every card only when some card has one to show, so a card whose
+  // notes are all empty stays one line and centred (issue 188).
+  const hasNote = choices.some((c) => !!c.note)
   const hasSlot = choices.some((c) => c.slot !== undefined)
   // The one card Tab stops at: the chosen one, or the first that can be picked
   // when nothing is chosen.

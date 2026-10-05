@@ -130,4 +130,21 @@ describe('ChoiceCards', () => {
     )
     expect(screen.getByRole('radio').querySelectorAll('.w-24')).toHaveLength(0)
   })
+
+  it('keeps no empty note line when no card has a note to show', () => {
+    render(
+      <ChoiceCards
+        label="Pack source"
+        value="a"
+        choices={[
+          { value: 'a', title: 'Published pack', detail: 'example.org', note: '' },
+          { value: 'b', title: 'Dev pack', detail: 'localhost:8080', note: '' },
+        ]}
+        onChange={() => undefined}
+      />,
+    )
+    for (const radio of screen.getAllByRole('radio')) {
+      expect(radio.querySelector('[id$="-note"]')).toBeNull()
+    }
+  })
 })
