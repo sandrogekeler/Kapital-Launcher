@@ -594,6 +594,24 @@ export namespace models {
 	        this.ms = source["ms"];
 	    }
 	}
+	export class PlayerProfile {
+	    name: string;
+	    uuid: string;
+	    faceSrc: string;
+	    status: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PlayerProfile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.uuid = source["uuid"];
+	        this.faceSrc = source["faceSrc"];
+	        this.status = source["status"];
+	    }
+	}
 	export class PreviewSituation {
 	    id: string;
 	    label: string;
