@@ -48,7 +48,11 @@ import { ensureFreshDist } from './lib/dist-freshness.mjs'
 // of the launcher's own beside the settings, from the bottom, both from the
 // first paint. The page itself loads on demand. Measured 89.1 KB, from 88.6 KB
 // before it.
-const BUDGET_KB = 89.2
+// 89.3 since Play offline and the Iris switch (2026-10-05, issues 192 and 156's
+// follow-up): the sidebar's tile says Offline from the first paint, the settings
+// carry the offline pair, and the mod store knows which switches are locked.
+// Measured just over 89.2 KB, from 89.1 KB before them.
+const BUDGET_KB = 89.3
 
 const DIST_ASSETS = await ensureFreshDist()
 const DIST = path.dirname(DIST_ASSETS)

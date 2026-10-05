@@ -7,6 +7,8 @@ import { Server } from '../../lib/icons'
 import { Segmented } from '../ui/Segmented'
 import { SettingsCard, SettingsSection } from '../ui/SettingsLayout'
 import { Toggle } from '../ui/Toggle'
+import { hasDistantHorizons } from '../../lib/distantHorizons'
+import { DistantHorizonsCard } from './DistantHorizonsCard'
 
 interface Props {
   chapter: Chapter
@@ -25,7 +27,8 @@ type Field = 'address' | 'join'
  * is off for every chapter until the player turns it on; on, Play reads Join
  * and Prism is started with the chosen address. Both save the moment they are
  * changed, through the settings store as the Settings screen does, and a
- * refusal from Go shows under its control with the old value back.
+ * refusal from Go shows under its control with the old value back. A chapter
+ * whose pack has Distant Horizons gets the world data card under it (issue 136).
  */
 export function ChapterServerSection({ chapter }: Props) {
   const settings = useSettingsStore((s) => s.settings)
@@ -77,6 +80,7 @@ export function ChapterServerSection({ chapter }: Props) {
           }
         />
       </SettingsCard>
+      {hasDistantHorizons(chapter) && <DistantHorizonsCard />}
     </SettingsSection>
   )
 }
