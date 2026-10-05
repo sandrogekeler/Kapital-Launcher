@@ -30,6 +30,8 @@ export function GetManifest():Promise<models.Manifest>;
 
 export function GetPackStates():Promise<Array<models.PackState>>;
 
+export function GetPanoramas():Promise<Array<models.Panorama>>;
+
 export function GetPreviewSituations():Promise<Array<models.PreviewSituation>>;
 
 export function GetPrismRelease():Promise<models.PrismRelease>;

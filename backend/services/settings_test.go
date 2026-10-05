@@ -144,6 +144,80 @@ func TestSettingsIgnoresTheOldHoldGameWindowKey(t *testing.T) {
 	}
 }
 
+// The hero's picture choice replaced the staticArt switch (issue 195): an old
+// file keeps working, and the next save writes the new key alone.
+func TestSettingsMigrateTheOldStaticArtSwitchToHeroArt(t *testing.T) {
+	cases := []struct {
+		name string
+		file string
+		want string
+	}{
+		{"switch on is default", `{"theme": "dark", "staticArt": true}`, HeroArtDefault},
+		{"switch off is nothing stored", `{"theme": "dark", "staticArt": false}`, ""},
+		{"neither is nothing stored", `{"theme": "dark"}`, ""},
+		{"a choice outranks the old switch", `{"theme": "dark", "staticArt": true, "heroArt": "panorama"}`, HeroArtPanorama},
+		{"a choice stands", `{"theme": "dark", "heroArt": "slideshow"}`, HeroArtSlideshow},
+		{"an unknown choice is dropped", `{"theme": "dark", "heroArt": "video"}`, ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, SettingsFileName), []byte(c.file), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			svc := NewSettingsService(dir)
+			got, err := svc.Load()
+			if err != nil || got.HeroArt != c.want || got.StaticArt {
+				t.Fatalf("got %+v, %v; want heroArt %q and staticArt cleared", got, err, c.want)
+			}
+			if err := svc.Save(got); err != nil {
+				t.Fatal(err)
+			}
+			raw, err := os.ReadFile(filepath.Join(dir, SettingsFileName))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(raw), "staticArt") {
+				t.Fatalf("a save writes the old key back: %s", raw)
+			}
+		})
+	}
+}
+
+func TestSettingsSaveMigratesAStaticArtThatComesBackFromAnOldPage(t *testing.T) {
+	svc := NewSettingsService(t.TempDir())
+	if err := svc.Save(models.AppSettings{Theme: "dark", StaticArt: true}); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := svc.Load(); err != nil || got.HeroArt != HeroArtDefault {
+		t.Fatalf("got %+v, %v", got, err)
+	}
+}
+
+func TestSettingsValidateTheHeroArt(t *testing.T) {
+	for _, ok := range []string{"", HeroArtSlideshow, HeroArtDefault, HeroArtPanorama} {
+		if err := ValidateSettings(models.AppSettings{Theme: "dark", HeroArt: ok}); err != nil {
+			t.Errorf("%q refused: %v", ok, err)
+		}
+	}
+	for _, bad := range []string{"Panorama", "video", "static", " "} {
+		if err := ValidateSettings(models.AppSettings{Theme: "dark", HeroArt: bad}); err == nil {
+			t.Errorf("%q accepted", bad)
+		}
+	}
+}
+
+func TestHeroArtDefaultsToTheSlideshow(t *testing.T) {
+	for stored, want := range map[string]string{
+		"": HeroArtSlideshow, "nonsense": HeroArtSlideshow,
+		HeroArtDefault: HeroArtDefault, HeroArtPanorama: HeroArtPanorama,
+	} {
+		if got := HeroArt(models.AppSettings{HeroArt: stored}); got != want {
+			t.Errorf("%q: got %q want %q", stored, got, want)
+		}
+	}
+}
+
 func TestSettingsLoadRefusesACorruptFile(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, SettingsFileName), []byte("{not json"), 0o600); err != nil {

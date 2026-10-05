@@ -53,9 +53,16 @@ type AppSettings struct {
 	// value rather than the file's.
 	LoadingSplashAvailable bool `json:"loadingSplashAvailable,omitempty"`
 	LoadingSplashOn        bool `json:"loadingSplashOn,omitempty"`
-	// StaticArt turns the slideshow off (#142): each chapter shows its own
-	// bundled picture, and the wiki's screenshots do not cycle. False, the
-	// default, cycles them.
+	// HeroArt is what the hero shows behind the chapter (issue 195): "slideshow",
+	// the wiki's pictures cycling (#142, the default, also when empty);
+	// "default", each chapter's own bundled picture; or "panorama", the
+	// chapter's title-screen panorama as a slowly turning cube, where the
+	// chapter has one (services.HeroArt).
+	HeroArt string `json:"heroArt,omitempty"`
+	// StaticArt is the older form of HeroArt, which was a switch for the
+	// slideshow off (#142). It is only read: a load turns true into
+	// HeroArt "default" when HeroArt is empty, and clears it, so a save never
+	// writes it back. Nothing else uses it.
 	StaticArt bool `json:"staticArt,omitempty"`
 	// WikiPictures is how many of the wiki's pictures each chapter's slideshow
 	// has (issue 172): 5, 10 or 20, or 0 for all of them. Nil means the default,
