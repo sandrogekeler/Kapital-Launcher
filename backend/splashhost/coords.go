@@ -29,6 +29,11 @@ type frame struct{ X, Y, W, H float64 }
 // wrong place on the screen, never off it.
 func appKitFrame(r Rect, visible frame) frame {
 	w, h := float64(r.W), float64(r.H)
+	if r.OnScreen {
+		// No place was given (#210): the middle of the visible frame, in the
+		// top left offsets the rest of this function inverts.
+		r.X, r.Y = int((visible.W-w)/2), int((visible.H-h)/2)
+	}
 	f := frame{
 		X: visible.X + float64(r.X),
 		Y: visible.Y + visible.H - float64(r.Y) - h,
@@ -36,6 +41,28 @@ func appKitFrame(r Rect, visible frame) frame {
 		H: h,
 	}
 	return clampInto(f, visible)
+}
+
+// placeOnScreen is where the card goes on a Windows desktop (#210): r as it is
+// when its centre lies on a monitor, else centred on primary, the primary
+// monitor's work area. monitorAt answers the work area of the monitor holding a
+// point, and ok false for a point on none, as a minimised window's parked
+// position (-32000, -32000) is. A card that is only half on a monitor keeps its
+// place: its centre is on it, so it can be reached and dragged. A caller with
+// no place to give (OnScreen) always gets the primary work area. A primary
+// that has no size (the system could not say) leaves r alone.
+func placeOnScreen(r Rect, monitorAt func(x, y int) (Rect, bool), primary Rect) Rect {
+	if primary.W <= 0 || primary.H <= 0 {
+		return r
+	}
+	if !r.OnScreen {
+		if _, ok := monitorAt(r.X+r.W/2, r.Y+r.H/2); ok {
+			return r
+		}
+	}
+	r.X, r.Y = primary.X+(primary.W-r.W)/2, primary.Y+(primary.H-r.H)/2
+	r.OnScreen = false
+	return r
 }
 
 // clampInto moves f, without resizing it, to lie inside bounds, rounded to

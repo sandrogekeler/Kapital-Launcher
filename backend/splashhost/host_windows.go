@@ -76,7 +76,9 @@ func (h *windowsHost) Open(rect Rect, page Page) error {
 		h.mu.Unlock()
 		return errors.New("the loading card window is used once")
 	}
-	c := newCard(rect, page)
+	// A card with no place to go to, or one whose place is on no monitor (the
+	// launcher minimised and parked off screen, #210), opens on the primary one.
+	c := newCard(placeOnScreen(rect, workAreaAt, primaryWorkArea()), page)
 	h.card = c
 	h.mu.Unlock()
 

@@ -17,12 +17,14 @@ import (
 // the calls, and whether the card's window was up when it was minimised.
 type fakeLauncher struct {
 	x, y, w, h     int
+	minimised      bool
 	calls          []string
 	hosts          func() []*splashhost.Fake
 	openAtMinimise bool
 }
 
 func (l *fakeLauncher) Frame() (int, int, int, int) { return l.x, l.y, l.w, l.h }
+func (l *fakeLauncher) Minimised() bool             { return l.minimised }
 func (l *fakeLauncher) Minimise() {
 	l.calls = append(l.calls, "minimise")
 	if hosts := l.hosts(); len(hosts) > 0 {
@@ -157,19 +159,39 @@ func TestCardRectCentresOnTheLauncherWherever(t *testing.T) {
 	cases := []struct {
 		name       string
 		x, y, w, h int
+		minimised  bool
 		want       splashhost.Rect
 	}{
-		{"on the first monitor", 100, 50, 1000, 700, splashhost.Rect{X: 100 + (1000-cw)/2, Y: 50 + (700-ch)/2, W: cw, H: ch}},
-		{"on a monitor to the left", -1920, 100, 1280, 800, splashhost.Rect{X: -1920 + (1280-cw)/2, Y: 100 + (800-ch)/2, W: cw, H: ch}},
-		{"a launcher smaller than the card", 10, 10, 400, 300, splashhost.Rect{X: 10 + (400-cw)/2, Y: 10 + (300-ch)/2, W: cw, H: ch}},
-		{"a window that cannot say", 0, 0, 0, 0, splashhost.Rect{W: cw, H: ch}},
+		{"on the first monitor", 100, 50, 1000, 700, false, splashhost.Rect{X: 100 + (1000-cw)/2, Y: 50 + (700-ch)/2, W: cw, H: ch}},
+		{"on a monitor to the left", -1920, 100, 1280, 800, false, splashhost.Rect{X: -1920 + (1280-cw)/2, Y: 100 + (800-ch)/2, W: cw, H: ch}},
+		{"a launcher smaller than the card", 10, 10, 400, 300, false, splashhost.Rect{X: 10 + (400-cw)/2, Y: 10 + (300-ch)/2, W: cw, H: ch}},
+		{"half off the monitor's right edge", 1500, 100, 900, 700, false, splashhost.Rect{X: 1500 + (900-cw)/2, Y: 100 + (700-ch)/2, W: cw, H: ch}},
+		{"a window that cannot say", 0, 0, 0, 0, false, splashhost.Rect{W: cw, H: ch, OnScreen: true}},
+		// Windows parks a minimised window here (seen 2026-10-05, #210): its
+		// frame is the position and size of the title bar it is reduced to.
+		{"minimised and parked", -32000, -32000, 160, 28, true, splashhost.Rect{W: cw, H: ch, OnScreen: true}},
+		{"minimised with its old frame", 100, 50, 1000, 700, true, splashhost.Rect{W: cw, H: ch, OnScreen: true}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := cardRect(c.x, c.y, c.w, c.h); got != c.want {
+			if got := cardRect(c.x, c.y, c.w, c.h, c.minimised); got != c.want {
 				t.Fatalf("got %v want %v", got, c.want)
 			}
 		})
+	}
+}
+
+// A launcher that is minimised when Play is pressed gets its card on the
+// screen, not where Windows parked it (#210): the host is asked to centre it.
+func TestBeginOnAMinimisedLauncherAsksForTheScreensMiddle(t *testing.T) {
+	f := newCardFixture("windows")
+	f.launcher.x, f.launcher.y, f.launcher.w, f.launcher.h = -32000, -32000, 160, 28
+	f.launcher.minimised = true
+	f.begin(t)
+
+	want := splashhost.Rect{W: design.SplashWidth, H: design.SplashHeight, OnScreen: true}
+	if got := f.host().Opens(); !reflect.DeepEqual(got, []splashhost.Rect{want}) {
+		t.Fatalf("opened at %v, want %v", got, want)
 	}
 }
 
