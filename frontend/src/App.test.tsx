@@ -499,7 +499,10 @@ describe('App', () => {
     await screen.findByRole('heading', { level: 1 })
     expect(screen.queryByText(/Not an official Minecraft product/)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
-    expect(await screen.findByText(/Not an official Minecraft product/)).toBeInTheDocument()
+    // The settings are a lazy chunk; under the full suite its first load can pass a second.
+    expect(
+      await screen.findByText(/Not an official Minecraft product/, {}, { timeout: 5000 }),
+    ).toBeInTheDocument()
   })
 
   it('lands a preview started in Settings on the chapter view, with its settings open beneath', async () => {
