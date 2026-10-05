@@ -21,8 +21,29 @@ import (
 func systemGameOS() gameOS {
 	return gameOS{
 		list: listProcesses, started: processStart, wait: waitProcess,
-		terminate: terminateProcess, askClose: closeWindows,
+		terminate: terminateProcess, askClose: closeWindows, image: processImage,
 	}
+}
+
+// processImage is the path of the executable a process runs, through
+// QueryFullProcessImageNameW on a handle opened with
+// PROCESS_QUERY_LIMITED_INFORMATION, which a process of the same user grants
+// whether or not it is elevated. False when the process has gone or will not
+// say. It is asked of processes named like Prism's executable only, to tell
+// the Prism the launcher runs from another program of that name (ADR-2,
+// thirteenth amendment); no command line or memory is read.
+func processImage(pid int) (string, bool) {
+	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
+	if err != nil {
+		return "", false
+	}
+	defer windows.CloseHandle(h) //nolint:errcheck // a process handle, nothing to flush
+	buf := make([]uint16, windows.MAX_LONG_PATH)
+	size := uint32(len(buf))
+	if err := windows.QueryFullProcessImageName(h, 0, &buf[0], &size); err != nil {
+		return "", false
+	}
+	return windows.UTF16ToString(buf[:size]), true
 }
 
 // wmClose asks a window to close, as its close button does.

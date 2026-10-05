@@ -58,6 +58,10 @@ func (a *App) SetPackSource(chapterID, source string) (models.InstanceReport, er
 	if err := a.refuseIfRunning(chapter, filepath.Dir(cfg)); err != nil {
 		return models.InstanceReport{}, err
 	}
+	// Prism has the old command in memory and writes it back (issue 209).
+	if err := a.refuseIfPrismOpen(chapter, engine.Executable); err != nil {
+		return models.InstanceReport{}, err
+	}
 	result, err := services.SwitchPackSource(cfg, a.syncExe(), to)
 	if err != nil {
 		slog.Warn("pack source not switched", "chapter", chapterID, "source", source, "error", err)

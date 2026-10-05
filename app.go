@@ -57,6 +57,11 @@ type App struct {
 	showInPrism func(engine models.EngineInfo, instanceID, root string) error
 	// openPrism opens Prism's main window (issue 192); a test swaps it.
 	openPrism func(engine models.EngineInfo, root string) error
+	// closeOwnPrism and prismOpenElsewhere are the two looks at Prism a write to
+	// instance.cfg takes (issue 209, app_chapters.go); nil uses the tracker's, and
+	// a test swaps them.
+	closeOwnPrism      func(chapterID string) bool
+	prismOpenElsewhere func(chapterID, exe string) (bool, error)
 	// emit, when set, takes the game:state events in place of the window; a
 	// test sets it. emitInstall does the same for prism:install.
 	emit        func(models.GameState)
@@ -551,6 +556,9 @@ func (a *App) SaveChapterSettings(chapterID string, settings models.ChapterSetti
 		return models.ChapterSettingsInfo{}, fmt.Errorf("chapter settings: %w", err)
 	}
 	if err := a.refuseIfRunning(chapter, filepath.Dir(cfg)); err != nil {
+		return models.ChapterSettingsInfo{}, err
+	}
+	if err := a.refuseIfPrismOpen(chapter, a.realEngine().Executable); err != nil {
 		return models.ChapterSettingsInfo{}, err
 	}
 	if err := services.WriteChapterSettings(cfg, settings); err != nil {

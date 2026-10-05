@@ -22,8 +22,27 @@ import (
 func systemGameOS() gameOS {
 	return gameOS{
 		list: listProcesses, started: processStart, wait: waitProcess,
-		terminate: terminateProcess, askClose: closeProcess,
+		terminate: terminateProcess, askClose: closeProcess, image: processImage,
 	}
+}
+
+// processImage is the path of the executable a process runs: the first string
+// of kern.procargs2, after the argument count (what proc_pidpath returns, with no
+// cgo). Only that string is taken, never the arguments or the environment that
+// follow it. False when the process has gone or will not say, as it will not for
+// another user's. It is asked of processes named like Prism's executable only
+// (ADR-2, thirteenth amendment). [verify] on a real Mac (#30): not run on one.
+func processImage(pid int) (string, bool) {
+	raw, err := unix.SysctlRaw("kern.procargs2", pid)
+	if err != nil || len(raw) <= 4 {
+		return "", false
+	}
+	rest := raw[4:] // the int32 argc
+	end := bytes.IndexByte(rest, 0)
+	if end <= 0 {
+		return "", false
+	}
+	return string(rest[:end]), true
 }
 
 // terminateProcess signals one process: SIGTERM, or SIGKILL when force. A

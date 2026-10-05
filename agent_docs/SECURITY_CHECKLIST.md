@@ -24,7 +24,7 @@ summed). A different count is new surface to classify: add the method to this ta
 | `InstallPrism` | nothing | download, verify and unpack Prism's official build | S4.5 |
 | `InstallChapter` | a chapter id | the manifest's instance and pack URL: one instance folder written into the Prism root | S3.3, S4.6 |
 | `LaunchChapter`, `OpenChapterWiki`, `GetServerStatus` | a chapter id | the manifest's instance, URL or address for it; before a launch, the one `PreLaunchCommand` key of the chapter's own `instance.cfg`, only from the launcher's earlier template | S3.3, S3.7, S4.6, S6.1 |
-| `SetPackSource` | a chapter id and `published` or `dev` | the one `PreLaunchCommand` key of the chapter's own `instance.cfg`, between the manifest's pack URL and the loopback override from settings, only from the launcher's own template; refused while the game is active | S3.3, S4.6 |
+| `SetPackSource` | a chapter id and `published` or `dev` | the one `PreLaunchCommand` key of the chapter's own `instance.cfg`, between the manifest's pack URL and the loopback override from settings, only from the launcher's own template; refused while the game is active or a Prism is open (the launcher's own is closed first) | S3.3, S3.9, S4.6 |
 | `StopGame` | a chapter id | the pid of the Prism the launcher started, or of the game's Java found as its child, for a run the tracker follows: asked to close, then ended | S3.3, S3.9 |
 | `OpenPrism` | nothing | Prism started with `[--dir <the engine's root>]` and nothing else, on its main window, where the player signs in; the started Prism is not followed and nothing of its accounts is read | S1.1, S3.1, S3.2 |
 | `ShowInstanceInPrism` | a chapter id | Prism started with `[--dir <root>] --show <the chapter's manifest instance id>` for an installed chapter whose game is not active, after a Prism left on that chapter's last console is closed as Play closes it; the started Prism is not followed | S3.1, S3.2, S3.3 |
@@ -39,7 +39,7 @@ summed). A different count is new surface to classify: add the method to this ta
 | `OpenWikiPage` | a URL | the system browser, only for a URL `GetWikiPages` returned | S3.3 |
 | `GetChapterSettings` | a chapter id | four keys of the chapter's own `instance.cfg` | S1.1, S3.3 |
 | `GetPlayTime` | nothing | two keys, `totalTimePlayed` and `lastLaunchTime`, of the own `instance.cfg` of each installed manifest chapter, through `scanINIKeys`; nothing else of the file is read or logged | S1.1, S3.3 |
-| `SaveChapterSettings` | a chapter id and a `ChapterSettings` | five keys rewritten in the chapter's own `instance.cfg`, held to the preset list, the machine's memory and, for the player's own Java arguments, `ValidateJVMArgs` (issue 191) | S3.2, S3.3, S4.6 |
+| `SaveChapterSettings` | a chapter id and a `ChapterSettings` | five keys rewritten in the chapter's own `instance.cfg`, held to the preset list, the machine's memory and, for the player's own Java arguments, `ValidateJVMArgs` (issue 191); refused while the game runs or a Prism is open (the launcher's own is closed first) | S3.2, S3.3, S3.9, S4.6 |
 | `GetRunLogs` | a chapter id | the names, times and sizes of `logs/latest.log`, `logs/*.log.gz` and `crash-reports/*.txt` in that chapter's instance game folder, listed through an `os.Root`; no file is opened | S3.3, S3.10 |
 | `ReadRunLog` | a chapter id, a kind (`log` or `crash`), a base name the listing produces and a byte offset | one chunk (at most 256 KiB, from a whole line) of one such file in that game folder, unpacked if `.log.gz` up to 256 MiB, redacted before it leaves Go; nothing written | S3.3, S3.10, S7.5 |
 | `GetChapterMods` | a chapter id | the file names, sizes and disabled state of the regular files directly in that chapter's instance `mods` folder, listed through an `os.Root`; when the game is not running, a left-over sync journal is recovered (jars in it that are still on the player's list are renamed to `.jar.disabled`) | S3.3, S3.11 |
@@ -391,11 +391,13 @@ chapter's next Play begins and when the launcher quits (bounded), and only while
 a console window of it is left; one with a game running is not touched. A run
 that held no console (splash off) still keeps its Prism's pid and exit channel
 on the chapter's record, and a Prism left alive after that run ended is closed
-the same way (issue 211); it is still only the pid the launcher started. On macOS it is `SIGTERM` and, five seconds
+the same way (issue 211); it is still only the pid the launcher started. The same close runs before the launcher writes `instance.cfg` (`SaveChapterSettings`, `SetPackSource`; `GameTracker.CloseOwnPrism`, issue 209), which Prism would overwrite from memory, and the exit is waited for. Any other Prism is only detected, never closed (`OtherPrismOpen`, `gametracker_prismopen.go`): the process list the tracker already reads (pid, parent pid, name) gains one read, the image path of a process whose name is Prism's executable's (Windows: `QueryFullProcessImageNameW` on a `PROCESS_QUERY_LIMITED_INFORMATION` handle; macOS: the first string of `kern.procargs2`, [verify]), compared with the resolved Prism executable. No command line, environment or memory is read, no path is logged, and the write is refused with a message to close Prism, not worked around. On macOS it is `SIGTERM` and, five seconds
 on, `SIGKILL`. The five seconds are judged on the run's steps, not slept on.
 Nothing is started, read or written to do it, and the pid is logged, never a
 window title.
-Verify: `TestStopAsksTheLaunchersPrismToCloseAndEndsWhenItExits`,
+Verify: `TestCloseOwnPrismClosesTheLaunchersPrismAndSaysWhetherItIsGone`,
+`TestAPrismTheLauncherDidNotStartIsNeverClosed`, `TestMatchPrismProcessesTellsThePrismOfTheExecutableFromEveryOtherProcess`,
+`TestStopAsksTheLaunchersPrismToCloseAndEndsWhenItExits`,
 `TestStopClosesThePrismLeftAfterTheGameAndEndsItIfItStays`,
 `TestStopLeavesAPrismThatQuitsWithItsGameAlone`,
 `TestAGameThatCrashedWithoutAStopLeavesPrismRunning`,

@@ -213,6 +213,20 @@ loopback override, under the same template check (ADR-2, seventh amendment).
 side: the list lives in settings (`disabledMods`), is validated against the mods
 folder, applied at once, and refused while the game runs.
 
+Prism keeps an instance's `instance.cfg` in memory and writes the whole file at a
+launch, on a settings save and on exit, so the launcher's writes to it (a settings
+save, `SetPackSource`, the pre-launch rewrite) are lost while a Prism has the
+instance loaded (issue 209, ADR-2 thirteenth amendment). `refuseIfPrismOpen`
+(`app_chapters.go`), after `refuseIfRunning`, closes the Prism the launcher
+started for the chapter (`GameTracker.CloseOwnPrism`: Stop's routine, the exit
+waited for) and refuses if it stays; then `GameTracker.OtherPrismOpen`
+(`gametracker_prismopen.go`) refuses while any other process runs from the
+engine's Prism executable, by name and by image path (`gameOS.image`,
+`gameproc_*.go`), telling the player to close Prism. It only looks: nothing it
+did not start is ended. `updatePreLaunch` does not refuse, it skips the rewrite
+with a log line while a Prism is open and leaves it for a later Play. Where the
+processes cannot be listed the write goes ahead as before.
+
 The map check (`maps.go`, `app_map.go`, `CheckChapterMap`, issue 161, ADR-4's
 third amendment) is the one network call for a chapter's web map: a GET of the
 address the manifest names for the chapter (a `*.tun.ply.gg` tunnel with a port,

@@ -48,6 +48,8 @@ type fakeProcs struct {
 	terms    []termCall
 	closeErr error
 	termErr  error
+	// images is the executable path a pid runs, for the processes that have one.
+	images map[int]string
 }
 
 // termCall is one terminate the tracker made.
@@ -120,6 +122,12 @@ func (f *fakeProcs) os() gameOS {
 			defer f.mu.Unlock()
 			f.terms = append(f.terms, termCall{pid, force})
 			return f.termErr
+		},
+		image: func(pid int) (string, bool) {
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			path, ok := f.images[pid]
+			return path, ok
 		},
 		askClose: func(pid int) error {
 			f.mu.Lock()
