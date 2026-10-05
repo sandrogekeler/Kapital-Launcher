@@ -36,8 +36,9 @@ It cycles through the chapters on CSS animations alone, in `src/showcase.css`,
 with the app's own motion: the card slides the way the content moves and
 blurs at the middle of its travel (`frontend/src/style.css`), the nav
 highlight glides to the next row in the same duration and easing, the row's
-art fades in behind it, and the glow behind the window and the Download
-button take the open chapter's colour. A chapter dwells for
+art fades in behind it, and the glow behind the window, the Download
+button and the popup's download buttons take the open chapter's colour, all
+from one animation on the page's root, so the popup never restarts the cycle. A chapter dwells for
 `motion.duration.dwell`, then the next slides in over `motion.duration.slow`;
 the keyframe stops in `showcase.css` are fractions of that cycle and say how
 to recompute them if either duration changes. With reduced motion the cards

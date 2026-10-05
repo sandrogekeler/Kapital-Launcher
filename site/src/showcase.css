@@ -147,24 +147,38 @@
 }
 
 /* The open chapter's colour, for what sits outside the window: the glow
-   behind it and the Download button above it. */
+   behind it, the Download button above it and the download buttons in the
+   popup. One clock for all of them: the colour is animated once, on the root,
+   as a registered property each of them reads. An animation on the element
+   itself restarts whenever the browser starts drawing it again, so the popup,
+   drawn only while open, and its two panels, swapped by display, would begin
+   the cycle at Frangfurd on every opening and every switch, out of step with
+   the page. Reading the root's colour, they show where the page is. */
+@property --showcase-accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
 @keyframes showcase-accent {
   0%,
   70%,
   100% {
-    background-color: var(--chapter-frangfurd);
+    --showcase-accent: var(--chapter-frangfurd);
   }
   3.333%,
   33.333% {
-    background-color: var(--chapter-luxemburg);
+    --showcase-accent: var(--chapter-luxemburg);
   }
   36.667%,
   66.667% {
-    background-color: var(--chapter-lichdenstein);
+    --showcase-accent: var(--chapter-lichdenstein);
   }
 }
-.showcase-accent {
+:root {
   animation: showcase-accent var(--showcase-cycle) var(--ease-glide) infinite;
+}
+.showcase-accent {
+  background-color: var(--showcase-accent);
 }
 
 /* With reduced motion the cards only cross-fade, on the same clock, and the
