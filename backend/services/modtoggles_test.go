@@ -24,19 +24,25 @@ func TestBundledManifestNamesTheQuickToggles(t *testing.T) {
 	if lic.ID != "lichdenstein" || fra.ID != "frangfurd" || len(m.Chapters[0].Pack.Toggles) != 0 {
 		t.Fatalf("chapters: %s %s", lic.ID, fra.ID)
 	}
-	if want := []models.ModToggle{toggle("Distant Horizons", "DistantHorizons-")}; !reflect.DeepEqual(lic.Pack.Toggles, want) {
+	if want := []models.ModToggle{toggle("Distant Horizons", "DistantHorizons-"), toggle("Iris", "iris-")}; !reflect.DeepEqual(lic.Pack.Toggles, want) {
 		t.Fatalf("Lichdenstein: %+v", lic.Pack.Toggles)
 	}
 	names := []string{}
 	for _, tg := range fra.Pack.Toggles {
 		names = append(names, tg.Name)
 	}
-	if want := []string{"Distant Horizons", "Colorwheel", "Colorwheel Patcher", "Create Better FPS"}; !reflect.DeepEqual(names, want) {
+	if want := []string{"Distant Horizons", "Iris", "Colorwheel", "Colorwheel Patcher", "Create Better FPS"}; !reflect.DeepEqual(names, want) {
 		t.Fatalf("Frangfurd: %q", names)
+	}
+	// Colorwheel declares Iris required in its neoforge.mods.toml (read from the
+	// jar, 2026-10-05), and the Patcher only patches shaders for Colorwheel.
+	if fra.Pack.Toggles[2].Requires != "iris-neoforge-" || fra.Pack.Toggles[3].Requires != "colorwheel-neoforge-" {
+		t.Fatalf("Frangfurd requires: %+v", fra.Pack.Toggles)
 	}
 	// Each matches exactly the one jar it is for, whichever version the pack has.
 	frangfurd := []string{
 		"DistantHorizons-3.3.3-1.21.1-fabric-neoforge.jar",
+		"iris-neoforge-1.8.14-beta.1+mc1.21.1.jar",
 		"colorwheel-neoforge-1.3.0+mc1.21.1.jar",
 		"colorwheel_patcher-neoforge-1.0.5+mc1.21.1.jar",
 		"createbetterfps-1.21.1-1.1.5.jar",
@@ -56,6 +62,9 @@ func TestBundledManifestNamesTheQuickToggles(t *testing.T) {
 	// And Lichdenstein's own, older Distant Horizons.
 	if !strings.HasPrefix("DistantHorizons-2.1.0-a-1.20.6-noForge.jar", lic.Pack.Toggles[0].JarPrefix) {
 		t.Error("Lichdenstein's Distant Horizons is not matched")
+	}
+	if !strings.HasPrefix("iris-1.7.2+mc1.20.6.jar", lic.Pack.Toggles[1].JarPrefix) {
+		t.Error("Lichdenstein's Iris is not matched")
 	}
 }
 
@@ -125,5 +134,58 @@ func TestParseManifestReadsToggles(t *testing.T) {
 	raw := strings.Replace(string(bundledManifest(t)), `"jarPrefix": "createbetterfps-"`, `"jarPrefix": "createbetterfps-", "command": "calc"`, 1)
 	if _, err := ParseManifest([]byte(raw)); err == nil {
 		t.Fatal("a toggle with a field this build does not know must be refused")
+	}
+}
+
+// Iris off takes Colorwheel off, and Colorwheel off takes the Patcher off, from
+// either list the page sends; a mod whose requirement is off is blocked.
+func TestWithRequiredOffTakesTheChainDown(t *testing.T) {
+	toggles := []models.ModToggle{
+		toggle("Iris", "iris-neoforge-"),
+		{Name: "Colorwheel", JarPrefix: "colorwheel-neoforge-", Requires: "iris-neoforge-"},
+		{Name: "Colorwheel Patcher", JarPrefix: "colorwheel_patcher-neoforge-", Requires: "colorwheel-neoforge-"},
+		toggle("Create Better FPS", "createbetterfps-"),
+	}
+	mods := []models.ModFile{
+		{Name: "colorwheel-neoforge-1.3.0+mc1.21.1.jar"},
+		{Name: "colorwheel_patcher-neoforge-1.0.5+mc1.21.1.jar"},
+		{Name: "createbetterfps-1.21.1-1.1.5.jar"},
+		{Name: "iris-neoforge-1.8.14-beta.1+mc1.21.1.jar"},
+	}
+	got := WithRequiredOff(toggles, mods, []string{"iris-neoforge-1.8.14-beta.1+mc1.21.1.jar"})
+	want := []string{"colorwheel-neoforge-1.3.0+mc1.21.1.jar", "colorwheel_patcher-neoforge-1.0.5+mc1.21.1.jar", "iris-neoforge-1.8.14-beta.1+mc1.21.1.jar"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("iris off: %q", got)
+	}
+	if got := WithRequiredOff(toggles, mods, []string{"colorwheel-neoforge-1.3.0+mc1.21.1.jar"}); len(got) != 2 {
+		t.Fatalf("colorwheel off takes the patcher only: %q", got)
+	}
+	if got := WithRequiredOff(toggles, mods, []string{"createbetterfps-1.21.1-1.1.5.jar"}); len(got) != 1 {
+		t.Fatalf("an independent mod takes nothing with it: %q", got)
+	}
+	// The states say which switches are locked.
+	marked := []models.ModFile{mods[0], mods[1], mods[2], {Name: mods[3].Name, Disabled: true}}
+	for _, s := range ModToggleStates(toggles, marked) {
+		wantBlocked := s.Name == "Colorwheel" || s.Name == "Colorwheel Patcher"
+		if s.Blocked != wantBlocked {
+			t.Errorf("%s blocked=%v", s.Name, s.Blocked)
+		}
+	}
+}
+
+func TestValidateTogglesRefusesARequirementThatIsNotAToggleOrLoops(t *testing.T) {
+	ok := []models.ModToggle{toggle("Iris", "iris-neoforge-"), {Name: "Colorwheel", JarPrefix: "colorwheel-neoforge-", Requires: "iris-neoforge-"}}
+	if err := validateToggles("frangfurd", ok); err != nil {
+		t.Fatal(err)
+	}
+	for name, bad := range map[string][]models.ModToggle{
+		"unknown":   {toggle("Iris", "iris-neoforge-"), {Name: "Colorwheel", JarPrefix: "colorwheel-neoforge-", Requires: "sodium-"}},
+		"itself":    {{Name: "Iris", JarPrefix: "iris-neoforge-", Requires: "iris-neoforge-"}},
+		"loop":      {{Name: "A", JarPrefix: "aaa-", Requires: "bbb-"}, {Name: "B", JarPrefix: "bbb-", Requires: "aaa-"}},
+		"long loop": {{Name: "A", JarPrefix: "aaa-", Requires: "bbb-"}, {Name: "B", JarPrefix: "bbb-", Requires: "ccc-"}, {Name: "C", JarPrefix: "ccc-", Requires: "aaa-"}},
+	} {
+		if err := validateToggles("x", bad); err == nil {
+			t.Errorf("%s: passed", name)
+		}
 	}
 }

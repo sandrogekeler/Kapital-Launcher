@@ -202,6 +202,31 @@ func validateToggles(where string, toggles []models.ModToggle) error {
 			}
 		}
 	}
+	// requires names another toggle of the chapter, never itself, and a chain
+	// of them ends: a mod cannot need itself through another.
+	prefixes := map[string]string{}
+	for _, t := range toggles {
+		prefixes[t.JarPrefix] = t.Requires
+	}
+	for i, t := range toggles {
+		if t.Requires == "" {
+			continue
+		}
+		at := fmt.Sprintf("%s.pack.toggles[%d]", where, i)
+		if _, ok := prefixes[t.Requires]; !ok || t.Requires == t.JarPrefix {
+			return fmt.Errorf("%s: requires %q is not another toggle's jarPrefix", at, t.Requires)
+		}
+		next := t.Requires
+		for range toggles {
+			if next == "" {
+				break
+			}
+			if next == t.JarPrefix {
+				return fmt.Errorf("%s: requires %q comes back to it", at, t.Requires)
+			}
+			next = prefixes[next]
+		}
+	}
 	return nil
 }
 
