@@ -47,6 +47,20 @@ export interface MapStatus {
   reason: string
 }
 
+/** How a profile name fared against Mojang's public lookup (ADR-13, issue 193). */
+export type PlayerStatus = 'found' | 'not_found' | 'unknown' | 'invalid'
+
+/** What Mojang's public profile endpoints say about the profile name; Go's models.PlayerProfile. */
+export interface PlayerProfile {
+  /** Mojang's own spelling of the name, "" unless found. */
+  name: string
+  /** The profile id with dashes, "" unless found. */
+  uuid: string
+  /** The launcher's own /mojang-face/ path for the face, "" when there is none. */
+  faceSrc: string
+  status: PlayerStatus
+}
+
 /** One way to reach a chapter's server, under the label settings offers (issue 151). */
 export interface ServerAddress {
   label: string

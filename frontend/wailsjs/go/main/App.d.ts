@@ -10,6 +10,8 @@ export function ChoosePrismRoot():Promise<string>;
 
 export function ClearPreviews():Promise<void>;
 
+export function CopyPlayerUUID():Promise<void>;
+
 export function CopyRedactedLog():Promise<number>;
 
 export function GetAppVersion():Promise<string>;
@@ -31,6 +33,8 @@ export function GetManifest():Promise<models.Manifest>;
 export function GetPackStates():Promise<Array<models.PackState>>;
 
 export function GetPlayTime():Promise<Array<models.PlayTime>>;
+
+export function GetPlayerProfile(arg1:string):Promise<models.PlayerProfile>;
 
 export function GetPreviewSituations():Promise<Array<models.PreviewSituation>>;
 

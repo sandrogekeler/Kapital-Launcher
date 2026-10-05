@@ -39,9 +39,6 @@ var (
 	prismInstanceID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
 	hostLabel       = regexp.MustCompile(`^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$`)
 	prismVersion    = regexp.MustCompile(`(\d+\.\d+(?:\.\d+)?)`)
-	// minecraftName is Minecraft's own rule for a Java Edition player name,
-	// which an offline name must meet (issue 192).
-	minecraftName = regexp.MustCompile(`^[A-Za-z0-9_]{3,16}$`)
 )
 
 // ErrPrismNotFound is returned when no Prism executable could be located.

@@ -164,5 +164,7 @@ download.
 - **Bundling or modifying Prism.** GPL-3.0 duties, and a fork cannot reuse
   Prism's client id. The app points at prismlauncher.org instead. (HANDOFF §5)
 - **Re-hosting mod jars.** Packs reference Modrinth or CurseForge downloads.
-- **Telemetry.** None. Outbound traffic is the site, Modrinth or CurseForge, and
-  whatever Prism itself contacts.
+- **Telemetry.** None. Outbound traffic is the site, Modrinth or CurseForge,
+  Mojang's public profile lookup for the account page (`api.mojang.com`,
+  `sessionserver.mojang.com`, `textures.minecraft.net`: the profile name, then
+  the UUID, ADR-13), and whatever Prism itself contacts.
