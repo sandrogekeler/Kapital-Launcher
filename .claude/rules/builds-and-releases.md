@@ -98,7 +98,15 @@ pins current.
 `build/windows/` and `build/darwin/` are the template's manifest and plist,
 which `wails build` reads and regenerates if deleted. The Windows `info.json`
 reads `wails.json`'s `info` block, which is where the company name, product
-name and the disclaimer comment come from.
+name and the disclaimer comment come from. Its string table is keyed `0409`
+(US English): winres reads the key as a hex language id, and Explorer and
+.NET's `FileVersionInfo` read the strings of the system's language, so the old
+`0000` key (neutral) showed none. The fixed file and product versions and the
+`FileVersion` and `ProductVersion` strings all take `info.productVersion`,
+which the release workflow stamps to the numeric part of the tag (`1.0.0` for
+`v1.0.0-beta.1`, which the installer's `VIProductVersion` needs), so a beta's
+Details tab says 1.0.0; the tag lives in the exe's `-X main.Version` and the
+About page.
 
 Linux builds need `-tags webkit2_41` on distributions on the 4.1 side of
 WebKitGTK; `wails doctor` says which.
