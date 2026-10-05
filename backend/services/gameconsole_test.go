@@ -548,3 +548,130 @@ func TestIsPrismConsoleTitleMatchesOnlyTheConsole(t *testing.T) {
 		}
 	}
 }
+
+// leftAliveWithoutSplash runs a start with the splash off to its end, a launch
+// that timed out, and returns the run: its Prism is still alive, as one left on
+// a console of its own is, and no console was held (issue 211).
+func leftAliveWithoutSplash(t *testing.T, r *gameRig, fc *fakeHoldConsole) *gameRun {
+	t.Helper()
+	run := r.begin()
+	run.holdPrismConsole()
+	if fc.callCount() != 0 {
+		t.Fatalf("the splash is off, nothing is held: %d", fc.callCount())
+	}
+	if c := r.tracker.console("frangfurd"); c == nil || c.holder != nil || c.pid != 100 {
+		t.Fatalf("the launcher's Prism is on the record all the same: %+v", c)
+	}
+	if !r.stepAfter(run, r.tracker.startTimeout+time.Second) || run.state.Phase != "failed" {
+		t.Fatalf("the start timed out: %s", run.state.Phase)
+	}
+	run.finish()
+	return run
+}
+
+// closeWhenAsked makes the Prism on the channel exit once the OS routine has
+// been asked to close it, as a Prism that takes the request does.
+func closeWhenAsked(r *gameRig, prism chan struct{}) {
+	go func() {
+		for len(r.procs.closed()) == 0 {
+			time.Sleep(time.Millisecond)
+		}
+		close(prism)
+	}()
+}
+
+// The next Play closes a Prism the last start left alive with no console held,
+// by its pid, with Stop's routine, and the record goes with it.
+func TestTheNextPlayClosesAPrismLeftAliveAfterARunWithTheSplashOff(t *testing.T) {
+	r, fc := consoleRig(t, false)
+	leftAliveWithoutSplash(t, r, fc)
+	if r.tracker.consoleAvailable("frangfurd") {
+		t.Fatal("no console was held, so none is offered")
+	}
+	if shown, err := r.tracker.ShowConsole("frangfurd"); shown || err != nil {
+		t.Fatalf("nothing to show: %v, %v", shown, err)
+	}
+	closeWhenAsked(r, r.prism)
+	r.tracker.CloseConsole("frangfurd")
+	if got := r.procs.closed(); !reflect.DeepEqual(got, []int{100}) {
+		t.Fatalf("the Prism the launcher started is asked to close: %v", got)
+	}
+	if got := r.procs.terminated(); len(got) != 0 {
+		t.Fatalf("it closed in time: %v", got)
+	}
+	if r.tracker.console("frangfurd") != nil {
+		t.Fatal("the record is released")
+	}
+}
+
+func TestTheNextPlayEndsAPrismLeftAliveWithTheSplashOffThatIgnoresTheClose(t *testing.T) {
+	r, fc := consoleRig(t, false)
+	leftAliveWithoutSplash(t, r, fc)
+	r.procs.closeErr = errors.New("no visible window")
+	r.tracker.CloseConsole("frangfurd")
+	if got := r.procs.terminated(); !reflect.DeepEqual(got, []termCall{{100, true}}) {
+		t.Fatalf("by its pid, forcibly, once: %v", got)
+	}
+}
+
+// The same step through a run's own order: it closes the Prism the last one
+// left behind before it records its own.
+func TestARunAfterOneWithTheSplashOffClosesTheOldPrismAndRecordsTheNew(t *testing.T) {
+	r, fc := consoleRig(t, false)
+	leftAliveWithoutSplash(t, r, fc)
+	oldPrism := r.prism
+	r.prism = make(chan struct{})
+	closeWhenAsked(r, oldPrism)
+	r.start()
+	until(t, "the new record", func() bool {
+		c := r.tracker.console("frangfurd")
+		return c != nil && c.exited == (<-chan struct{})(r.prism)
+	})
+	if got := r.procs.closed(); !reflect.DeepEqual(got, []int{100}) {
+		t.Fatalf("the old Prism was closed: %v", got)
+	}
+}
+
+func TestAPrismThatExitedByItselfIsNotTouchedAtTheNextPlay(t *testing.T) {
+	r, fc := consoleRig(t, false)
+	leftAliveWithoutSplash(t, r, fc)
+	close(r.prism)
+	until(t, "the record to be released", func() bool { return r.tracker.console("frangfurd") == nil })
+	r.tracker.CloseConsole("frangfurd")
+	if len(r.procs.closed()) != 0 || len(r.procs.terminated()) != 0 {
+		t.Fatalf("nothing is alive: closed %v, ended %v", r.procs.closed(), r.procs.terminated())
+	}
+}
+
+// A Prism whose run is still going has a game the player is in: quitting the
+// launcher leaves it, and closes one left after its run.
+func TestShutdownLeavesThePrismOfARunStillGoingWithTheSplashOffAndClosesOneLeftAfterIt(t *testing.T) {
+	r, _ := consoleRig(t, false)
+	run := r.begin()
+	run.holdPrismConsole()
+	r.tracker.Shutdown()
+	if len(r.procs.closed()) != 0 || len(r.procs.terminated()) != 0 {
+		t.Fatalf("a running game's Prism is not the launcher's to close: %v %v", r.procs.closed(), r.procs.terminated())
+	}
+
+	r, fc := consoleRig(t, false)
+	leftAliveWithoutSplash(t, r, fc)
+	r.tracker.Shutdown()
+	if got := r.procs.terminated(); !reflect.DeepEqual(got, []termCall{{100, true}}) {
+		t.Fatalf("the leftover is closed at quit: %v", got)
+	}
+}
+
+// With the console hook unable to start the record is still made.
+func TestTheRecordIsMadeWhenTheConsoleCannotBeHeldToo(t *testing.T) {
+	r, fc := consoleRig(t, true)
+	fc.err = errors.New("no hook for you")
+	run := r.begin()
+	run.holdPrismConsole()
+	if c := r.tracker.console("frangfurd"); c == nil || c.holder != nil {
+		t.Fatalf("a record with no holder: %+v", c)
+	}
+	if r.tracker.consoleAvailable("frangfurd") {
+		t.Fatal("nothing is held")
+	}
+}
