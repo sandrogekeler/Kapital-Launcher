@@ -171,6 +171,8 @@ type gameRig struct {
 	prismRoot string
 	// onHandover is TrackRequest.OnHandover for the requests the rig makes.
 	onHandover func()
+	// onConsoleHeld is TrackRequest.OnConsoleHeld for the requests the rig makes.
+	onConsoleHeld func()
 	// activity counts the OS activities the tracker takes and ends.
 	activity *activityCount
 
@@ -222,16 +224,17 @@ func newGameRig(t *testing.T) *gameRig {
 
 func (r *gameRig) request() TrackRequest {
 	return TrackRequest{
-		ChapterID:   "frangfurd",
-		InstanceDir: r.log.dir,
-		Prism:       PrismProcess{PID: 100, Exited: r.prism},
-		PrismExe:    "/Prism/prismlauncher.exe",
-		StartedAt:   r.play,
-		Before:      SnapshotGameLog(r.log.dir),
-		PrismRoot:   r.prismRoot,
-		PrismLog:    SnapshotPrismLog(r.prismRoot),
-		HoldWindow:  r.hold,
-		OnHandover:  r.onHandover,
+		ChapterID:     "frangfurd",
+		InstanceDir:   r.log.dir,
+		Prism:         PrismProcess{PID: 100, Exited: r.prism},
+		PrismExe:      "/Prism/prismlauncher.exe",
+		StartedAt:     r.play,
+		Before:        SnapshotGameLog(r.log.dir),
+		PrismRoot:     r.prismRoot,
+		PrismLog:      SnapshotPrismLog(r.prismRoot),
+		HoldWindow:    r.hold,
+		OnHandover:    r.onHandover,
+		OnConsoleHeld: r.onConsoleHeld,
 	}
 }
 

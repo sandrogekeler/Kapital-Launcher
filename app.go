@@ -327,6 +327,9 @@ func (a *App) LaunchChapter(chapterID string) error {
 		// On Windows the card closes once the game has the foreground, not
 		// before; macOS closes it at the game's window phase (Observe).
 		track.OnHandover = func() { a.splash.Handover(chapterID) }
+		// A failed start ends from Prism's log before Prism opens its console;
+		// the card's report is told when the hold catches it (#208).
+		track.OnConsoleHeld = func() { a.splash.ConsoleHeld(chapterID) }
 	}
 	if err := a.games.Track(a.trackContext(), track); err != nil {
 		slog.Warn("track game", "chapter", chapterID, "error", err)

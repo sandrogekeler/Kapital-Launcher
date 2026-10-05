@@ -4,6 +4,7 @@ package services
 
 import (
 	"io"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -28,7 +29,7 @@ func holdConsoleOfChild(t *testing.T, title string) (*glfwChild, ConsoleHolder, 
 	child.await(t, "created")
 	hwnd := theWindow(t, child.cmd.Process.Pid)
 
-	holder, err := HoldPrismConsole(child.cmd.Process.Pid)
+	holder, err := HoldPrismConsole(child.cmd.Process.Pid, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +128,8 @@ func TestPrismConsoleHoldSweepsAConsoleThatWasAlreadyVisible(t *testing.T) {
 	hwnd := theWindow(t, pid)
 	until(t, "the child's window to show", func() bool { return windows.IsWindowVisible(hwnd) })
 
-	holder, err := HoldPrismConsole(pid)
+	var heldCalls atomic.Int32
+	holder, err := HoldPrismConsole(pid, func() { heldCalls.Add(1) })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,6 +137,7 @@ func TestPrismConsoleHoldSweepsAConsoleThatWasAlreadyVisible(t *testing.T) {
 	// The sweep runs on the hook thread right after the hook is in and counts
 	// its hide once it is queued; the child takes it a moment later.
 	until(t, "the sweep", func() bool { return holder.Hides() >= 1 })
+	until(t, "the first held window to be reported", func() bool { return heldCalls.Load() == 1 })
 	until(t, "the sweep's hide to land", func() bool { return !windows.IsWindowVisible(hwnd) })
 	if holder.Held() != 1 {
 		t.Fatalf("held %d", holder.Held())
@@ -142,7 +145,7 @@ func TestPrismConsoleHoldSweepsAConsoleThatWasAlreadyVisible(t *testing.T) {
 }
 
 func TestPrismConsoleHoldRefusesWhatItCannotHold(t *testing.T) {
-	if _, err := HoldPrismConsole(0); err == nil {
+	if _, err := HoldPrismConsole(0, nil); err == nil {
 		t.Fatal("pid 0 is no process")
 	}
 }

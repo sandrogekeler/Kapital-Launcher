@@ -69,7 +69,7 @@ func (r *gameRun) holdPrismConsole() {
 		return
 	}
 	r.t.CloseConsole(r.req.ChapterID)
-	h, err := r.t.holdConsole(r.req.Prism.PID)
+	h, err := r.t.holdConsole(r.req.Prism.PID, r.consoleHeld)
 	if err != nil {
 		if r.t.consoleWarned.CompareAndSwap(false, true) {
 			slog.Warn("prism console cannot be held", "chapter", r.req.ChapterID, "error", err)
@@ -82,6 +82,18 @@ func (r *gameRun) holdPrismConsole() {
 	r.t.consoles[r.req.ChapterID] = c
 	r.t.mu.Unlock()
 	go r.t.watchConsole(r.req.ChapterID, c)
+}
+
+// consoleHeld is the holder's call when its first window is held: Prism's
+// console has appeared. On Windows a run usually ends from Prism's log a moment
+// before that, so the card's run report, built at the end, said the console was
+// not there (#208); the request's OnConsoleHeld lets it say so now. It is called
+// from the hook thread, so the request's call is made on a goroutine of its own.
+func (r *gameRun) consoleHeld() {
+	slog.Info("prism console held", "chapter", r.req.ChapterID)
+	if r.req.OnConsoleHeld != nil {
+		go r.req.OnConsoleHeld()
+	}
 }
 
 // watchConsole lets the hook go when the Prism does: a Prism that has exited

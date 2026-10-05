@@ -97,6 +97,19 @@ source: the launch log is never written to a file).
   and the card's fourth action, `showConsole`. Showing ends the hook first, or
   it would hide the window again as it is shown, then shows the held windows
   and gives them the foreground.
+- **The card's button follows the console, not the run's end (#208).** Since
+  Prism's own log ends a failed run (ADR-2 fifth amendment) it does so about
+  0.4 s before Prism opens its console (seen 2026-10-05: failed at 23:02:21.040,
+  console held at 23:02:21.45), so the report the card builds when the run ends
+  said `consoleAvailable` false and was never built again. The holder is given
+  an `onHeld` call, made once when its first window is held, which the tracker
+  turns into `TrackRequest.OnConsoleHeld` and the app into `SplashCard.ConsoleHeld`.
+  For a card that is up, shows an end and has a report, that sets the report's
+  `consoleAvailable` and pushes the card again; a card the player left, a run the
+  player stopped (it has no report) and a start still in progress are left alone.
+  A console that comes first is read as before when the report is built. No
+  polling, and nothing changes in the page, which already draws the button from
+  the report.
 - **A second failure signal.** A console hidden while the run is still in
   `starting` with no game log of its own is a launch step having failed, and
   ends the run `failed`, reason `launch`, after a second for Prism's own log to

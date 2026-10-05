@@ -124,6 +124,11 @@ type TrackRequest struct {
 	// because minimising first hands the foreground elsewhere. It runs on the
 	// tracker's own goroutine or one it starts, and may be nil.
 	OnHandover func()
+	// OnConsoleHeld is called once, when Prism's console is first held, which
+	// is the console appearing (gametracker_console.go). The card hears of it
+	// here, for a run that has ended before it. It runs on its own goroutine
+	// and may be nil.
+	OnConsoleHeld func()
 }
 
 // GameTracker follows each launched chapter from Play to the game's end: the
@@ -145,7 +150,8 @@ type GameTracker struct {
 	holdDialogs func(pid int) (DialogHolder, error)
 	// holdConsole starts keeping that Prism's console window hidden, past the
 	// run's end (gametracker_console.go); injected likewise.
-	holdConsole func(pid int) (ConsoleHolder, error)
+	// It is given the call to make once the first window is held.
+	holdConsole func(pid int, onHeld func()) (ConsoleHolder, error)
 	// activity tells the OS the tracker is doing work the player asked for, so
 	// a launcher that is minimised and has no window up is not napped, and
 	// returns the call that says it is done. A no-op off macOS; injected so a

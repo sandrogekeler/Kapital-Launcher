@@ -127,7 +127,12 @@ per-chapter record in the tracker (`gametracker_console.go`), where it also is
 the second failure signal (a console seen while the start waits, with no game
 log of its own, ends the run `failed` with the reason `launch`, after a second
 for Prism's own log to give a better one), and `consoleAvailable` in the run
-report. `ShowPrismConsole` and the card's `showConsole` action end the hook and
+report. The card's copy of that report is refreshed when the console appears
+after the run ended (#208): Prism's log ends a failed run a moment before Prism
+opens its console, so the holder's `onHeld` (called once, at its first held
+window) reaches `TrackRequest.OnConsoleHeld` and `SplashCard.ConsoleHeld`, which
+sets `consoleAvailable` on the card's report and pushes the card again, for a
+card that is up with an end and a report only. `ShowPrismConsole` and the card's `showConsole` action end the hook and
 show the windows. A Prism left alive on a console is the launcher's to close,
 with Stop's routine plus `WM_CLOSE` to the hold's own (hidden) windows: when the
 next Play of the chapter begins, on Stop and when the launcher quits
