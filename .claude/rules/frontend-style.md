@@ -84,6 +84,6 @@ The manifest writes an unsettled fact as `[PLACEHOLDER]` or `null`.
 ## Stores
 
 One per domain (`useChapterStore`, `useEngineStore`, `useSettingsStore`,
-`useServerStore`, `useGameStore`); a
+`useServerStore`, `useGameStore`, and the account page's `usePlayerStore`); a
 component reads with a selector and never reaches into another store's data.
 `.claude/rules/ipc.md` has the rejection rules.

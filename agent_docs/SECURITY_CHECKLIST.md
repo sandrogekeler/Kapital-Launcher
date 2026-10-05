@@ -45,6 +45,8 @@ summed). A different count is new surface to classify: add the method to this ta
 | `WatchLiveLog` | a chapter id | the same chunk of `logs/latest.log` as `ReadRunLog` (at most 256 KiB, redacted), and a follower of that one file in that game folder, which emits what is appended as `log:live` events (at most 64 KiB each, redacted); one follower at a time, ended by the app's shutdown; nothing written | S3.3, S3.10, S7.5 |
 | `StopLiveLog` | a chapter id | the follower of that chapter's log, ended; nothing else | S3.3, S3.10 |
 | `CheckChapterMap` | a chapter id | one GET (5 s, no redirect followed, body dropped after 4 KiB) of the address the manifest names as that chapter's `map`, a playit tunnel with a port; nothing is kept, and a chapter with no map makes no request | S2.2, S5.4 |
+| `GetPlayerProfile` | a profile name, checked against `^[A-Za-z0-9_]{3,16}$` before any request | up to three bounded GETs on Mojang's public hosts (the name to `api.mojang.com`, the UUID it returned to `sessionserver.mojang.com`, a hash it named to `textures.minecraft.net`), the face cut from the skin and cached in the app data dir's `mojang/` and served at `/mojang-face/`; every outcome is a status, never an error | S1.1, S4.8 |
+| `CopyPlayerUUID` | nothing | the UUID of the latest found profile, held in Go, to the clipboard through Wails' `ClipboardSetText` | S4.8 |
 | `GetPreviewSituations` | nothing | the fixed list of developer previews, in memory | none |
 | `StartPreview`, `ClearPreviews` | a chapter id and a situation name, which must be one of the fixed list (`services.PreviewSituations`) | state and copy only: a synthetic `game:state`, the real loading card with a made-up report, synthetic pack, instance, engine and release answers, and a made-up Prism install that never reaches the installer. No file, process, URL or network request; a real launch, game event or write to the chapter ends the preview | S3.3, S3.8, S4.5 |
 
@@ -584,6 +586,47 @@ pack.toml, a local pack serve, the concurrency bound) and
 Probe: a changelog 65 KiB long; `"entries"` holding a `<script>` line, a
 right-to-left override or an ANSI escape; `changelog.json` redirecting to
 another host; a pack URL `.../pack.toml?x=../..`.
+
+**S4.8 The player's profile is asked of three Mojang hosts, with the name and then the UUID, and only a face is kept.**
+Holds when: (a) `GetPlayerProfile` checks the name against
+`^[A-Za-z0-9_]{3,16}$` before any request, so nothing else is put in a URL, and
+Mojang's answer must be a 32-hex id and the same name (case aside) or it is
+dropped; (b) the three hosts are fixed (`api.mojang.com`,
+`sessionserver.mojang.com`, `textures.minecraft.net`), each request is a GET
+with the launcher's User-Agent, 8 s, no redirect followed and a body read to a
+cap (4 KiB, 32 KiB, 256 KiB); (c) the skin address from the textures property
+is held by `skinHash` to the exact host `textures.minecraft.net`, no port,
+credentials or query, a lower-case hex `/texture/<hash>` path, and the request
+is made to `https://textures.minecraft.net/texture/<hash>` built from the hash
+alone, whatever scheme or text Mojang wrote; (d) the skin must sniff as PNG
+and be 64x64 or 64x32 by `png.DecodeConfig` before its pixels are decoded, and
+only a re-encoded 64x64 face is kept; (e) the cache is `mojang/` in the app
+data dir (`lookup.json` and `<uuid>.png`, owner-only, one profile at a time),
+used for 24 hours, and removed for a name Mojang does not know; (f) the page
+reaches the face only at `/mojang-face/<32 hex>.png` through
+`FaceMiddleware`, GET and HEAD, one name shape, read through an `os.Root`,
+re-sniffed as PNG, `nosniff`, so the CSP stays `img-src 'self'`; (g) no error
+reaches the page for an unreachable Mojang, no request's address (which holds
+the name) is logged, and the log carries the status alone; (h) `CopyPlayerUUID`
+takes no argument and copies the UUID Go found. No token, cookie or account
+file of Prism's is involved (S1.1).
+Verify: `TestMojangProfileFindsTheUUIDAndCutsTheFace`,
+`TestMojangProfileRefusesAnInvalidNameWithoutAsking`,
+`TestMojangProfileNotFoundOn404And204AndForgets`, `TestMojangProfileUnknownWhenOffline`,
+`TestMojangProfileUsesTheCacheForADayThenKeepsItOffline`,
+`TestMojangProfileForADifferentNameReplacesTheCache`,
+`TestMojangProfileWithoutAFaceStaysFoundWithNoFaceSrc`,
+`TestMojangLookupRefusesAnAnswerForAnotherNameOrABadID`, `TestMojangFollowsNoRedirect`,
+`TestMojangBodiesAreBounded`, `TestSkinHashAcceptsOnlyTexturesMinecraftNet`,
+`TestFaceFromSkinHatAndLegacyRules`, `TestMojangFaceMiddlewareServesOnlyTheCachedFace`,
+`TestMojangCopyUUIDHandsOverTheLatestFoundProfile`,
+`TestGetPlayerProfileRefusesAnInvalidNameWithAStatusAndNoError`,
+`TestCopyPlayerUUIDRefusesWithoutAFoundProfileAndUsesTheClipboard`.
+Probe: a name of `../x` or `a?b=c`; a lookup answering another name or a short
+id; a session profile whose skin is on `evil.example`, on
+`textures.minecraft.net.evil.example` or at `/texture/../x`; a skin that is a
+GIF, 300 KiB or 4000x4000; any of the three hosts answering with a redirect;
+`/mojang-face/../lookup.json`.
 
 ## S5. WebView
 
