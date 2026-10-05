@@ -85,6 +85,11 @@
                     "type": "string",
                     "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]{2,63}$",
                     "description": "The part of the jar's file name before its version, separator included: DistantHorizons- for DistantHorizons-3.3.3-1.21.1-fabric-neoforge.jar. A prefix, never a path or a pattern."
+                  },
+                  "requires": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]{2,63}$",
+                    "description": "The jarPrefix of another toggle of this chapter that this mod needs to load (Colorwheel needs Iris). With that one off, this one is off too and cannot be turned on. A chain of them must end."
                   }
                 }
               }

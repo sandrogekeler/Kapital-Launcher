@@ -231,7 +231,7 @@ func ListMods(gameDir string) ([]models.ModFile, error) {
 func ModToggleStates(toggles []models.ModToggle, mods []models.ModFile) []models.ModToggleState {
 	states := make([]models.ModToggleState, 0, len(toggles))
 	for _, t := range toggles {
-		s := models.ModToggleState{Name: t.Name, JarPrefix: t.JarPrefix, Jars: []string{}}
+		s := models.ModToggleState{Name: t.Name, JarPrefix: t.JarPrefix, Requires: t.Requires, Jars: []string{}}
 		all := true
 		for _, mod := range mods {
 			if !strings.HasPrefix(mod.Name, t.JarPrefix) {
@@ -243,7 +243,76 @@ func ModToggleStates(toggles []models.ModToggle, mods []models.ModFile) []models
 		s.Disabled = len(s.Jars) > 0 && all
 		states = append(states, s)
 	}
+	off := map[string]bool{}
+	for _, s := range states {
+		off[s.JarPrefix] = s.Disabled
+	}
+	for i := range states {
+		states[i].Blocked = requiredOff(toggles, off, states[i].Requires)
+	}
 	return states
+}
+
+// requiredOff walks a toggle's requires chain and says whether any toggle on it
+// is off. The manifest refuses a chain that loops (validateToggles); the walk is
+// bounded by the number of toggles all the same.
+func requiredOff(toggles []models.ModToggle, off map[string]bool, prefix string) bool {
+	for range toggles {
+		if prefix == "" {
+			return false
+		}
+		if off[prefix] {
+			return true
+		}
+		next := ""
+		for _, t := range toggles {
+			if t.JarPrefix == prefix {
+				next = t.Requires
+			}
+		}
+		prefix = next
+	}
+	return false
+}
+
+// WithRequiredOff adds to a chapter's disabled list the jars of every toggle
+// whose required toggle is off by that list, directly or through another
+// (issue 156's follow-up: Colorwheel requires Iris, and NeoForge refuses to start
+// a game with Colorwheel and no Iris). It is applied to whatever the page sends,
+// the quick switches and the advanced list alike, so the mods folder never holds
+// a mod whose requirement is switched off. The result is sorted, without repeats.
+func WithRequiredOff(toggles []models.ModToggle, mods []models.ModFile, disabled []string) []string {
+	set := make(map[string]bool, len(disabled))
+	for _, name := range disabled {
+		set[name] = true
+	}
+	marked := make([]models.ModFile, len(mods))
+	for {
+		for i, m := range mods {
+			marked[i] = models.ModFile{Name: m.Name, Disabled: set[m.Name], Size: m.Size}
+		}
+		grew := false
+		for _, s := range ModToggleStates(toggles, marked) {
+			if !s.Blocked {
+				continue
+			}
+			for _, jar := range s.Jars {
+				if !set[jar] {
+					set[jar] = true
+					grew = true
+				}
+			}
+		}
+		if !grew {
+			break
+		}
+	}
+	out := make([]string, 0, len(set))
+	for name := range set {
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // ValidateDisabledMods holds a list from the bridge to what a disabled list may

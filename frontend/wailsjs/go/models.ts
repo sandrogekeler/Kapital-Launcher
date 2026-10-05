@@ -123,6 +123,7 @@ export namespace models {
 	export class ModToggle {
 	    name: string;
 	    jarPrefix: string;
+	    requires?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ModToggle(source);
@@ -132,6 +133,7 @@ export namespace models {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.jarPrefix = source["jarPrefix"];
+	        this.requires = source["requires"];
 	    }
 	}
 	export class Pack {
@@ -251,6 +253,8 @@ export namespace models {
 	export class ModToggleState {
 	    name: string;
 	    jarPrefix: string;
+	    requires?: string;
+	    blocked: boolean;
 	    jars: string[];
 	    disabled: boolean;
 	
@@ -262,6 +266,8 @@ export namespace models {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.jarPrefix = source["jarPrefix"];
+	        this.requires = source["requires"];
+	        this.blocked = source["blocked"];
 	        this.jars = source["jars"];
 	        this.disabled = source["disabled"];
 	    }
