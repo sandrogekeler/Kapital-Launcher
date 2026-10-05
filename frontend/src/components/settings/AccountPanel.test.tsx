@@ -1,10 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
+import { BUNDLED_MANIFEST } from '../../lib/manifest'
+import { useEngineStore } from '../../stores/useEngineStore'
+import { usePlayerStore } from '../../stores/usePlayerStore'
 import { DEFAULT_SETTINGS, useSettingsStore } from '../../stores/useSettingsStore'
 import { AccountPanel } from './AccountPanel'
 
 vi.mock('../../../wailsjs/go/main/App')
+
+const FOUND = {
+  name: 'Snadrochka',
+  uuid: '069a79f4-44e9-4726-a5be-fca90e38aaf5',
+  faceSrc: '/mojang-face/069a79f444e94726a5befca90e38aaf5.png?v=1',
+  status: 'found',
+} as const
+const NOT_FOUND = { name: '', uuid: '', faceSrc: '', status: 'not_found' } as const
 
 describe('AccountPanel', () => {
   beforeEach(() => {
@@ -12,6 +23,9 @@ describe('AccountPanel', () => {
     // A real backend answers: rejections revert and show (.claude/rules/ipc.md).
     Object.assign(window, { go: {} })
     vi.mocked(App.SaveSettings).mockResolvedValue()
+    vi.mocked(App.GetPlayTime).mockResolvedValue([])
+    useEngineStore.setState({ playTimes: {} })
+    usePlayerStore.getState().clear()
     useSettingsStore.setState({
       settings: { ...DEFAULT_SETTINGS, profileName: 'Snadrochka' },
       loaded: true,
@@ -73,6 +87,120 @@ describe('AccountPanel', () => {
     expect(screen.getByText(/never sees the account/)).toBeInTheDocument()
   })
 
+  it('turns offline on with the profile name, and shows the name field only then', async () => {
+    render(<AccountPanel onClose={() => undefined} />)
+    expect(screen.queryByLabelText('Offline name')).toBeNull()
+    expect(screen.queryByText('Online servers refuse an offline player.')).toBeNull()
+    expect(screen.getByText('Microsoft account · via Prism')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('switch', { name: 'Play offline' }))
+    await waitFor(() =>
+      expect(App.SaveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ offline: true, offlineName: 'Snadrochka' }),
+      ),
+    )
+    expect(await screen.findByLabelText('Offline name')).toHaveValue('Snadrochka')
+    expect(screen.getByText('Online servers refuse an offline player.')).toBeInTheDocument()
+    expect(screen.getByText('Offline', { selector: 'span' })).toBeInTheDocument()
+    expect(screen.queryByText('Microsoft account · via Prism')).toBeNull()
+  })
+
+  it('saves an offline name on Enter and turns offline off again', async () => {
+    useSettingsStore.setState({
+      settings: {
+        ...DEFAULT_SETTINGS,
+        profileName: 'Snadrochka',
+        offline: true,
+        offlineName: 'Steve',
+      },
+    })
+    render(<AccountPanel onClose={() => undefined} />)
+    const field = screen.getByLabelText('Offline name')
+    fireEvent.change(field, { target: { value: ' Alex_01 ' } })
+    fireEvent.keyDown(field, { key: 'Enter' })
+    await waitFor(() =>
+      expect(App.SaveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ offline: true, offlineName: 'Alex_01' }),
+      ),
+    )
+    fireEvent.click(screen.getByRole('switch', { name: 'Play offline' }))
+    await waitFor(() =>
+      expect(App.SaveSettings).toHaveBeenLastCalledWith(
+        expect.objectContaining({ offline: false }),
+      ),
+    )
+    expect(screen.queryByLabelText('Offline name')).toBeNull()
+  })
+
+  it('opens the name field first when there is no name to start from', async () => {
+    useSettingsStore.setState({ settings: { ...DEFAULT_SETTINGS, profileName: '' } })
+    render(<AccountPanel onClose={() => undefined} />)
+    fireEvent.click(screen.getByRole('switch', { name: 'Play offline' }))
+    const field = await screen.findByLabelText('Offline name')
+    expect(App.SaveSettings).not.toHaveBeenCalled()
+    fireEvent.change(field, { target: { value: 'Steve' } })
+    fireEvent.keyDown(field, { key: 'Enter' })
+    await waitFor(() =>
+      expect(App.SaveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ offline: true, offlineName: 'Steve' }),
+      ),
+    )
+  })
+
+  it("shows Go's refusal under the switch and puts it back off", async () => {
+    vi.mocked(App.SaveSettings).mockRejectedValueOnce(
+      'settings: offline name "x" is not a Minecraft name',
+    )
+    useSettingsStore.setState({
+      settings: { ...DEFAULT_SETTINGS, profileName: 'Snadrochka', offlineName: 'x' },
+    })
+    render(<AccountPanel onClose={() => undefined} />)
+    fireEvent.click(screen.getByRole('switch', { name: 'Play offline' }))
+    expect(await screen.findByText(/is not a Minecraft name/)).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Play offline' })).not.toBeChecked()
+  })
+
+  it('lists each chapter with its time, share and last play, and the total', async () => {
+    const [first, second, third] = BUNDLED_MANIFEST.chapters
+    const now = Date.now()
+    vi.mocked(App.GetPlayTime).mockResolvedValue([
+      { chapterId: first!.id, totalSeconds: 3 * 3600, lastLaunchMs: now },
+      {
+        chapterId: second!.id,
+        totalSeconds: 1 * 3600 + 20 * 60,
+        lastLaunchMs: now - 3 * 86_400_000,
+      },
+    ])
+    render(<AccountPanel onClose={() => undefined} />)
+    await waitFor(() => expect(App.GetPlayTime).toHaveBeenCalledOnce())
+    expect(await screen.findByText('4 h 20 min')).toBeInTheDocument()
+    expect(screen.getByText('3 h')).toBeInTheDocument()
+    expect(screen.getByText('1 h 20 min')).toBeInTheDocument()
+    expect(screen.getByText('Last played today')).toBeInTheDocument()
+    expect(screen.getByText('Last played 3 days ago')).toBeInTheDocument()
+    expect(screen.getByText('Not installed')).toBeInTheDocument()
+    const row = screen.getByText(first!.name).closest('[data-chapter]')
+    expect(row).toHaveAttribute('data-chapter', first!.id)
+    expect(screen.getByText(third!.name).closest('[data-chapter]')).toHaveAttribute(
+      'data-chapter',
+      third!.id,
+    )
+    // The bar's share is a custom property, 3 of 4 h 20 min.
+    expect(
+      row
+        ?.querySelector<HTMLElement>('[class*="w-(--play-share)"]')
+        ?.style.getPropertyValue('--play-share'),
+    ).toBe('69%')
+  })
+
+  it('reads the play time again when the window regains focus', async () => {
+    render(<AccountPanel onClose={() => undefined} />)
+    await waitFor(() => expect(App.GetPlayTime).toHaveBeenCalledTimes(1))
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'))
+    })
+    await waitFor(() => expect(App.GetPlayTime).toHaveBeenCalledTimes(2))
+  })
+
   it('closes on Back and on Escape', async () => {
     const onClose = vi.fn()
     render(<AccountPanel onClose={onClose} />)
@@ -81,5 +209,91 @@ describe('AccountPanel', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
     expect(onClose).toHaveBeenCalledTimes(2)
+  })
+
+  describe('the Mojang lookup', () => {
+    it('shows the face, the UUID and "Found on Mojang" for a profile Mojang knows', async () => {
+      vi.mocked(App.GetPlayerProfile).mockResolvedValue(FOUND as never)
+      render(<AccountPanel onClose={() => undefined} />)
+      const face = await screen.findByRole('img', { name: "Snadrochka's skin" })
+      expect(face).toHaveAttribute('src', FOUND.faceSrc)
+      expect(screen.queryByText('S', { selector: 'span' })).toBeNull()
+      expect(screen.getByText(FOUND.uuid)).toBeInTheDocument()
+      expect(screen.getByRole('status')).toHaveTextContent('Found on Mojang')
+      expect(App.GetPlayerProfile).toHaveBeenCalledExactlyOnceWith('Snadrochka')
+    })
+
+    it('copies the UUID through Go and opens the skin page through OpenExternal', async () => {
+      vi.mocked(App.GetPlayerProfile).mockResolvedValue(FOUND as never)
+      vi.mocked(App.CopyPlayerUUID).mockResolvedValueOnce()
+      vi.mocked(App.OpenExternal).mockResolvedValueOnce()
+      render(<AccountPanel onClose={() => undefined} />)
+      fireEvent.click(await screen.findByRole('button', { name: 'Copy UUID' }))
+      await waitFor(() => expect(App.CopyPlayerUUID).toHaveBeenCalledOnce())
+      expect(await screen.findByRole('button', { name: 'UUID copied' })).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: 'Change skin' }))
+      expect(App.OpenExternal).toHaveBeenCalledExactlyOnceWith(
+        'https://www.minecraft.net/msaprofile/mygames/editskin',
+      )
+    })
+
+    it('says so when Go cannot copy the UUID', async () => {
+      vi.mocked(App.GetPlayerProfile).mockResolvedValue(FOUND as never)
+      vi.mocked(App.CopyPlayerUUID).mockRejectedValueOnce('copy UUID: clipboard busy')
+      render(<AccountPanel onClose={() => undefined} />)
+      fireEvent.click(await screen.findByRole('button', { name: 'Copy UUID' }))
+      expect(await screen.findByText('copy UUID: clipboard busy')).toBeInTheDocument()
+    })
+
+    it('says no profile has a name Mojang does not know, and keeps the initials', async () => {
+      vi.mocked(App.GetPlayerProfile).mockResolvedValue(NOT_FOUND as never)
+      render(<AccountPanel onClose={() => undefined} />)
+      expect(await screen.findByText('No Minecraft profile has this name')).toBeInTheDocument()
+      expect(screen.getByText('S', { selector: 'span' })).toBeInTheDocument()
+      expect(screen.queryByRole('img')).toBeNull()
+      expect(screen.queryByText('Found on Mojang')).toBeNull()
+    })
+
+    it('says nothing, and keeps the initials, when Mojang cannot be reached', async () => {
+      vi.mocked(App.GetPlayerProfile).mockResolvedValue({
+        name: '',
+        uuid: '',
+        faceSrc: '',
+        status: 'unknown',
+      } as never)
+      render(<AccountPanel onClose={() => undefined} />)
+      await waitFor(() => expect(App.GetPlayerProfile).toHaveBeenCalled())
+      expect(screen.queryByText('Found on Mojang')).toBeNull()
+      expect(screen.queryByText('No Minecraft profile has this name')).toBeNull()
+      expect(screen.getByText('S', { selector: 'span' })).toBeInTheDocument()
+    })
+
+    it('falls back to the initials when the face does not load', async () => {
+      vi.mocked(App.GetPlayerProfile).mockResolvedValue(FOUND as never)
+      render(<AccountPanel onClose={() => undefined} />)
+      fireEvent.error(await screen.findByRole('img', { name: "Snadrochka's skin" }))
+      expect(screen.getByText('S', { selector: 'span' })).toBeInTheDocument()
+      expect(screen.queryByRole('img')).toBeNull()
+    })
+
+    it('asks once when the page opens, not per keystroke, and again after a save', async () => {
+      vi.mocked(App.GetPlayerProfile).mockResolvedValue(FOUND as never)
+      render(<AccountPanel onClose={() => undefined} />)
+      await screen.findByText('Found on Mojang')
+      const field = screen.getByLabelText('Profile name')
+      fireEvent.change(field, { target: { value: 'Not' } })
+      fireEvent.change(field, { target: { value: 'Notch' } })
+      expect(App.GetPlayerProfile).toHaveBeenCalledTimes(1)
+      fireEvent.keyDown(field, { key: 'Enter' })
+      await waitFor(() => expect(App.GetPlayerProfile).toHaveBeenCalledTimes(2))
+      expect(App.GetPlayerProfile).toHaveBeenLastCalledWith('Notch')
+    })
+
+    it('asks nothing for the default account', async () => {
+      useSettingsStore.setState({ settings: { ...DEFAULT_SETTINGS, profileName: '' } })
+      render(<AccountPanel onClose={() => undefined} />)
+      await screen.findByText("Prism's default account", { selector: 'span' })
+      expect(App.GetPlayerProfile).not.toHaveBeenCalled()
+    })
   })
 })

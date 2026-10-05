@@ -42,6 +42,7 @@ type App struct {
 	syncCopy       *services.SyncCopy
 	wiki           *services.WikiService
 	panoramas      *services.PanoramaService
+	mojang         *services.MojangService
 	games          *services.GameTracker
 	splash         *services.SplashCard
 	live           *services.LiveLog
@@ -121,6 +122,7 @@ func NewApp(dataDir string, manifest []byte, dist fs.FS) (*App, error) {
 		creator:        services.NewInstanceCreator(dataDir),
 		wiki:           services.NewWikiService(dataDir, m.Wiki.BaseURL).ForChapters(m.Chapters),
 		panoramas:      services.NewPanoramaService(dataDir),
+		mojang:         services.NewMojangService(dataDir),
 		openFolder:     services.OpenFolder,
 		frontendErrors: services.NewFrontendErrorLog(),
 		showInPrism: func(engine models.EngineInfo, instanceID, root string) error {
@@ -264,6 +266,9 @@ func (a *App) LaunchChapter(chapterID string) error {
 	req := models.LaunchRequest{
 		InstanceID: chapter.Instance.ID,
 		Profile:    settings.ProfileName,
+		// Play offline (issue 192): --offline <name> in place of --profile.
+		Offline:     settings.Offline,
+		OfflineName: settings.OfflineName,
 		// The detected engine's root: the configured one for the player's own
 		// Prism, the managed root for the launcher's copy.
 		Root:   engine.Root,
@@ -650,11 +655,11 @@ func (a *App) GetWikiArtStats() (models.WikiArtStats, error) {
 	return a.wiki.ArtStats(a.context()), nil
 }
 
-// assetMiddleware serves the cached wiki art ahead of the embedded build
-// and the cached panoramas (main.go's AssetServer). Unexported, so Wails does
-// not bind it.
+// assetMiddleware serves the cached wiki art, the cached panoramas and the
+// player's cached face ahead of the embedded build (main.go's AssetServer).
+// Unexported, so Wails does not bind it.
 func (a *App) assetMiddleware(next http.Handler) http.Handler {
-	return a.panoramas.Middleware(a.wiki.ArtMiddleware(next))
+	return a.panoramas.Middleware(a.wiki.ArtMiddleware(a.mojang.FaceMiddleware(next)))
 }
 
 // OpenWikiPage opens one of the pages GetWikiPages returned in the system

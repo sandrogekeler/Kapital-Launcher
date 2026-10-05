@@ -14,6 +14,14 @@ type AppSettings struct {
 	// ProfileName is the Prism account profile passed with --profile. Empty
 	// means Prism's default account.
 	ProfileName string `json:"profileName"`
+	// Offline launches without a Microsoft account (issue 192): Play passes
+	// Prism's --offline with OfflineName in place of --profile. Online servers
+	// refuse such a player. Off by default.
+	Offline bool `json:"offline"`
+	// OfflineName is the player name passed with --offline: Minecraft's own
+	// rule, 3 to 16 letters, digits or underscore. Required while Offline is
+	// on, kept while it is off.
+	OfflineName string `json:"offlineName"`
 	// LastChapter is the chapter selected when the app was last closed.
 	LastChapter string `json:"lastChapter"`
 	// PackOverrides maps a chapter id to a local packwiz serve address that

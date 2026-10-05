@@ -18,6 +18,7 @@ export {
   Check,
   ChevronRight,
   ChevronDown,
+  Clock,
   Code,
   Copy,
   Download,

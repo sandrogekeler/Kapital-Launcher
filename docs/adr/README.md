@@ -7,7 +7,8 @@ what it costs.
 
 The first seven follow the questions in `docs/HANDOFF.md` §3; 0008 was added
 while building the scaffold, 0009 with the download site, 0010 with the header bar,
-0011 with getting Prism for the player, 0012 with hiding the game window.
+0011 with getting Prism for the player, 0012 with hiding the game window, 0013 with
+the player's profile from Mojang.
 
 | ADR | Decision | Status |
 |---|---|---|
@@ -23,3 +24,4 @@ while building the scaffold, 0009 with the download site, 0010 with the header b
 | [0010](0010-window-chrome.md) | The app draws its own header bar; our window buttons on Windows, native traffic lights on macOS | accepted |
 | [0011](0011-getting-prism.md) | On approval, a verified, launcher-managed portable Prism for players without one | accepted |
 | [0012](0012-hiding-the-game-window.md) | The launcher hides the game's window until the reload begins; the pack keeps its early window on | accepted |
+| [0013](0013-mojang-profile.md) | The account page asks Mojang's public profile endpoints for the player's UUID and skin face; only the profile name leaves, nothing from the response but the UUID, name and face is kept | accepted |

@@ -17,6 +17,7 @@ const view = (off: string[] = []): ChapterMods => ({
       jarPrefix: 'DistantHorizons-',
       jars: [dh],
       disabled: off.includes(dh),
+      blocked: false,
     },
   ],
   running: false,

@@ -18,6 +18,10 @@ export function ClearPreviews() {
   return window['go']['main']['App']['ClearPreviews']();
 }
 
+export function CopyPlayerUUID() {
+  return window['go']['main']['App']['CopyPlayerUUID']();
+}
+
 export function CopyRedactedLog() {
   return window['go']['main']['App']['CopyRedactedLog']();
 }
@@ -60,6 +64,14 @@ export function GetPackStates() {
 
 export function GetPanoramas() {
   return window['go']['main']['App']['GetPanoramas']();
+}
+
+export function GetPlayTime() {
+  return window['go']['main']['App']['GetPlayTime']();
+}
+
+export function GetPlayerProfile(arg1) {
+  return window['go']['main']['App']['GetPlayerProfile'](arg1);
 }
 
 export function GetPreviewSituations() {

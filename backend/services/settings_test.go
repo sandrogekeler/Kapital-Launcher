@@ -235,6 +235,9 @@ func TestValidateSettings(t *testing.T) {
 		"relative root":    {Theme: "dark", PrismRoot: "prism"},
 		"relative exe":     {Theme: "dark", PrismExecutable: "prismlauncher.exe"},
 		"option profile":   {Theme: "dark", ProfileName: "--dir"},
+		"offline no name":  {Theme: "dark", Offline: true},
+		"offline bad name": {Theme: "dark", Offline: true, OfflineName: "no spaces"},
+		"offline option":   {Theme: "dark", Offline: true, OfflineName: "-dir"},
 		"empty theme":      {},
 		"whitespace theme": {Theme: " "},
 	}
@@ -246,6 +249,25 @@ func TestValidateSettings(t *testing.T) {
 	good := models.AppSettings{Theme: "system", PrismRoot: abs, PrismExecutable: filepath.Join(abs, "p"), ProfileName: "S"}
 	if err := ValidateSettings(good); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Play offline (issue 192): the switch needs a name Minecraft allows, and a
+// name left behind with the switch off is kept and trimmed, not refused.
+func TestOfflineNeedsAMinecraftNameOnlyWhileOn(t *testing.T) {
+	if err := ValidateSettings(models.AppSettings{Theme: "dark", Offline: true, OfflineName: "Steve_01"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateSettings(models.AppSettings{Theme: "dark", OfflineName: "x"}); err != nil {
+		t.Fatalf("a name with the switch off is not checked: %v", err)
+	}
+	svc := NewSettingsService(t.TempDir())
+	if err := svc.Save(models.AppSettings{Theme: "dark", Offline: true, OfflineName: " Steve_01 "}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := svc.Load()
+	if err != nil || !got.Offline || got.OfflineName != "Steve_01" {
+		t.Fatalf("got %+v, %v", got, err)
 	}
 }
 

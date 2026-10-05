@@ -23,7 +23,7 @@ import (
 	"kapital/backend/models"
 )
 
-// A chapter's title-screen panorama (issue 195, ADR-2's eleventh amendment).
+// A chapter's title-screen panorama (issue 195, ADR-2's twelfth amendment).
 // Each pack ships a resources pack of its own, a folder or a .zip in the
 // instance's resourcepacks folder, with the six faces of the game's menu
 // background at the vanilla path. The launcher lists that folder by name only,

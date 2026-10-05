@@ -213,6 +213,10 @@
     filter: none;
   }
 }
+/* A small picture scaled up stays blocks of pixels, as a skin's face should. */
+@utility pixelated {
+  image-rendering: pixelated;
+}
 @utility reveal {
   animation: reveal-in var(--duration-reveal) var(--ease-standard) both;
 }

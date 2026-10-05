@@ -85,6 +85,15 @@ redacts the lines and emits `log:live` (`EventLiveLog`) in events of at most
 64 KiB. A shrunk or replaced file, told by its first 128 bytes, emits a reset.
 One follower at a time, under the app's run context.
 
+The play time (`playtime.go`, `app_playtime.go`, `GetPlayTime`, issue 192, ADR-2
+eleventh amendment) reads two keys of each installed chapter's `instance.cfg`,
+`totalTimePlayed` (seconds) and `lastLaunchTime` (milliseconds since the epoch),
+through `scanINIKeys`, for the account page. The instances are the disk's own
+report, as `chapterInstance` resolves them; a chapter that is not installed is
+left out, and nothing else of the file is read or logged. With Play offline on,
+`LaunchArgs` passes `--offline <name>` instead of `--profile`, the name held to
+`CheckOfflineName` (Minecraft's rule) at launch and at save.
+
 The window holder (`gamewindow*.go`, #45, Windows only; the loading splash,
 #43, is what turns it on for a run) hooks the show events of the game's own
 process and hides and shows its `GLFW30` window through user32. Every hide,
@@ -224,7 +233,7 @@ cache's mean picture size (100 KB while it is empty) and each era's pool size, f
 the settings screen's estimate.
 
 The panoramas (`panorama.go`, `app_panorama.go`, `GetPanoramas`, issue 195, ADR-2
-eleventh amendment) are the other read of a chapter's instance for a picture: the
+twelfth amendment) are the other read of a chapter's instance for a picture: the
 names in `<game folder>/resourcepacks/` (a folder or a `.zip` whose name contains
 "resource", the first sorted that holds all six faces), then six files at the
 vanilla `assets/minecraft/textures/gui/title/background/panorama_N.png` path
@@ -234,6 +243,21 @@ keyed by the pack's name, sizes and times, and the route `/panorama/`
 (`PanoramaService.Middleware`) serves them for GET and HEAD of the exact name shape
 through an `os.Root`, ahead of the wiki art's route. The page asks on focus and
 after an install or a run, only while the panorama is the chosen picture.
+
+The player's profile (`mojang.go`, `app_mojang.go`, `GetPlayerProfile` and
+`CopyPlayerUUID`, issue 193, ADR-13) is the one lookup that sends something about
+the player off the machine: the profile name to `api.mojang.com`, then the UUID
+it returned to `sessionserver.mojang.com`, then a hash it named to
+`textures.minecraft.net` (the skin address is held to that host and shape by
+`skinHash`, and fetched over https from the hash alone). Each request is 8 s, no
+redirect, a capped body; the skin must be a 64x64 or 64x32 PNG, and only the
+8x8 face with the hat layer, scaled to 64x64, is kept, in `mojang/<uuid>.png`
+beside a `lookup.json` of the UUID, Mojang's spelling and the time, for 24 hours
+and one profile at a time. The route `/mojang-face/` (`FaceMiddleware`) is the
+wiki art's twin: GET and HEAD, one name shape, an `os.Root`. Not finding the
+name, being offline or an invalid name is a `models.PlayerProfile` status and
+never an error, and the log carries the status alone, never the name or an
+address (an `error` from `net/http` holds the URL, so none is logged).
 
 ## Data shapes
 

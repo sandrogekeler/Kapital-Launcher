@@ -59,7 +59,10 @@
         "version": "1.0.0",
         "packwiz": "https://kapital-packs.alessandrogekeler.workers.dev/lichdenstein/pack.toml",
         "mrpack": null,
-        "toggles": [{ "name": "Distant Horizons", "jarPrefix": "DistantHorizons-" }]
+        "toggles": [
+          { "name": "Distant Horizons", "jarPrefix": "DistantHorizons-" },
+          { "name": "Iris", "jarPrefix": "iris-" }
+        ]
       },
       "server": {
         "addresses": [{ "label": "Main", "address": "stamina-berkshire.tun.ply.gg" }],
@@ -95,8 +98,13 @@
         "mrpack": null,
         "toggles": [
           { "name": "Distant Horizons", "jarPrefix": "DistantHorizons-" },
-          { "name": "Colorwheel", "jarPrefix": "colorwheel-neoforge-" },
-          { "name": "Colorwheel Patcher", "jarPrefix": "colorwheel_patcher-neoforge-" },
+          { "name": "Iris", "jarPrefix": "iris-neoforge-" },
+          { "name": "Colorwheel", "jarPrefix": "colorwheel-neoforge-", "requires": "iris-neoforge-" },
+          {
+            "name": "Colorwheel Patcher",
+            "jarPrefix": "colorwheel_patcher-neoforge-",
+            "requires": "colorwheel-neoforge-"
+          },
           { "name": "Create Better FPS", "jarPrefix": "createbetterfps-" }
         ]
       },

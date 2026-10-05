@@ -39,6 +39,21 @@ describe('useEngineStore', () => {
     vi.mocked(App.GetChangelogs).mockReset()
   })
 
+  it('keeps the play time Go read by chapter id, and none without a bridge', async () => {
+    vi.mocked(App.GetPlayTime).mockResolvedValue([
+      { chapterId: 'frangfurd', totalSeconds: 90, lastLaunchMs: 5 },
+    ])
+    await useEngineStore.getState().loadPlayTime()
+    expect(useEngineStore.getState().playTimes).toEqual({
+      frangfurd: { chapterId: 'frangfurd', totalSeconds: 90, lastLaunchMs: 5 },
+    })
+    vi.mocked(App.GetPlayTime).mockImplementation(() => {
+      throw new TypeError('no bridge')
+    })
+    await useEngineStore.getState().loadPlayTime()
+    expect(useEngineStore.getState().playTimes).toEqual({})
+  })
+
   it('installs a chapter and takes the instances Go read back', async () => {
     const report = { root: 'C:/Prism', dir: 'C:/Prism/instances', present: { frangfurd: true } }
     vi.mocked(App.InstallChapter).mockResolvedValue(models.InstanceReport.createFrom(report))

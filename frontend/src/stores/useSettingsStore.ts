@@ -12,6 +12,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   prismExecutable: '',
   prismRoot: '',
   profileName: '',
+  offline: false,
+  offlineName: '',
   lastChapter: '',
 }
 
