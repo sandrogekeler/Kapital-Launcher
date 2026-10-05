@@ -66,6 +66,9 @@ func (r *gameRun) finish() {
 		delete(r.t.live, r.req.ChapterID)
 	}
 	r.t.mu.Unlock()
+	if r.console != nil {
+		r.console.over.Store(true)
+	}
 	close(r.stop.done)
 }
 

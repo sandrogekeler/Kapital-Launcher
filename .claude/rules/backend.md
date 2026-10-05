@@ -137,7 +137,11 @@ show the windows. A Prism left alive on a console is the launcher's to close,
 with Stop's routine plus `WM_CLOSE` to the hold's own (hidden) windows: when the
 next Play of the chapter begins, on Stop and when the launcher quits
 (`GameTracker.Shutdown`, bounded). A Prism with no console left is not touched.
-Windows only; the title is read through `GetWindowTextW`, never kept or logged.
+The record is made for every run, whether or not a console was held (issue 211):
+with the splash off its holder is nil, and a Prism it names that is still alive
+after its run ended is closed the same way, by the pid the launcher started; one
+whose run is still going is left alone at quit. Windows only for the hold; the
+title is read through `GetWindowTextW`, never kept or logged.
 
 The loading card (#43, #97) is a window of its own: `backend/splashhost` is one
 borderless window with a webview of its own per OS (`host_windows.go`,

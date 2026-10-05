@@ -133,3 +133,24 @@ source: the launch log is never written to a file).
   its console as it always did, the safe failure.
 - **Windows only.** macOS has no window holder, so Prism's console appears as
   Prism makes it and the view has no button for it.
+
+## Amendment, 2026-10-05: the Prism a run leaves behind is on a record with no console too
+
+The record above existed only when the run held the console, which needs the
+splash. With the splash off a failed start leaves the launcher's Prism alive on
+a console of its own, nothing was hidden, and the next Play had no record to
+close it by: its `--launch` was handed to that Prism (issue 211, seen on
+2026-10-05 with the pack server down).
+
+- **The record is made for every run.** `holdPrismConsole` records the Prism
+  the launcher started (its pid and exit channel, from `TrackRequest.Prism`)
+  whether or not a console could be held; the holder is nil when none was (splash
+  off, no hold on the platform, the hook failed to start). A nil holder offers
+  nothing to show (`consoleAvailable`, `ShowConsole`) and is not a failure signal
+  (`consoleFailed`).
+- **Closed when it is left behind.** With a holder, as before: while a console
+  window is left. With none, once the run that started it has ended (the record's
+  `over`, set when the run's goroutine finishes): a Prism whose run is still going
+  has a game the player is in, and quitting the launcher leaves it. The close is
+  the same routine, by the pid the launcher started and never by name (S3.9), and
+  a Prism that exits by itself releases the record as before.

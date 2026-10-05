@@ -179,7 +179,8 @@ type GameTracker struct {
 
 	mu     sync.Mutex
 	states map[string]models.GameState
-	// consoles is each chapter's Prism console holder, which outlives its run.
+	// consoles is each chapter's record of the Prism the launcher started, and of its
+	// console holder when one was held, which outlives its run.
 	consoles map[string]*prismConsole
 	// records is what a chapter's latest run's report needs beyond its state
 	// (gametracker_report.go); redactor makes the report's redactor.

@@ -388,7 +388,10 @@ Prism outlives it (waiting on the console of what it saw as a crash), the run's
 end closes that Prism the same way, a second after the game, on a goroutine the
 tracker's runs count, and gives up when the launcher quits (#133). A Prism left on a console is closed this way when the
 chapter's next Play begins and when the launcher quits (bounded), and only while
-a console window of it is left; one with a game running is not touched. On macOS it is `SIGTERM` and, five seconds
+a console window of it is left; one with a game running is not touched. A run
+that held no console (splash off) still keeps its Prism's pid and exit channel
+on the chapter's record, and a Prism left alive after that run ended is closed
+the same way (issue 211); it is still only the pid the launcher started. On macOS it is `SIGTERM` and, five seconds
 on, `SIGKILL`. The five seconds are judged on the run's steps, not slept on.
 Nothing is started, read or written to do it, and the pid is logged, never a
 window title.
