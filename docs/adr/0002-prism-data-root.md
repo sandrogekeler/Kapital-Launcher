@@ -391,3 +391,28 @@ anyone with the instance open.
 - **What does not change.** A manifest still names a preset and never an
   argument (S2.1); the launcher writes the same five keys, atomically, refused
   while the game is active; nothing of `JvmArgs` is logged.
+
+## Eleventh amendment, 2026-10-05
+
+Two things for issue 192, the account page: the play time Prism counts, and
+playing without an account.
+
+- **Play time.** `GetPlayTime` reads two more keys of each installed chapter's
+  `instance.cfg`, from `[General]` and through the same `scanINIKeys`:
+  `totalTimePlayed`, the seconds the game has run, and `lastLaunchTime`, the
+  start of the last launch in milliseconds since the epoch (both `qint64` in
+  Prism's `BaseInstance.cpp`). Only installed chapters are read, through the
+  instance resolution `chapterInstance` uses, and the paths come from the
+  manifest's instance ids. A value that is not a non-negative integer reads as
+  0. Nothing else of the file is read, nothing of it is logged, and the
+  launcher writes none of it: Prism keeps the numbers. The page asks when it
+  opens and when the window regains focus, never on a timer.
+- **`--offline`.** Prism's `-o, --offline <name>` ("Launch offline, with given
+  player name (only valid in combination with --launch)", `launcher/Application.cpp`)
+  is the second account-related value the launcher passes, after `--profile`. With
+  the player's switch on, `LaunchArgs` passes `--offline <name>` in place of
+  `--profile`. The name is held to what `--profile` is held to (no leading `-`,
+  no NUL, CR or LF) and to Minecraft's own rule, `^[A-Za-z0-9_]{3,16}$`, so it is
+  one plain argument; the same check runs at save time and refuses the switch on
+  with no name. It is an argument array like the rest, and Prism's account data
+  stays unread.

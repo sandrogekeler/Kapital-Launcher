@@ -85,6 +85,15 @@ redacts the lines and emits `log:live` (`EventLiveLog`) in events of at most
 64 KiB. A shrunk or replaced file, told by its first 128 bytes, emits a reset.
 One follower at a time, under the app's run context.
 
+The play time (`playtime.go`, `app_playtime.go`, `GetPlayTime`, issue 192, ADR-2
+eleventh amendment) reads two keys of each installed chapter's `instance.cfg`,
+`totalTimePlayed` (seconds) and `lastLaunchTime` (milliseconds since the epoch),
+through `scanINIKeys`, for the account page. The instances are the disk's own
+report, as `chapterInstance` resolves them; a chapter that is not installed is
+left out, and nothing else of the file is read or logged. With Play offline on,
+`LaunchArgs` passes `--offline <name>` instead of `--profile`, the name held to
+`CheckOfflineName` (Minecraft's rule) at launch and at save.
+
 The window holder (`gamewindow*.go`, #45, Windows only; the loading splash,
 #43, is what turns it on for a run) hooks the show events of the game's own
 process and hides and shows its `GLFW30` window through user32. Every hide,
