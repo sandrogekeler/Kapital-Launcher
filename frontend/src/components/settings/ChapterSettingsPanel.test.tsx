@@ -73,12 +73,70 @@ describe('ChapterSettingsPanel', () => {
   it('reads the instance and shows memory, the marks and the preset', async () => {
     render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
     expect(await screen.findByLabelText('Memory')).toHaveValue('8192')
-    expect(screen.getByText('8.0 GB')).toBeInTheDocument()
-    expect(
-      screen.getByText(/Prism would pick 4\.0 GB; the pack recommends 8\.0 GB/),
-    ).toBeInTheDocument()
+    expect(screen.getByText('of 32.0 GB')).toBeInTheDocument()
+    // The pack's recommendation is a mark on the track, pressed while the slider is on it;
+    // Prism's own default is not shown (issue 189).
+    const mark = screen.getByRole('button', { name: /Recommended/ })
+    expect(mark).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByText(/Prism would pick/)).toBeNull()
     expect(screen.getByRole('radio', { name: /ZGC/ })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Default' })).not.toBeChecked()
+    expect(screen.getByText('Java 21 and later')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(screen.getByRole('status')).toHaveTextContent('No changes to save')
+  })
+
+  it('sets the recommended memory from its mark', async () => {
+    vi.mocked(App.GetChapterSettings).mockResolvedValue(
+      info({ settings: { maxMemoryMb: 4096, jvm: 'zgc' } }),
+    )
+    render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+    const mark = await screen.findByRole('button', { name: /Recommended/ })
+    expect(mark).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(mark)
+    expect(screen.getByLabelText('Memory')).toHaveValue('8192')
+    expect(mark).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes')
+  })
+
+  it('has no mark when the pack names no memory', async () => {
+    vi.mocked(App.GetChapterSettings).mockResolvedValue(info({ packMemoryMb: 0 }))
+    render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+    await screen.findByLabelText('Memory')
+    expect(screen.queryByRole('button', { name: /Recommended/ })).toBeNull()
+  })
+
+  it('reverts the draft to what Go read', async () => {
+    render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+    fireEvent.change(await screen.findByLabelText('Memory'), { target: { value: '4096' } })
+    fireEvent.click(screen.getByRole('radio', { name: 'Default' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Revert' }))
+    expect(screen.getByLabelText('Memory')).toHaveValue('8192')
+    expect(screen.getByRole('radio', { name: /ZGC/ })).toBeChecked()
+    expect(screen.queryByRole('button', { name: 'Revert' })).toBeNull()
+    expect(screen.getByRole('status')).toHaveTextContent('No changes to save')
+  })
+
+  it('keeps an unsaved draft over a re-read of an unchanged file, and follows a changed one', async () => {
+    render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+    fireEvent.change(await screen.findByLabelText('Memory'), { target: { value: '4096' } })
+
+    // The window comes back to the front; the file is as it was.
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'))
+    })
+    await waitFor(() => expect(App.GetChapterSettings).toHaveBeenCalledTimes(2))
+    expect(screen.getByLabelText('Memory')).toHaveValue('4096')
+
+    // Prism's own window wrote the memory meanwhile: the file wins.
+    vi.mocked(App.GetChapterSettings).mockResolvedValue(
+      info({ settings: { maxMemoryMb: 12288, jvm: 'zgc' } }),
+    )
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'))
+    })
+    await waitFor(() => expect(screen.getByLabelText('Memory')).toHaveValue('12288'))
+    expect(screen.getByRole('status')).toHaveTextContent('No changes to save')
   })
 
   it('saves a changed memory and preset together and shows what Go wrote', async () => {
@@ -88,7 +146,7 @@ describe('ChapterSettingsPanel', () => {
     render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
     const slider = await screen.findByLabelText('Memory')
     fireEvent.change(slider, { target: { value: '6144' } })
-    fireEvent.click(screen.getByRole('radio', { name: /Prism's own/ }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Default' }))
     expect(screen.getByText('6.0 GB')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() =>
@@ -98,7 +156,8 @@ describe('ChapterSettingsPanel', () => {
       }),
     )
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled())
-    expect(screen.getByRole('radio', { name: /Prism's own/ })).toBeChecked()
+    expect(screen.getByRole('status')).toHaveTextContent('Saved')
+    expect(screen.getByRole('radio', { name: 'Default' })).toBeChecked()
   })
 
   it('shows a rejection and keeps the draft', async () => {

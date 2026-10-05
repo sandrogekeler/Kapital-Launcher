@@ -28,10 +28,15 @@ export function sliderMaxMb(machineMemoryMb: number): number {
 export function presetLabel(name: string): string {
   switch (name) {
     case '':
-      return "Prism's own arguments"
+      return 'Default'
     case 'zgc':
-      return 'ZGC garbage collector (Java 21 and later)'
+      return 'ZGC garbage collector'
     default:
       return name
   }
+}
+
+/** What a preset needs, under its label, when it needs something (issue 189). */
+export function presetNote(name: string): string | undefined {
+  return name === 'zgc' ? 'Java 21 and later' : undefined
 }

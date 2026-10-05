@@ -402,6 +402,23 @@
   border-radius: var(--radius-pill);
   background: var(--accent);
 }
+/* A mark under the track (ui/RangeField), centred where its value falls: the
+   thumb's centre runs from half a thumb in to half a thumb short of the end, so
+   the mark lines up with the thumb at that value. Its share arrives as
+   --mark-at. A short tick above it points at the track. */
+.range-mark {
+  left: calc(var(--spacing) * 2.25 + (100% - var(--spacing) * 4.5) * var(--mark-at, 0));
+  translate: -50% 0;
+}
+.range-mark::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  width: 1px;
+  height: calc(var(--spacing) * 1.5);
+  background: var(--line-strong);
+}
 .range:hover::-webkit-slider-thumb {
   filter: brightness(var(--effect-hover-brightness));
 }
