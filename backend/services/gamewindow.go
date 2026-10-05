@@ -122,6 +122,11 @@ type DialogHolder interface {
 // log is never written to a file), so they stay until the next Play of the
 // chapter, Stop or the launcher quitting. It is the seam the tracker is tested
 // through; HoldPrismConsole makes the real one.
+//
+// The holder is polled for Hides and Held, and tells of one moment itself: the
+// onHeld it is made with is called once, when its first window is held, which is
+// the console appearing. The failure view hears of it there, because Prism's
+// log ends a failed run a moment before Prism opens its console.
 type ConsoleHolder interface {
 	// Hides is how many console windows were hidden so far: a counter the run
 	// reads, so a console appearing before the game's log is a failed start.

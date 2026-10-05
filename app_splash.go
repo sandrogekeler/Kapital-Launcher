@@ -141,3 +141,19 @@ func (w launcherWindow) Unminimise() {
 		w.a.window.show(w.a.ctx)
 	}
 }
+
+// cardHooks ties a run's tracking to its loading card, when the run has one:
+// the game's window is held where the OS allows it (#43), the card closes at
+// the handover on Windows (macOS closes it at the game's window phase, in
+// Observe), and the card's report hears when the hold catches Prism's console,
+// which a failed start shows after it has ended (#208). Without a card nothing
+// is held: a hidden game with no card would show nothing at all.
+func (a *App) cardHooks(track *services.TrackRequest, splash bool) {
+	if !splash {
+		return
+	}
+	chapterID := track.ChapterID
+	track.HoldWindow = a.splash.HoldsGameWindow()
+	track.OnHandover = func() { a.splash.Handover(chapterID) }
+	track.OnConsoleHeld = func() { a.splash.ConsoleHeld(chapterID) }
+}

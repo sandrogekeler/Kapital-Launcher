@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -18,12 +19,30 @@ type fakeConsole struct {
 	shows       int
 	closes      int
 	releases    int
+	// onHeld is the call the tracker gave the hold, made by catch.
+	onHeld func()
+	caught bool
 }
 
 func (f *fakeConsole) set(hides, held int) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.hides, f.held = hides, held
+}
+
+// catch is the real hold's first window being held: the hold has one more hide
+// and window, and tells the tracker once, as winHolder.noteHeld does, however
+// many it hides after that.
+func (f *fakeConsole) catch() {
+	f.mu.Lock()
+	f.hides++
+	f.held++
+	first := !f.caught
+	f.caught = true
+	f.mu.Unlock()
+	if first && f.onHeld != nil {
+		f.onHeld()
+	}
 }
 
 func (f *fakeConsole) Hides() int {
@@ -72,14 +91,14 @@ type fakeHoldConsole struct {
 	holders []*fakeConsole
 }
 
-func (f *fakeHoldConsole) hold(pid int) (ConsoleHolder, error) {
+func (f *fakeHoldConsole) hold(pid int, onHeld func()) (ConsoleHolder, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.calls++
 	if f.err != nil {
 		return nil, f.err
 	}
-	c := &fakeConsole{pid: pid}
+	c := &fakeConsole{pid: pid, onHeld: onHeld}
 	f.holders = append(f.holders, c)
 	return c, nil
 }
@@ -159,6 +178,45 @@ func TestTrackerHoldsPrismsConsoleOnlyWhileTheSplashIsOn(t *testing.T) {
 	}
 	if shows, closes, releases := fc.holder(0).counts(); shows+closes+releases != 0 {
 		t.Fatalf("nothing is asked of it yet: %d %d %d", shows, closes, releases)
+	}
+}
+
+// The tracker passes the holder a call that reaches the request's OnConsoleHeld
+// when the first window is held (#208), and only then: the hide of a second
+// window, or of the same one again, is no new console.
+func TestTrackerTellsTheRequestOnceWhenTheConsoleIsFirstHeld(t *testing.T) {
+	r, fc := consoleRig(t, true)
+	var calls atomic.Int32
+	r.onConsoleHeld = func() { calls.Add(1) }
+	run := r.begin()
+	run.holdPrismConsole()
+	if fc.count() != 1 {
+		t.Fatalf("holds %d", fc.count())
+	}
+	c := fc.holder(0)
+	time.Sleep(20 * time.Millisecond)
+	if calls.Load() != 0 {
+		t.Fatal("nothing is held yet")
+	}
+
+	c.catch()
+	until(t, "the call", func() bool { return calls.Load() == 1 })
+	c.catch()
+	c.catch()
+	time.Sleep(20 * time.Millisecond)
+	if got := calls.Load(); got != 1 {
+		t.Fatalf("called %d times, once for the first window", got)
+	}
+}
+
+// A request with no OnConsoleHeld (the splash off) is no reason to fail.
+func TestTrackerHoldsTheConsoleWithNoCallToMake(t *testing.T) {
+	r, fc := consoleRig(t, true)
+	run := r.begin()
+	run.holdPrismConsole()
+	fc.holder(0).catch()
+	if !r.tracker.consoleAvailable("frangfurd") {
+		t.Fatal("the console is held all the same")
 	}
 }
 

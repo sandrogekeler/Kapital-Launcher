@@ -84,8 +84,12 @@ type cardRun struct {
 	latest  models.GameState
 	copyLog *splashhost.StateCopyLog
 	// report is the run's report, filled once when it ends badly.
-	report  *models.RunReport
-	errText string
+	report *models.RunReport
+	// consoleHeld is Prism's console having been caught by the hold during this
+	// run (ConsoleHeld), whatever the run had reached by then: the report built
+	// at the end is told of it, so a console that came first is not missed.
+	consoleHeld bool
+	errText     string
 	// closed is the card's window being gone because the game has the screen:
 	// the launcher stays minimised until the game ends.
 	closed bool
@@ -266,6 +270,11 @@ func (c *SplashCard) showEnd(run *cardRun, s models.GameState) {
 	defer c.mu.Unlock()
 	if !c.live(run) {
 		return
+	}
+	// The hold may have caught the console while the report was being read: its
+	// call (ConsoleHeld) then found no report to change, and it is told here.
+	if report != nil && run.consoleHeld {
+		report.ConsoleAvailable = true
 	}
 	run.report = report
 	c.push(run)

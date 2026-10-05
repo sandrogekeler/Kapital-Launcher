@@ -321,13 +321,8 @@ func (a *App) LaunchChapter(chapterID string) error {
 		Before:      before,
 		PrismRoot:   prismRoot,
 		PrismLog:    prismLog,
-		HoldWindow:  splash && a.splash.HoldsGameWindow(),
 	}
-	if splash {
-		// On Windows the card closes once the game has the foreground, not
-		// before; macOS closes it at the game's window phase (Observe).
-		track.OnHandover = func() { a.splash.Handover(chapterID) }
-	}
+	a.cardHooks(&track, splash)
 	if err := a.games.Track(a.trackContext(), track); err != nil {
 		slog.Warn("track game", "chapter", chapterID, "error", err)
 	}

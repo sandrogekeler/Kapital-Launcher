@@ -27,7 +27,7 @@ var procGetWindowTextW = user32.NewProc("GetWindowTextW")
 // HoldPrismDialogs starts hiding the "Please wait" dialogs of the Prism with
 // this pid, over the same hook and callback as the game window's.
 func HoldPrismDialogs(pid int) (DialogHolder, error) {
-	h, err := startHolder("prism dialogs", pid, isPrismDialog)
+	h, err := startHolder("prism dialogs", pid, isPrismDialog, nil)
 	if err != nil {
 		return nil, err
 	}

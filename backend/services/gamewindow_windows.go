@@ -138,7 +138,7 @@ func call(p *windows.LazyProc, args ...uintptr) uintptr {
 // The hook lives on a thread of its own, which pumps messages as an
 // out-of-context hook needs and ends in Release.
 func HoldGameWindow(pid int) (WindowHolder, error) {
-	h, err := startHolder("game window", pid, isGameWindow)
+	h, err := startHolder("game window", pid, isGameWindow, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -147,12 +147,14 @@ func HoldGameWindow(pid int) (WindowHolder, error) {
 
 // startHolder hooks the show events of a pid and hides the windows its match
 // accepts: the game's window, or Prism's progress dialogs (#95), through the
-// one callback and the one dispatch map.
-func startHolder(what string, pid int, match func(windows.HWND, uint32) bool) (*winHolder, error) {
+// one callback and the one dispatch map. onHeld, if not nil, is called once,
+// when the first window is held (the console's holder uses it); see
+// winHolder.noteHeld.
+func startHolder(what string, pid int, match func(windows.HWND, uint32) bool, onHeld func()) (*winHolder, error) {
 	if pid <= 0 {
 		return nil, fmt.Errorf("hold %s: pid %d", what, pid)
 	}
-	h := &winHolder{pid: uint32(pid), match: match, held: map[windows.HWND]struct{}{},
+	h := &winHolder{pid: uint32(pid), match: match, onHeld: onHeld, held: map[windows.HWND]struct{}{},
 		done: make(chan struct{}), finished: make(chan struct{})}
 	ready := make(chan error, 1)
 	go h.run(what, ready)
@@ -182,14 +184,19 @@ type winHolder struct {
 	match    func(hwnd windows.HWND, pid uint32) bool
 	threadID uint32
 	done     chan struct{}
+	// onHeld is called once, with no lock held, when the first window is held;
+	// nil for the holders that have no use for it.
+	onHeld func()
 
-	mu       sync.Mutex
-	held     map[windows.HWND]struct{}
-	tally    hideTally
-	seen     bool
-	swept    int
-	released bool
-	report   WindowReport
+	mu    sync.Mutex
+	held  map[windows.HWND]struct{}
+	tally hideTally
+	seen  bool
+	swept int
+	// heldNoted is whether the first held window has been reported to onHeld.
+	heldNoted bool
+	released  bool
+	report    WindowReport
 	// finished closes when Release has stored its report.
 	finished chan struct{}
 }
@@ -341,7 +348,21 @@ func (h *winHolder) hide(hwnd windows.HWND) bool {
 		slog.Warn("window hold: the hide could not be queued")
 		return false
 	}
+	h.noteHeld()
 	return true
+}
+
+// noteHeld calls onHeld the first time a window is held, and never again: a
+// console hidden a second time (a title change on it) is not news. It runs on
+// the hook thread, so onHeld must not wait on anything.
+func (h *winHolder) noteHeld() {
+	h.mu.Lock()
+	first := h.onHeld != nil && !h.heldNoted
+	h.heldNoted = true
+	h.mu.Unlock()
+	if first {
+		h.onHeld()
+	}
 }
 
 // Release unhooks first, so no show is hidden after it, then shows what was

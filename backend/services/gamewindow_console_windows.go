@@ -25,8 +25,10 @@ import (
 const consoleShowWait = 2 * time.Second
 
 // HoldPrismConsole starts hiding the console window of the Prism with this pid.
-func HoldPrismConsole(pid int) (ConsoleHolder, error) {
-	h, err := startHolder("prism console", pid, isPrismConsole)
+// onHeld, which may be nil, is called once, when the first console window is
+// held (see ConsoleHolder).
+func HoldPrismConsole(pid int, onHeld func()) (ConsoleHolder, error) {
+	h, err := startHolder("prism console", pid, isPrismConsole, onHeld)
 	if err != nil {
 		return nil, err
 	}
