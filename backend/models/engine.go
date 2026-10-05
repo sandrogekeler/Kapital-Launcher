@@ -26,7 +26,11 @@ type LaunchRequest struct {
 	InstanceID string
 	Server     string
 	Profile    string
-	Root       string
+	// Offline and OfflineName launch with Prism's --offline <name> in place of
+	// --profile (issue 192); LaunchArgs validates the name.
+	Offline     bool
+	OfflineName string
+	Root        string
 }
 
 // InstanceReport says which chapters' Prism instances exist. Root and Dir are

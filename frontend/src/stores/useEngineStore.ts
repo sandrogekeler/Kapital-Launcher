@@ -7,6 +7,7 @@ import type {
   PackChangelog,
   PackSource,
   PackState,
+  PlayTime,
   PrismInstallProgress,
   PrismRelease,
 } from '../types'
@@ -17,6 +18,7 @@ import {
   GetEngine,
   GetInstances,
   GetPackStates,
+  GetPlayTime,
   GetPrismRelease,
   InstallChapter,
   InstallPrism,
@@ -59,6 +61,13 @@ interface EngineStore {
   chapterSettings: Record<string, ChapterSettingsInfo | undefined>
   load: () => Promise<void>
   loadChapterSettings: (chapterId: string) => Promise<void>
+  /**
+   * What Prism has counted for each installed chapter (issue 192), by chapter id; a chapter that
+   * is not installed has no entry. A read of Prism's own numbers: the account page asks when it
+   * opens and the window regains focus, never on a timer.
+   */
+  playTimes: Record<string, PlayTime | undefined>
+  loadPlayTime: () => Promise<void>
   /** Writes the settings into the instance; rejects with Go's reason, which the panel shows. */
   saveChapterSettings: (chapterId: string, settings: ChapterSettings) => Promise<void>
   /** Shows the chapter's instance folder in the file manager; rejects with Go's reason. */
@@ -98,6 +107,15 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
   release: null,
   install: null,
   chapterSettings: {},
+  playTimes: {},
+
+  // A read: with no bridge, or a file Go could not read, there is nothing to show and the page
+  // says so per chapter.
+  loadPlayTime: async () => {
+    const raw = await readOr<unknown, unknown>(GetPlayTime, [])
+    const times = Array.isArray(raw) ? (raw as PlayTime[]) : []
+    set({ playTimes: Object.fromEntries(times.map((t) => [t.chapterId, t])) })
+  },
 
   // A read of the instance's own file: nothing to show without a bridge or
   // an instance, and the panel says so.

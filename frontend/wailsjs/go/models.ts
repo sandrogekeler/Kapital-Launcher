@@ -5,6 +5,8 @@ export namespace models {
 	    prismExecutable: string;
 	    prismRoot: string;
 	    profileName: string;
+	    offline: boolean;
+	    offlineName: string;
 	    lastChapter: string;
 	    packOverrides?: Record<string, string>;
 	    serverChoices?: Record<string, string>;
@@ -27,6 +29,8 @@ export namespace models {
 	        this.prismExecutable = source["prismExecutable"];
 	        this.prismRoot = source["prismRoot"];
 	        this.profileName = source["profileName"];
+	        this.offline = source["offline"];
+	        this.offlineName = source["offlineName"];
 	        this.lastChapter = source["lastChapter"];
 	        this.packOverrides = source["packOverrides"];
 	        this.serverChoices = source["serverChoices"];
@@ -598,6 +602,22 @@ export namespace models {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.phase = source["phase"];
 	        this.ms = source["ms"];
+	    }
+	}
+	export class PlayTime {
+	    chapterId: string;
+	    totalSeconds: number;
+	    lastLaunchMs: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PlayTime(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.chapterId = source["chapterId"];
+	        this.totalSeconds = source["totalSeconds"];
+	        this.lastLaunchMs = source["lastLaunchMs"];
 	    }
 	}
 	export class PreviewSituation {

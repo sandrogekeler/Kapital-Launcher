@@ -37,6 +37,7 @@ summed). A different count is new surface to classify: add the method to this ta
 | `GetWikiArtStats` | nothing | the mean size of the files in the wiki-art cache and the pool sizes of the cached export, in memory; no request beyond the export `GetWikiPages` already makes | S2.3 |
 | `OpenWikiPage` | a URL | the system browser, only for a URL `GetWikiPages` returned | S3.3 |
 | `GetChapterSettings` | a chapter id | four keys of the chapter's own `instance.cfg` | S1.1, S3.3 |
+| `GetPlayTime` | nothing | two keys, `totalTimePlayed` and `lastLaunchTime`, of the own `instance.cfg` of each installed manifest chapter, through `scanINIKeys`; nothing else of the file is read or logged | S1.1, S3.3 |
 | `SaveChapterSettings` | a chapter id and a `ChapterSettings` | five keys rewritten in the chapter's own `instance.cfg`, held to the preset list, the machine's memory and, for the player's own Java arguments, `ValidateJVMArgs` (issue 191) | S3.2, S3.3, S4.6 |
 | `GetRunLogs` | a chapter id | the names, times and sizes of `logs/latest.log`, `logs/*.log.gz` and `crash-reports/*.txt` in that chapter's instance game folder, listed through an `os.Root`; no file is opened | S3.3, S3.10 |
 | `ReadRunLog` | a chapter id, a kind (`log` or `crash`), a base name the listing produces and a byte offset | one chunk (at most 256 KiB, from a whole line) of one such file in that game folder, unpacked if `.log.gz` up to 256 MiB, redacted before it leaves Go; nothing written | S3.3, S3.10, S7.5 |
@@ -52,8 +53,10 @@ summed). A different count is new surface to classify: add the method to this ta
 
 **S1.1 The Microsoft account never enters this process.**
 Holds when: nothing under `backend/` or `app.go` opens Prism's `accounts.json`;
-the only account-related value is the profile *name* in
-`AppSettings.ProfileName`, passed to `--profile`. Inside a Prism data
+the only account-related values are the profile *name* in
+`AppSettings.ProfileName`, passed to `--profile`, and, when the player plays
+offline (issue 192), the player name in `AppSettings.OfflineName`, passed to
+`--offline` in its place. Inside a Prism data
 directory exactly two files are read, both in `services/instances.go`:
 `prismlauncher.cfg` is scanned for the one key `InstanceDir` (every other line,
 including any `ProxyPass`, is dropped unread and nothing from the file is
@@ -70,7 +73,11 @@ The chapter's settings (#36) read four keys of that same `instance.cfg`
 `scanINIKeys`, and a save reads the file whole to copy every other line back
 unchanged; nothing from it is kept or logged. The writes are S4.6's: a
 chapter's own instance folder, created when absent, and those five keys of
-its `instance.cfg` on the player's request.
+its `instance.cfg` on the player's request. The play time (issue 192, ADR-2's
+eleventh amendment) reads two more keys of each installed chapter's
+`instance.cfg`, `totalTimePlayed` and `lastLaunchTime`, through the same
+`scanINIKeys` (`GetPlayTime`, `services.ReadPlayTime`); they are numbers, a
+value that is not a non-negative integer reads as 0, and neither is logged.
 Verify: `grep -rn 'accounts\|token\|refresh' --include=*.go . | grep -v _test`;
 `grep -rn 'p.open(\|os.Open\|ReadFile' backend/services/instances.go` shows two opens,
 both through `scanINIKey`; `TestScanINIKeyKeepsOnlyThatKey`;
@@ -169,7 +176,11 @@ Verify: the `shell never sees a command string` invariant in `.claude/suite.json
 **S3.2 Every argument is validated.**
 Holds when: `LaunchArgs` refuses an instance id that is not a plain folder
 name, a server that is not `host[:port]`, a profile starting with `-`, and a
-relative root. `ShowArgs` (Open in Prism, issue 190) builds `[--dir <root>]
+relative root. With Play offline on (issue 192) it passes `--offline <name>` in
+place of `--profile`, and `CheckOfflineName` holds the name to no leading `-`,
+no NUL, CR or LF and Minecraft's own rule, `^[A-Za-z0-9_]{3,16}$`; the same check
+runs at save time, where an offline switch on with an empty or malformed name is
+refused (`ValidateSettings`). `ShowArgs` (Open in Prism, issue 190) builds `[--dir <root>]
 --show <id>` through the same check of the id and the root. The player's
 own Java arguments (issue 191, ADR-2's tenth amendment) reach the game through
 `JvmArgs`, not the command line, and `ValidateJVMArgs` holds each: one argument
@@ -178,10 +189,13 @@ most 200 characters and 32 of them, no repeat, and never memory (`-Xmx`,
 `-Xms`), an agent (`-javaagent`, `-agentpath`, `-agentlib`), a command run on
 a failure (`-XX:OnError`, `-XX:OnOutOfMemoryError`) or options read from a file
 (`-XX:VMOptionsFile`, `-XX:Flags`). A manifest still names no argument (S2.1).
-Verify: `TestLaunchArgsRefusesAnythingThatIsNotAPlainValue`,
+Verify: `TestLaunchArgsRefusesAnythingThatIsNotAPlainValue` (its offline
+cases), `TestLaunchArgsBuildsTheDocumentedCommandLine`,
+`TestOfflineNeedsAMinecraftNameOnlyWhileOn`,
 `TestShowArgsOpensTheInstanceWindowAndNothingElse`,
 `TestValidateJVMArgsRefusesWhatCouldDoMoreThanTuneTheGame`.
-Probe: `--dir` as an instance id; a newline in a profile name.
+Probe: `--dir` as an instance id; a newline in a profile name; `--dir` or
+`Steve Jobs` as an offline name.
 
 **S3.3 Bridge-supplied ids resolve through the manifest.**
 Holds when: `LaunchChapter`, `OpenChapterWiki` and `GetServerStatus` look the
