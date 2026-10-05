@@ -43,7 +43,12 @@ import { ensureFreshDist } from './lib/dist-freshness.mjs'
 // in only once it has decoded (lib/useLoadedImage). Both run from the first
 // paint, so they cannot load on demand. Measured 88.5 KB alone, 88.6 KB with the
 // wiki pictures setting beside it, from 88.2 KB before them.
-const BUDGET_KB = 88.6
+// 89.2 since the account page (2026-10-05, issue 192): the sidebar's account
+// tile is a button with a pressed state, and the page layer opens a second page
+// of the launcher's own beside the settings, from the bottom, both from the
+// first paint. The page itself loads on demand. Measured 89.1 KB, from 88.6 KB
+// before it.
+const BUDGET_KB = 89.2
 
 const DIST_ASSETS = await ensureFreshDist()
 const DIST = path.dirname(DIST_ASSETS)

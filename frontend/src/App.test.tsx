@@ -499,7 +499,10 @@ describe('App', () => {
     await screen.findByRole('heading', { level: 1 })
     expect(screen.queryByText(/Not an official Minecraft product/)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
-    expect(await screen.findByText(/Not an official Minecraft product/)).toBeInTheDocument()
+    // The settings are a lazy chunk; under the full suite its first load can pass a second.
+    expect(
+      await screen.findByText(/Not an official Minecraft product/, {}, { timeout: 5000 }),
+    ).toBeInTheDocument()
   })
 
   it('lands a preview started in Settings on the chapter view, with its settings open beneath', async () => {
@@ -1009,6 +1012,31 @@ describe('App', () => {
       endAnimation(sliding('page-out-top')!)
       expect(page).not.toBeInTheDocument()
       expect(gear).toHaveFocus()
+    })
+
+    it('opens the account from the sidebar tile, over the settings, and closes it from the tile (issue 192)', async () => {
+      render(<App />)
+      await screen.findByRole('heading', { level: 1 })
+      fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
+      const settingsPage = await screen.findByRole('region', { name: 'Settings' })
+
+      const tile = screen.getByRole('button', { name: /^Account, / })
+      expect(tile).toHaveAttribute('aria-pressed', 'false')
+      fireEvent.click(tile)
+      // The settings slide out up while the account slides in, as from a chapter's page.
+      expect(sliding('page-out-top')).toContainElement(settingsPage)
+      const account = await screen.findByRole('region', { name: 'Account' }, { timeout: 5000 })
+      endAnimation(sliding('page-out-top')!)
+      expect(settingsPage).not.toBeInTheDocument()
+      expect(tile).toHaveAttribute('aria-pressed', 'true')
+
+      // It comes up from the bottom, above the tile, and goes back down.
+      expect(account.parentElement).toHaveClass('page-in-bottom')
+      fireEvent.click(tile)
+      expect(sliding('page-out-bottom')).toContainElement(account)
+      endAnimation(sliding('page-out-bottom')!)
+      expect(account).not.toBeInTheDocument()
+      expect(tile).toHaveAttribute('aria-pressed', 'false')
     })
 
     it("closes a chapter's page when another chapter is picked, sliding it out as the card changes", async () => {

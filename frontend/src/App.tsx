@@ -23,6 +23,9 @@ import { usePages } from './lib/usePages'
 const SettingsPanel = lazy(() =>
   import('./components/settings/SettingsPanel').then((m) => ({ default: m.SettingsPanel })),
 )
+const AccountPanel = lazy(() =>
+  import('./components/settings/AccountPanel').then((m) => ({ default: m.AccountPanel })),
+)
 const ChapterPage = lazy(() =>
   import('./components/main/ChapterPage').then((m) => ({ default: m.ChapterPage })),
 )
@@ -64,7 +67,7 @@ export default function App() {
   // The pages over the chapter card: the settings from the gear, a chapter's
   // own from its hero and from the corner's notices (lib/usePages).
   const pages = usePages(selectedId, select)
-  const { settings, chapterPage } = pages
+  const { settings, account, chapterPage } = pages
   const openedChapter =
     chapterPage.slot && chapters.find((c) => c.id === chapterPage.slot?.page.chapterId)
 
@@ -160,7 +163,7 @@ export default function App() {
       <ChapterSelectionSync />
       <HeaderBar platform={platform} onOpenSettings={pages.toggleSettings} />
       <div className="flex min-h-0 grow">
-        <Sidebar />
+        <Sidebar onOpenAccount={pages.toggleAccount} accountOpen={account.slot?.open === true} />
         {/* The chapter card scrolls under the header bar and beside the
             sidebar when the window is shorter than it (issue 56). A page slides
             over the card in the same stage, and scrolls inside its own frame. */}
@@ -190,6 +193,11 @@ export default function App() {
             {settings.slot && (
               <PageLayer edge="top" open={settings.slot.open} onExited={settings.done}>
                 <SettingsPanel onClose={settings.hide} onShowChapter={pages.showChapter} />
+              </PageLayer>
+            )}
+            {account.slot && (
+              <PageLayer edge="bottom" open={account.slot.open} onExited={account.done}>
+                <AccountPanel onClose={account.hide} />
               </PageLayer>
             )}
           </ChapterStage>

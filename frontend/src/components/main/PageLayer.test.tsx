@@ -153,7 +153,7 @@ describe('PageLayer', () => {
   })
 
   it('is built from tokens and, with reduced motion, only fades, over the same duration', () => {
-    for (const name of ['in-right', 'out-right', 'in-top', 'out-top']) {
+    for (const name of ['in-right', 'out-right', 'in-top', 'out-top', 'in-bottom', 'out-bottom']) {
       expect(css).toMatch(
         new RegExp(
           `@utility page-${name} \\{\\s*animation: page-${name} var\\(--duration-page\\) var\\(--ease-glide\\) both;`,
@@ -163,10 +163,10 @@ describe('PageLayer', () => {
     const enter = /@keyframes page-in-right \{\s*from \{([^}]*)\}/.exec(css)![1]
     expect(enter).toContain('blur(var(--effect-reveal-blur))')
     expect(css).toMatch(
-      /\.page-in-right,\s*\.page-in-top \{\s*animation: card-fade-in var\(--duration-page\) ease-in-out both;/,
+      /\.page-in-right,\s*\.page-in-top,\s*\.page-in-bottom \{\s*animation: card-fade-in var\(--duration-page\) ease-in-out both;/,
     )
     expect(css).toMatch(
-      /\.page-out-right,\s*\.page-out-top \{\s*animation: card-fade-out var\(--duration-page\) ease-in-out both;/,
+      /\.page-out-right,\s*\.page-out-top,\s*\.page-out-bottom \{\s*animation: card-fade-out var\(--duration-page\) ease-in-out both;/,
     )
   })
 })

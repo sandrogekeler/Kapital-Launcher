@@ -2,8 +2,12 @@ import { Suspense, useLayoutEffect, useRef, useState } from 'react'
 import type { AnimationEvent, ReactNode } from 'react'
 import { CARD } from '../ui/card'
 
-/** The edge a page comes in from: a chapter's pages from the right, the app's settings from the top. */
-export type PageEdge = 'right' | 'top'
+/**
+ * The edge a page comes in from: a chapter's pages from the right, the app's settings from the
+ * top, under the gear, and the account from the bottom, above the sidebar's account tile
+ * (issue 192).
+ */
+export type PageEdge = 'right' | 'top' | 'bottom'
 
 interface Props {
   edge: PageEdge
@@ -19,6 +23,7 @@ interface Props {
 const EDGE = {
   right: { in: 'page-in-right', out: 'page-out-right', frame: 'overflow-hidden rounded-lg' },
   top: { in: 'page-in-top', out: 'page-out-top', frame: '' },
+  bottom: { in: 'page-in-bottom', out: 'page-out-bottom', frame: '' },
 } as const
 
 /**

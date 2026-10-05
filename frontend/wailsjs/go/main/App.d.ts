@@ -64,6 +64,8 @@ export function OpenExternal(arg1:string):Promise<void>;
 
 export function OpenInstanceFolder(arg1:string):Promise<void>;
 
+export function OpenPrism():Promise<void>;
+
 export function OpenWikiPage(arg1:string):Promise<void>;
 
 export function ReadRunLog(arg1:string,arg2:string,arg3:string,arg4:number):Promise<models.RunLogText>;

@@ -182,16 +182,44 @@ func instanceArgs(option, instanceID, root string) ([]string, error) {
 	return append(args, option, instanceID), nil
 }
 
-// Show opens an instance's window in Prism and returns once Prism has started.
-// Nothing follows that Prism: it is the player's to close, and its exit is
-// waited on only so the process is reaped.
-func (p *PrismService) Show(ctx context.Context, engine models.EngineInfo, instanceID, root string) error {
-	if !engine.Found {
-		return ErrPrismNotFound
+// OpenArgs is the argument array that opens Prism's own main window, where its
+// accounts are (issue 192): `[--dir <root>]` and nothing else.
+func OpenArgs(root string) ([]string, error) {
+	root = strings.TrimSpace(root)
+	if root == "" {
+		return []string{}, nil
 	}
+	if !filepath.IsAbs(root) {
+		return nil, fmt.Errorf("prism root %q must be an absolute path", root)
+	}
+	return []string{"--dir", filepath.Clean(root)}, nil
+}
+
+// Show opens an instance's window in Prism and returns once Prism has started.
+func (p *PrismService) Show(ctx context.Context, engine models.EngineInfo, instanceID, root string) error {
 	args, err := ShowArgs(instanceID, root)
 	if err != nil {
 		return err
+	}
+	return p.startUnfollowed(ctx, engine, args)
+}
+
+// Open starts Prism on its main window (issue 192) and returns once it has
+// started.
+func (p *PrismService) Open(ctx context.Context, engine models.EngineInfo, root string) error {
+	args, err := OpenArgs(root)
+	if err != nil {
+		return err
+	}
+	return p.startUnfollowed(ctx, engine, args)
+}
+
+// startUnfollowed starts Prism with a validated argument array for the player
+// to use. Nothing follows that Prism: it is the player's to close, and its exit
+// is waited on only so the process is reaped.
+func (p *PrismService) startUnfollowed(ctx context.Context, engine models.EngineInfo, args []string) error {
+	if !engine.Found {
+		return ErrPrismNotFound
 	}
 	exe, prefix := p.command(engine)
 	cmd := exec.CommandContext(context.WithoutCancel(ctx), exe, append(prefix, args...)...)

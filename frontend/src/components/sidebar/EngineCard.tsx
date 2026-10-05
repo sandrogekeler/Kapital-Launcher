@@ -1,17 +1,28 @@
 import { useEngineStore } from '../../stores/useEngineStore'
 import { installLine } from '../../lib/prismInstall'
+import { profileInitials } from '../../lib/profileName'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { IconButton } from '../ui/IconButton'
 import { ErrorLine } from '../ui/Notes'
 import { TextLink } from '../ui/TextLink'
-import { RefreshCw } from '../../lib/icons'
+import { ChevronRight, RefreshCw } from '../../lib/icons'
+import { Icon } from '../ui/Icon'
+
+interface Props {
+  /** Opens or closes the account page (issue 192); without it the account half is plain text. */
+  onOpenAccount?: () => void
+  /** The account page is open: the card takes the accent, as a chosen chapter does. */
+  accountOpen?: boolean
+}
 
 /**
  * The account and engine card at the foot of the sidebar. The account line
  * shows the profile *name* from settings and nothing more: the Microsoft
- * account itself lives inside Prism and this app never reads it.
+ * account itself lives inside Prism and this app never reads it. The account
+ * half is a button that opens the account page (issue 192); Re-detect stays a
+ * button of its own beside it.
  */
-export function EngineCard() {
+export function EngineCard({ onOpenAccount, accountOpen = false }: Props) {
   const engine = useEngineStore((s) => s.engine)
   const refresh = useEngineStore((s) => s.refresh)
   const release = useEngineStore((s) => s.release)
@@ -20,12 +31,7 @@ export function EngineCard() {
   const profile = useSettingsStore((s) => s.settings.profileName)
 
   const name = profile || 'Default profile'
-  const initials = name
-    .split(/[\s_-]+/)
-    .map((w) => w[0] ?? '')
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
+  const initials = profileInitials(name)
 
   // An update runs while Prism is found; the first install is the action bar's.
   const updateLine =
@@ -44,17 +50,31 @@ export function EngineCard() {
   const offer = engine?.found && release?.updateAvailable && !updateLine ? release : null
 
   return (
-    <div className="bg-raised border-line flex flex-col gap-2.5 rounded-lg border p-3">
-      <div className="flex items-center gap-2.5">
-        <div className="bg-hover flex size-8 items-center justify-center rounded-sm font-mono text-xs">
-          {initials || 'KK'}
-        </div>
-        <div className="flex min-w-0 grow flex-col gap-0.5">
-          <span className="truncate text-sm font-semibold">{name}</span>
-          <span className="text-fg-faint text-2xs truncate" title="Microsoft account · via Prism">
-            Microsoft account · via Prism
+    <div
+      className={`duration-fast ease-standard flex flex-col gap-2.5 rounded-lg border p-3 transition-colors ${
+        accountOpen ? 'bg-accent-wash border-accent-edge' : 'bg-raised border-line'
+      }`}
+    >
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          aria-label={`Account, ${name}`}
+          aria-pressed={accountOpen}
+          disabled={!onOpenAccount}
+          onClick={() => onOpenAccount?.()}
+          className="hover:bg-hover duration-fast ease-standard -m-1.5 flex min-w-0 grow cursor-pointer items-center gap-2.5 rounded-md p-1.5 text-left transition-colors disabled:cursor-default disabled:hover:bg-transparent"
+        >
+          <span className="bg-hover flex size-8 shrink-0 items-center justify-center rounded-sm font-mono text-xs">
+            {initials || 'KK'}
           </span>
-        </div>
+          <span className="flex min-w-0 grow flex-col gap-0.5">
+            <span className="truncate text-sm font-semibold">{name}</span>
+            <span className="text-fg-faint text-2xs truncate" title="Microsoft account · via Prism">
+              Microsoft account · via Prism
+            </span>
+          </span>
+          {onOpenAccount && <Icon icon={ChevronRight} size="sm" className="text-fg-faint" />}
+        </button>
         <IconButton
           icon={RefreshCw}
           title="Re-detect Prism"

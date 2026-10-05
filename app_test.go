@@ -383,6 +383,23 @@ func TestShowInstanceInPrismOpensOnlyAnInstalledChaptersInstance(t *testing.T) {
 	}
 }
 
+// Open Prism (issue 192) passes the engine's root and says so when it fails.
+func TestOpenPrismPassesTheEnginesRoot(t *testing.T) {
+	app := newTestApp(t)
+	var roots []string
+	app.openPrism = func(_ models.EngineInfo, root string) error { roots = append(roots, root); return nil }
+	if err := app.OpenPrism(); err != nil {
+		t.Fatal(err)
+	}
+	if len(roots) != 1 || roots[0] != app.realEngine().Root {
+		t.Fatalf("roots %v", roots)
+	}
+	app.openPrism = func(models.EngineInfo, string) error { return errors.New("not found") }
+	if err := app.OpenPrism(); err == nil || !strings.Contains(err.Error(), "Prism") {
+		t.Fatalf("%v", err)
+	}
+}
+
 // The bridge may only open a wiki page the app itself listed (#58).
 func TestOpenWikiPageRefusesAnUnlistedURL(t *testing.T) {
 	app := newTestApp(t)

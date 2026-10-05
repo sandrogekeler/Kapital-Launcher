@@ -26,6 +26,7 @@ export {
   Folder,
   FolderOpen,
   Info,
+  KeyRound,
   LifeBuoy,
   // lucide's `Map`, renamed: a bare `Map` would shadow the global one.
   Map as MapIcon,
@@ -45,5 +46,6 @@ export {
   Trash2,
   Triangle,
   TriangleAlert,
+  UserRound,
   X,
 } from 'lucide-react'

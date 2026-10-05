@@ -168,13 +168,6 @@ function PrismSection({
           onCommit={(v) => void save('prismRoot', { prismRoot: v })}
           trailing={<BrowseButton onClick={() => void browse('prismRoot', ChoosePrismRoot)} />}
         />
-        <TextField
-          label="Profile name"
-          value={settings.profileName}
-          placeholder="Prism's default account"
-          error={errors.profileName}
-          onCommit={(v) => void save('profileName', { profileName: v })}
-        />
       </SettingsCard>
     </SettingsSection>
   )
