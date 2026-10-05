@@ -362,3 +362,32 @@ What it costs, and what stays open:
   that the Wails binary runs outside its bundle, which a Go program linked against
   AppKit and run before any window should, with its ad-hoc signature intact in a
   byte copy.
+
+## Tenth amendment, 2026-10-04
+
+The second amendment held the player to the launcher's preset list: "a player
+still never types an argument that reaches the game". The author decided on
+issue 191 to let the player add Java arguments of their own after the preset's,
+from the chapter's Game card, as Prism's own instance window already allows
+anyone with the instance open.
+
+- **Where they live.** In `JvmArgs` itself, after the preset's arguments and
+  separated by spaces, with `OverrideJavaArgs` on whenever there are any. Nothing
+  is kept in the launcher's settings: `ReadChapterSettings` reads a value that
+  starts with a preset's arguments as that preset and the rest, and anything
+  else as no preset and all of it the player's, so arguments written in Prism's
+  window (issue 190 puts it a click away) are shown and kept.
+- **What is allowed.** `ValidateJVMArgs`, on every save: each is one argument
+  that starts with a dash, with no space, quote, backslash or control character,
+  because Prism splits `JvmArgs` on spaces and reads quotes and backslashes
+  itself, so one entry can never become two; at most 200 characters, 32
+  arguments, no repeat. Refused whatever the player wants: memory (`-Xmx`,
+  `-Xms`), which the slider owns; an agent (`-javaagent`, `-agentpath`,
+  `-agentlib`), which loads code into the game; the two options that run a
+  command when the JVM fails (`-XX:OnError`, `-XX:OnOutOfMemoryError`); and the
+  two that read more options from a file (`-XX:VMOptionsFile`, `-XX:Flags`). An
+  argument Prism's window wrote that breaks these is shown, and the save says
+  which one to remove.
+- **What does not change.** A manifest still names a preset and never an
+  argument (S2.1); the launcher writes the same five keys, atomically, refused
+  while the game is active; nothing of `JvmArgs` is logged.

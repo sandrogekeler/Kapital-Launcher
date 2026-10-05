@@ -36,7 +36,7 @@ summed). A different count is new surface to classify: add the method to this ta
 | `GetWikiArtStats` | nothing | the mean size of the files in the wiki-art cache and the pool sizes of the cached export, in memory; no request beyond the export `GetWikiPages` already makes | S2.3 |
 | `OpenWikiPage` | a URL | the system browser, only for a URL `GetWikiPages` returned | S3.3 |
 | `GetChapterSettings` | a chapter id | four keys of the chapter's own `instance.cfg` | S1.1, S3.3 |
-| `SaveChapterSettings` | a chapter id and a `ChapterSettings` | five keys rewritten in the chapter's own `instance.cfg`, held to the preset list and the machine's memory | S3.2, S3.3, S4.6 |
+| `SaveChapterSettings` | a chapter id and a `ChapterSettings` | five keys rewritten in the chapter's own `instance.cfg`, held to the preset list, the machine's memory and, for the player's own Java arguments, `ValidateJVMArgs` (issue 191) | S3.2, S3.3, S4.6 |
 | `GetRunLogs` | a chapter id | the names, times and sizes of `logs/latest.log`, `logs/*.log.gz` and `crash-reports/*.txt` in that chapter's instance game folder, listed through an `os.Root`; no file is opened | S3.3, S3.10 |
 | `ReadRunLog` | a chapter id, a kind (`log` or `crash`), a base name the listing produces and a byte offset | one chunk (at most 256 KiB, from a whole line) of one such file in that game folder, unpacked if `.log.gz` up to 256 MiB, redacted before it leaves Go; nothing written | S3.3, S3.10, S7.5 |
 | `GetChapterMods` | a chapter id | the file names, sizes and disabled state of the regular files directly in that chapter's instance `mods` folder, listed through an `os.Root`; when the game is not running, a left-over sync journal is recovered (jars in it that are still on the player's list are renamed to `.jar.disabled`) | S3.3, S3.11 |
@@ -169,9 +169,17 @@ Verify: the `shell never sees a command string` invariant in `.claude/suite.json
 Holds when: `LaunchArgs` refuses an instance id that is not a plain folder
 name, a server that is not `host[:port]`, a profile starting with `-`, and a
 relative root. `ShowArgs` (Open in Prism, issue 190) builds `[--dir <root>]
---show <id>` through the same check of the id and the root.
+--show <id>` through the same check of the id and the root. The player's
+own Java arguments (issue 191, ADR-2's tenth amendment) reach the game through
+`JvmArgs`, not the command line, and `ValidateJVMArgs` holds each: one argument
+that starts with a dash, no space, quote, backslash or control character, at
+most 200 characters and 32 of them, no repeat, and never memory (`-Xmx`,
+`-Xms`), an agent (`-javaagent`, `-agentpath`, `-agentlib`), a command run on
+a failure (`-XX:OnError`, `-XX:OnOutOfMemoryError`) or options read from a file
+(`-XX:VMOptionsFile`, `-XX:Flags`). A manifest still names no argument (S2.1).
 Verify: `TestLaunchArgsRefusesAnythingThatIsNotAPlainValue`,
-`TestShowArgsOpensTheInstanceWindowAndNothingElse`.
+`TestShowArgsOpensTheInstanceWindowAndNothingElse`,
+`TestValidateJVMArgsRefusesWhatCouldDoMoreThanTuneTheGame`.
 Probe: `--dir` as an instance id; a newline in a profile name.
 
 **S3.3 Bridge-supplied ids resolve through the manifest.**
@@ -513,8 +521,8 @@ only from GitHub's hosts, checked against the size and SHA-256 pinned in
 `packwizjars.go`, caching nothing that fails its pin. After that,
 `WriteChapterSettings` (#36, ADR-2's second amendment) rewrites five keys of
 `instance.cfg` and nothing else, atomically, with the preset's arguments from
-the launcher's fixed list and a memory the machine has
-(`ValidateChapterSettings`), and `SaveChapterSettings` refuses while the
+the launcher's fixed list, then the player's own as `ValidateJVMArgs` allows
+them (S3.2), and a memory the machine has (`ValidateChapterSettings`), and `SaveChapterSettings` refuses while the
 instance looks to be running. Before a launch, `RewritePreLaunchCommand`
 (`prelaunch.go`, #95, ADR-2's fourth and ninth amendments) rewrites the one key
 `PreLaunchCommand` and only when it is exactly one of the launcher's own

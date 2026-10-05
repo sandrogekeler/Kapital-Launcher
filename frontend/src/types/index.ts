@@ -347,6 +347,8 @@ export interface ChapterSettings {
   maxMemoryMb: number
   /** A preset name from the launcher's list, or '' for Prism's own arguments. */
   jvm: string
+  /** The player's own Java arguments, after the preset's (issue 191); Go holds each to its rules. */
+  jvmArgs: string[]
 }
 
 /** A chapter's settings with what the panel shows around them. */

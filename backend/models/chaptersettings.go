@@ -11,6 +11,10 @@ type ChapterSettings struct {
 	// JVM names a preset from the launcher's fixed list, or "" for Prism's
 	// own arguments. Never raw arguments.
 	JVM string `json:"jvm"`
+	// JVMArgs are the player's own Java arguments, written after the preset's
+	// (issue 191, ADR-2's tenth amendment). Each is one argument, held by
+	// services.ValidateJVMArgs; never from a manifest.
+	JVMArgs []string `json:"jvmArgs"`
 }
 
 // ChapterSettingsInfo is a chapter's settings with what the panel needs to

@@ -15,7 +15,7 @@ const frangfurd = BUNDLED_MANIFEST.chapters[2]!
 const info = (over: Partial<ChapterSettingsInfo> = {}) =>
   models.ChapterSettingsInfo.createFrom({
     chapterId: 'frangfurd',
-    settings: { maxMemoryMb: 8192, jvm: 'zgc' },
+    settings: { maxMemoryMb: 8192, jvm: 'zgc', jvmArgs: [] },
     machineMemoryMb: 32768,
     prismDefaultMb: 4096,
     packMemoryMb: 8192,
@@ -88,7 +88,7 @@ describe('ChapterSettingsPanel', () => {
 
   it('sets the recommended memory from its mark', async () => {
     vi.mocked(App.GetChapterSettings).mockResolvedValue(
-      info({ settings: { maxMemoryMb: 4096, jvm: 'zgc' } }),
+      info({ settings: { maxMemoryMb: 4096, jvm: 'zgc', jvmArgs: [] } }),
     )
     render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
     const mark = await screen.findByRole('button', { name: /Recommended/ })
@@ -130,7 +130,7 @@ describe('ChapterSettingsPanel', () => {
 
     // Prism's own window wrote the memory meanwhile: the file wins.
     vi.mocked(App.GetChapterSettings).mockResolvedValue(
-      info({ settings: { maxMemoryMb: 12288, jvm: 'zgc' } }),
+      info({ settings: { maxMemoryMb: 12288, jvm: 'zgc', jvmArgs: [] } }),
     )
     await act(async () => {
       window.dispatchEvent(new Event('focus'))
@@ -141,7 +141,7 @@ describe('ChapterSettingsPanel', () => {
 
   it('saves a changed memory and preset together and shows what Go wrote', async () => {
     vi.mocked(App.SaveChapterSettings).mockResolvedValue(
-      info({ settings: { maxMemoryMb: 6144, jvm: '' } }),
+      info({ settings: { maxMemoryMb: 6144, jvm: '', jvmArgs: [] } }),
     )
     render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
     const slider = await screen.findByLabelText('Memory')
@@ -153,6 +153,7 @@ describe('ChapterSettingsPanel', () => {
       expect(App.SaveChapterSettings).toHaveBeenCalledWith('frangfurd', {
         maxMemoryMb: 6144,
         jvm: '',
+        jvmArgs: [],
       }),
     )
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled())
