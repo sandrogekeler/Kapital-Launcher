@@ -391,3 +391,35 @@ anyone with the instance open.
 - **What does not change.** A manifest still names a preset and never an
   argument (S2.1); the launcher writes the same five keys, atomically, refused
   while the game is active; nothing of `JvmArgs` is logged.
+
+## Eleventh amendment, 2026-10-05
+
+The hero can show a chapter's title-screen panorama as a slowly turning cube
+(issue 195). Each pack ships a resources pack of its own, and the six faces of
+the game's menu background are in it at the vanilla path. The launcher reads
+them, which is one more read inside a chapter's own instance.
+
+- **What is listed.** The entries of `<game folder>/resourcepacks/` of an
+  installed chapter, by name only (`minecraft`, or `.minecraft` in older
+  instances). A name that contains "resource", in any case, and is a folder or a
+  `.zip` is a candidate; the first in sorted order that holds all six faces is
+  used. Nothing else of the folder is opened.
+- **What is read.** Six files at one fixed path inside that one entry,
+  `assets/minecraft/textures/gui/title/background/panorama_0.png` to
+  `panorama_5.png`: through an `os.Root` on the folder, so a link cannot lead
+  out of it. For a zip only the central directory is read, then the six entries.
+  Each is read under a 4 MiB cap, decoded as a PNG (the dimensions first, at
+  most 4096 pixels square), and must be square and of one size with the other
+  five. Anything else refuses that pack.
+- **What is kept.** Copies of the six PNGs in the launcher's own data dir,
+  `panorama/<chapter id>/`, with a key made from the pack's name and the file
+  sizes and times (the zip's, for a zip), so a changed pack is read again and an
+  unchanged one is not. The cache of a chapter with no panorama is removed. The
+  copies are served to the launcher's own page at `/panorama/<chapter>/panorama_<n>.png`
+  (GET and HEAD, that name shape only, through an `os.Root`), so the page's CSP
+  stays closed. Nothing of the pack is logged but the chapter and the face size.
+- **When.** On the page's request (`GetPanoramas`), made only while the
+  panorama is the chosen picture: when it is chosen, on window focus, and after an
+  install or a game run ends. Never on a timer.
+- **What does not change.** Nothing is written into the instance, no other file
+  of a resources pack is opened, and no account data is touched.
