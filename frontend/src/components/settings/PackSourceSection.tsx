@@ -7,8 +7,9 @@ import { isActive, selectGame, useGameStore } from '../../stores/useGameStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { ChoiceCards } from '../ui/ChoiceCards'
 import type { Choice } from '../ui/ChoiceCards'
-import { ErrorLine, Hint, WarningLine } from '../ui/Notes'
-import { SubHeading } from '../ui/Section'
+import { Package } from '../../lib/icons'
+import { ErrorLine, WarningLine } from '../ui/Notes'
+import { SettingsSection } from '../ui/SettingsLayout'
 import { RunningHint } from './RunningHint'
 
 interface Source {
@@ -103,18 +104,16 @@ export function PackSourceSection({ chapter }: Props) {
   })
 
   return (
-    <section aria-label="Pack source" className="flex flex-col gap-3">
-      <SubHeading>Pack source</SubHeading>
+    <SettingsSection title="Pack source" icon={Package}>
       <ChoiceCards
         label="Pack source"
         value={current}
         choices={cards}
         onChange={(source) => source !== current && void onSwitch(source)}
       />
-      <Hint>The next Play syncs from the chosen pack. Saves and settings stay.</Hint>
       {playing && <WarningLine>Close the game to switch.</WarningLine>}
       {!playing && running && <RunningHint chapterName={chapter.name} />}
       {error && <ErrorLine>{error}</ErrorLine>}
-    </section>
+    </SettingsSection>
   )
 }

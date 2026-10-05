@@ -45,8 +45,13 @@ export function executablePlaceholder(engine: EngineInfo | null): string {
   return engine.executable
 }
 
-/** The line under the executable field. */
-export function executableHint(settings: AppSettings, engine: EngineInfo | null): string {
+/**
+ * The line under the executable field, only when something needs saying (issue 188): Prism is still
+ * being looked for, was not found, or runs from somewhere other than the path given. A Prism
+ * that runs from the field's path, or from detection with the field empty, needs no line: the
+ * field or its placeholder shows the path.
+ */
+export function executableHint(settings: AppSettings, engine: EngineInfo | null): string | null {
   const set = settings.prismExecutable.trim() !== ''
   if (engine === null) return 'Looking for Prism Launcher.'
   if (!engine.found) {
@@ -57,9 +62,7 @@ export function executableHint(settings: AppSettings, engine: EngineInfo | null)
   if (set && engine.source !== 'settings') {
     return `This path was not found, so Prism ${sourceLabel(engine.source)} is used instead.`
   }
-  return set
-    ? 'Prism runs from this path.'
-    : `Detected ${sourceLabel(engine.source)}. Leave empty to keep detecting.`
+  return null
 }
 
 /** What the data root field shows when it is empty. */
@@ -67,14 +70,14 @@ export function rootPlaceholder(instances: InstanceReport | null): string {
   return instances?.root || "Prism's own data folder"
 }
 
-/** The line under the data root field. */
-export function rootHint(settings: AppSettings, engine: EngineInfo | null): string {
-  if (engine?.source === 'managed') {
-    return 'The managed Prism keeps its data in its own folder. This setting applies to a Prism you install yourself.'
-  }
-  return settings.prismRoot.trim() !== ''
-    ? 'Prism is started with this folder as its data root.'
-    : 'Where Prism keeps its instances. Leave empty for the default.'
+/**
+ * The line under the data root field, only when the field does not apply (issue 188): the managed
+ * Prism keeps its data in its own folder.
+ */
+export function rootHint(engine: EngineInfo | null): string | null {
+  return engine?.source === 'managed'
+    ? 'The managed Prism keeps its data in its own folder. This setting applies to a Prism you install yourself.'
+    : null
 }
 
 /** A packOverrides map with one chapter's entry set, or removed when the address is empty. */

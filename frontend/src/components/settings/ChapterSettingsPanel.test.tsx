@@ -188,8 +188,8 @@ describe('ChapterSettingsPanel', () => {
     render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
     expect(await screen.findByRole('switch', { name: 'Distant Horizons' })).toBeChecked()
     expect(App.GetChapterMods).toHaveBeenCalledWith('frangfurd')
-    const headings = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
-    expect(headings.indexOf('Mods')).toBeGreaterThanOrEqual(0)
+    expect(screen.getByRole('heading', { level: 2, name: 'Mods' })).toBeInTheDocument()
+    expect(screen.getByText('1 of 1 on')).toBeInTheDocument()
   })
 
   it('does not read the mods of a chapter that is not installed', () => {
@@ -330,9 +330,6 @@ describe('ChapterSettingsPanel', () => {
       expect(card('Dev pack')).not.toBeChecked()
       expect(card('Dev pack')).toBeEnabled()
       expect(screen.getByText('Switch')).toBeInTheDocument()
-      expect(
-        screen.getByText('The next Play syncs from the chosen pack. Saves and settings stay.'),
-      ).toBeInTheDocument()
     })
 
     it('is shown for an instance that syncs from a local pack the setting no longer names', async () => {

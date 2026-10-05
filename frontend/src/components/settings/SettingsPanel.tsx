@@ -21,15 +21,16 @@ import {
   picturesHint,
   picturesOf,
 } from '../../lib/wikiArt'
-import { FolderOpen } from '../../lib/icons'
+import { Code, FolderOpen, Palette, Triangle } from '../../lib/icons'
 import { ChoosePrismExecutable, ChoosePrismRoot } from '../../../wailsjs/go/main/App'
 import { AboutSection } from './AboutSection'
 import { Button } from '../ui/Button'
 import { Hint } from '../ui/Notes'
 import { Icon } from '../ui/Icon'
 import { Page } from '../ui/Page'
-import { Section, SubHeading } from '../ui/Section'
+import { SubHeading } from '../ui/Section'
 import { Segmented } from '../ui/Segmented'
+import { SettingsCard, SettingsSection } from '../ui/SettingsLayout'
 import { TextField } from '../ui/TextField'
 import { Toggle } from '../ui/Toggle'
 import { SupportSection } from './SupportSection'
@@ -101,12 +102,20 @@ export function SettingsPanel({ onClose, onShowChapter }: Props) {
   const common = { settings, errors, save }
 
   return (
-    <Page label="Settings" title="Settings" onBack={onClose} ready={loaded}>
+    <Page
+      label="Settings"
+      eyebrow="Launcher"
+      title="Settings"
+      onBack={onClose}
+      ready={loaded}
+      settings
+    >
       <PrismSection {...common} onError={fail} />
       <AppearanceSection {...common} />
-      <DeveloperSection {...common} chapters={chapters} onShowChapter={onShowChapter} />
       <SupportSection />
       <AboutSection />
+      {/* Most players never open it, so it is last (issue 188). */}
+      <DeveloperSection {...common} chapters={chapters} onShowChapter={onShowChapter} />
     </Page>
   )
 }
@@ -135,38 +144,39 @@ function PrismSection({
   }
 
   return (
-    <Section title="Prism Launcher">
-      <TextField
-        label="Prism program"
-        value={settings.prismExecutable}
-        placeholder={executablePlaceholder(engine)}
-        hint={executableHint(settings, engine)}
-        error={errors.prismExecutable}
-        mono
-        onCommit={(v) => void save('prismExecutable', { prismExecutable: v })}
-        trailing={
-          <BrowseButton onClick={() => void browse('prismExecutable', ChoosePrismExecutable)} />
-        }
-      />
-      <TextField
-        label="Prism data folder"
-        value={settings.prismRoot}
-        placeholder={rootPlaceholder(instances)}
-        hint={rootHint(settings, engine)}
-        error={errors.prismRoot}
-        mono
-        onCommit={(v) => void save('prismRoot', { prismRoot: v })}
-        trailing={<BrowseButton onClick={() => void browse('prismRoot', ChoosePrismRoot)} />}
-      />
-      <TextField
-        label="Profile name"
-        value={settings.profileName}
-        placeholder="Prism's default account"
-        hint="The profile name of a Microsoft account signed in to Prism. Kapital Launcher only passes the name on and never sees the account."
-        error={errors.profileName}
-        onCommit={(v) => void save('profileName', { profileName: v })}
-      />
-    </Section>
+    <SettingsSection title="Prism Launcher" icon={Triangle}>
+      <SettingsCard>
+        <TextField
+          label="Prism program"
+          value={settings.prismExecutable}
+          placeholder={executablePlaceholder(engine)}
+          hint={executableHint(settings, engine)}
+          error={errors.prismExecutable}
+          mono
+          onCommit={(v) => void save('prismExecutable', { prismExecutable: v })}
+          trailing={
+            <BrowseButton onClick={() => void browse('prismExecutable', ChoosePrismExecutable)} />
+          }
+        />
+        <TextField
+          label="Prism data folder"
+          value={settings.prismRoot}
+          placeholder={rootPlaceholder(instances)}
+          hint={rootHint(engine)}
+          error={errors.prismRoot}
+          mono
+          onCommit={(v) => void save('prismRoot', { prismRoot: v })}
+          trailing={<BrowseButton onClick={() => void browse('prismRoot', ChoosePrismRoot)} />}
+        />
+        <TextField
+          label="Profile name"
+          value={settings.profileName}
+          placeholder="Prism's default account"
+          error={errors.profileName}
+          onCommit={(v) => void save('profileName', { profileName: v })}
+        />
+      </SettingsCard>
+    </SettingsSection>
   )
 }
 
@@ -181,57 +191,55 @@ function AppearanceSection({ settings, errors, save }: SectionProps) {
     void loadArtStats()
   }, [loadArtStats])
   return (
-    <Section title="Appearance">
-      <Segmented
-        label="Theme"
-        value={settings.theme}
-        options={THEME_OPTIONS}
-        error={errors.theme}
-        onChange={(theme) => void save('theme', { theme })}
-      />
-      <Toggle
-        label="Picture slideshow"
-        checked={!(settings.staticArt ?? false)}
-        hint="Cycles each chapter's pictures from the wiki, with a post about what they show, on every switch and every minute. Off shows each chapter's own picture."
-        error={errors.staticArt}
-        onChange={(on) => void save('staticArt', { staticArt: !on })}
-      />
-      <div className="flex flex-col gap-1.5">
+    <SettingsSection title="Appearance" icon={Palette}>
+      <SettingsCard>
         <Segmented
+          inline
+          label="Theme"
+          value={settings.theme}
+          options={THEME_OPTIONS}
+          error={errors.theme}
+          onChange={(theme) => void save('theme', { theme })}
+        />
+        <Toggle
+          label="Picture slideshow"
+          checked={!(settings.staticArt ?? false)}
+          error={errors.staticArt}
+          onChange={(on) => void save('staticArt', { staticArt: !on })}
+        />
+        {/* What the choice weighs on disk is not something the label can say. */}
+        <Segmented
+          inline
           label="Pictures per chapter"
           value={choiceOf(count)}
           options={WIKI_PICTURES_OPTIONS}
+          hint={picturesHint(count, chapters, artStats)}
           error={errors.wikiPictures}
           onChange={(choice) => void save('wikiPictures', { wikiPictures: numberOf(choice) })}
         />
-        <Hint>{picturesHint(count, chapters, artStats)}</Hint>
-      </div>
-      <div className="flex flex-col gap-1.5">
         <Segmented
+          inline
           label="Open the map"
           value={settings.mapIn === 'browser' ? 'browser' : 'app'}
           options={MAP_IN_OPTIONS}
           error={errors.mapIn}
           onChange={(mapIn) => void save('mapIn', { mapIn })}
         />
-        <Hint>
-          Where the map tool in a chapter's hero shows the map: in a page over the chapter, or in
-          your default browser.
-        </Hint>
-      </div>
-      {/* Go says where the splash can run at all (#43); elsewhere there is
-          nothing to choose. The effective value is derived, so the save
-          carries it along for the switch to follow at once. */}
-      {settings.loadingSplashAvailable && (
-        <Toggle
-          label="Loading splash"
-          checked={settings.loadingSplashOn ?? false}
-          hint="Shows a small loading card from Play until the game's own loading screen."
-          error={errors.loadingSplash}
-          onChange={(on) => void save('loadingSplash', { loadingSplash: on, loadingSplashOn: on })}
-        />
-      )}
-    </Section>
+        {/* Go says where the splash can run at all (#43); elsewhere there is
+            nothing to choose. The effective value is derived, so the save
+            carries it along for the switch to follow at once. */}
+        {settings.loadingSplashAvailable && (
+          <Toggle
+            label="Loading splash"
+            checked={settings.loadingSplashOn ?? false}
+            error={errors.loadingSplash}
+            onChange={(on) =>
+              void save('loadingSplash', { loadingSplash: on, loadingSplashOn: on })
+            }
+          />
+        )}
+      </SettingsCard>
+    </SettingsSection>
   )
 }
 
@@ -243,33 +251,35 @@ function DeveloperSection({
   onShowChapter,
 }: SectionProps & { chapters: readonly Chapter[]; onShowChapter: (chapterId: string) => void }) {
   return (
-    <Section title="Developer" collapsible>
+    <SettingsSection title="Developer" icon={Code} collapsible>
       <Hint>
         A chapter can be installed from a packwiz serve running on this machine instead of its
         published pack. Loopback addresses only; the field is empty for a normal install. An
         installed chapter is switched between its packs in its own settings (the pen in the hero).
       </Hint>
-      {chapters.map((c) => (
-        <TextField
-          key={c.id}
-          label={`Local pack for ${c.name}`}
-          value={settings.packOverrides?.[c.id] ?? ''}
-          placeholder="http://localhost:8080/pack.toml"
-          error={errors[`pack:${c.id}`]}
-          mono
-          onCommit={(v) =>
-            void save(`pack:${c.id}`, {
-              packOverrides: withPackOverride(settings.packOverrides, c.id, v),
-            })
-          }
-        />
-      ))}
+      <SettingsCard>
+        {chapters.map((c) => (
+          <TextField
+            key={c.id}
+            label={`Local pack for ${c.name}`}
+            value={settings.packOverrides?.[c.id] ?? ''}
+            placeholder="http://localhost:8080/pack.toml"
+            error={errors[`pack:${c.id}`]}
+            mono
+            onCommit={(v) =>
+              void save(`pack:${c.id}`, {
+                packOverrides: withPackOverride(settings.packOverrides, c.id, v),
+              })
+            }
+          />
+        ))}
+      </SettingsCard>
       {/* A preview shows its screen, which is not this one: the chapter is
           opened and every page over it closes (issue 124). */}
       <Suspense fallback={<PreviewFallback />}>
         <PreviewSection onStarted={onShowChapter} />
       </Suspense>
-    </Section>
+    </SettingsSection>
   )
 }
 

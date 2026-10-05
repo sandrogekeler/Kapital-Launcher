@@ -28,11 +28,11 @@ export function Toggle({ label, checked, hint, error, disabled, onChange }: Prop
   const track = checked ? 'bg-accent border-accent' : 'bg-sunken border-line-strong'
   const thumb = checked ? 'bg-canvas translate-x-5' : 'bg-fg-muted translate-x-0'
   return (
-    <div className="flex items-start justify-between gap-6">
-      <div className="flex min-w-0 flex-col gap-1.5">
+    <div className="flex items-center justify-between gap-6">
+      <div className="flex min-w-0 flex-col gap-1">
         <label
           htmlFor={id}
-          className={`text-fg w-fit text-sm ${disabled ? 'cursor-default' : 'cursor-pointer'}`}
+          className={`text-fg w-fit text-sm font-medium ${disabled ? 'cursor-default' : 'cursor-pointer'}`}
         >
           {label}
         </label>

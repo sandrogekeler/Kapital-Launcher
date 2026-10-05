@@ -9,7 +9,7 @@ interface Props {
   /** What an empty field shows: the value that applies when nothing is set. */
   placeholder?: string
   /** A line under the field: where the value comes from, or what it does. */
-  hint?: string
+  hint?: string | null
   /** The backend's rejection, shown under the field in place of the hint. */
   error?: string | null
   /** Paths and addresses read better in the data face. */
@@ -59,8 +59,8 @@ export function TextField({
 
   const lineId = `${id}-line`
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-fg-muted text-sm">
+    <div className="flex flex-col gap-2">
+      <label htmlFor={id} className="text-fg text-sm font-medium">
         {label}
       </label>
       <div className="flex items-center gap-2">
