@@ -101,6 +101,9 @@ func TestTheLauncherWindowsCallsAreNoOpsBeforeTheWindowExists(t *testing.T) {
 	if x, y, width, height := w.Frame(); x != 0 || y != 0 || width != 0 || height != 0 {
 		t.Fatalf("%d,%d %dx%d", x, y, width, height)
 	}
+	if w.Minimised() {
+		t.Fatal("no window is minimised")
+	}
 }
 
 func TestNoCardOpensWithoutAWindowToCentreOn(t *testing.T) {
@@ -272,6 +275,8 @@ type windowLog struct {
 	calls []string
 	// fullscreen is what the window answers to isFullscreen.
 	fullscreen bool
+	// minimised is what the window answers to isMinimised.
+	minimised bool
 }
 
 func (l *windowLog) record(name string) func(context.Context) {
@@ -286,6 +291,7 @@ func stubWindow(app *App, showAfterUnminimise bool) *windowLog {
 		minimise:            log.record("minimise"),
 		unminimise:          log.record("unminimise"),
 		show:                log.record("show"),
+		isMinimised:         func(context.Context) bool { return log.minimised },
 		isFullscreen:        func(context.Context) bool { return log.fullscreen },
 		showAfterUnminimise: showAfterUnminimise,
 	}
@@ -338,5 +344,23 @@ func TestAFullScreenLauncherIsNeitherMinimisedNorUnminimised(t *testing.T) {
 	w.Unminimise()
 	if want := []string{"minimise", "unminimise", "show"}; !reflect.DeepEqual(log.calls, want) {
 		t.Fatalf("got %v, want %v", log.calls, want)
+	}
+}
+
+// The launcher says it is minimised from the window's own answer, which is what
+// the card asks before it trusts Frame (#210).
+func TestTheLauncherWindowSaysWhetherItIsMinimised(t *testing.T) {
+	app := newTestApp(t)
+	log := stubWindow(app, false)
+	w := launcherWindow{app}
+	if w.Minimised() {
+		t.Fatal("a window that is up is not minimised")
+	}
+	log.minimised = true
+	if !w.Minimised() {
+		t.Fatal("a minimised window said it was not")
+	}
+	if len(log.calls) != 0 {
+		t.Fatalf("asking changed the window: %v", log.calls)
 	}
 }

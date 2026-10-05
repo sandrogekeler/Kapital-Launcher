@@ -136,3 +136,74 @@ func TestAssetPathFromURLRefusesAnotherOriginAndWhatItDecodesToDotDot(t *testing
 		t.Fatal("the control file is not served, so the checks above prove nothing")
 	}
 }
+
+func TestAppKitFrameCentresACardWithNoPlaceOnTheVisibleFrame(t *testing.T) {
+	// OnScreen (#210): the launcher is minimised, so the card asks for the
+	// middle of the screen it was given, whatever X and Y say. The visible
+	// frame is on a second screen to the left, with a Dock under it.
+	visible := frame{X: -1920, Y: 70, W: 1920, H: 986}
+	got := appKitFrame(Rect{X: 5000, Y: 5000, W: 480, H: 300, OnScreen: true}, visible)
+	want := frame{X: -1920 + 720, Y: 70 + 343, W: 480, H: 300}
+	if got != want {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+}
+
+func TestPlaceOnScreenKeepsACardWhoseCentreIsOnAMonitor(t *testing.T) {
+	primary := Rect{X: 0, Y: 0, W: 1920, H: 1040}
+	second := Rect{X: 1920, Y: 0, W: 2560, H: 1400}
+	monitorAt := func(x, y int) (Rect, bool) {
+		for _, m := range []Rect{primary, second} {
+			if x >= m.X && x < m.X+m.W && y >= m.Y && y < m.Y+m.H {
+				return m, true
+			}
+		}
+		return Rect{}, false
+	}
+	const cw, ch = 480, 300
+	middle := Rect{X: 720, Y: 370, W: cw, H: ch} // the primary work area's middle
+	cases := []struct {
+		name string
+		in   Rect
+		want Rect
+	}{
+		{"a normal frame", Rect{X: 700, Y: 400, W: cw, H: ch}, Rect{X: 700, Y: 400, W: cw, H: ch}},
+		{"on the second monitor", Rect{X: 3000, Y: 200, W: cw, H: ch}, Rect{X: 3000, Y: 200, W: cw, H: ch}},
+		// The centre (2000, 600) is on the second monitor, the card's left
+		// half on the first: it can be reached and stays.
+		{"straddling two monitors", Rect{X: 1760, Y: 450, W: cw, H: ch}, Rect{X: 1760, Y: 450, W: cw, H: ch}},
+		// The centre (1900, 1030) is on the first monitor but the card hangs
+		// below its work area: half off, still reachable, so it stays.
+		{"half off a monitor's bottom edge", Rect{X: 1660, Y: 880, W: cw, H: ch}, Rect{X: 1660, Y: 880, W: cw, H: ch}},
+		// A minimised window's parked frame, centred as Begin does: 160 by
+		// 28 at (-32000, -32000) gives the card (-32280, -32188).
+		{"the parked frame, as it was seen", Rect{X: -32280, Y: -32188, W: cw, H: ch}, middle},
+		{"wholly off every monitor", Rect{X: 9000, Y: 9000, W: cw, H: ch}, middle},
+		{"asked for the screen", Rect{W: cw, H: ch, OnScreen: true}, middle},
+		{"asked for the screen, with a place", Rect{X: 700, Y: 400, W: cw, H: ch, OnScreen: true}, middle},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := placeOnScreen(c.in, monitorAt, primary); got != c.want {
+				t.Fatalf("got %+v, want %+v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestPlaceOnScreenUsesTheWorkAreaAsItsMiddleNotTheMonitors(t *testing.T) {
+	// A taskbar on the left takes 48 pixels and one at the top 40: the work
+	// area starts at 48, 40.
+	primary := Rect{X: 48, Y: 40, W: 1872, H: 1040}
+	got := placeOnScreen(Rect{W: 480, H: 300, OnScreen: true}, func(int, int) (Rect, bool) { return Rect{}, false }, primary)
+	if want := (Rect{X: 48 + (1872-480)/2, Y: 40 + (1040-300)/2, W: 480, H: 300}); got != want {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+}
+
+func TestPlaceOnScreenWithNoPrimaryLeavesTheRectAlone(t *testing.T) {
+	in := Rect{X: -32280, Y: -32188, W: 480, H: 300}
+	if got := placeOnScreen(in, func(int, int) (Rect, bool) { return Rect{}, false }, Rect{}); got != in {
+		t.Fatalf("got %+v, want %+v", got, in)
+	}
+}

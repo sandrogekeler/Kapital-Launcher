@@ -84,6 +84,8 @@ type windowCalls struct {
 	minimise   func(context.Context)
 	unminimise func(context.Context)
 	show       func(context.Context)
+	// isMinimised is whether the window is minimised.
+	isMinimised func(context.Context) bool
 	// isFullscreen is whether the window is in full screen.
 	isFullscreen func(context.Context) bool
 	// showAfterUnminimise is whether bringing the window back also needs show.
@@ -101,6 +103,7 @@ func wailsWindowCalls() windowCalls {
 		minimise:            wailsrt.WindowMinimise,
 		unminimise:          wailsrt.WindowUnminimise,
 		show:                wailsrt.WindowShow,
+		isMinimised:         wailsrt.WindowIsMinimised,
 		isFullscreen:        wailsrt.WindowIsFullscreen,
 		showAfterUnminimise: runtime.GOOS == "darwin",
 	}
@@ -118,6 +121,13 @@ func (w launcherWindow) Frame() (x, y, width, height int) {
 	x, y = wailsrt.WindowGetPosition(w.a.ctx)
 	width, height = wailsrt.WindowGetSize(w.a.ctx)
 	return x, y, width, height
+}
+
+// Minimised is whether the launcher is minimised, which is when Frame is not a
+// place to put the card (#210): Windows parks a minimised window at about
+// (-32000, -32000). No window is not minimised, and Frame has no size then.
+func (w launcherWindow) Minimised() bool {
+	return w.a.ctx != nil && w.a.window.isMinimised(w.a.ctx)
 }
 
 // Minimise and Unminimise leave a full screen launcher alone, on every OS. On

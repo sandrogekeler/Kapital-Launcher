@@ -22,6 +22,11 @@ const (
 	swpNoZOrder   = 0x0004
 	swpNoActivate = 0x0010
 
+	// monitorDefaultToNull makes MonitorFromPoint answer 0 for a point on no
+	// monitor; spiGetWorkArea is the primary monitor's work area.
+	monitorDefaultToNull = 0
+	spiGetWorkArea       = 0x0030
+
 	wmDestroy     = 0x0002
 	wmSize        = 0x0005
 	wmClose       = 0x0010
@@ -58,6 +63,9 @@ var (
 	procGetDpiForWindow     = user32.NewProc("GetDpiForWindow")
 	procFillRect            = user32.NewProc("FillRect")
 	procLoadCursorW         = user32.NewProc("LoadCursorW")
+	procMonitorFromPoint    = user32.NewProc("MonitorFromPoint")
+	procGetMonitorInfoW     = user32.NewProc("GetMonitorInfoW")
+	procSysParamsInfoW      = user32.NewProc("SystemParametersInfoW")
 	procCreateSolidBrush    = gdi32.NewProc("CreateSolidBrush")
 	procDeleteObject        = gdi32.NewProc("DeleteObject")
 	procExtractIconW        = shell32.NewProc("ExtractIconW")
@@ -92,6 +100,14 @@ type winMsg struct {
 
 // winRect is the Win32 RECT.
 type winRect struct{ left, top, right, bottom int32 }
+
+// winMonitorInfo is the Win32 MONITORINFO.
+type winMonitorInfo struct {
+	size    uint32
+	monitor winRect
+	work    winRect
+	flags   uint32
+}
 
 // callErr is LazyProc.Call without the middle result, and with the "operation
 // completed successfully" errno that Call returns on success taken for nil.

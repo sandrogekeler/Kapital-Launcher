@@ -17,6 +17,9 @@ type CardLauncher interface {
 	// Frame is the window's position and size in screen coordinates, as the
 	// Wails runtime reports them; zero sizes when it cannot say.
 	Frame() (x, y, w, h int)
+	// Minimised is whether the window is minimised, when Frame is no place to
+	// centre on: Windows parks a minimised window at about (-32000, -32000).
+	Minimised() bool
 	Minimise()
 	Unminimise()
 }
@@ -131,6 +134,7 @@ func (c *SplashCard) live(run *cardRun) bool {
 // so a quit meanwhile (Shutdown) ends the wait, and Begin then returns false.
 func (c *SplashCard) Begin(chapter models.Chapter, theme string) bool {
 	x, y, w, h := c.cfg.Launcher.Frame()
+	rect := cardRect(x, y, w, h, c.cfg.Launcher.Minimised())
 	host := c.cfg.NewHost()
 	run := &cardRun{
 		chapter: splashhost.StateChapter{ID: chapter.ID, Name: chapter.Name},
@@ -166,7 +170,7 @@ func (c *SplashCard) Begin(chapter models.Chapter, theme string) bool {
 
 	// Open waits for the page, up to 15 s, so mu is not held: Shutdown must be
 	// able to reach this host meanwhile, and its Close ends the wait.
-	err := host.Open(cardRect(x, y, w, h), page)
+	err := host.Open(rect, page)
 
 	c.mu.Lock()
 	if err != nil || c.run != run {
@@ -194,12 +198,16 @@ func (c *SplashCard) Begin(chapter models.Chapter, theme string) bool {
 }
 
 // cardRect centres the card on the launcher's window: the card's design size
-// with its centre on the window's. A window that cannot say where it is gets
-// the card at the screen's corner, which still shows it.
-func cardRect(x, y, w, h int) splashhost.Rect {
+// with its centre on the window's. A window that is minimised, or cannot say
+// where it is, has no place worth centring on (a minimised one is parked at
+// about (-32000, -32000), where the card was once opened out of reach, #210),
+// so the rect asks the host for the screen's middle instead (OnScreen). A
+// frame that is on no monitor for another reason is the host's to catch, as it
+// alone knows the monitors (splashhost.placeOnScreen).
+func cardRect(x, y, w, h int, minimised bool) splashhost.Rect {
 	cw, ch := design.SplashWidth, design.SplashHeight
-	if w <= 0 || h <= 0 {
-		return splashhost.Rect{W: cw, H: ch}
+	if minimised || w <= 0 || h <= 0 {
+		return splashhost.Rect{W: cw, H: ch, OnScreen: true}
 	}
 	return splashhost.Rect{X: x + (w-cw)/2, Y: y + (h-ch)/2, W: cw, H: ch}
 }

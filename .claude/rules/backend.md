@@ -150,13 +150,19 @@ argument. `protocol.go` is the whole contract.
 `SplashCard` (`services/splashcard.go`) drives it on the tracker's phase changes
 and keeps the launcher's window out of the way: `Begin` before Prism runs
 (opens the card centred on the launcher's window, then minimises the launcher;
+a launcher that is already minimised, or cannot say where it is, has no place
+to centre on, as Windows parks a minimised window at about (-32000, -32000), so
+`cardRect` sets `Rect.OnScreen` and the host centres the card on the screen:
+the primary work area on Windows, which also does it for any frame whose centre
+is on no monitor (`placeOnScreen`, #210), and the launcher's screen on macOS;
 when the card cannot open it says so and the run holds nothing), `Observe` per
 game event, `Handover` from `TrackRequest.OnHandover` on Windows once the
 holder's foreground release is done, and `Leave`. On macOS there is no window
 hold, so the card closes at the game's `window` phase instead. The launcher
 comes back when the game ends, showing how it ended; a crash or failure before
 the handover keeps the card for the error until the player leaves it. The
-launcher's own window is only asked where it is, to minimise and to come back
+launcher's own window is only asked where it is and whether it is minimised, to
+minimise and to come back
 (`launcherWindow` in `app_splash.go`).
 
 `managedprism.go` gets Prism for a player who has none, on approval only

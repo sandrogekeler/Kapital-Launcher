@@ -47,7 +47,17 @@ type Host interface {
 // runtime reports them (screen coordinates, the physical pixels of a Windows
 // desktop). A host that scales W and H for the monitor's DPI keeps the centre,
 // X+W/2 and Y+H/2, where it is, and so lands on the launcher's monitor.
-type Rect struct{ X, Y, W, H int }
+//
+// OnScreen says the caller has no place to give: the launcher is minimised, or
+// cannot say where it is (#210). X and Y are then ignored and the host centres
+// the card on the screen it knows, the primary work area on Windows and the
+// launcher's screen (else the main one) on macOS. Whatever the caller says, a
+// Windows host also does it when X+W/2, Y+H/2 lies on no monitor, which is
+// where a minimised window is parked (-32000, -32000).
+type Rect struct {
+	X, Y, W, H int
+	OnScreen   bool
+}
 
 // Page is what the card shows and how it talks back.
 type Page struct {
