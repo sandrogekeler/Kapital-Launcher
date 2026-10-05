@@ -135,17 +135,10 @@ func (p *PrismService) Detect(ctx context.Context, settings models.AppSettings) 
 // LaunchArgs is the pure half of Launch: it validates every field and returns
 // the argument array. Kept separate so the exact command line is testable.
 func LaunchArgs(req models.LaunchRequest) ([]string, error) {
-	if !prismInstanceID.MatchString(req.InstanceID) {
-		return nil, fmt.Errorf("instance id %q is not a plain folder name", req.InstanceID)
+	args, err := instanceArgs("--launch", req.InstanceID, req.Root)
+	if err != nil {
+		return nil, err
 	}
-	var args []string
-	if root := strings.TrimSpace(req.Root); root != "" {
-		if !filepath.IsAbs(root) {
-			return nil, fmt.Errorf("prism root %q must be an absolute path", root)
-		}
-		args = append(args, "--dir", filepath.Clean(root))
-	}
-	args = append(args, "--launch", req.InstanceID)
 	if req.Server != "" {
 		host, port, err := ParseServerAddress(req.Server)
 		if err != nil {
@@ -164,6 +157,53 @@ func LaunchArgs(req models.LaunchRequest) ([]string, error) {
 		args = append(args, "--profile", profile)
 	}
 	return args, nil
+}
+
+// ShowArgs is the argument array that opens an instance's own window in Prism
+// (issue 190): `[--dir <root>] --show <id>`, validated as LaunchArgs validates
+// the same two values.
+func ShowArgs(instanceID, root string) ([]string, error) {
+	return instanceArgs("--show", instanceID, root)
+}
+
+// instanceArgs validates an instance id and an optional root and returns
+// `[--dir <root>] <option> <id>`.
+func instanceArgs(option, instanceID, root string) ([]string, error) {
+	if !prismInstanceID.MatchString(instanceID) {
+		return nil, fmt.Errorf("instance id %q is not a plain folder name", instanceID)
+	}
+	var args []string
+	if root = strings.TrimSpace(root); root != "" {
+		if !filepath.IsAbs(root) {
+			return nil, fmt.Errorf("prism root %q must be an absolute path", root)
+		}
+		args = append(args, "--dir", filepath.Clean(root))
+	}
+	return append(args, option, instanceID), nil
+}
+
+// Show opens an instance's window in Prism and returns once Prism has started.
+// Nothing follows that Prism: it is the player's to close, and its exit is
+// waited on only so the process is reaped.
+func (p *PrismService) Show(ctx context.Context, engine models.EngineInfo, instanceID, root string) error {
+	if !engine.Found {
+		return ErrPrismNotFound
+	}
+	args, err := ShowArgs(instanceID, root)
+	if err != nil {
+		return err
+	}
+	exe, prefix := p.command(engine)
+	cmd := exec.CommandContext(context.WithoutCancel(ctx), exe, append(prefix, args...)...)
+	cmd.Stdout, cmd.Stderr = nil, nil
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("start prism: %w", err)
+	}
+	go func() {
+		//nolint:errcheck // Prism's exit status says nothing the launcher acts on.
+		cmd.Wait()
+	}()
+	return nil
 }
 
 // Launch starts Prism with the given request and returns its process once it

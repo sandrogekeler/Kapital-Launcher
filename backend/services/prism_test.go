@@ -47,6 +47,32 @@ func TestLaunchArgsBuildsTheDocumentedCommandLine(t *testing.T) {
 	}
 }
 
+// Open in Prism (issue 190) builds `[--dir <root>] --show <id>` and refuses
+// what LaunchArgs refuses in the same two values.
+func TestShowArgsOpensTheInstanceWindowAndNothingElse(t *testing.T) {
+	root := t.TempDir()
+	got, err := ShowArgs("kapital-frangfurd", root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"--dir", root, "--show", "kapital-frangfurd"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %q want %q", got, want)
+	}
+	if got, _ := ShowArgs("kapital-frangfurd", ""); !reflect.DeepEqual(got, []string{"--show", "kapital-frangfurd"}) {
+		t.Fatalf("without a root: %q", got)
+	}
+	for name, c := range map[string][2]string{
+		"option as instance": {"--launch", ""},
+		"path traversal":     {"../x", ""},
+		"empty instance":     {"", ""},
+		"relative root":      {"x", "prism"},
+	} {
+		if _, err := ShowArgs(c[0], c[1]); err == nil {
+			t.Errorf("%s: expected a refusal", name)
+		}
+	}
+}
+
 func TestLaunchArgsRefusesAnythingThatIsNotAPlainValue(t *testing.T) {
 	cases := map[string]models.LaunchRequest{
 		"empty instance":        {InstanceID: ""},

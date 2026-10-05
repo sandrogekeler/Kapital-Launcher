@@ -23,7 +23,8 @@ through.
 `backend/services/prism.go` runs Prism. The command line is Prism's
 documented CLI, quoted at the top of the file; `LaunchArgs` is the pure, tested
 function that builds the argument array, and `Launch` starts Prism and returns
-its process. The only other processes are macOS's `codesign`, with fixed
+its process. `ShowArgs` and `Show` do the same for `--show` (Open in Prism,
+issue 190), whose Prism is waited on only to be reaped. The only other processes are macOS's `codesign`, with fixed
 arguments, in `verify_darwin.go`, macOS's `open`, with the absolute path of
 a folder that exists as its only argument, in `openfolder_darwin.go`, and the
 pre-launch sync's Java, the `INST_JAVA` Prism named with the packwiz template's

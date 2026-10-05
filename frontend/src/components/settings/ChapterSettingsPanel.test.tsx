@@ -338,10 +338,35 @@ describe('ChapterSettingsPanel', () => {
     await screen.findByText(/could not open the Frangfurd folder/)
   })
 
-  it('keeps Open folder disabled until the instance exists', () => {
+  it('keeps Open folder and Open in Prism disabled until the instance exists', () => {
     useEngineStore.setState({ instances: report(false) })
     render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
     expect(screen.getByRole('button', { name: 'Open folder' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Open in Prism' })).toBeDisabled()
+  })
+
+  it('opens the instance in Prism by chapter id and shows a refusal (issue 190)', async () => {
+    vi.mocked(App.ShowInstanceInPrism).mockResolvedValueOnce(undefined)
+    render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+    await screen.findByLabelText('Memory')
+    const button = screen.getByRole('button', { name: 'Open in Prism' })
+    expect(button).toHaveAttribute('title', expect.stringContaining('put back on the next Play'))
+    fireEvent.click(button)
+    await waitFor(() => expect(App.ShowInstanceInPrism).toHaveBeenCalledWith('frangfurd'))
+
+    vi.mocked(App.ShowInstanceInPrism).mockRejectedValueOnce(
+      'could not open Frangfurd in Prism: start prism: not found',
+    )
+    fireEvent.click(button)
+    await screen.findByText(/could not open Frangfurd in Prism/)
+  })
+
+  it('holds Open in Prism while the game is active', async () => {
+    useGameStore.setState({ states: phaseOf('running') })
+    render(<ChapterSettingsPanel chapter={frangfurd} onClose={() => undefined} />)
+    await screen.findByLabelText('Memory')
+    expect(screen.getByRole('button', { name: 'Open in Prism' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Open folder' })).toBeEnabled()
   })
 
   it('closes on Back and Escape', async () => {

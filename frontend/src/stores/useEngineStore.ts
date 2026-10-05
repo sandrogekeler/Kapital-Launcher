@@ -25,6 +25,7 @@ import {
   RefreshEngine,
   SaveChapterSettings,
   SetPackSource,
+  ShowInstanceInPrism,
 } from '../../wailsjs/go/main/App'
 import { EventsOff, EventsOn } from '../../wailsjs/runtime/runtime'
 
@@ -61,6 +62,8 @@ interface EngineStore {
   saveChapterSettings: (chapterId: string, settings: ChapterSettings) => Promise<void>
   /** Shows the chapter's instance folder in the file manager; rejects with Go's reason. */
   openInstanceFolder: (chapterId: string) => Promise<void>
+  /** Opens the chapter's instance in Prism's own window (issue 190); rejects with Go's reason. */
+  showInPrism: (chapterId: string) => Promise<void>
   loadRelease: () => Promise<void>
   installPrism: () => Promise<void>
   listenInstall: () => () => void
@@ -109,6 +112,7 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
 
   // Go resolves the folder from the chapter id, so there is nothing to keep.
   openInstanceFolder: (chapterId) => OpenInstanceFolder(chapterId),
+  showInPrism: (chapterId) => ShowInstanceInPrism(chapterId),
 
   // What installing or updating Prism would fetch. A read: without a bridge,
   // or when GitHub cannot be reached, there is simply nothing to offer.

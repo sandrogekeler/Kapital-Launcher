@@ -78,6 +78,8 @@ export function SetModsDisabled(arg1:string,arg2:Array<string>):Promise<models.C
 
 export function SetPackSource(arg1:string,arg2:string):Promise<models.InstanceReport>;
 
+export function ShowInstanceInPrism(arg1:string):Promise<void>;
+
 export function ShowPrismConsole(arg1:string):Promise<boolean>;
 
 export function StartPreview(arg1:string,arg2:string):Promise<models.PreviewStart>;
