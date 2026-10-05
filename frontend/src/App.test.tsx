@@ -118,6 +118,7 @@ describe('App', () => {
       wikiPages: [],
       wikiShots: [],
       slides: {},
+      panoramas: {},
     })
     useEngineStore.setState({
       engine: null,
@@ -884,7 +885,7 @@ describe('App', () => {
     expect(screen.getByRole('main')).toBeInTheDocument()
   })
 
-  it('moves the slide on every minute, from the last switch, and not with the slideshow off', async () => {
+  it('moves the slide on every minute, from the last switch, and only while the slideshow is what the hero shows', async () => {
     vi.useFakeTimers()
     try {
       const advance = vi.fn(async () => undefined)
@@ -907,12 +908,92 @@ describe('App', () => {
       await act(() => vi.advanceTimersByTimeAsync(SLIDE_INTERVAL_MS / 2))
       expect(advance).toHaveBeenCalledTimes(2)
 
-      act(() => useSettingsStore.setState({ settings: { ...DEFAULT_SETTINGS, staticArt: true } }))
+      act(() =>
+        useSettingsStore.setState({ settings: { ...DEFAULT_SETTINGS, heroArt: 'default' } }),
+      )
       await act(() => vi.advanceTimersByTimeAsync(SLIDE_INTERVAL_MS * 3))
       expect(advance).toHaveBeenCalledTimes(2)
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  describe('the hero panorama (issue 195)', () => {
+    const faces = (id: string) =>
+      Array.from({ length: 6 }, (_, n) => `/panorama/${id}/panorama_${n}.png`)
+    beforeEach(() => {
+      Object.assign(window, { go: {} })
+      vi.mocked(Bindings.GetPanoramas).mockResolvedValue([
+        { chapterId: 'luxemburg', faces: faces('luxemburg') },
+      ])
+    })
+    afterEach(() => void Reflect.deleteProperty(window, 'go'))
+    const chosen = (heroArt: string) =>
+      vi.mocked(Bindings.GetSettings).mockResolvedValue({ ...DEFAULT_SETTINGS, heroArt })
+
+    it('reads the panoramas only when it is the choice, and draws the open chapter its own cube', async () => {
+      chosen('panorama')
+      render(<App />)
+      expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument()
+      await waitFor(() => expect(Bindings.GetPanoramas).toHaveBeenCalledTimes(1))
+      await waitFor(() =>
+        expect(document.querySelector('[data-face="0"]')).toHaveAttribute(
+          'src',
+          '/panorama/luxemburg/panorama_0.png',
+        ),
+      )
+      expect(document.querySelectorAll('.panorama-face')).toHaveLength(6)
+    })
+
+    it('does not read them, or draw a cube, for the slideshow or the default picture', async () => {
+      for (const heroArt of ['slideshow', 'default']) {
+        chosen(heroArt)
+        const { unmount } = render(<App />)
+        expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument()
+        await act(() => Promise.resolve())
+        expect(document.querySelector('.panorama')).toBeNull()
+        unmount()
+      }
+      expect(Bindings.GetPanoramas).not.toHaveBeenCalled()
+    })
+
+    it('shows the chapter its own picture when it has no panorama', async () => {
+      chosen('panorama')
+      useChapterStore.setState({ selectedId: 'frangfurd' })
+      render(<App />)
+      expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument()
+      await waitFor(() => expect(Bindings.GetPanoramas).toHaveBeenCalled())
+      expect(document.querySelector('.panorama')).toBeNull()
+      expect(document.querySelector('section img[draggable="false"]')).not.toBeNull()
+    })
+
+    it('reads again when the window is focused and when a game run ends, and not while one runs', async () => {
+      chosen('panorama')
+      render(<App />)
+      await waitFor(() => expect(Bindings.GetPanoramas).toHaveBeenCalledTimes(1))
+      fireEvent.focus(window)
+      await waitFor(() => expect(Bindings.GetPanoramas).toHaveBeenCalledTimes(2))
+
+      act(() =>
+        useGameStore.getState().receive({ chapterId: 'luxemburg', phase: 'running' } as never),
+      )
+      fireEvent.focus(window)
+      await act(() => Promise.resolve())
+      expect(Bindings.GetPanoramas).toHaveBeenCalledTimes(2)
+
+      act(() =>
+        useGameStore.getState().receive({ chapterId: 'luxemburg', phase: 'closed' } as never),
+      )
+      await waitFor(() => expect(Bindings.GetPanoramas).toHaveBeenCalledTimes(3))
+    })
+
+    it('reads again when an install has finished', async () => {
+      chosen('panorama')
+      render(<App />)
+      await waitFor(() => expect(Bindings.GetPanoramas).toHaveBeenCalledTimes(1))
+      act(() => useEngineStore.setState({ installedNow: 'luxemburg' }))
+      await waitFor(() => expect(Bindings.GetPanoramas).toHaveBeenCalledTimes(2))
+    })
   })
 
   describe('pages over the chapter', () => {

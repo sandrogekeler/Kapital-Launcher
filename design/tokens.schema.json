@@ -246,7 +246,7 @@
     "effect": {
       "type": "object",
       "description": "Values a utility cannot name on its own: the hover lift on the filled button, the focus outline, the stops of the scrim over artwork, and the grid shown where a chapter has no artwork yet.",
-      "required": ["hoverBrightness", "focusRing", "scrim", "accent", "artPending", "motionBlur", "revealBlur", "glow", "tileBlur", "tileTint"],
+      "required": ["hoverBrightness", "focusRing", "scrim", "accent", "artPending", "motionBlur", "revealBlur", "glow", "tileBlur", "tileTint", "panorama"],
       "additionalProperties": false,
       "properties": {
         "hoverBrightness": { "type": "number", "exclusiveMinimum": 1, "maximum": 2 },
@@ -296,6 +296,17 @@
             "line": { "type": "number", "minimum": 0, "maximum": 100 },
             "cell": { "type": "integer", "minimum": 1 },
             "cellThumb": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "panorama": {
+          "type": "object",
+          "description": "The hero's turning panorama (issue 195): fov is the horizontal field of view in degrees, tilt how far the camera looks down in degrees, bleed how much larger than the cube each face is drawn, in percent (emitted as a ratio), so no seam shows between two faces.",
+          "required": ["fov", "tilt", "bleed"],
+          "additionalProperties": false,
+          "properties": {
+            "fov": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 180 },
+            "tilt": { "type": "number", "minimum": 0, "maximum": 60 },
+            "bleed": { "type": "number", "minimum": 0, "maximum": 5 }
           }
         },
         "tileTint": {

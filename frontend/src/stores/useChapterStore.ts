@@ -1,9 +1,9 @@
 import { create } from 'zustand'
-import type { Chapter, Manifest, WikiPage, WikiShot } from '../types'
+import type { Chapter, Manifest, Panorama, WikiPage, WikiShot } from '../types'
 import { BUNDLED_MANIFEST, chapterById } from '../lib/manifest'
 import { pickSlide, preload, shotsForChapter, type Slide } from '../lib/slides'
 import { readOr } from '../lib/ipc'
-import { GetManifest, GetWikiPages, GetWikiShots } from '../../wailsjs/go/main/App'
+import { GetManifest, GetPanoramas, GetWikiPages, GetWikiShots } from '../../wailsjs/go/main/App'
 
 /**
  * The chapter list, which chapter is open, and the wiki page shown for it.
@@ -20,6 +20,12 @@ import { GetManifest, GetWikiPages, GetWikiShots } from '../../wailsjs/go/main/A
  * the rotation calls every minute. With no screenshots the hero keeps the
  * bundled art; with no pages (offline on a first start) the panel shows the
  * manifest's teaser.
+ *
+ * A chapter's panorama (issue 195) is six faces Go cached from the resources pack
+ * in its instance, by chapter id; a chapter without one is not in the record and
+ * its hero shows its own picture. It is read when the panorama is chosen and
+ * again when the window is focused or an install or a run ends, which is the
+ * caller's to ask (`loadPanoramas`), never a timer.
  */
 interface ChapterStore {
   manifest: Manifest
@@ -31,9 +37,12 @@ interface ChapterStore {
   wikiShots: WikiShot[]
   /** Each chapter's slide, by chapter id; picked again on every switch to it. */
   slides: Record<string, Slide | undefined>
+  /** The six faces of each chapter's panorama, by chapter id; a chapter with none is absent. */
+  panoramas: Record<string, string[] | undefined>
   load: () => Promise<void>
   loadWikiPages: () => Promise<void>
   loadWikiShots: () => Promise<void>
+  loadPanoramas: () => Promise<void>
   select: (id: string) => void
   /** The open chapter's next slide, shown once its picture has loaded. */
   advance: () => Promise<void>
@@ -51,6 +60,7 @@ export const useChapterStore = create<ChapterStore>((set, get) => ({
   wikiPages: [],
   wikiShots: [],
   slides: {},
+  panoramas: {},
 
   load: async () => {
     const manifest = await readOr(GetManifest, get().manifest)
@@ -100,6 +110,17 @@ export const useChapterStore = create<ChapterStore>((set, get) => ({
     if (get().selectedId === selectedId) set({ slides: { ...get().slides, [selectedId]: next } })
   },
 
+  // A read of what Go found in the instances' resources packs. Without a bridge,
+  // or on a failure, there is none and each hero keeps its own picture.
+  loadPanoramas: async () => {
+    const found = asList<Panorama>(await readOr(GetPanoramas, []))
+    const panoramas: Record<string, string[]> = {}
+    for (const p of found) {
+      if (Array.isArray(p.faces) && p.faces.length === 6) panoramas[p.chapterId] = p.faces
+    }
+    set({ panoramas })
+  },
+
   select: (id) => {
     // Clicking the open chapter is not a switch: its slide stays (#140).
     if (id === get().selectedId) return
@@ -136,6 +157,12 @@ export const selectSlide =
   (id: string) =>
   (s: ChapterStore): Slide | undefined =>
     s.slides[id]
+
+/** A chapter's panorama faces, undefined where it has none or has not been read. */
+export const selectPanorama =
+  (id: string) =>
+  (s: ChapterStore): string[] | undefined =>
+    s.panoramas[id]
 
 /** Whether the open chapter has more than one slide to rotate through. */
 export const selectCanRotate = (s: ChapterStore): boolean => {

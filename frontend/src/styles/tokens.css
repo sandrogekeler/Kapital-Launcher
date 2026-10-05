@@ -82,6 +82,8 @@
   --transition-duration-slow: 420ms;
   --duration-drift: 900ms;
   --transition-duration-drift: 900ms;
+  --duration-panorama: 180000ms;
+  --transition-duration-panorama: 180000ms;
   --duration-dwell: 3780ms;
   --transition-duration-dwell: 3780ms;
   --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -129,6 +131,9 @@
   --effect-motion-blur: 4px;
   --effect-tile-blur: 14px;
   --effect-tile-tint: 75%;
+  --panorama-fov: 90deg;
+  --panorama-tilt: 10deg;
+  --panorama-bleed: 0.005;
   --layout-reveal-rise: 4px;
   --effect-reveal-blur: 2px;
   --effect-glow-blur: 18px;

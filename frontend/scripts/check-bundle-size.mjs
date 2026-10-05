@@ -48,7 +48,11 @@ import { ensureFreshDist } from './lib/dist-freshness.mjs'
 // of the launcher's own beside the settings, from the bottom, both from the
 // first paint. The page itself loads on demand. Measured 89.1 KB, from 88.6 KB
 // before it.
-const BUDGET_KB = 89.2
+// 89.7 since the hero panorama (2026-10-05, issue 195): the hero's choice of picture
+// (lib/heroArt), the panoramas the chapter store reads and the cube's lazy import
+// run from the first paint. The cube itself loads only when the panorama is chosen.
+// Measured 89.6 KB, from 89.1 KB before it.
+const BUDGET_KB = 89.7
 
 const DIST_ASSETS = await ensureFreshDist()
 const DIST = path.dirname(DIST_ASSETS)

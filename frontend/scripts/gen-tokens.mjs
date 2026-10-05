@@ -266,8 +266,17 @@ function emitLayout(src, push) {
 }
 
 function emitEffects(src, push) {
-  const { hoverBrightness, focusRing, scrim, accent, artPending, motionBlur, tileBlur, tileTint } =
-    src.effect
+  const {
+    hoverBrightness,
+    focusRing,
+    scrim,
+    accent,
+    artPending,
+    motionBlur,
+    tileBlur,
+    tileTint,
+    panorama,
+  } = src.effect
   push(`/* Effects: values a utility cannot name on its own. Read by the shared`)
   push(`   styles/base.css and by brightness-(--effect-hover-brightness). */`)
   push(`:root {`)
@@ -289,6 +298,9 @@ function emitEffects(src, push) {
   push(`  --effect-motion-blur: ${motionBlur}px;`)
   push(`  --effect-tile-blur: ${tileBlur}px;`)
   push(`  --effect-tile-tint: ${tileTint}%;`)
+  push(`  --panorama-fov: ${panorama.fov}deg;`)
+  push(`  --panorama-tilt: ${panorama.tilt}deg;`)
+  push(`  --panorama-bleed: ${panorama.bleed / 100};`)
   emitRevealValues(src, push)
   push(`}`)
 }

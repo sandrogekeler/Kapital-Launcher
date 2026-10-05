@@ -91,3 +91,45 @@ describe('Hero pills', () => {
     expect(screen.getByText('31 mods')).toBeInTheDocument()
   })
 })
+
+describe('Hero panorama (issue 195)', () => {
+  afterEach(cleanup)
+  const faces = Array.from({ length: 6 }, (_, n) => `/panorama/${chapter.id}/panorama_${n}.png`)
+  const show = (panorama?: readonly string[]) =>
+    render(
+      <Hero
+        chapter={chapter}
+        panorama={panorama}
+        onOpenSettings={noop}
+        onOpenLogs={noop}
+        onOpenMap={noop}
+        version="1.0.1"
+      />,
+    )
+
+  it("draws the cube over the chapter's own picture and under the same scrim", async () => {
+    const { container } = show(faces)
+    await screen.findByText(chapter.blurb)
+    await vi.waitFor(() => expect(container.querySelector('.panorama')).not.toBeNull())
+    const section = container.querySelector('section')!
+    const children = Array.from(section.children)
+    const picture = children.findIndex((c) => c.querySelector('img[draggable=false]'))
+    const cube = children.findIndex((c) => c.classList.contains('panorama'))
+    const scrim = children.findIndex((c) => c.classList.contains('scrim-hero'))
+    // The picture is what shows until the faces load, and the scrim keeps the text readable.
+    expect(picture).toBeGreaterThanOrEqual(0)
+    expect(cube).toBeGreaterThan(picture)
+    expect(scrim).toBeGreaterThan(cube)
+    expect(section.querySelectorAll('.panorama-face')).toHaveLength(6)
+  })
+
+  it('keeps only its own picture with no panorama, or with one that is not six faces', async () => {
+    for (const panorama of [undefined, faces.slice(0, 5)]) {
+      const { container, unmount } = show(panorama)
+      await screen.findByText(chapter.blurb)
+      expect(container.querySelector('.panorama')).toBeNull()
+      expect(container.querySelector('.scrim-hero')).not.toBeNull()
+      unmount()
+    }
+  })
+})

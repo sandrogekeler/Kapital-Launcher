@@ -21,6 +21,7 @@ import {
   picturesHint,
   picturesOf,
 } from '../../lib/wikiArt'
+import { HERO_ART_OPTIONS, heroArtHint, heroArtOf } from '../../lib/heroArt'
 import { Code, FolderOpen, Palette, Triangle } from '../../lib/icons'
 import { ChoosePrismExecutable, ChoosePrismRoot } from '../../../wailsjs/go/main/App'
 import { AboutSection } from './AboutSection'
@@ -178,6 +179,7 @@ function AppearanceSection({ settings, errors, save }: SectionProps) {
   const artStats = useArtStatsStore((s) => s.stats)
   const loadArtStats = useArtStatsStore((s) => s.load)
   const count = picturesOf(settings)
+  const heroArt = heroArtOf(settings)
   // The estimate wants the pools and the cache's average, which Go has once the
   // wiki's export is read.
   useEffect(() => {
@@ -194,22 +196,29 @@ function AppearanceSection({ settings, errors, save }: SectionProps) {
           error={errors.theme}
           onChange={(theme) => void save('theme', { theme })}
         />
-        <Toggle
-          label="Picture slideshow"
-          checked={!(settings.staticArt ?? false)}
-          error={errors.staticArt}
-          onChange={(on) => void save('staticArt', { staticArt: !on })}
-        />
-        {/* What the choice weighs on disk is not something the label can say. */}
         <Segmented
           inline
-          label="Pictures per chapter"
-          value={choiceOf(count)}
-          options={WIKI_PICTURES_OPTIONS}
-          hint={picturesHint(count, chapters, artStats)}
-          error={errors.wikiPictures}
-          onChange={(choice) => void save('wikiPictures', { wikiPictures: numberOf(choice) })}
+          label="Hero picture"
+          value={heroArt}
+          options={HERO_ART_OPTIONS}
+          hint={heroArtHint(heroArt)}
+          error={errors.heroArt}
+          onChange={(heroArt) => void save('heroArt', { heroArt })}
         />
+        {/* Only the slideshow has pictures to count; the other two choices show
+            one picture per chapter, so the control is left out rather than dead. */}
+        {heroArt === 'slideshow' && (
+          /* What the choice weighs on disk is not something the label can say. */
+          <Segmented
+            inline
+            label="Pictures per chapter"
+            value={choiceOf(count)}
+            options={WIKI_PICTURES_OPTIONS}
+            hint={picturesHint(count, chapters, artStats)}
+            error={errors.wikiPictures}
+            onChange={(choice) => void save('wikiPictures', { wikiPictures: numberOf(choice) })}
+          />
+        )}
         <Segmented
           inline
           label="Open the map"
