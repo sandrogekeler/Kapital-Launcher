@@ -94,3 +94,10 @@ URL; the build derives the two installer URLs and the release notes URL from
 the tag and the GitHub link, because `releases/latest/download/` skips
 prereleases. A `null` release keeps "Download · coming soon" and leaves the
 popup out of the page.
+
+## Amendment, 2026-10-06
+
+The Wiki button is gone, at the author's request: the page offers Download and
+GitHub only. The build no longer reads `data/launcher.json` for a link, and a
+`data-link="wiki"` in `index.html` would now fail it as an unknown key. The
+launcher itself still links the wiki from each chapter's "From the wiki" panel.

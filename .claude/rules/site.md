@@ -31,7 +31,7 @@ paths:
   Pill, Fact) and the chapter facts of `data/launcher.json`. A change to one
   of those is a change to the site's copy, in the same pull request.
 - **Links are data.** `links.json` holds `release` (a tag, or `null`) and
-  GitHub, the wiki is in `data/launcher.json`. Never write a URL for the
+  GitHub; the page has no Wiki button since 2026-10-06. Never write a URL for the
   buttons or the popup's downloads into `index.html`; the build derives the
   installer and release notes URLs from the tag and fills them, and rejects a
   tag that is not `vX.Y.Z` or `vX.Y.Z-alpha.N`/`-beta.N` and anything but

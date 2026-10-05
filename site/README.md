@@ -1,6 +1,6 @@
 # Download site
 
-One static page: what the launcher is, the Download, GitHub and Wiki buttons,
+One static page: what the launcher is, the Download and GitHub buttons,
 and under them the launcher window itself, cycling through its three
 chapters. It is separate from the Kapitel Kapital wiki and runs one small
 script, which only picks the operating system in the download popup.
@@ -36,8 +36,9 @@ It cycles through the chapters on CSS animations alone, in `src/showcase.css`,
 with the app's own motion: the card slides the way the content moves and
 blurs at the middle of its travel (`frontend/src/style.css`), the nav
 highlight glides to the next row in the same duration and easing, the row's
-art fades in behind it, and the glow behind the window and the Download
-button take the open chapter's colour. A chapter dwells for
+art fades in behind it, and the glow behind the window, the Download
+button and the popup's download buttons take the open chapter's colour, all
+from one animation on the page's root, so the popup never restarts the cycle. A chapter dwells for
 `motion.duration.dwell`, then the next slides in over `motion.duration.slow`;
 the keyframe stops in `showcase.css` are fractions of that cycle and say how
 to recompute them if either duration changes. With reduced motion the cards
@@ -57,7 +58,6 @@ chapter facts, is a change to this page in the same pull request.
 |---|---|---|
 | Download | `links.json` `release`, a tag | Shows "Download · coming soon", no popup |
 | GitHub | `links.json` `github` | Left out |
-| Wiki | `data/launcher.json` `wiki.baseUrl` | Never null; the build fails |
 
 `vite.config.js` fills them in at build time and refuses anything that is not
 https. `release` is a tag such as `v1.0.0-beta.1`, checked against

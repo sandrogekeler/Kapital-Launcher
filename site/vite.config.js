@@ -8,23 +8,18 @@ import tailwindcss from '@tailwindcss/vite'
 // release renders the "Download · coming soon" fallback and leaves out the
 // download popup. A release is a tag, and the two installer URLs and the
 // release notes URL are derived from it and the GitHub link, so nothing is
-// written twice. The wiki is the manifest's own baseUrl, so the app and the
-// site cannot disagree about where it lives.
+// written twice.
 const TAG = /^v\d+\.\d+\.\d+(-(alpha|beta)\.\d+)?$/
 
 function readLinks() {
   const links = JSON.parse(readFileSync(new URL('./links.json', import.meta.url), 'utf8'))
-  const manifest = JSON.parse(
-    readFileSync(new URL('../data/launcher.json', import.meta.url), 'utf8'),
-  )
-  const all = { github: links.github, wiki: manifest.wiki.baseUrl }
+  const all = { github: links.github }
   for (const [key, url] of Object.entries(all)) {
     if (url === null) continue
     if (typeof url !== 'string' || new URL(url).protocol !== 'https:') {
       throw new Error(`site: ${key} link must be an https URL or null, got ${JSON.stringify(url)}`)
     }
   }
-  if (all.wiki === null) throw new Error('site: the manifest has no wiki.baseUrl')
 
   const tag = links.release
   let release = null
@@ -77,7 +72,7 @@ function fillLinks(html, links) {
     .replace(/<span\s+data-link-fallback="(\w+)"([^>]*)>([\s\S]*?)<\/span\s*>/g, (_, key, attrs, body) =>
       links[key] ? '' : `<span${attrs}>${body}</span>`,
     )
-  for (const key of ['github', 'wiki']) {
+  for (const key of ['github']) {
     if (!seen.has(key)) throw new Error(`site: index.html has no data-link="${key}"`)
   }
   return out
