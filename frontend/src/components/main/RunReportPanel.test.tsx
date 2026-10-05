@@ -57,7 +57,9 @@ describe('RunReportPanel', () => {
       'mods 4.2 s, window 9.8 s, crashed 31 s',
     )
     expect(Bindings.GetRunReport).toHaveBeenCalledExactlyOnceWith(chapter.id)
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Frangfurd run report')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Run report')
+    // Whose report it is sits above the title, as on the chapter's other pages.
+    expect(screen.getByText('Frangfurd', { selector: 'span' })).toBeInTheDocument()
     expect(screen.getByText('○ The game stopped')).toHaveClass('text-danger')
     expect(screen.getByLabelText("The end of the game's log")).toHaveTextContent(
       'Reported exception thrown!',
@@ -98,7 +100,7 @@ describe('RunReportPanel', () => {
     let finish: (r: RunReport) => void = () => undefined
     vi.mocked(Bindings.GetRunReport).mockReturnValue(new Promise((r) => (finish = r)) as never)
     render(<RunReportPanel chapter={chapter} onClose={() => undefined} />)
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Frangfurd run report')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Run report')
     expect(screen.getByText('Reading.')).toHaveClass('reveal-wait')
     expect(screen.queryByLabelText('Timeline')).toBeNull()
     await act(async () => finish(runReport()))
