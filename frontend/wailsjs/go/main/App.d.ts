@@ -32,6 +32,8 @@ export function GetManifest():Promise<models.Manifest>;
 
 export function GetPackStates():Promise<Array<models.PackState>>;
 
+export function GetPlayTime():Promise<Array<models.PlayTime>>;
+
 export function GetPlayerProfile(arg1:string):Promise<models.PlayerProfile>;
 
 export function GetPreviewSituations():Promise<Array<models.PreviewSituation>>;

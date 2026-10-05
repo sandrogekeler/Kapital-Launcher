@@ -79,9 +79,9 @@ func TestGetChapterModsListsTheFolderAndResolvesTheToggles(t *testing.T) {
 	if want := []string{modCW, modDH, modJade}; !reflect.DeepEqual(mods, want) {
 		t.Fatalf("mods: %q, want %q", mods, want)
 	}
-	// Frangfurd's four quick switches, in the manifest's order: DH is off,
+	// Frangfurd's five quick switches, in the manifest's order: DH is off,
 	// Colorwheel on, the two the pack has not shipped here match nothing.
-	if len(got.Toggles) != 4 {
+	if len(got.Toggles) != 5 {
 		t.Fatalf("toggles: %+v", got.Toggles)
 	}
 	byName := map[string]models.ModToggleState{}
@@ -102,7 +102,7 @@ func TestGetChapterModsListsTheFolderAndResolvesTheToggles(t *testing.T) {
 func TestGetChapterModsBeforeThePacksFirstSyncIsEmptyNotAnError(t *testing.T) {
 	app, cfg := packApp(t, commandLine("https://example.com/pack.toml"), nil)
 	got, err := app.GetChapterMods("frangfurd")
-	if err != nil || got.Mods == nil || len(got.Mods) != 0 || len(got.Toggles) != 4 {
+	if err != nil || got.Mods == nil || len(got.Mods) != 0 || len(got.Toggles) != 5 {
 		t.Fatalf("%+v, %v", got, err)
 	}
 	for _, tg := range got.Toggles {
@@ -370,5 +370,32 @@ func TestUpdatePreLaunchWritesTheSyncCommandAndMakesTheCopy(t *testing.T) {
 	app2.updatePreLaunch("frangfurd", filepath.Dir(cfg2))
 	if readFile(t, cfg2) != before2 {
 		t.Fatalf("with no copy the command changed:\n%q", readFile(t, cfg2))
+	}
+}
+
+// Iris off takes Colorwheel off with it (Colorwheel requires Iris, and NeoForge
+// would refuse the game), whichever list the page sends; Colorwheel is then
+// blocked until Iris is back.
+func TestSetModsDisabledTakesAModOffWithWhatItRequires(t *testing.T) {
+	const modIris = "iris-neoforge-1.8.14-beta.1+mc1.21.1.jar"
+	app, _, _ := modsApp(t, modIris, modCW, modJade)
+	got, err := app.SetModsDisabled("frangfurd", []string{modIris})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{modCW, modIris}; !reflect.DeepEqual(storedDisabled(t, app, "frangfurd"), want) {
+		t.Fatalf("stored: %q, want %q", storedDisabled(t, app, "frangfurd"), want)
+	}
+	for _, tg := range got.Toggles {
+		if tg.Name == "Colorwheel" && (!tg.Disabled || !tg.Blocked) {
+			t.Fatalf("Colorwheel: %+v", tg)
+		}
+	}
+	// Turning Colorwheel back on alone is undone: Iris is still off.
+	if _, err := app.SetModsDisabled("frangfurd", []string{modIris}); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{modCW, modIris}; !reflect.DeepEqual(storedDisabled(t, app, "frangfurd"), want) {
+		t.Fatalf("stored after: %q", storedDisabled(t, app, "frangfurd"))
 	}
 }

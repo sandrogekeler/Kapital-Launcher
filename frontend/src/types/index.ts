@@ -215,6 +215,8 @@ export interface Pack {
 export interface ModToggle {
   name: string
   jarPrefix: string
+  /** The jarPrefix of another toggle this mod needs to load; off with it, and locked while it is. */
+  requires?: string | null
 }
 
 /** One page of the wiki, from its lore export (#58); eras are chapter names. */
@@ -394,6 +396,8 @@ export interface ModToggleState extends ModToggle {
   jars: string[]
   /** True when it matches at least one jar and every one of them is switched off. */
   disabled: boolean
+  /** A toggle it requires, directly or through another, is off: it cannot be turned on now. */
+  blocked: boolean
 }
 
 /** A chapter's mods as the settings page shows them: the folder, and the quick toggles in it. */
@@ -405,11 +409,23 @@ export interface ChapterMods {
   running: boolean
 }
 
+/** What Prism has counted for one installed chapter (issue 192): seconds played, and the last start. */
+export interface PlayTime {
+  chapterId: string
+  totalSeconds: number
+  /** Milliseconds since the epoch; 0 when the game was never started. */
+  lastLaunchMs: number
+}
+
 export interface AppSettings {
   theme: Theme | string
   prismExecutable: string
   prismRoot: string
   profileName: string
+  /** Play without a Microsoft account (issue 192): Prism's --offline with `offlineName` in place of --profile. */
+  offline: boolean
+  /** The player name passed with --offline: 3 to 16 letters, digits or _; required while `offline` is on. */
+  offlineName: string
   lastChapter: string
   /** Chapter id to a local packwiz serve address (#41), edited on the settings screen (#5). */
   packOverrides?: Record<string, string>

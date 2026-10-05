@@ -194,6 +194,13 @@ func ValidateSettings(s models.AppSettings) error {
 	if strings.HasPrefix(strings.TrimSpace(s.ProfileName), "-") {
 		return fmt.Errorf("settings: profile name %q could be read as an option", s.ProfileName)
 	}
+	// The name is checked as Play would pass it, and only while the switch is
+	// on: an old name kept with the switch off is not in anyone's way.
+	if s.Offline {
+		if _, err := CheckOfflineName(s.OfflineName); err != nil {
+			return fmt.Errorf("settings: %w", err)
+		}
+	}
 	for id, raw := range s.PackOverrides {
 		if err := checkPackOverride(id, raw); err != nil {
 			return fmt.Errorf("settings: %w", err)
@@ -251,6 +258,7 @@ func normalize(s models.AppSettings) models.AppSettings {
 	s.PrismRoot = strings.TrimSpace(s.PrismRoot)
 	s.PrismExecutable = strings.TrimSpace(s.PrismExecutable)
 	s.ProfileName = strings.TrimSpace(s.ProfileName)
+	s.OfflineName = strings.TrimSpace(s.OfflineName)
 	s.LastChapter = strings.TrimSpace(s.LastChapter)
 	// What the app derives for the screen is not the player's to set.
 	s.LoadingSplashAvailable, s.LoadingSplashOn = false, false

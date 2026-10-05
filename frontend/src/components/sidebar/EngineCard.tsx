@@ -29,9 +29,11 @@ export function EngineCard({ onOpenAccount, accountOpen = false }: Props) {
   const install = useEngineStore((s) => s.install)
   const installPrism = useEngineStore((s) => s.installPrism)
   const profile = useSettingsStore((s) => s.settings.profileName)
+  const offline = useSettingsStore((s) => s.settings.offline)
 
   const name = profile || 'Default profile'
   const initials = profileInitials(name)
+  const accountLine = offline ? 'Offline' : 'Microsoft account · via Prism'
 
   // An update runs while Prism is found; the first install is the action bar's.
   const updateLine =
@@ -69,8 +71,8 @@ export function EngineCard({ onOpenAccount, accountOpen = false }: Props) {
           </span>
           <span className="flex min-w-0 grow flex-col gap-0.5">
             <span className="truncate text-sm font-semibold">{name}</span>
-            <span className="text-fg-faint text-2xs truncate" title="Microsoft account · via Prism">
-              Microsoft account · via Prism
+            <span className="text-fg-faint text-2xs truncate" title={accountLine}>
+              {accountLine}
             </span>
           </span>
           {onOpenAccount && <Icon icon={ChevronRight} size="sm" className="text-fg-faint" />}

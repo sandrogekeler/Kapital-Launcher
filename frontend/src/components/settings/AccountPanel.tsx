@@ -13,6 +13,8 @@ import { ErrorLine } from '../ui/Notes'
 import { Page } from '../ui/Page'
 import { SettingsCard, SettingsSection } from '../ui/SettingsLayout'
 import { TextField } from '../ui/TextField'
+import { Toggle } from '../ui/Toggle'
+import { PlayTimeSection } from './PlayTimeSection'
 import { TextLink } from '../ui/TextLink'
 
 /** Mojang's own page for changing a skin; the launcher never touches the account. */
@@ -36,9 +38,14 @@ interface Props {
  * the page opens and after a save and never per keystroke: the card's tile becomes the skin's
  * face and gains the UUID, and the field says whether Mojang knows the name. Offline, or for a
  * name Mojang does not know, the tile keeps the initials and an unreachable Mojang says nothing.
+ *
+ * Play offline (Prism's `--offline`) swaps the profile for a player name
+ * of the launcher's own, and the play time section shows what Prism has counted per chapter.
  */
 export function AccountPanel({ onClose }: Props) {
   const profile = useSettingsStore((s) => s.settings.profileName)
+  const offline = useSettingsStore((s) => s.settings.offline)
+  const offlineName = useSettingsStore((s) => s.settings.offlineName)
   const update = useSettingsStore((s) => s.update)
   const loaded = useSettingsStore((s) => s.loaded)
   const openPrism = useEngineStore((s) => s.openPrism)
@@ -66,6 +73,10 @@ export function AccountPanel({ onClose }: Props) {
     },
     [clearPlayer],
   )
+  const [offlineError, setOfflineError] = useState<string | null>(null)
+  // The switch is on but no name exists to save it with yet: Go refuses an empty name, so the
+  // field shows first and the pair saves when a name is committed.
+  const [offlinePending, setOfflinePending] = useState(false)
 
   const save = async (profileName: string) => {
     try {
@@ -74,6 +85,30 @@ export function AccountPanel({ onClose }: Props) {
     } catch (e) {
       setError(errMsg(e))
     }
+  }
+  const saveOffline = async (patch: { offline?: boolean; offlineName?: string }) => {
+    try {
+      await update(patch)
+      setOfflineError(null)
+      setOfflinePending(false)
+    } catch (e) {
+      setOfflineError(errMsg(e))
+    }
+  }
+  const onOfflineSwitch = (on: boolean) => {
+    if (!on) {
+      setOfflinePending(false)
+      void saveOffline({ offline: false })
+      return
+    }
+    // The name to start from: the one kept from last time, else the profile name if it is one
+    // Minecraft allows.
+    const start = offlineName.trim() || (profileNameProblem(profile) ? '' : profile.trim())
+    if (start === '') {
+      setOfflinePending(true)
+      return
+    }
+    void saveOffline({ offline: true, offlineName: start })
   }
   const onOpenPrism = async () => {
     setPrismError(null)
@@ -103,6 +138,7 @@ export function AccountPanel({ onClose }: Props) {
   const name = profile.trim()
   const found = player?.status === 'found' ? player : null
   const face = found?.faceSrc && found.faceSrc !== brokenFace ? found.faceSrc : null
+  const offlineShown = offline || offlinePending
   return (
     <Page
       label="Account"
@@ -129,7 +165,9 @@ export function AccountPanel({ onClose }: Props) {
           <span className="font-display text-fg truncate text-2xl font-semibold">
             {name || "Prism's default account"}
           </span>
-          <span className="text-fg-muted text-xs">Microsoft account · via Prism</span>
+          <span className="text-fg-muted text-xs">
+            {offline ? 'Offline' : 'Microsoft account · via Prism'}
+          </span>
           {found && (
             <div className="flex items-center gap-1">
               <span className="text-fg-muted truncate font-mono text-xs select-text">
@@ -174,8 +212,26 @@ export function AccountPanel({ onClose }: Props) {
               <ErrorLine>No Minecraft profile has this name</ErrorLine>
             )}
           </div>
+          <Toggle
+            label="Play offline"
+            checked={offlineShown}
+            hint={offlineShown ? 'Online servers refuse an offline player.' : undefined}
+            error={offlineError}
+            onChange={onOfflineSwitch}
+          />
+          {offlineShown && (
+            <TextField
+              label="Offline name"
+              value={offlineName}
+              placeholder={name || 'Your Minecraft name'}
+              hint={profileNameProblem(offlineName)}
+              onCommit={(v) => void saveOffline({ offlineName: v, offline: true })}
+            />
+          )}
         </SettingsCard>
       </SettingsSection>
+
+      <PlayTimeSection />
 
       <SettingsSection title="Sign-in" icon={KeyRound}>
         <SettingsCard>

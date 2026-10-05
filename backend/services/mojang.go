@@ -65,7 +65,7 @@ const (
 
 var (
 	// minecraftName is Minecraft's own rule for a Java Edition name, checked
-	// before any request.
+	// before any request and held by an offline name too (issue 192).
 	minecraftName = regexp.MustCompile(`^[A-Za-z0-9_]{3,16}$`)
 	// mojangID is a profile id, undashed.
 	mojangID = regexp.MustCompile(`^[0-9a-f]{32}$`)

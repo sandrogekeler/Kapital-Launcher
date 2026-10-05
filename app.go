@@ -264,6 +264,9 @@ func (a *App) LaunchChapter(chapterID string) error {
 	req := models.LaunchRequest{
 		InstanceID: chapter.Instance.ID,
 		Profile:    settings.ProfileName,
+		// Play offline (issue 192): --offline <name> in place of --profile.
+		Offline:     settings.Offline,
+		OfflineName: settings.OfflineName,
 		// The detected engine's root: the configured one for the player's own
 		// Prism, the managed root for the launcher's copy.
 		Root:   engine.Root,

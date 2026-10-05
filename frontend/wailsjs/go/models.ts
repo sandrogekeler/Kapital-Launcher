@@ -5,6 +5,8 @@ export namespace models {
 	    prismExecutable: string;
 	    prismRoot: string;
 	    profileName: string;
+	    offline: boolean;
+	    offlineName: string;
 	    lastChapter: string;
 	    packOverrides?: Record<string, string>;
 	    serverChoices?: Record<string, string>;
@@ -27,6 +29,8 @@ export namespace models {
 	        this.prismExecutable = source["prismExecutable"];
 	        this.prismRoot = source["prismRoot"];
 	        this.profileName = source["profileName"];
+	        this.offline = source["offline"];
+	        this.offlineName = source["offlineName"];
 	        this.lastChapter = source["lastChapter"];
 	        this.packOverrides = source["packOverrides"];
 	        this.serverChoices = source["serverChoices"];
@@ -119,6 +123,7 @@ export namespace models {
 	export class ModToggle {
 	    name: string;
 	    jarPrefix: string;
+	    requires?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ModToggle(source);
@@ -128,6 +133,7 @@ export namespace models {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.jarPrefix = source["jarPrefix"];
+	        this.requires = source["requires"];
 	    }
 	}
 	export class Pack {
@@ -247,6 +253,8 @@ export namespace models {
 	export class ModToggleState {
 	    name: string;
 	    jarPrefix: string;
+	    requires?: string;
+	    blocked: boolean;
 	    jars: string[];
 	    disabled: boolean;
 	
@@ -258,6 +266,8 @@ export namespace models {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.jarPrefix = source["jarPrefix"];
+	        this.requires = source["requires"];
+	        this.blocked = source["blocked"];
 	        this.jars = source["jars"];
 	        this.disabled = source["disabled"];
 	    }
@@ -592,6 +602,22 @@ export namespace models {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.phase = source["phase"];
 	        this.ms = source["ms"];
+	    }
+	}
+	export class PlayTime {
+	    chapterId: string;
+	    totalSeconds: number;
+	    lastLaunchMs: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PlayTime(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.chapterId = source["chapterId"];
+	        this.totalSeconds = source["totalSeconds"];
+	        this.lastLaunchMs = source["lastLaunchMs"];
 	    }
 	}
 	export class PlayerProfile {

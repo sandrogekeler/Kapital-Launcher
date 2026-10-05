@@ -114,6 +114,12 @@ func (a *App) SetModsDisabled(chapterID string, disabled []string) (models.Chapt
 	if err != nil {
 		return models.ChapterMods{}, fmt.Errorf("%s: %w", chapter.Name, err)
 	}
+	// A mod whose requirement is off goes off with it, whatever the page sent.
+	present, err := services.ListMods(gameDir)
+	if err != nil {
+		return models.ChapterMods{}, fmt.Errorf("%s: %w", chapter.Name, err)
+	}
+	clean = services.WithRequiredOff(chapter.Pack.Toggles, present, clean)
 	if err := a.settings.Update(func(s *models.AppSettings) error {
 		next := make(map[string][]string, len(s.DisabledMods)+1)
 		for id, names := range s.DisabledMods {

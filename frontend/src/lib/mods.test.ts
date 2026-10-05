@@ -50,9 +50,27 @@ describe('mods helpers', () => {
       mods,
       running: false,
       toggles: [
-        { name: 'Distant Horizons', jarPrefix: 'DistantHorizons-', jars: [dh], disabled: true },
-        { name: 'Colorwheel', jarPrefix: 'colorwheel-neoforge-', jars: [cw], disabled: false },
-        { name: 'Create Better FPS', jarPrefix: 'createbetterfps-', jars: [], disabled: false },
+        {
+          name: 'Distant Horizons',
+          jarPrefix: 'DistantHorizons-',
+          jars: [dh],
+          disabled: true,
+          blocked: false,
+        },
+        {
+          name: 'Colorwheel',
+          jarPrefix: 'colorwheel-neoforge-',
+          jars: [cw],
+          disabled: false,
+          blocked: false,
+        },
+        {
+          name: 'Create Better FPS',
+          jarPrefix: 'createbetterfps-',
+          jars: [],
+          disabled: false,
+          blocked: false,
+        },
       ],
     }
     const off = withJarsSet(view, [cw], true)

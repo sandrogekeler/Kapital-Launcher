@@ -25,6 +25,8 @@ import (
 //	-l, --launch <id>       launch an instance by id (its folder name)
 //	-s, --server <address>  join a server on launch; only with --launch
 //	-a, --profile <name>    account by profile name; only with --launch
+//	-o, --offline <name>    launch offline with this player name; only with
+//	                        --launch (launcher/Application.cpp)
 //	-I, --import <zip|url>  import an instance
 //	    --show <id>         open an instance's window
 //	-v, --version           print the version
@@ -150,6 +152,13 @@ func LaunchArgs(req models.LaunchRequest) ([]string, error) {
 		}
 		args = append(args, "--server", addr)
 	}
+	if req.Offline {
+		name, err := CheckOfflineName(req.OfflineName)
+		if err != nil {
+			return nil, err
+		}
+		return append(args, "--offline", name), nil
+	}
 	if profile := strings.TrimSpace(req.Profile); profile != "" {
 		if strings.HasPrefix(profile, "-") || strings.ContainsAny(profile, "\x00\n\r") {
 			return nil, fmt.Errorf("profile name %q could be read as an option", profile)
@@ -157,6 +166,23 @@ func LaunchArgs(req models.LaunchRequest) ([]string, error) {
 		args = append(args, "--profile", profile)
 	}
 	return args, nil
+}
+
+// CheckOfflineName holds an offline player name to what --offline may be given:
+// not readable as an option, no NUL, CR or LF, and Minecraft's own rule. It
+// returns the name trimmed. Settings validation and LaunchArgs both use it.
+func CheckOfflineName(raw string) (string, error) {
+	name := strings.TrimSpace(raw)
+	if name == "" {
+		return "", errors.New("offline name is empty")
+	}
+	if strings.HasPrefix(name, "-") || strings.ContainsAny(name, "\x00\n\r") {
+		return "", fmt.Errorf("offline name %q could be read as an option", name)
+	}
+	if !minecraftName.MatchString(name) {
+		return "", fmt.Errorf("offline name %q is not a Minecraft name: 3 to 16 letters, digits or _", name)
+	}
+	return name, nil
 }
 
 // ShowArgs is the argument array that opens an instance's own window in Prism

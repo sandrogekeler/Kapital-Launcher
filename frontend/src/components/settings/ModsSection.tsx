@@ -80,10 +80,22 @@ export function ModsSection({ chapter }: Props) {
   const shown = filterMods(view.mods, query)
   const nothingYet = view.mods.length === 0
 
-  const toggleHint = (t: ModToggleState): string =>
+  // A switch says something under its name only when it cannot be used yet.
+  const toggleHint = (t: ModToggleState): string | undefined =>
     t.jars.length === 0
       ? 'Not downloaded yet. The first Play fetches it, and it can be switched after that.'
-      : t.jars.map(modLabel).join(', ')
+      : undefined
+  // The toggle a blocked one waits for, by its name: the first off on its requires chain.
+  const byPrefix = new Map(view.toggles.map((t) => [t.jarPrefix, t]))
+  const waitsFor = (t: ModToggleState): string | null => {
+    for (let p = t.requires, n = 0; p && n < view.toggles.length; n++) {
+      const r = byPrefix.get(p)
+      if (!r) return null
+      if (r.disabled) return r.name
+      p = r.requires
+    }
+    return null
+  }
 
   const on = view.toggles.filter((t) => !t.disabled).length
   return (
@@ -99,7 +111,15 @@ export function ModsSection({ chapter }: Props) {
             label={t.name}
             checked={!t.disabled}
             hint={toggleHint(t)}
-            disabled={busy || t.jars.length === 0}
+            disabled={busy || t.jars.length === 0 || t.blocked}
+            muted={t.blocked}
+            badge={
+              t.blocked && (
+                <span className="border-warning text-warning rounded-pill text-2xs border px-2 font-normal">
+                  Needs {waitsFor(t) ?? 'another mod'}
+                </span>
+              )
+            }
             onChange={(on) => void set(t.jars, !on)}
           />
         ))}
