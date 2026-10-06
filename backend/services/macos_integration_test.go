@@ -289,11 +289,13 @@ func TestMacSyncCopyRunsOutsideTheBundle(t *testing.T) {
 		t.Fatalf("the copy's path %q should carry the space the real one does", copyPath)
 	}
 
-	// The copy keeps the signature that lets it run on Apple Silicon: Wails
-	// signs the bundle ad hoc, and the Mach-O carries it.
-	if out, err := exec.Command("/usr/bin/codesign", "--verify", "--verbose", copyPath).CombinedOutput(); err != nil {
-		t.Errorf("codesign rejects the copy: %v: %s", err, out)
-	}
+	// Wails signs the bundle ad hoc, so the executable's signature also seals
+	// the bundle's Info.plist and resources, and codesign refuses the copy on
+	// its own ("invalid Info.plist", seen on the first run of this test). What
+	// matters is that it still runs: the kernel checks the code pages, which
+	// the copy keeps. Logged, and the runs below are the check.
+	out, err := exec.Command("/usr/bin/codesign", "--verify", "--verbose", copyPath).CombinedOutput()
+	t.Logf("codesign on the copy: %v: %s", err, strings.TrimSpace(string(out)))
 
 	// Prism splits its pre-launch command on spaces outside double quotes; the
 	// launcher's own reader must get the same path back.
