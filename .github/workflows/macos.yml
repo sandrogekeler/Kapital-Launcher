@@ -1,0 +1,152 @@
+name: macOS
+
+# What a Mac has to show and the unit tests fake (#30, #31), on an Apple Silicon
+# and an Intel runner: the managed Prism installed from its latest release and
+# verified by codesign, its version read through detection, the roots Prism
+# itself creates, Prism quitting on SIGTERM, and the launcher's sync copy run
+# from outside its bundle. ci.yml's backend-macos job compiles and unit-tests
+# the Go on Apple Silicon; this one also runs the unit tests on Intel, the only
+# Mac the author has. It downloads Prism, so it runs when the macOS paths change,
+# once a week (a new Prism release is met within the week) and from the Actions
+# tab. Nothing here signs in, starts a game or needs a display beyond the
+# runner's own session.
+on:
+  pull_request:
+    paths:
+      - 'backend/services/*darwin*'
+      - 'backend/services/managedprism*'
+      - 'backend/services/prism.go'
+      - 'backend/services/instances.go'
+      - 'backend/services/synccopy.go'
+      - 'backend/services/prelaunchcommand.go'
+      - 'backend/services/modsync*'
+      - 'backend/services/gameproc*'
+      - 'backend/services/macos_integration_test.go'
+      - 'backend/splashhost/*darwin*'
+      - 'main.go'
+      - 'sync.go'
+      - 'build/darwin/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'wails.json'
+      - '.github/workflows/macos.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/services/*darwin*'
+      - 'backend/services/managedprism*'
+      - 'backend/services/prism.go'
+      - 'backend/services/instances.go'
+      - 'backend/services/synccopy.go'
+      - 'backend/services/prelaunchcommand.go'
+      - 'backend/services/modsync*'
+      - 'backend/services/gameproc*'
+      - 'backend/services/macos_integration_test.go'
+      - 'backend/splashhost/*darwin*'
+      - 'main.go'
+      - 'sync.go'
+      - 'build/darwin/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'wails.json'
+      - '.github/workflows/macos.yml'
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: macos-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        # macos-latest is Apple Silicon; macos-15-intel is x86_64, like the
+        # author's 2017 iMac.
+        runner: [macos-latest, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    env:
+      # As build.yml: Go 1.26 and Prism 11 need macOS 12.
+      CGO_CFLAGS: -mmacosx-version-min=12.0
+      CGO_LDFLAGS: -mmacosx-version-min=12.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 12
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - run: pnpm build
+        working-directory: frontend
+
+      - name: Machine
+        run: |
+          uname -m
+          sw_vers
+
+      # ci.yml runs these on Apple Silicon already.
+      - name: Go gates on Intel
+        if: matrix.runner == 'macos-15-intel'
+        run: |
+          go vet ./...
+          go test ./...
+
+      - name: Install the Wails CLI
+        run: |
+          go install "github.com/wailsapp/wails/v2/cmd/wails@$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      # The bundle the release ships, so each runner runs its own half of it.
+      - name: Build the app
+        run: wails build -platform darwin/universal -trimpath -s -skipbindings
+
+      - name: go.mod and go.sum are unchanged
+        run: git diff --exit-code go.mod go.sum
+
+      # The release the launcher itself would offer: the latest, its macOS zip,
+      # and the digest GitHub lists for it. ManagedPrism.Latest does the same
+      # lookup without a token; here the job's token avoids the shared rate
+      # limit of a hosted runner's address.
+      - name: Find Prism's latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rel="$(gh api repos/PrismLauncher/PrismLauncher/releases/latest)"
+          tag="$(jq -r .tag_name <<<"$rel")"
+          asset="PrismLauncher-macOS-${tag}.zip"
+          digest="$(jq -r --arg n "$asset" '.assets[] | select(.name == $n) | .digest' <<<"$rel")"
+          size="$(jq -r --arg n "$asset" '.assets[] | select(.name == $n) | .size' <<<"$rel")"
+          echo "Prism $tag, $asset, $size bytes, $digest"
+          case "$digest" in
+            sha256:*) ;;
+            *) echo "::error::$asset has no sha256 digest"; exit 1 ;;
+          esac
+          {
+            echo "KAPITAL_IT_PRISM_VERSION=$tag"
+            echo "KAPITAL_IT_PRISM_DIGEST=$digest"
+            echo "KAPITAL_IT_PRISM_SIZE=$size"
+          } >> "$GITHUB_ENV"
+
+      - name: Mac checks
+        env:
+          KAPITAL_IT_APP: ${{ github.workspace }}/build/bin/Kapital Launcher.app
+          KAPITAL_IT_DISPOSABLE: '1'
+        run: go test -tags macintegration -run '^TestMac' -count=1 -v -timeout 20m ./backend/services/

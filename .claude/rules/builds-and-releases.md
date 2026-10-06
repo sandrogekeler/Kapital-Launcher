@@ -81,6 +81,16 @@ frontend built first because `main.go` embeds `frontend/dist`, the release
 notes generator's tests, and the vendored runner's `invariants`, `generated`
 and `memory` sections with `--require-runnable`.
 
+`.github/workflows/macos.yml` runs what a Mac has to show and the unit tests
+fake, on `macos-latest` (Apple Silicon) and `macos-15-intel` (#30, #31): it
+builds the universal bundle, installs Prism's latest macOS release through
+`ManagedPrism.Install` (download, digest, unzip, `codesign`), reads its version
+through detection, starts it to see the roots it creates and that it quits on
+`SIGTERM`, and runs the launcher's sync copy from outside the bundle. The tests
+are `backend/services/macos_integration_test.go`, behind the `macintegration`
+build tag because they download Prism and start it. On Intel it also runs the
+Go gates. It runs when a macOS path changes, weekly and from the Actions tab.
+
 Beside it: `pr-labelled.yml` (one `type:` and one `area:` label),
 `pr-copy.yml` (title in sentence case, no em dash in title or body),
 `aislop.yml` (the aislop gate at 100, with ruff pinned) and
