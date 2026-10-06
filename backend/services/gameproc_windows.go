@@ -53,9 +53,11 @@ var procPostMessageW = user32.NewProc("PostMessageW")
 
 // terminateProcess ends a process. Windows has no gentler way to end one from
 // outside, so force makes no difference. A process that has already gone is
-// not an error: the run is ending by it.
+// not an error: the run is ending by it. That includes one that has exited
+// while a handle still keeps its object (the tracker's own wait holds one), on
+// which TerminateProcess fails with access denied.
 func terminateProcess(pid int, _ bool) error {
-	h, err := windows.OpenProcess(windows.PROCESS_TERMINATE, false, uint32(pid))
+	h, err := windows.OpenProcess(windows.PROCESS_TERMINATE|windows.SYNCHRONIZE, false, uint32(pid))
 	if err != nil {
 		if errors.Is(err, windows.ERROR_INVALID_PARAMETER) {
 			return nil // no such process
@@ -64,6 +66,9 @@ func terminateProcess(pid int, _ bool) error {
 	}
 	defer windows.CloseHandle(h) //nolint:errcheck // a process handle, nothing to flush
 	if err := windows.TerminateProcess(h, 1); err != nil {
+		if event, waitErr := windows.WaitForSingleObject(h, 0); waitErr == nil && event == windows.WAIT_OBJECT_0 {
+			return nil // it had exited already
+		}
 		return fmt.Errorf("terminate process: %w", err)
 	}
 	return nil

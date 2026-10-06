@@ -492,7 +492,43 @@ func unzipBounded(src, dst string) error {
 	}
 	defer root.Close() //nolint:errcheck // holds no data to flush
 	var written int64
+	var doubles []appleDoubleEntry
 	for _, f := range r.File {
+		// A Mac zip's AppleDouble files are read, not written: on macOS the
+		// code signature attributes they hold go back on their files once
+		// every file is in place (appledouble.go).
+		if isAppleDoubleEntry(f.Name) {
+			if f.Mode().IsDir() {
+				continue
+			}
+			target, ok := appleDoubleTarget(f.Name)
+			if !ok || !f.Mode().IsRegular() {
+				return fmt.Errorf("entry %q is not an AppleDouble file", f.Name)
+			}
+			native := filepath.FromSlash(target)
+			if filepath.IsAbs(native) || strings.Contains(target, `\`) || filepath.VolumeName(native) != "" {
+				return fmt.Errorf("entry %q has an absolute or odd path", f.Name)
+			}
+			if runtime.GOOS != "darwin" {
+				continue
+			}
+			raw, err := readSmall(f, maxAppleDouble+1)
+			if err != nil {
+				return err
+			}
+			if len(raw) > maxAppleDouble {
+				return fmt.Errorf("entry %q is larger than an AppleDouble file", f.Name)
+			}
+			attrs, err := parseAppleDoubleXattrs([]byte(raw))
+			if err != nil {
+				return fmt.Errorf("entry %q: %w", f.Name, err)
+			}
+			if written += int64(len(raw)); written > maxPrismUnpacked {
+				return fmt.Errorf("unpacking %q would pass %d bytes", f.Name, int64(maxPrismUnpacked))
+			}
+			doubles = append(doubles, appleDoubleEntry{target: filepath.Clean(native), attrs: codeSignatureAttrs(attrs)})
+			continue
+		}
 		native := filepath.FromSlash(f.Name)
 		// A rooted name is refused on every OS: Windows would not call "/x"
 		// absolute, but an archive that names one is malformed.
@@ -539,7 +575,7 @@ func unzipBounded(src, dst string) error {
 			return fmt.Errorf("entry %q is not a file, folder or link", f.Name)
 		}
 	}
-	return nil
+	return restoreAppleDouble(root, doubles)
 }
 
 // relativeLinkInside reports whether a link at name (relative to the install
