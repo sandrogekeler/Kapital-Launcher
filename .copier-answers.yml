@@ -1,0 +1,16 @@
+# Changes here will be overwritten by Copier. Do not edit by hand.
+_commit: v0.1.0
+_src_path: https://github.com/sandrogekeler/AllesSandro.git
+aislop: true
+claude_action: true
+description: Branded desktop front-end for the Kapitel Kapital Minecraft packs
+frontend_dir: frontend
+kind: wails-desktop
+languages:
+- go
+- typescript
+owner: sandrogekeler
+project_name: Kapital Launcher
+release_notes: true
+repo_name: Kapital-Launcher
+tracking: github-issues

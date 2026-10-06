@@ -93,11 +93,12 @@ request into the release notes. Branch from `origin/main`.
 `docs/HANDOVER.md` is the state a session cannot derive: branches, open
 questions, the issues still to file. Update it when handing over.
 
-Vendored from `kollektiv-mc/Kollektiv` and never edited here: the three
-`.claude/suite-*.py`, `.github/workflows/{pr-labelled,aislop,issue-priority}.yml`,
-`.github/scripts/release-notes*.py`, `.github/release.yml`, `.aislop/base.yml`.
-Vendored the same way from `kollektiv-mc/Konnekt`, which is where they live:
-`.github/workflows/{codeql,scorecard}.yml`.
+Locked files come from the `sandrogekeler/AllesSandro` template
+(`.copier-answers.yml`) and are listed in `.claude/rules/template-files.md`:
+change them there, never here. Renovate opens a pull request for each template
+release, and a local edit shows up in it as a conflict. Still vendored by hand
+from `kollektiv-mc/Kollektiv`: `.github/workflows/issue-priority.yml`,
+`.github/scripts/release-notes_test.py` and `.github/release.yml`.
 
 ## Deeper rules, loaded on demand
 
