@@ -2,7 +2,7 @@
 # technical fields are optional and say where to find what they ask for.
 #
 # The `area` options must stay identical to feature_request.yml's, and every
-# label in `labels:` must exist in .github/labels.yml: GitHub ignores an
+# label in `labels:` must exist in .github/labels.json: GitHub ignores an
 # unknown label silently.
 name: Bug report
 description: Something in Kapital Launcher is broken or does not behave the way you expected

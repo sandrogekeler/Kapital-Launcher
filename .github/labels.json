@@ -1,0 +1,115 @@
+{
+  "$comment": [
+    "Project-owned (seeded once from AllesSandro). .github/workflows/labels.yml",
+    "applies this file to the repo on every push to main that changes it.",
+    "Keep the type:* and p0-p3 names as they are: pr-labelled, the issue forms and",
+    "the release notes rely on them. Add this project's own area:* labels freely."
+  ],
+  "labels": [
+    {
+      "name": "type:feature",
+      "color": "bb87fc",
+      "description": "New capability: the product can now do something it never offered."
+    },
+    {
+      "name": "type:bug",
+      "color": "eb5757",
+      "description": "Existing behavior is wrong. Still a bug when the repair adds new code or new UI."
+    },
+    {
+      "name": "type:chore",
+      "color": "8792a2",
+      "description": "No user-visible change: refactors, tests, CI, deps. Counted in the notes, not listed."
+    },
+    {
+      "name": "type:docs",
+      "color": "0b84a5",
+      "description": "Documentation only. Counted in the release notes, not listed."
+    },
+    {
+      "name": "area:chapters",
+      "color": "aed9e0",
+      "description": "The chapter list, hero, panels and the manifest that feeds them."
+    },
+    {
+      "name": "area:engine",
+      "color": "f9e2ae",
+      "description": "Prism detection, launch, and the settings that point at it."
+    },
+    {
+      "name": "area:packs",
+      "color": "c5e8b7",
+      "description": "Pack sync, packwiz, mrpack import."
+    },
+    {
+      "name": "area:server",
+      "color": "d4c5f9",
+      "description": "Server status and joining."
+    },
+    {
+      "name": "area:tokens",
+      "color": "e0aed9",
+      "description": "design/tokens.json and everything generated from it."
+    },
+    {
+      "name": "area:build",
+      "color": "f5b7b1",
+      "description": "Build, CI, release, dependencies."
+    },
+    {
+      "name": "area:agents",
+      "color": "fef2c0",
+      "description": "agent_docs, .claude, suite-kit configuration."
+    },
+    {
+      "name": "p0",
+      "color": "b60205",
+      "description": "Drop everything."
+    },
+    {
+      "name": "p1",
+      "color": "d93f0b",
+      "description": "High priority, next up."
+    },
+    {
+      "name": "p2",
+      "color": "fbca04",
+      "description": "Medium priority, normal queue."
+    },
+    {
+      "name": "p3",
+      "color": "c2e0c6",
+      "description": "Low priority, nice to have."
+    },
+    {
+      "name": "blocked",
+      "color": "5319e7",
+      "description": "Cannot proceed until a stated dependency clears."
+    },
+    {
+      "name": "changelog:skip",
+      "color": "8792a2",
+      "description": "Leave this pull request out of the release notes entirely."
+    },
+    {
+      "name": "status:needs-triage",
+      "color": "ededed",
+      "description": "Just filed. Nobody has read it yet."
+    },
+    {
+      "name": "status:needs-info",
+      "color": "fbca04",
+      "description": "Waiting on the reporter."
+    },
+    {
+      "name": "status:confirmed",
+      "color": "0e8a16",
+      "description": "Reproduced, or accepted as in scope."
+    },
+    {
+      "name": "question",
+      "color": "d876e3",
+      "description": "Further information is requested."
+    }
+  ]
+}

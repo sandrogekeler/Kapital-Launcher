@@ -1,19 +1,9 @@
-# Vendored into every product in suite.repos.json as .github/workflows/codeql.yml
-# by scripts/sync-workflows.sh. Edit it here. The next sync overwrites the copy
-# in a product, the same way it overwrites a hand-edited tokens.source.json.
+# Locked: comes from sandrogekeler/AllesSandro and is re-applied by every
+# template update. Change it there, not here; a local edit surfaces as a merge
+# conflict on the next update (AllesSandro docs/updating.md).
 #
-# One file for both products is possible because they carry the same four
-# languages: the workflow files themselves, a Go shell, a TypeScript frontend,
-# and the Python under .github/scripts/ and .claude/. A product that grows a
-# fifth language changes the matrix here, for both.
-#
-# Go is on autobuild knowing the build does not finish on a bare runner: each
-# shell embeds a frontend that is a pnpm build away and gitignored, and links
-# against webkit2gtk headers the runner lacks. The Go extractor keeps going
-# past those errors and scans what compiled, which Konnekt's runs put at
-# roughly two thirds of its Go files. A manual build step would close that gap
-# at the cost of a per-product build recipe in a file that is shared verbatim,
-# so it stays partial until that trade looks worth it.
+# The language matrix is rendered from this repo's `languages` answer in
+# .copier-answers.yml. GitHub Actions workflows are always scanned.
 name: CodeQL
 
 on:
@@ -24,8 +14,6 @@ on:
   schedule:
     - cron: '36 14 * * 0'
 
-# The default for any job added later. analyze declares the scopes it needs
-# itself, and a job-level block replaces this one rather than adding to it.
 permissions:
   contents: read
 
@@ -49,6 +37,7 @@ jobs:
             build-mode: autobuild
           - language: javascript-typescript
             build-mode: none
+          # The vendored .claude/ runner is Python, so Python is always scanned.
           - language: python
             build-mode: none
 
