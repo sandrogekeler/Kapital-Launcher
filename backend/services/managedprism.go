@@ -113,6 +113,13 @@ type ManagedPrism struct {
 	stall        time.Duration
 
 	mu sync.Mutex // one install at a time
+
+	// The last self-update Reconcile looked at (#221): the version Prism
+	// reported and what checking its signature gave, so a version is
+	// verified and logged once, not on every look.
+	driftMu      sync.Mutex
+	driftVersion string
+	driftErr     error
 }
 
 // NewManagedPrism keeps the managed Prism under dataDir/prism.
@@ -211,6 +218,37 @@ func (m *ManagedPrism) Latest(ctx context.Context) (models.PrismRelease, error) 
 		return rel, nil
 	}
 	return models.PrismRelease{}, fmt.Errorf("Prism %s has no %s", doc.Tag, name)
+}
+
+// Reconcile corrects rel for a managed Prism that updated itself (#221).
+// Prism's own updater (Sparkle on macOS, which stays on: its settings are per
+// user and shared with any other Prism) can replace the bundle in place, after
+// which managed.json names the version the launcher installed, not the one on
+// disk. detected is what detection read from the managed executable. When it
+// is a different Prism version, rel says that one is installed, an update is
+// offered only for a newer release, and the bundle is checked again as an
+// install checks it, since the launcher did not place what now runs. A copy
+// that no longer verifies is offered the latest release as a repair, which
+// installs into its own folder as any update does. The first look at each
+// version is logged; managed.json is left as the install wrote it, as the
+// program folder's name.
+func (m *ManagedPrism) Reconcile(ctx context.Context, rel *models.PrismRelease, detected string) {
+	if rel.Installed == "" || detected == rel.Installed || !prismTag.MatchString(detected) {
+		return
+	}
+	recorded := rel.Installed
+	m.driftMu.Lock()
+	defer m.driftMu.Unlock()
+	if m.driftVersion != detected {
+		m.driftVersion = detected
+		m.driftErr = m.verify(ctx, m.appDir(recorded))
+		slog.Info("managed prism updated outside the launcher", "recorded", recorded, "running", detected, "verified", m.driftErr == nil)
+		if m.driftErr != nil {
+			slog.Warn("managed prism no longer verifies", "version", detected, "error", m.driftErr)
+		}
+	}
+	rel.Installed = detected
+	rel.UpdateAvailable = newerVersion(rel.Version, detected) || m.driftErr != nil
 }
 
 // Install downloads, verifies and unpacks rel, reporting each step. An

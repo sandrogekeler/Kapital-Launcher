@@ -279,6 +279,46 @@ func TestMacManagedPrism(t *testing.T) {
 			t.Fatalf("Prism started with no --dir created no %s; %s holds %v (%v)", root, filepath.Dir(root), names, err)
 		}
 	})
+
+	t.Run("self-updated copy", func(t *testing.T) {
+		// What Sparkle leaves (#221): managed.json names an older version
+		// whose folder now holds the release. Made by renaming the folder and
+		// rewriting the record, then put back.
+		const older = "11.0.0"
+		placed, olderDir := m.appDir(version), m.appDir(older)
+		record := filepath.Join(m.dir, "managed.json")
+		saved, err := os.ReadFile(record)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Rename(placed, olderDir); err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := os.Rename(olderDir, placed); err != nil {
+				t.Error(err)
+			}
+			if err := os.WriteFile(record, saved, 0o644); err != nil {
+				t.Error(err)
+			}
+		}()
+		if err := os.WriteFile(record, []byte(`{"version":"`+older+`"}`), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		_, olderExe, ok := m.Installed()
+		if !ok {
+			t.Fatal("the renamed copy is not seen as installed")
+		}
+		engine := NewPrismService("darwin").Detect(ctx, models.AppSettings{PrismExecutable: olderExe})
+		if engine.Version != version {
+			t.Fatalf("detection read %q from the renamed copy, want %q", engine.Version, version)
+		}
+		latest := models.PrismRelease{Version: version, Installed: older, UpdateAvailable: true}
+		m.Reconcile(ctx, &latest, engine.Version)
+		if latest.Installed != version || latest.UpdateAvailable {
+			t.Fatalf("a self-updated copy at the latest release: %+v (it should verify and need nothing)", latest)
+		}
+	})
 }
 
 func TestMacSyncCopyRunsOutsideTheBundle(t *testing.T) {

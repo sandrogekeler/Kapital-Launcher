@@ -116,3 +116,18 @@ changes signer, installs and updates are refused, with an error naming the
 Team ID, until the launcher is updated: a deliberate trade for not accepting
 any signer. Windows still accepts any signature `WinVerifyTrust` trusts; pinning
 Prism's Authenticode signer there is a separate change.
+
+## Amendment, 2026-10-09: a Prism that updated itself (#221)
+
+Prism's own updater stays on (author's decision, 2026-10-06): on macOS Sparkle
+keeps its settings per user under Prism's bundle id, shared with any Prism the
+player installed, so it cannot be turned off for the managed copy alone. When a
+player accepts its offer, Sparkle replaces the bundle in `app-<version>/` in
+place and `managed.json` names a version no longer on disk. `GetPrismRelease`
+now measures an update against the version detection read from the managed
+executable (`ManagedPrism.Reconcile`): no update is offered to the version
+already running, and the first look at each new version checks the bundle
+again as an install does, Team ID included. A copy that no longer verifies is
+offered the latest release as a repair, which installs into its own folder as
+any update does. `managed.json` is not rewritten: its version is the program
+folder's name.
