@@ -647,6 +647,9 @@ func wndProc(hwnd, msg, wparam, lparam uintptr) (ret uintptr) {
 		c.flush()
 		return 0
 	case wmShutdown:
+		if c.isEmbedding() {
+			return 0 // build closes the card once Embed returns
+		}
 		c.teardownWebView()
 		call(procDestroyWindow, hwnd)
 		return 0
