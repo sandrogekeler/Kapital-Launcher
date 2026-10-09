@@ -11,7 +11,8 @@ import { useSettingsStore } from './stores/useSettingsStore'
 import { useServerStore } from './stores/useServerStore'
 import { isActive, useGameStore } from './stores/useGameStore'
 import { Environment } from '../wailsjs/runtime/runtime'
-import { errMsg, readOr } from './lib/ipc'
+import { errMsg, hasWailsBridge, readOr } from './lib/ipc'
+import { guessPlatform } from './lib/platform'
 import { SLIDE_INTERVAL_MS } from './lib/slides'
 import { usePages } from './lib/usePages'
 import { heroArtOf } from './lib/heroArt'
@@ -61,9 +62,11 @@ export default function App() {
   const theme = useSettingsStore((s) => s.settings.theme)
   const loadSettings = useSettingsStore((s) => s.load)
 
-  // Which OS draws the window, for the header's controls. Without a bridge
-  // (the browser-only preview) it shows the Windows bar, the primary target.
-  const [platform, setPlatform] = useState('windows')
+  // Which OS draws the window, for the header's controls: guessed from the
+  // WebView at once, then Wails' answer (lib/platform).
+  const [platform, setPlatform] = useState(() =>
+    guessPlatform(navigator.userAgent, hasWailsBridge()),
+  )
   useEffect(() => {
     void readOr(Environment, null).then((env) => env && setPlatform(env.platform))
   }, [])

@@ -42,3 +42,17 @@ the traffic lights.
   the 40px bar and that `pl-20` clears them.
 - Reopen when moving to Wails v3 (ADR-1) if it offers the real caption
   buttons without the bar.
+
+## Amendment, 2026-10-09: the macOS menu bar (#225)
+
+"The window menu stays the system's" assumed a menu bar macOS draws by itself.
+It does not: Wails v2 installs one only when `options.App.Menu` is set, and the
+launcher set none, so Cmd+C, Cmd+V, Cmd+A, Cmd+Z, Cmd+Q and Cmd+M, which are key
+equivalents of menu items, reached nothing. On darwin the window now carries
+Wails' App, Edit and Window menus (`appMenu` in `menu.go`); Windows and Linux
+keep no menu bar. The macOS workflow starts the built bundle and reads its menu
+bar where the runner allows it.
+
+The header no longer starts as the Windows bar until Wails names the platform:
+`lib/platform.ts` guesses it from the WebView's user agent, so a Mac never shows
+the Windows buttons, nor the brand under the traffic lights, at start.
