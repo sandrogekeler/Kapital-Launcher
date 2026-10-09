@@ -410,6 +410,9 @@ func ResolvePrismExecutable(goos, picked string) string {
 	return picked
 }
 
+// versionTimeout bounds readVersion's wait for prismlauncher --version.
+const versionTimeout = 15 * time.Second
+
 func (p *PrismService) flatpakInstalled(ctx context.Context, flatpak string) bool {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -424,9 +427,15 @@ func (p *PrismService) flatpakInstalled(ctx context.Context, flatpak string) boo
 // Observed on 2026-09-29 with Prism 11.1.0 on Windows 11: the GUI build writes
 // "PrismLauncher 11.1.0\r\n\r\n" to stdout through a pipe, so exec's Output
 // reads it without a console. The pattern takes the number wherever it sits,
-// so other builds' wording does not matter; macOS and Linux output is [verify].
+// so other builds' wording does not matter. macOS writes "PrismLauncher
+// 11.1.1\n\n" (the macOS runners); Linux output is [verify].
+//
+// The first start of a freshly unpacked Prism can be slow: on the Intel macOS
+// runner (2026-10-09, Prism 11.1.1) it took over 5 seconds, so the version was
+// lost, while the next start answered within a second. versionTimeout leaves
+// room for that first start; detection is cached, so a slow answer is paid once.
 func (p *PrismService) readVersion(ctx context.Context, engine models.EngineInfo) string {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, versionTimeout)
 	defer cancel()
 	exe, prefix := p.command(engine)
 	out, err := p.run(ctx, exe, append(prefix, "--version")...)
