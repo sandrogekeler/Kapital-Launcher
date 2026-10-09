@@ -66,6 +66,13 @@ func waitForFile(path string, limit time.Duration) bool {
 // with SIGTERM, as Stop does. It reports whether want appeared.
 func startAndStop(t *testing.T, exe string, want string, args ...string) bool {
 	t.Helper()
+	return startRunStop(t, exe, want, nil, args...)
+}
+
+// startRunStop is startAndStop with during called while Prism is up, once want
+// exists.
+func startRunStop(t *testing.T, exe string, want string, during func(), args ...string) bool {
+	t.Helper()
 	cmd := exec.Command(exe, args...)
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
@@ -73,6 +80,9 @@ func startAndStop(t *testing.T, exe string, want string, args ...string) bool {
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
 	seen := waitForFile(want, 90*time.Second)
+	if seen && during != nil {
+		during()
+	}
 	if err := terminateProcess(cmd.Process.Pid, false); err != nil {
 		t.Error(err)
 	}
@@ -242,7 +252,15 @@ func TestMacManagedPrism(t *testing.T) {
 		// The launch passes the managed root with --dir; Prism's own log in
 		// that root is what the tracker follows (#106).
 		log := filepath.Join(m.Root(), "logs", "PrismLauncher-0.log")
-		if !startAndStop(t, exe, log, "--dir", m.Root()) {
+		// While it runs, the look an update takes before it removes the
+		// previous version's folder sees it, by name and image path (#227).
+		seen := func() {
+			open, err := NewGameTracker(t.TempDir(), nil).OtherPrismOpen("", exe)
+			if err != nil || !open {
+				t.Errorf("a running managed Prism is not seen as open: %v, %v", open, err)
+			}
+		}
+		if !startRunStop(t, exe, log, seen, "--dir", m.Root()) {
 			t.Fatalf("Prism started with --dir wrote no %s", log)
 		}
 	})
