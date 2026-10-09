@@ -71,8 +71,9 @@ jobs:
         runner: [macos-latest, macos-15-intel]
     runs-on: ${{ matrix.runner }}
     env:
-      # As build.yml: Go 1.26 and Prism 11 need macOS 12.
-      CGO_CFLAGS: -mmacosx-version-min=12.0
+      # As build.yml: Go 1.26 and Prism 11 need macOS 12, with Go's default
+      # -O2 -g kept.
+      CGO_CFLAGS: -O2 -g -mmacosx-version-min=12.0
       CGO_LDFLAGS: -mmacosx-version-min=12.0
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -120,6 +121,15 @@ jobs:
 
       - name: go.mod and go.sum are unchanged
         run: git diff --exit-code go.mod go.sum
+
+      # The keys the plist template must carry into the bundle: the minimum
+      # macOS, and the local network usage string without which macOS 15
+      # refuses LAN access with no prompt (#228).
+      - name: Bundle plist
+        run: |
+          plist="build/bin/Kapital Launcher.app/Contents/Info.plist"
+          plutil -extract LSMinimumSystemVersion raw "$plist"
+          plutil -extract NSLocalNetworkUsageDescription raw "$plist"
 
       # The release the launcher itself would offer: the latest, its macOS zip,
       # and the digest GitHub lists for it. ManagedPrism.Latest does the same

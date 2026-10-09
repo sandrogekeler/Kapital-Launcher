@@ -21,6 +21,8 @@
         <string>12.0</string>
         <key>NSHighResolutionCapable</key>
         <string>true</string>
+        <key>NSLocalNetworkUsageDescription</key>
+        <string>Kapital Launcher starts Prism Launcher and Minecraft, which look for worlds and servers on your local network.</string>
         <key>NSHumanReadableCopyright</key>
         <string>{{.Info.Copyright}}</string>
         {{if .Info.FileAssociations}}
