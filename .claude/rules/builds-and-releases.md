@@ -86,7 +86,8 @@ fake, on `macos-latest` (Apple Silicon) and `macos-15-intel` (#30, #31): it
 builds the universal bundle, installs Prism's latest macOS release through
 `ManagedPrism.Install` (download, digest, unzip, `codesign`), reads its version
 through detection, starts it to see the roots it creates and that it quits on
-`SIGTERM`, and runs the launcher's sync copy from outside the bundle. The tests
+`SIGTERM`, runs the launcher's sync copy from outside the bundle, and starts the built
+bundle to see it stay up and read its menu bar (#225). The tests
 are `backend/services/macos_integration_test.go`, behind the `macintegration`
 build tag because they download Prism and start it. On Intel it also runs the
 Go gates. It runs when a macOS path changes, weekly and from the Actions tab.

@@ -84,6 +84,8 @@ func main() {
 		// lights, full-screen and zoom stay the system's.
 		Frameless: runtime.GOOS != "darwin",
 		Mac:       &mac.Options{TitleBar: mac.TitleBarHidden()},
+		// macOS's App, Edit and Window menus, which carry the Cmd shortcuts.
+		Menu: appMenu(runtime.GOOS),
 		// The wiki's screenshots are served from the app data dir (#141).
 		AssetServer: &assetserver.Options{Assets: assets, Middleware: app.assetMiddleware},
 		OnStartup:   app.startup,
