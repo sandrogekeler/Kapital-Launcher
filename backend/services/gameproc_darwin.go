@@ -58,8 +58,10 @@ func terminateProcess(pid int, force bool) error {
 	return nil
 }
 
-// closeProcess asks a Prism to quit. It has no window to ask, as the one on
-// Windows has: a SIGTERM is Qt's quit.
+// closeProcess asks a Prism to quit, the nearest macOS has to the window
+// message Windows sends. Prism installs no handler for SIGTERM (none in its
+// main.cpp or Application.cpp), so it is the default action, an immediate exit
+// without Prism's own shutdown: what the Mac runners see, Prism gone at once.
 func closeProcess(pid int) error {
 	return terminateProcess(pid, false)
 }

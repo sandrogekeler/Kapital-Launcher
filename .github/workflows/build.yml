@@ -180,8 +180,9 @@ jobs:
       NUMERIC: ${{ needs.version.outputs.numeric }}
       # Wails hardcodes -mmacosx-version-min=10.13 in its cgo flags and lets
       # these override it. Go 1.26 and Prism 11 both need macOS 12, which is
-      # also LSMinimumSystemVersion in build/darwin/*.plist.
-      CGO_CFLAGS: -mmacosx-version-min=12.0
+      # also LSMinimumSystemVersion in build/darwin/*.plist. Setting the
+      # variable replaces Go's default, -O2 -g, so that is written out too.
+      CGO_CFLAGS: -O2 -g -mmacosx-version-min=12.0
       CGO_LDFLAGS: -mmacosx-version-min=12.0
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

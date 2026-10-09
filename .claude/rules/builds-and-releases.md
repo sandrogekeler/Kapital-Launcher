@@ -33,7 +33,10 @@ no baseline. The Wails CLI is installed at `go.mod`'s version and the build
 fails if it changed `go.mod`. The macOS build sets `CGO_CFLAGS` and
 `CGO_LDFLAGS` to `-mmacosx-version-min=12.0` (Wails hardcodes 10.13) to match
 `LSMinimumSystemVersion` in `build/darwin/*.plist`: Go 1.26 and Prism 11 both
-need macOS 12.
+need macOS 12. Setting `CGO_CFLAGS` replaces Go's default `-O2 -g`, so the
+value spells those out too (#228). Both plists carry
+`NSLocalNetworkUsageDescription`: macOS 15 refuses local network access with no
+prompt to an app without it, and the launcher starts Prism and Java.
 
 ## The installers
 
