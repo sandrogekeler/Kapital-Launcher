@@ -181,7 +181,11 @@ unpacked through an `os.Root` (`unzipBounded`). Prism's macOS zip keeps the
 signatures of its three jars in `Contents/MacOS/jars` as AppleDouble files
 under `__MACOSX/`: those entries are parsed, never written, and on macOS only
 their `com.apple.cs.*` attributes go back on the files they name
-(`appledouble.go`), or codesign refuses the bundle.
+(`appledouble.go`), or codesign refuses the bundle. An update removes the
+previous version's folder, so `InstallPrism` first refuses one while any process
+runs from the managed executable (`refusePrismUpdateWhileOpen`, the
+`OtherPrismOpen` look, #227); a first install or the version already in place
+removes nothing and is not checked.
 
 Detection is injected (`lookPath`, `getenv`, `stat`, `run`) so it is tested on
 a machine with no Prism. A path that has not been observed on a real install is

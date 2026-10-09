@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log/slog"
 
 	wailsrt "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -91,6 +92,10 @@ func (a *App) InstallPrism() error {
 		a.emitPrismInstall(models.PrismInstallProgress{Phase: "failed", Error: err.Error()})
 		return err
 	}
+	if err := a.refusePrismUpdateWhileOpen(rel); err != nil {
+		a.emitPrismInstall(models.PrismInstallProgress{Phase: "failed", Error: err.Error()})
+		return err
+	}
 	if err := a.managed.Install(a.context(), rel, a.emitPrismInstall); err != nil {
 		slog.Error("install prism", "version", rel.Version, "error", err)
 		return err
@@ -98,6 +103,33 @@ func (a *App) InstallPrism() error {
 	_, err = a.detectEngine()
 	return err
 }
+
+// refusePrismUpdateWhileOpen refuses an update of the managed Prism while a
+// process runs from its executable (#227): an update removes the previous
+// version's folder, and on macOS that delete succeeds under a running Prism and
+// the game it started. The look is the one the instance.cfg writes take
+// (OtherPrismOpen, by name and image path), and it covers the launcher's own
+// Prism too, which stays up while its game runs. A first install, or the
+// version already in place, has nothing to remove. Where the processes cannot
+// be listed the update goes on, as before. Nothing is ended.
+func (a *App) refusePrismUpdateWhileOpen(rel models.PrismRelease) error {
+	installed, exe, ok := a.managed.Installed()
+	if !ok || installed == rel.Version {
+		return nil
+	}
+	open, err := a.otherPrismOpen("", exe)
+	if err != nil {
+		slog.Info("could not tell whether the managed Prism is open", "error", err)
+		return nil
+	}
+	if open {
+		return errPrismUpdateOpen
+	}
+	return nil
+}
+
+// errPrismUpdateOpen is what an update refused for an open Prism says.
+var errPrismUpdateOpen = errors.New("Prism is open; close it, and any game it started, then update")
 
 // emitPrismInstall is one prism:install event.
 func (a *App) emitPrismInstall(p models.PrismInstallProgress) {
