@@ -185,3 +185,57 @@ func TestAStateThatArrivesBeforeTheWindowHasLoadedIsNotLost(t *testing.T) {
 	}
 	waitFor(t, "the state, echoed back by the page", func() bool { return got.has(`"n":7`) })
 }
+
+// TestACloseWhileTheWebviewStartsLeavesTheProcessRunning closes the card while
+// WebView2 is still creating it, which is what Open's own timeout does on a
+// slow start and what a game that is up before the card does. Destroying the
+// window then aborts the creation, and go-webview2 ends the whole process on
+// that, so this test failing is the test binary exiting with no FAIL line.
+func TestACloseWhileTheWebviewStartsLeavesTheProcessRunning(t *testing.T) {
+	testwindows.Require(t, "opens a real WebView2 window")
+	dataDir := t.TempDir()
+	h := New()
+	opened := make(chan error, 1)
+	go func() {
+		opened <- h.Open(Rect{X: 200, Y: 200, W: 320, H: 200}, Page{
+			Assets:  testAssets,
+			Entry:   "splash.html",
+			DataDir: dataDir,
+		})
+	}()
+	wh := h.(*windowsHost)
+	waitFor(t, "the webview to start", func() bool {
+		wh.mu.Lock()
+		c := wh.card
+		wh.mu.Unlock()
+		return c != nil && c.isEmbedding()
+	})
+	h.Close()
+
+	err := <-opened
+	if errors.Is(err, errNoRuntime) {
+		t.Skipf("no WebView2 runtime: %v", err)
+	}
+	if err == nil {
+		t.Fatal("Open succeeded on a card closed while it started")
+	}
+	select {
+	case <-wh.card.done:
+	case <-time.After(30 * time.Second):
+		t.Fatal("the card's thread did not finish after the webview started")
+	}
+	if findCardWindow() != 0 {
+		t.Fatal("the window is still there after the card's thread finished")
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		err := os.RemoveAll(dataDir)
+		if err == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("the data folder is still held after the card closed: %v", err)
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}

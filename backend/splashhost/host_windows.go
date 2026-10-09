@@ -37,6 +37,9 @@ import (
 // (Eval, the background colour) and checks what it can first (the runtime is
 // installed, the page is in the build, the folder can be made), but a failure
 // inside Embed itself, the controller's creation, still ends the process there.
+// Destroying the window while that creation is pending is one such failure
+// (WebView2 aborts it with E_ABORT), so a Close that lands then leaves the
+// window alone and the thread closes the card once Embed has returned.
 
 const (
 	// openTimeout bounds how long Open waits for the first page to load; past
@@ -137,11 +140,14 @@ type card struct {
 	// done is closed when the thread has finished and nothing is left.
 	done chan struct{}
 
-	// mu guards hwnd and closing, which the window thread and Open, Update and
-	// Close all read.
+	// mu guards hwnd, closing and embedding, which the window thread and
+	// Open, Update and Close all read.
 	mu      sync.Mutex
 	hwnd    uintptr
 	closing bool
+	// embedding is true while Embed creates the webview, when the window
+	// must not be destroyed.
+	embedding bool
 
 	// The rest belongs to the window thread alone.
 	chromium *edge.Chromium
@@ -188,6 +194,18 @@ func (c *card) isClosing() bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.closing
+}
+
+func (c *card) setEmbedding(on bool) {
+	c.mu.Lock()
+	c.embedding = on
+	c.mu.Unlock()
+}
+
+func (c *card) isEmbedding() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.embedding
 }
 
 // run is the thread's body. The OS thread is never unlocked: it ends with the
@@ -269,9 +287,13 @@ func (c *card) build() error {
 	ch.NavigationCompletedCallback = guard2(func(_ *edge.ICoreWebView2, _ *edge.ICoreWebView2NavigationCompletedEventArgs) { c.onLoaded() })
 	ch.ProcessFailedCallback = guard2(c.onProcessFailed)
 
-	// Embed pumps this thread's messages until the controller exists, so a
-	// shutdown posted meanwhile reaches the window and ends the wait.
+	// Embed pumps this thread's messages until the controller exists. A
+	// shutdown posted meanwhile is held off (wndProc), because destroying the
+	// window would abort the creation and go-webview2 exits the process on
+	// that; closing is seen here instead, once Embed returns.
+	c.setEmbedding(true)
 	ch.Embed(hwnd)
+	c.setEmbedding(false)
 	ctrl := ch.GetController()
 	if ctrl == nil || c.isClosing() {
 		return errClosed
@@ -625,6 +647,9 @@ func wndProc(hwnd, msg, wparam, lparam uintptr) (ret uintptr) {
 		c.flush()
 		return 0
 	case wmShutdown:
+		if c.isEmbedding() {
+			return 0 // build closes the card once Embed returns
+		}
 		c.teardownWebView()
 		call(procDestroyWindow, hwnd)
 		return 0
