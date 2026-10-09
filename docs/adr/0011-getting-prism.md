@@ -50,7 +50,8 @@ Read on 2026-09-30 from Prism 11.1.1's source and release:
   entries outside the target, rooted names and symlinks leaving the folder,
   and bounds entries and bytes. Windows then requires a valid Authenticode
   signature (`WinVerifyTrust`, no shell); macOS runs `codesign --verify --deep
-  --strict` with a fixed argument array.
+  --strict` with a fixed argument array and, since #226, a requirement that
+  the signer is Prism's Developer ID team (see the amendment below).
 - **Program and data apart.** `<data>/prism/app-<version>/` is the program,
   replaced whole on update (the installed version is never reinstalled, and a
   leftover folder is moved aside before it is removed, so a running Prism is
@@ -103,3 +104,15 @@ Read on 2026-09-30 from Prism 11.1.1's source and release:
 - `[verify]` on a real Mac: that Prism's macOS zip is signed and passes
   `codesign`, that its app bundle's symlinks unpack intact, and where
   `prismlauncher_update.cfg` applies (the Mac build updates through Sparkle).
+
+## Amendment, 2026-10-09: who signed it (#226)
+
+`codesign --verify` alone checks that a signature is intact, not whose it is:
+an ad hoc signature passed. The macOS runners read Prism 11.1.1's signer (#220):
+Developer ID Application, Sefa Eyeoglu, Team ID `MZM5U2NVNH`, notarized. The
+check now passes `-R` with the designated-requirement shape of a Developer ID
+app for that team (`prismRequirement` in `verify_darwin.go`). If Prism ever
+changes signer, installs and updates are refused, with an error naming the
+Team ID, until the launcher is updated: a deliberate trade for not accepting
+any signer. Windows still accepts any signature `WinVerifyTrust` trusts; pinning
+Prism's Authenticode signer there is a separate change.
