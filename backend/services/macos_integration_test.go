@@ -148,6 +148,14 @@ func TestMacManagedPrism(t *testing.T) {
 				t.Log(line)
 			}
 		}
+		// Prism's own designated requirement, beside the one the install holds
+		// it to (verify_darwin.go, #226).
+		if dr, err := exec.Command("/usr/bin/codesign", "-d", "-r-", app).CombinedOutput(); err == nil {
+			t.Logf("designated requirement: %s", strings.TrimSpace(string(dr)))
+		}
+		if err := codesignVerify(context.Background(), app, prismRequirement); err != nil {
+			t.Errorf("Prism does not meet the launcher's requirement: %v", err)
+		}
 		if !strings.Contains(string(out), "Authority=Developer ID Application") {
 			t.Errorf("not Developer ID signed:\n%s", out)
 		}
