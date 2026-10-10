@@ -68,10 +68,15 @@ func (a *App) GetPrismRelease() (models.PrismRelease, error) {
 	if err != nil {
 		return rel, err
 	}
-	// An update is only worth offering for the Prism the launcher runs.
-	if a.realEngine().Source != "managed" {
+	// An update is only worth offering for the Prism the launcher runs, and
+	// measured against the version it runs, which Prism's own updater may have
+	// changed (#221).
+	engine := a.realEngine()
+	if engine.Source != "managed" {
 		rel.UpdateAvailable = false
+		return rel, nil
 	}
+	a.managed.Reconcile(a.context(), &rel, engine.Version)
 	return rel, nil
 }
 
