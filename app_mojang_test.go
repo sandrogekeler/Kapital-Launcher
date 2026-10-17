@@ -27,3 +27,29 @@ func TestCopyPlayerUUIDRefusesWithoutAFoundProfileAndUsesTheClipboard(t *testing
 		t.Fatalf("%v %q", err, copied)
 	}
 }
+
+// The name the game signed in with is kept only while Play runs on Prism's
+// default account, and a save from the settings screen never changes it.
+func TestLearnPlayerNameOnlyOnPrismsDefaultAccount(t *testing.T) {
+	app := newTestApp(t)
+	app.learnPlayerName("Sandro_K")
+	got, err := app.settings.Load()
+	if err != nil || got.PlayerName != "Sandro_K" {
+		t.Fatalf("default account: got %q, %v", got.PlayerName, err)
+	}
+	got.PlayerName = "Typed"
+	if err := app.SaveSettings(got); err != nil {
+		t.Fatal(err)
+	}
+	if got, err = app.settings.Load(); err != nil || got.PlayerName != "Sandro_K" {
+		t.Fatalf("the screen does not set it: %q, %v", got.PlayerName, err)
+	}
+	got.ProfileName = "Other"
+	if err := app.SaveSettings(got); err != nil {
+		t.Fatal(err)
+	}
+	app.learnPlayerName("Someone")
+	if got, err = app.settings.Load(); err != nil || got.PlayerName != "Sandro_K" {
+		t.Fatalf("with a profile name nothing is learned: %q, %v", got.PlayerName, err)
+	}
+}

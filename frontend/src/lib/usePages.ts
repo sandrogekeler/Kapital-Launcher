@@ -65,6 +65,11 @@ export function usePages(selectedId: string, select: (chapterId: string) => void
       hideChapterPage()
       showSettings(true)
     },
+    openAccount: () => {
+      hideSettings()
+      hideChapterPage()
+      showAccount(true)
+    },
     toggleAccount: () => {
       if (account.slot?.open) return hideAccount()
       hideSettings()

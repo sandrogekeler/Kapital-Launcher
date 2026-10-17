@@ -36,6 +36,9 @@ const (
 	// GameFailLaunch is any other launch step Prism stopped at: Java, the
 	// libraries, the assets.
 	GameFailLaunch = "launch"
+	// GameFailProfile is Prism finding no account with the profile name it
+	// was given (--profile): it then starts nothing and says nothing.
+	GameFailProfile = "profile"
 	// GameFailStopped is the player ending the run from the launcher (Stop).
 	// It is set on a run that was asked to stop, whether the start had not
 	// reached a game (failed) or the game was ended (crashed).

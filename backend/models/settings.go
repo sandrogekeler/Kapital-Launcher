@@ -14,6 +14,12 @@ type AppSettings struct {
 	// ProfileName is the Prism account profile passed with --profile. Empty
 	// means Prism's default account.
 	ProfileName string `json:"profileName"`
+	// PlayerName is the name the game last signed in with on Prism's default
+	// account: read from the game log's "Setting user:" line on a run with no
+	// ProfileName and Play offline off, and held to Minecraft's rule. The
+	// account page shows it and looks it up on Mojang while ProfileName is
+	// empty. It is never passed to Prism. Set by the app, not the player.
+	PlayerName string `json:"playerName,omitempty"`
 	// Offline launches without a Microsoft account (issue 192): Play passes
 	// Prism's --offline with OfflineName in place of --profile. Online servers
 	// refuse such a player. Off by default.

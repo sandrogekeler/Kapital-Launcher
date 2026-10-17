@@ -84,6 +84,13 @@ type TrackRequest struct {
 	PrismRoot string
 	// PrismLog is that log as it was before Prism was started.
 	PrismLog PrismLogSnapshot
+	// Profile is whether Prism was given an account by --profile, which it
+	// may not have (gametracker_prism.go).
+	Profile bool
+	// OnPlayer is called once, with the name the game signed in with, when
+	// its log first says it ("Setting user:", held to Minecraft's rule). It
+	// runs on its own goroutine and may be nil.
+	OnPlayer func(name string)
 	// HoldWindow keeps the game's window hidden from its creation until the
 	// resource reload begins, when it is shown and given the foreground
 	// (#45), so the loading splash (#43) is what the player sees meanwhile.
@@ -278,7 +285,7 @@ func (t *GameTracker) begin(ctx context.Context, req TrackRequest) (*gameRun, er
 		req:      req,
 		state:    state,
 		follower: newLogFollower(req.InstanceDir, req.Before, req.StartedAt),
-		prism:    newPrismLogFollower(req.PrismRoot, req.PrismLog),
+		prism:    newPrismLogFollower(req.PrismRoot, req.PrismLog, req.Profile),
 		reached:  map[string]time.Time{},
 		ignored:  map[int]bool{},
 		exitCh:   make(chan procExit, 1),
@@ -317,6 +324,8 @@ type gameRun struct {
 	reached map[string]time.Time
 	// stopped is whether the log has shown "Stopping!".
 	stopped bool
+	// playerSent is whether OnPlayer has been called.
+	playerSent bool
 
 	prismExitedAt time.Time
 	// prismExitedFresh is whether the game log had begun when Prism exited.
@@ -452,6 +461,10 @@ func (r *gameRun) readLog(now time.Time) {
 	}
 	for _, phase := range phases {
 		r.advance(phase, now)
+	}
+	if name := r.follower.Player(); name != "" && !r.playerSent && r.req.OnPlayer != nil {
+		r.playerSent = true
+		go r.req.OnPlayer(name)
 	}
 }
 

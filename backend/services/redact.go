@@ -86,10 +86,11 @@ func homeUser(home string) string {
 }
 
 // WithPlayer returns a redactor that also masks the player's in-game name, as
-// a game log gives it (a "Setting user:" line). The launcher is never told it:
-// the profile name Prism is given is the account's, and an offline name is
-// whatever the player typed. A blank name changes nothing, and r is not
-// changed either way.
+// a game log gives it (a "Setting user:" line). Prism never tells the launcher
+// which account it used: the profile name it is given may differ in case, an
+// offline name is whatever the player typed, and on Prism's default account
+// the name is only known from this same line (ADR-2, seventeenth amendment).
+// A blank name changes nothing, and r is not changed either way.
 func (r *Redactor) WithPlayer(name string) *Redactor {
 	name = strings.TrimSpace(name)
 	if name == "" {

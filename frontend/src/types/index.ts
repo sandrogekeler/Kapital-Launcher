@@ -386,6 +386,12 @@ export interface AppSettings {
   prismExecutable: string
   prismRoot: string
   profileName: string
+  /**
+   * The Minecraft name the game reported on a run with no profile name, Prism's default
+   * account. Go's own: it learns it from the game log and a save never changes it. Shown in
+   * place of an empty profile name, and never passed to Prism.
+   */
+  playerName?: string
   /** Play without a Microsoft account (issue 192): Prism's --offline with `offlineName` in place of --profile. */
   offline: boolean
   /** The player name passed with --offline: 3 to 16 letters, digits or _; required while `offline` is on. */

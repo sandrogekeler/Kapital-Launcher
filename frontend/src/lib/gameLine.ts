@@ -11,6 +11,8 @@ function failedDetail(reason: GameFailReason | undefined): string {
       return 'The pack could not be synced'
     case 'launch':
       return 'Prism stopped before the game'
+    case 'profile':
+      return 'Prism has no account with your profile name'
     default:
       return 'Prism gave up or never started it'
   }

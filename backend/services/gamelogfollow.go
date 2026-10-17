@@ -112,6 +112,10 @@ type logFollower struct {
 	found   []string
 	// lastGrowth is when the log was first seen or last grew.
 	lastGrowth time.Time
+	// player is the name the game signed in with, from its "Setting user:"
+	// line, "" until one that is a Minecraft name has been read. The one
+	// part of a line the follower keeps (ADR-2, seventeenth amendment).
+	player string
 }
 
 func newLogFollower(instanceDir string, before GameLogSnapshot, startedAt time.Time) *logFollower {
@@ -123,6 +127,9 @@ func (f *logFollower) Fresh() bool { return f.path != "" }
 
 // LastGrowth is when the log last grew, zero before a fresh log.
 func (f *logFollower) LastGrowth() time.Time { return f.lastGrowth }
+
+// Player is the name the game signed in with, "" until its log has said.
+func (f *logFollower) Player() string { return f.player }
 
 // poll looks at the log once. It returns the phases the log moved through
 // since the last poll, in order, and whether the log began again: a new run
@@ -249,5 +256,10 @@ func readLines(path string, offset, remaining int64, partial []byte, line func([
 func (f *logFollower) line(b []byte) {
 	if phase, moved := f.parser.Line(string(b)); moved {
 		f.found = append(f.found, phase)
+	}
+	if f.player == "" && bytes.Contains(b, playerFilter) {
+		if m := settingUser.FindSubmatch(b); m != nil && minecraftName.Match(m[1]) {
+			f.player = string(m[1])
+		}
 	}
 }

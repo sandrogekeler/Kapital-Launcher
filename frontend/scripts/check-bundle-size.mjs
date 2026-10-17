@@ -82,7 +82,11 @@ import { ensureFreshDist } from './lib/dist-freshness.mjs'
 // and the fade its body comes in with (Reveal) are the first paint's; only the
 // bodies load on demand. Before, the whole popup waited for its chunk. Measured
 // 92.06 KB locally and just over 92.1 KB on CI's runner, so 92.2.
-const BUDGET_KB = 92.2
+// 92.4 the same day: a Play Prism ignores over the profile name ends in a popup of
+// its own chunk, and the account tile shows the name the game reported for Prism's
+// default account, read again once a game runs. What stays in the entry is the lazy
+// import, the read, the name's fallback and the new reason. Measured 92.3 KB.
+const BUDGET_KB = 92.4
 
 const DIST_ASSETS = await ensureFreshDist()
 const DIST = path.dirname(DIST_ASSETS)

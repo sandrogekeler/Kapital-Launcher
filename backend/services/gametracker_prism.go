@@ -45,6 +45,25 @@ const (
 	prismPackSyncReason = "Pre-Launch command failed"
 )
 
+// A --profile that names no account of Prism's stops the launch before any
+// task, so no task line says so. Prism logs that the instance is launching,
+// looks the account up by its profile name and, finding none, returns: no
+// window, no message, no exit (Application::performMainStartupAction). A name
+// it finds is logged as "Launching with account" in the same call, straight
+// after. So a launching line with no account line within prismProfileGrace is
+// the name matching no account. A Prism that was already open is handed the
+// launch instead, and it does log a warning (Application::messageReceived).
+// Both are debug and warning lines of the default category, which Prism's own
+// rules keep (its qtlogging.ini has *.debug=true). From Prism's source at
+// 60bcc26 (October 2026), not yet seen on a real file [verify].
+const (
+	prismInstanceLaunching = "<> Instance"
+	prismLaunchingWord     = " launching"
+	prismAccountFound      = "Launching with account"
+	prismProfileInvalid    = "requires the specified profile to be valid"
+	prismProfileGrace      = 3 * time.Second
+)
+
 // prismLogPath is Prism's launcher log under its data root. Prism truncates it
 // at every start and rotates the older ones to -1 .. -4.
 func prismLogPath(root string) string {
@@ -110,17 +129,24 @@ type prismLogFollower struct {
 	partial []byte
 	// reason is why a launch step failed, "" until one has.
 	reason string
+	// profile is whether Prism was given --profile; launching is whether it
+	// has logged the instance launching, and when this follower read that,
+	// and account whether it then logged the account it found.
+	profile     bool
+	launching   bool
+	launchingAt time.Time
+	account     bool
 	// warned is whether a failed read has been logged: once is enough.
 	warned bool
 }
 
 // newPrismLogFollower follows the log under root from the snapshot, nil when
 // there is no root.
-func newPrismLogFollower(root string, before PrismLogSnapshot) *prismLogFollower {
+func newPrismLogFollower(root string, before PrismLogSnapshot, profile bool) *prismLogFollower {
 	if root == "" {
 		return nil
 	}
-	f := &prismLogFollower{path: prismLogPath(root)}
+	f := &prismLogFollower{path: prismLogPath(root), profile: profile}
 	if before.exists {
 		f.head, f.offset = before.head, before.size
 	}
@@ -129,18 +155,31 @@ func newPrismLogFollower(root string, before PrismLogSnapshot) *prismLogFollower
 
 // poll reads whatever the log gained since the last poll and returns why a
 // launch step failed, "" when none has.
-func (f *prismLogFollower) poll() string {
+func (f *prismLogFollower) poll(now time.Time) string {
+	f.read()
+	if f.launching && f.launchingAt.IsZero() {
+		f.launchingAt = now
+	}
+	if f.reason == "" && f.profile && f.launching && !f.account &&
+		now.Sub(f.launchingAt) >= prismProfileGrace {
+		f.reason = models.GameFailProfile
+	}
+	return f.reason
+}
+
+// read takes in whatever the log gained since the last read.
+func (f *prismLogFollower) read() {
 	info, err := os.Stat(f.path)
 	if err != nil {
 		// Not written yet, or gone between polls. One that comes back is told
 		// from this one by its length and first line, below.
 		f.noteError(err)
-		return f.reason
+		return
 	}
 	head, err := readLogHead(f.path)
 	if err != nil {
 		f.noteError(err)
-		return f.reason
+		return
 	}
 	switch {
 	case info.Size() < f.offset, f.head.complete && head.complete && head.first != f.head.first:
@@ -160,13 +199,23 @@ func (f *prismLogFollower) poll() string {
 		f.offset += int64(n)
 		f.partial = rest
 	}
-	return f.reason
 }
 
-// line notes a launch step failing. The bytes are not kept.
+// line notes a launch step failing, and the account lookup a --profile
+// starts. The bytes are not kept.
 func (f *prismLogFollower) line(b []byte) {
 	if reason, ok := prismTaskFailure(b); ok && f.reason == "" {
 		f.reason = reason
+	}
+	switch {
+	case bytes.Contains(b, []byte(prismProfileInvalid)):
+		if f.profile && f.reason == "" {
+			f.reason = models.GameFailProfile
+		}
+	case bytes.Contains(b, []byte(prismAccountFound)):
+		f.account = true
+	case bytes.Contains(b, []byte(prismInstanceLaunching)) && bytes.Contains(b, []byte(prismLaunchingWord)):
+		f.launching = true
 	}
 }
 
@@ -188,7 +237,7 @@ func (r *gameRun) prismFailed(now time.Time) bool {
 	if r.prism == nil || r.state.Phase != models.GamePhaseStarting || r.follower.Fresh() {
 		return false
 	}
-	reason := r.prism.poll()
+	reason := r.prism.poll(now)
 	if reason == "" {
 		return false
 	}

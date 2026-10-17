@@ -338,6 +338,11 @@ func (a *App) LaunchChapter(chapterID string) error {
 		Before:      before,
 		PrismRoot:   prismRoot,
 		PrismLog:    prismLog,
+		// LaunchArgs passes --profile for a name, and --offline instead of it.
+		Profile: !req.Offline && strings.TrimSpace(req.Profile) != "",
+	}
+	if !req.Offline && !track.Profile {
+		track.OnPlayer = a.learnPlayerName
 	}
 	a.cardHooks(&track, splash)
 	if err := a.games.Track(a.trackContext(), track); err != nil {
@@ -447,6 +452,8 @@ func (a *App) SaveSettings(settings models.AppSettings) error {
 	// it against the instance's mods folder; the screen's copy is none, and a
 	// save from it never changes the stored one (issue 156).
 	settings.DisabledMods = before.DisabledMods
+	// So is the name learned from the game's log (learnPlayerName).
+	settings.PlayerName = before.PlayerName
 	if err := a.settings.Save(settings); err != nil {
 		return err
 	}

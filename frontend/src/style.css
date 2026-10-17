@@ -595,6 +595,10 @@
     var(--accent) var(--range-fill, 0%),
     var(--bg-sunken) var(--range-fill, 0%)
   );
+  /* The gradient is sized to the padding box but painted under the border too,
+     so it repeats there: the next tile's accent start showed through the
+     translucent right border as a sliver at the end of the track. */
+  background-clip: padding-box;
 }
 .range::-webkit-slider-thumb {
   -webkit-appearance: none;

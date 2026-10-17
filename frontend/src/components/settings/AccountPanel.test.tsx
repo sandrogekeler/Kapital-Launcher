@@ -64,6 +64,21 @@ describe('AccountPanel', () => {
     expect(screen.getByText("Prism's default account", { selector: 'span' })).toBeInTheDocument()
   })
 
+  it("shows the name the game reported for Prism's default account", () => {
+    useSettingsStore.setState({
+      settings: { ...DEFAULT_SETTINGS, profileName: '', playerName: 'Snadrochka' },
+    })
+    render(<AccountPanel onClose={() => undefined} />)
+    expect(screen.getByText('Snadrochka', { selector: 'span' })).toBeInTheDocument()
+    expect(screen.getByText("Prism's default account", { selector: 'span' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Profile name')).toHaveValue('')
+    expect(screen.getByLabelText('Profile name')).toHaveAttribute(
+      'placeholder',
+      "Prism's default account, Snadrochka",
+    )
+    expect(App.GetPlayerProfile).toHaveBeenCalledWith('Snadrochka')
+  })
+
   it('shows a refusal under the field and puts the old name back', async () => {
     vi.mocked(App.SaveSettings).mockRejectedValueOnce(
       'profile name "-x" could be read as an option',

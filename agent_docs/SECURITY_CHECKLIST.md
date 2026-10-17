@@ -65,7 +65,11 @@ Holds when: nothing under `backend/` or `app.go` opens Prism's `accounts.json`;
 the only account-related values are the profile *name* in
 `AppSettings.ProfileName`, passed to `--profile`, and, when the player plays
 offline (issue 192), the player name in `AppSettings.OfflineName`, passed to
-`--offline` in its place. Inside a Prism data
+`--offline` in its place, and, with neither set, the name the game reported
+for Prism's default account in `AppSettings.PlayerName` (ADR-2, seventeenth
+amendment), learned from the game log's `Setting user:` line, shown on the
+account page and looked up on Mojang, never passed to Prism and never logged.
+Inside a Prism data
 directory exactly two files are read, both in `services/instances.go`:
 `prismlauncher.cfg` is scanned for the one key `InstanceDir` (every other line,
 including any `ProxyPass`, is dropped unread and nothing from the file is

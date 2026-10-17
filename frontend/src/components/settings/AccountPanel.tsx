@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { errMsg } from '../../lib/ipc'
 import { Check, Copy, ExternalLink, KeyRound, UserRound } from '../../lib/icons'
-import { profileInitials, profileNameProblem } from '../../lib/profileName'
+import { accountName, profileInitials, profileNameProblem } from '../../lib/profileName'
 import { useEngineStore } from '../../stores/useEngineStore'
 import { usePlayerStore } from '../../stores/usePlayerStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
@@ -40,11 +40,15 @@ interface Props {
  * face and gains the UUID, and the field says whether Mojang knows the name. Offline, or for a
  * name Mojang does not know, the tile keeps the initials and an unreachable Mojang says nothing.
  *
+ * With no profile name Prism plays its default account, and the page shows the name the game
+ * reported for it on the last run (`playerName`, which Go learns from the game log).
+ *
  * Play offline (Prism's `--offline`) swaps the profile for a player name of the launcher's own,
  * and the play time section shows what Prism has counted per chapter.
  */
 export function AccountPanel({ onClose }: Props) {
   const profile = useSettingsStore((s) => s.settings.profileName)
+  const playerName = useSettingsStore((s) => s.settings.playerName)
   const offline = useSettingsStore((s) => s.settings.offline)
   const loaded = useSettingsStore((s) => s.loaded)
   const player = usePlayerStore((s) => s.profile)
@@ -53,9 +57,10 @@ export function AccountPanel({ onClose }: Props) {
 
   // The saved name changes only on a commit (the field keeps its draft to itself), so this
   // asks Mojang when the page opens and after each save.
+  const name = accountName(profile, playerName)
   useEffect(() => {
-    if (loaded) void checkPlayer(profile.trim())
-  }, [loaded, profile, checkPlayer])
+    if (loaded) void checkPlayer(name)
+  }, [loaded, name, checkPlayer])
   useEffect(() => () => clearPlayer(), [clearPlayer])
 
   const found = player?.status === 'found' ? player : null
@@ -68,7 +73,12 @@ export function AccountPanel({ onClose }: Props) {
       ready={loaded}
       settings
     >
-      <ProfileCard name={profile.trim()} offline={offline} found={found} />
+      <ProfileCard
+        name={name}
+        defaultAccount={profile.trim() === ''}
+        offline={offline}
+        found={found}
+      />
       <ProfileSection player={player} />
       <PlayTimeSection />
       <SignInSection />
@@ -79,10 +89,13 @@ export function AccountPanel({ onClose }: Props) {
 /** The card at the top: the skin's face or the initials, the name, the UUID and Change skin. */
 function ProfileCard({
   name,
+  defaultAccount,
   offline,
   found,
 }: {
   name: string
+  /** No profile name is set, so Prism plays its default account; `name` is what it last reported. */
+  defaultAccount: boolean
   offline: boolean
   found: PlayerProfile | null
 }) {
@@ -131,7 +144,11 @@ function ProfileCard({
             {name || "Prism's default account"}
           </span>
           <span className="text-fg-muted text-xs">
-            {offline ? 'Offline' : 'Microsoft account · via Prism'}
+            {offline
+              ? 'Offline'
+              : defaultAccount && name
+                ? "Prism's default account"
+                : 'Microsoft account · via Prism'}
           </span>
           {found && (
             <div className="flex items-center gap-1">
@@ -159,6 +176,7 @@ function ProfileCard({
 /** The profile name with what Mojang says of it, and Play offline with its own name. */
 function ProfileSection({ player }: { player: PlayerProfile | null }) {
   const profile = useSettingsStore((s) => s.settings.profileName)
+  const playerName = useSettingsStore((s) => s.settings.playerName) ?? ''
   const offline = useSettingsStore((s) => s.settings.offline)
   const offlineName = useSettingsStore((s) => s.settings.offlineName)
   const update = useSettingsStore((s) => s.update)
@@ -191,9 +209,10 @@ function ProfileSection({ player }: { player: PlayerProfile | null }) {
       void saveOffline({ offline: false })
       return
     }
-    // The name to start from: the one kept from last time, else the profile name if it is one
+    // The name to start from: the one kept from last time, else the account's name if it is one
     // Minecraft allows.
-    const start = offlineName.trim() || (profileNameProblem(profile) ? '' : profile.trim())
+    const shown = accountName(profile, playerName)
+    const start = offlineName.trim() || (profileNameProblem(shown) ? '' : shown)
     if (start === '') {
       setOfflinePending(true)
       return
@@ -209,7 +228,9 @@ function ProfileSection({ player }: { player: PlayerProfile | null }) {
           <TextField
             label="Profile name"
             value={profile}
-            placeholder="Prism's default account"
+            placeholder={
+              playerName ? `Prism's default account, ${playerName}` : "Prism's default account"
+            }
             hint={profileNameProblem(profile)}
             error={error}
             onCommit={(v) => void save(v)}
@@ -238,7 +259,7 @@ function ProfileSection({ player }: { player: PlayerProfile | null }) {
           <TextField
             label="Offline name"
             value={offlineName}
-            placeholder={profile.trim() || 'Your Minecraft name'}
+            placeholder={accountName(profile, playerName) || 'Your Minecraft name'}
             hint={profileNameProblem(offlineName)}
             onCommit={(v) => void saveOffline({ offlineName: v, offline: true })}
           />

@@ -77,7 +77,8 @@ export function errorToasts({
     })
   }
   for (const [chapterId, game] of Object.entries(games)) {
-    if (!ENDED.includes(game.phase)) continue
+    // A start Prism ignored over the profile name is shell/ProfileNotice's popup instead.
+    if (!ENDED.includes(game.phase) || game.reason === 'profile') continue
     const rows = gameLine(game, chapterName(chapterId))
     if (!rows) continue
     const stopped = game.reason === 'stopped'

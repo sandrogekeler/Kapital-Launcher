@@ -1,6 +1,6 @@
 import { useEngineStore } from '../../stores/useEngineStore'
 import { installLine } from '../../lib/prismInstall'
-import { profileInitials } from '../../lib/profileName'
+import { accountName, profileInitials } from '../../lib/profileName'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { IconButton } from '../ui/IconButton'
 import { ErrorLine } from '../ui/Notes'
@@ -17,7 +17,8 @@ interface Props {
 
 /**
  * The account and engine card at the foot of the sidebar. The account line
- * shows the profile *name* from settings and nothing more: the Microsoft
+ * shows the profile *name* from settings, or the name the game reported for
+ * Prism's default account, and nothing more: the Microsoft
  * account itself lives inside Prism and this app never reads it. The account
  * half is a button that opens the account page (issue 192); Re-detect stays a
  * button of its own beside it.
@@ -28,7 +29,9 @@ export function EngineCard({ onOpenAccount, accountOpen = false }: Props) {
   const release = useEngineStore((s) => s.release)
   const install = useEngineStore((s) => s.install)
   const installPrism = useEngineStore((s) => s.installPrism)
-  const profile = useSettingsStore((s) => s.settings.profileName)
+  const profile = useSettingsStore((s) =>
+    accountName(s.settings.profileName, s.settings.playerName),
+  )
   const offline = useSettingsStore((s) => s.settings.offline)
 
   const name = profile || 'Default profile'

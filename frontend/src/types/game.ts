@@ -20,7 +20,7 @@ export type GamePhase =
  * Why a run failed or ended: from Prism's launcher log for a start (#103), or `stopped` when the
  * player ended it from the launcher. Same strings as the Go GameFail constants.
  */
-export type GameFailReason = 'packsync' | 'launch' | 'stopped'
+export type GameFailReason = 'packsync' | 'launch' | 'profile' | 'stopped'
 
 /** A launched chapter's game, keyed by chapter. Times are RFC 3339 in UTC. */
 export interface GameState {

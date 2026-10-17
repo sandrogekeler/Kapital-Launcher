@@ -384,3 +384,17 @@ func mustRead(t *testing.T, path string) string {
 	}
 	return string(data)
 }
+
+// The name learned from the game's log is kept only as a Minecraft name.
+func TestSettingsKeepALearnedPlayerNameOnlyAsAMinecraftName(t *testing.T) {
+	svc := NewSettingsService(t.TempDir())
+	for raw, want := range map[string]string{" Sandro_K ": "Sandro_K", "-dir": "", "no spaces": "", "": ""} {
+		if err := svc.Save(models.AppSettings{Theme: "dark", PlayerName: raw}); err != nil {
+			t.Fatal(err)
+		}
+		got, err := svc.Load()
+		if err != nil || got.PlayerName != want {
+			t.Fatalf("%q: got %q, %v", raw, got.PlayerName, err)
+		}
+	}
+}

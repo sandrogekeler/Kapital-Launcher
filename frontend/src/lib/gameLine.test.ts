@@ -81,6 +81,11 @@ describe('gameLine', () => {
       'Prism stopped before the game',
       'text-danger',
     ])
+    expect(gameLine(failed('profile'), 'Frangfurd')).toEqual([
+      '○ The game did not start',
+      'Prism has no account with your profile name',
+      'text-danger',
+    ])
   })
 
   it('says a run the player stopped without the error tone', () => {
@@ -116,7 +121,7 @@ describe('gameLine', () => {
     for (const p of phases) {
       expect(gameLine(at(p, 2), 'Frangfurd')?.join(' ')).not.toContain('—')
     }
-    for (const reason of ['packsync', 'launch', 'stopped'] as const) {
+    for (const reason of ['packsync', 'launch', 'profile', 'stopped'] as const) {
       expect(gameLine({ ...at('failed'), reason }, 'Frangfurd')?.join(' ')).not.toContain('—')
     }
     expect(gameLine({ ...at('crashed'), reason: 'stopped' }, 'Frangfurd')?.join(' ')).not.toContain(

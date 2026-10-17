@@ -177,6 +177,10 @@ type gameRig struct {
 	// prismRoot is TrackRequest.PrismRoot for the requests the rig makes, ""
 	// follows no Prism log.
 	prismRoot string
+	// profile is TrackRequest.Profile for the requests the rig makes.
+	profile bool
+	// onPlayer is TrackRequest.OnPlayer for the requests the rig makes.
+	onPlayer func(string)
 	// onHandover is TrackRequest.OnHandover for the requests the rig makes.
 	onHandover func()
 	// onConsoleHeld is TrackRequest.OnConsoleHeld for the requests the rig makes.
@@ -242,6 +246,8 @@ func (r *gameRig) request() TrackRequest {
 		Before:        SnapshotGameLog(r.log.dir),
 		PrismRoot:     r.prismRoot,
 		PrismLog:      SnapshotPrismLog(r.prismRoot),
+		Profile:       r.profile,
+		OnPlayer:      r.onPlayer,
 		HoldWindow:    r.hold,
 		OnHandover:    r.onHandover,
 		OnConsoleHeld: r.onConsoleHeld,

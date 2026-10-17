@@ -36,6 +36,10 @@ const ChapterPage = lazy(() =>
 const UpdateNotice = lazy(() =>
   import('./components/shell/UpdateNotice').then((m) => ({ default: m.UpdateNotice })),
 )
+// So does the popup for a Play Prism ignored over the profile name.
+const ProfileNotice = lazy(() =>
+  import('./components/shell/ProfileNotice').then((m) => ({ default: m.ProfileNotice })),
+)
 
 export default function App() {
   const chapter = useChapterStore(selectChapter)
@@ -63,6 +67,9 @@ export default function App() {
   const listenGame = useGameStore((s) => s.listen)
   const loadGames = useGameStore((s) => s.load)
   const gameActive = useGameStore((s) => Object.values(s.states).some((g) => isActive(g.phase)))
+  const gameRunning = useGameStore((s) =>
+    Object.values(s.states).some((g) => g.phase === 'running'),
+  )
 
   const theme = useSettingsStore((s) => s.settings.theme)
   const loadSettings = useSettingsStore((s) => s.load)
@@ -92,6 +99,12 @@ export default function App() {
     void loadWikiPages()
     void loadWikiShots()
   }, [loadChapters, loadEngine, loadSettings, loadWikiPages, loadWikiShots])
+
+  // A run on Prism's default account tells Go the player's name (settings' playerName), which
+  // it has by the time the game runs: read the settings again then, so the account tile shows it.
+  useEffect(() => {
+    if (gameRunning) void loadSettings()
+  }, [gameRunning, loadSettings])
 
   // The open chapter's slide moves on every minute (issue 142): a timer for
   // what is on screen, not a poll of anything Go holds. It runs only while the
@@ -233,6 +246,7 @@ export default function App() {
       <Toasts onOpenReport={pages.openReport} />
       <Suspense fallback={null}>
         <UpdateNotice />
+        <ProfileNotice onOpenAccount={pages.openAccount} />
       </Suspense>
     </div>
   )

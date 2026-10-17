@@ -5,6 +5,7 @@ export namespace models {
 	    prismExecutable: string;
 	    prismRoot: string;
 	    profileName: string;
+	    playerName?: string;
 	    offline: boolean;
 	    offlineName: string;
 	    lastChapter: string;
@@ -30,6 +31,7 @@ export namespace models {
 	        this.prismExecutable = source["prismExecutable"];
 	        this.prismRoot = source["prismRoot"];
 	        this.profileName = source["profileName"];
+	        this.playerName = source["playerName"];
 	        this.offline = source["offline"];
 	        this.offlineName = source["offlineName"];
 	        this.lastChapter = source["lastChapter"];

@@ -15,6 +15,14 @@ export function profileNameProblem(name: string): string | null {
   return 'A Minecraft name is 3 to 16 letters, digits or _.'
 }
 
+/**
+ * The name to show for the account: the profile name, or with none the name the game last
+ * reported for Prism's default account (`playerName`), or empty when neither is known.
+ */
+export function accountName(profileName: string, playerName = ''): string {
+  return profileName.trim() || playerName.trim()
+}
+
 /** Up to two letters for the account's tile, from the name's words. */
 export function profileInitials(name: string): string {
   return name

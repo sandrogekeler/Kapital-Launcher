@@ -286,6 +286,11 @@ func normalize(s models.AppSettings) models.AppSettings {
 	s.PrismRoot = strings.TrimSpace(s.PrismRoot)
 	s.PrismExecutable = strings.TrimSpace(s.PrismExecutable)
 	s.ProfileName = strings.TrimSpace(s.ProfileName)
+	// Learned from the game's log, so a value that is not a Minecraft name is
+	// dropped rather than refused.
+	if s.PlayerName = strings.TrimSpace(s.PlayerName); !minecraftName.MatchString(s.PlayerName) {
+		s.PlayerName = ""
+	}
 	s.OfflineName = strings.TrimSpace(s.OfflineName)
 	s.LastChapter = strings.TrimSpace(s.LastChapter)
 	// The hero's picture choice replaced the older staticArt switch (issue 195):

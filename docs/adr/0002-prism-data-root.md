@@ -608,3 +608,33 @@ more write inside a chapter's own instance.
 - **What does not change.** Nothing outside those level folders and the staging
   folder is written, nothing is sent but the GETs, and no account data is
   touched. The launcher never writes to the bucket.
+
+## Seventeenth amendment, 2026-10-17
+
+Play did nothing when the profile name was not one of Prism's accounts: no game,
+no message, and the launcher waited out its ten minute start. Prism's own code
+explains it (`Application::performMainStartupAction`, read at commit 60bcc26): a
+`--profile` that matches no account makes Prism log the instance as launching
+and then return, with no window and no error. A Prism already running logs
+`Launch command requires the specified profile to be valid.` instead. The author
+chose to keep Prism's account file off limits (S1.1) and make the failure fast
+and plain, over reading `accounts.json` to check or fill in the name.
+
+- **The failure.** With a profile name and Play offline off, the follower of
+  Prism's launcher log (#103) waits for `Launching with account` after the
+  instance's `<> Instance "<id>" launching` line. When three seconds pass
+  without it, or the running Prism's warning appears, the start ends as
+  `failed` with reason `profile`, and the launcher shows a popup with two ways
+  out: play with Prism's default account (the profile name cleared, Play
+  again) or open the account page. With no profile name Prism uses the
+  instance's account or its default one, and asks which account when it has
+  neither: that is Prism's own window and is left to it.
+- **The name, learned.** On a run with no profile name and Play offline off,
+  the game log follower keeps the first `Setting user:` name that is a valid
+  Minecraft name, and Go stores it as `AppSettings.PlayerName` while the
+  settings still launch that way. The account page and the sidebar show it in
+  place of the empty profile name, and the account page looks it up on Mojang
+  (ADR-13). It is never passed to Prism, a save from the page never changes it,
+  and the launcher's log records only that a name was learned.
+- **What does not change.** Nothing of Prism's accounts is read. The game log
+  was already read for this line to mask the name in reports (sixth amendment).

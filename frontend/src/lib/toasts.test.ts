@@ -66,6 +66,11 @@ describe('errorToasts', () => {
     ])
   })
 
+  it('leaves a start Prism ignored over the profile name to its popup', () => {
+    const games = { frangfurd: at('failed', { reason: 'profile' }) }
+    expect(errorToasts({ ...none, games })).toEqual([])
+  })
+
   it('confirms a stop the player asked for in the muted tone, with no Details', () => {
     const [toast] = errorToasts({
       ...none,
